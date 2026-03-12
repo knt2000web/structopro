@@ -6,7 +6,7 @@ import pandas as pd
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 
-st.set_page_config(page_title=_t("Herramientas Comunes", "Common Tools"), layout="wide")
+
 st.title(_t("🧰 Herramientas Comunes", "🧰 Common Tools"))
 st.markdown(_t("Transformación de Unidades Estructurales y Utilidades Rápidas.", "Structural Unit Conversion and Quick Utilities."))
 
