@@ -15,7 +15,7 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
-st.set_page_config(page_title=_t("Mampostería y Morteros", "Masonry and Mortars"), layout="wide")
+
 
 st.title(_t("Mampostería y Dosificación de Morteros", "Masonry and Mortar Dosing"))
 st.markdown(_t("Herramienta integral para el cálculo de cantidades de materiales en tabiquería/mampostería (ladrillos y mortero) y la dosificación exacta de mezclas según el volumen requerido.", 
