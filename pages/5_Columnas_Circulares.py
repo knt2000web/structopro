@@ -17,9 +17,9 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
-st.set_page_config(page_title=_t("Columnas Circulares P-M", "Circular Columns P-M"), layout="wide")
 
-st.image(r"C:\Users\cagch\.gemini\antigravity\brain\d408b5ad-3eb5-4039-b011-4650dd509d7e\circular_concrete_column_header_1773322766287.png", use_container_width=False, width=700)
+
+
 st.title(_t("Diagrama P-M para Columnas Circulares — Multi-Norma", "P-M Diagram for Circular Columns — Multi-Code"))
 st.markdown(_t("Generación del diagrama de interacción **P–M** para columnas circulares de concreto reforzado. Soporta normativa de **Colombia, EE.UU., Ecuador, Perú, México, Venezuela, Bolivia y Argentina**.", "Generation of the **P-M** interaction diagram for reinforced concrete circular columns. Supports codes from **Colombia, USA, Ecuador, Peru, Mexico, Venezuela, Bolivia and Argentina**."))
 with st.expander(_t("📺 ¿Cómo usar esta herramienta?", "📺 How to use this tool?")):
