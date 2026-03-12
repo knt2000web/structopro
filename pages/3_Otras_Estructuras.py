@@ -12,7 +12,7 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
-st.set_page_config(page_title=_t("Otras Estructuras", "Other Structures"), layout="wide")
+
 st.title(_t("Otras Estructuras — Suite (Multi-Norma)", "Other Structures — Suite (Multi-Code)"))
 
 # CODES dict
