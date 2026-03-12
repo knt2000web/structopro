@@ -13,7 +13,7 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 
-st.set_page_config(page_title=_t("StructMaster 2D", "StructMaster 2D"), layout="wide")
+
 st.title(_t("StructMaster 2D - Diseño Estructural Automatizado", "StructMaster 2D - Automated Structural Design"))
 st.markdown(_t(f"Análisis Matricial Interactivo con Recomendaciones Automáticas de Acero y Cimentación según **{norma_sel}**.", 
                f"Interactive Matrix Analysis with Automated Steel and Foundation Recommendations per **{norma_sel}**."))
