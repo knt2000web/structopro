@@ -5,7 +5,7 @@ import re
 import math
 import time
 
-st.set_page_config(page_title="APU y Costos - Scraping en Vivo", layout="wide")
+
 st.title("💸 Análisis de Precios Unitarios (APU) — En Vivo")
 
 st.markdown("""
