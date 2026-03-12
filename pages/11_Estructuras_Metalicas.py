@@ -38,8 +38,8 @@ else:
     term_C = "Perfil C"
     term_Tubo = "Perfil Tubular Rect."
 
-st.set_page_config(page_title=_t("Estructuras Metálicas", "Steel Structures"), layout="wide")
-st.image(r"C:\Users\cagch\.gemini\antigravity\brain\d408b5ad-3eb5-4039-b011-4650dd509d7e\steel_header_1773257206595.png", use_container_width=True)
+
+
 st.title(_t("Diseño de Estructuras Metálicas", "Steel Structure Design"))
 st.markdown(_t(f"Cálculo de Propiedades, Compresión y Flexión de Perfiles Laminados en Caliente y Conformados en Frío. Adaptado a la terminología de **{norma_sel}**.", 
                "Properties, Compression, and Flexure computation for Hot-Rolled and Cold-Formed Steel Sections."))
