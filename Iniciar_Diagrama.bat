@@ -27,7 +27,7 @@ echo Presiona CTRL+C en esta ventana cuando quieras apagar el programa.
 echo ----------------------------------------------------------
 
 :: Ejecutar streamlit y pausar en caso de fallo para ver el error
-python -m streamlit run "%~dp0app.py" --server.port 8502
+python -m streamlit run "%~dp0Inicio_App.py" --server.port 8502
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR CRITICO] El programa se cerro inesperadamente. Revisa el error arriba.
