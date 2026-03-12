@@ -1,3 +1,4 @@
+import streamlit as st
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,10 +19,9 @@ def _t(es, en):
 # ─────────────────────────────────────────────
 
 st.set_page_config(page_title=_t("Zapatas y Suelos", "Footings and Soils"), layout="wide")
-
 st.image(r"C:\Users\cagch\.gemini\antigravity\brain\d408b5ad-3eb5-4039-b011-4650dd509d7e\concrete_isolated_footing_1773262985104.png", use_container_width=True)
 st.title(_t("Cimentaciones: Zapatas y Geotecnia", "Foundations: Footings and Geotechnics"))
-st.markdown(_t("Módulo integral para diseño de cimentaciones superficiales (Zapata Aislada), capacidad portante y esfuerzos en la masa de suelo. Soporta normativa internacional ACI 318 / NSR-10 / Multi-Norma.", "Comprehensive module for shallow foundation design (Isolated Footing), bearing capacity and soil stresses. Supports international codes ACI 318 / NSR-10 / Multi-Code."))
+
 
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN GENERAL Y APU
