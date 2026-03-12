@@ -20,6 +20,7 @@ def _t(es, en):
 
 
 
+st.image("assets/retaining_wall_header_1773256923525.png", use_container_width=True)
 st.title(_t("Muros de Contención y Estabilidad", "Retaining Walls and Stability"))
 st.markdown(_t("Herramientas para revisar la estabilidad al volcamiento y deslizamiento de muros de contención de gravedad y en voladizo, considerando empujes de tierras y sobrecargas.", "Tools to verify overturning and sliding stability for gravity and cantilever retaining walls, considering earth pressures and surcharges."))
 
