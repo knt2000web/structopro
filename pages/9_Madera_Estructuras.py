@@ -16,7 +16,7 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
-st.set_page_config(page_title=_t("Estructuras en Madera", "Timber Structures"), layout="wide")
+
 
 st.title(_t("Diseño de Estructuras en Madera", "Timber Structure Design"))
 st.markdown(_t("Cálculo y diseño de elementos de madera estructural (Vigas, Columnas, Uniones) y cuantificación comercial en Pies Madereros. Basado en metodologías de Esfuerzos Admisibles (Marcelo Pardo / NDS / NSR-10).", 
