@@ -17,6 +17,7 @@ def _t(es, en): return en if lang == "English" else es
 
 
 st.title(_t("Diseño Sísmico y Espectros", "Seismic Design and Spectra"))
+st.image("assets/seismic_header_1773257220819.png", use_container_width=True)
 st.markdown(_t("Análisis dinámico simplificado (frecuencia natural 1 GDL) y Generación de Espectros de Respuesta de Diseño para diversas normativas de América (NSR, E.030, NB 1225001, ASCE 7, etc).", 
                "Simplified dynamic analysis (1 DOF natural frequency) and Design Response Spectrum Generation for various American codes (NSR, E.030, NB 1225001, ASCE 7, etc)."))
 
