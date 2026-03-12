@@ -16,6 +16,7 @@ norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 norma_flag = st.session_state.get("norma_flag_url", "")
 
 
+st.image("assets/generador_3d_header_1773257156151.png", use_container_width=True)
 
 
 html_title = """
