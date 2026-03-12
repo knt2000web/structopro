@@ -18,8 +18,8 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
-st.set_page_config(page_title=_t("Zapatas y Suelos", "Footings and Soils"), layout="wide")
-st.image(r"C:\Users\cagch\.gemini\antigravity\brain\d408b5ad-3eb5-4039-b011-4650dd509d7e\concrete_isolated_footing_1773262985104.png", use_container_width=True)
+
+
 st.title(_t("Cimentaciones: Zapatas y Geotecnia", "Foundations: Footings and Geotechnics"))
 
 
