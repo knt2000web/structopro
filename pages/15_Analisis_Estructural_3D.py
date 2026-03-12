@@ -11,7 +11,7 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 
-st.set_page_config(page_title=_t("StructMaster 3D", "StructMaster 3D"), layout="wide")
+
 st.title(_t("StructMaster 3D - Análisis Matricial Espacial", "StructMaster 3D - Spatial Matrix Analysis"))
 st.markdown(_t("Entorno Tridimensional Interactivo para Pórticos y Armaduras Espaciales (6 GDL por Nudo).", 
                "Interactive 3D Environment for Space Frames and Trusses (6 DOF per Node)."))
