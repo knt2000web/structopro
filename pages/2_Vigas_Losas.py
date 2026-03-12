@@ -16,6 +16,7 @@ def _t(es, en):
 
 
 
+st.image("assets/beam_header_1773257190287.png", use_container_width=True)
 st.title(_t("Suite de Diseño — Vigas y Losas", "Design Suite — Beams & Slabs"))
 st.markdown(_t("Herramientas de diseño de concreto reforzado según **10 normativas internacionales**.", "Reinforced concrete design tools based on **10 international codes**."))
 # ══════════════════════════════════════════
