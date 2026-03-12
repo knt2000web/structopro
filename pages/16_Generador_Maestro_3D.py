@@ -15,9 +15,9 @@ def _t(es, en): return en if lang == "English" else es
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 norma_flag = st.session_state.get("norma_flag_url", "")
 
-st.set_page_config(page_title=_t("Generador Maestro 3D", "Master 3D Generator"), layout="wide")
 
-st.image(r"C:\Users\cagch\.gemini\antigravity\brain\d408b5ad-3eb5-4039-b011-4650dd509d7e\concrete_building_framework_1773262967234.png", use_container_width=False, width=700)
+
+
 html_title = """
 <div style="font-family:'Segoe UI', sans-serif;margin-bottom:10px;">
     <h1 style="color:#ffffff; margin-bottom:5px; font-size: 2.2em;">Generador Maestro 3D Paramétrico</h1>
