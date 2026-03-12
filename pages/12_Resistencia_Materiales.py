@@ -10,7 +10,7 @@ import pandas as pd
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 
-st.set_page_config(page_title=_t("Resistencia de Materiales", "Strength of Materials"), layout="wide")
+
 st.title(_t("🏗️ Resistencia de Materiales", "🏗️ Mechanics of Materials"))
 st.markdown(_t("Análisis de Esfuerzos Secundarios y Propiedades Geométricas Universales.", 
                "Secondary Stress Analysis and Universal Geometric Properties."))
