@@ -40,7 +40,7 @@ else:
 
 
 
-st.title(_t("Diseño de Estructuras Metálicas", "Steel Structure Design"))
+st.image("assets/steel_header_1773257206595.png", use_container_width=True) st.title(_t("Diseño de Estructuras Metálicas", "Steel Structure Design"))
 st.markdown(_t(f"Cálculo de Propiedades, Compresión y Flexión de Perfiles Laminados en Caliente y Conformados en Frío. Adaptado a la terminología de **{norma_sel}**.", 
                "Properties, Compression, and Flexure computation for Hot-Rolled and Cold-Formed Steel Sections."))
 
