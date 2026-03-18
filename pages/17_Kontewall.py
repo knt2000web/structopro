@@ -270,7 +270,7 @@ Eah  = 0.5 * Ka  * gr * Hp**2
 Esch = Ka  * gr  * hs * Hp
 Ep   = 0.5 * Kp  * gf * hz**2
 Es   = 0.5 * (Kea - Ka) * (1 - Kv) * gr * Hp**2  if sismo else 0.0
-Wm   = gc * ct * Hp * (1 + (ct - ccor)/(2*ct))    # peso pantalla aprox.
+# Wm eliminado: ya separado en W2 (triángulo) + W3 (rectángulo) correctamente
 Eav  = (Eah + Es) * math.sin(deltr)
 Escv = Esch * math.sin(deltr)
 Cy = 0.6 * Hp + hz    # brazo incremento sísmico ΔEae
@@ -285,8 +285,8 @@ W5  = gr * Bp * Hp                                          # relleno sobre tal�
 WSC = SC * Bp                                               # sobrecarga
 
 x1  = B / 2
-x2  = b + (ct - ccor) / 3
-x3  = b + ct / 2
+x2  = b + ct - (ct - ccor) / 3                 # brazo triángulo pantalla
+x3  = b + ct - ccor / 2                         # brazo rectángulo pantalla
 x4  = b + ct / 2
 x5  = xbr + Bp / 2
 xSC = xbr + Bp / 2
@@ -334,6 +334,7 @@ diam_def = "5/8\""
 bw = 100.0  # cm
 
 # Pantalla
+rhomin_zap = 0.0018  # ACI 318 Tabla 9.6.1.2 losas y zapatas
 dp    = ct * 100 - rec
 Mup   = abs(1.7 * (MaEah + MaEsch) + (1.4 * MaEs if sismo else 0))
 Rup   = Mup * 100 / (phif * bw * dp**2)
@@ -363,31 +364,35 @@ if Asp > 0:
             dc = round((Hp - h_try), 2)
             break
 # Anclaje
-Ldh = round(0.075*fy/math.sqrt(fc) * Ab_diam(dii)[0], 2) / 100
+db_diam = {"3/8\"":0.95,"1/2\"":1.27,"5/8\"":1.59,"3/4\"":1.91,"7/8\"":2.22,"1\"":2.54}
+db_val = db_diam.get(dii, 1.59)  # diametro en cm
+Ldh = max(0.24 * fy / math.sqrt(fc) * db_val, 8*db_val, 15.0) / 100  # ACI 318-19 25.5.2 [m]
 
 # Talón posterior
 dz    = hz * 100 - rec
 Wu1   = 1.4*(gr*Hp + hz*gc) + 1.7*SC
 q2t   = q2 * 10000
 q1t   = q1 * 10000
-Mut   = abs(Wu1*Bp**2/2 - 1.7*(q2t*Bp**2/6 + q1t*Bp**2/3))
+q_xbr = q1t + (q2t - q1t) * (B - Bp) / B  # presion inicio talon [kg/m2]
+Mut  = abs(Wu1*Bp**2/2 - 1.7*(q_xbr*Bp**2/2 + (q2t - q_xbr)*Bp**2/3))  # trapecio real
 Rut   = Mut*100/(phif*bw*dz**2)
 rhot  = 0.85*fc/fy*(1 - math.sqrt(max(0, 1-2*Rut/(0.85*fc))))
-Ast   = max(rhot, rhomin) * bw * dz
-diamtl= "3/4\""; stl = s_acero(Ast, diamtl); Aptl = As_prov(diamtl, stl)
+Ast   = max(rhot, rhomin_zap) * bw * dz
+# (q_xbr definido arriba - presion inicio talon)
 Astp  = rhomin*bw*dz; stp = s_acero(Astp,"5/8\"")
-Vut   = abs(Wu1*Bp - 1.7*(q2t+q1t)/2*Bp)
+Vut  = abs(Wu1*Bp - 1.7*(q_xbr*Bp + 0.5*(q2t - q_xbr)*Bp))  # cortante con trapecio
 phiVct= phic*0.53*math.sqrt(fc)*bw*dz
 
 # Talón delantero (punta)
-Mupu  = abs(1.7*(5*q1t*b**2/6 - q2t*b**2/3))
+q_b   = q1t + (q2t - q1t) * b / B      # presion en cara pantalla (x=b)
+Mupu = abs(1.7*(q1t*b**2/2 + (q_b - q1t)*b**2/6) - 1.4*gc*hz*b**2/2)  # presion neta
 Rupu  = Mupu*100/(phif*bw*dz**2)
 rhopu = 0.85*fc/fy*(1 - math.sqrt(max(0, 1-2*Rupu/(0.85*fc))))
-Aspu  = max(rhopu, rhomin) * bw * dz
+Aspu  = max(rhopu, rhomin_zap) * bw * dz
 diampu= "5/8\""; spu = s_acero(Aspu, diampu); Appu = As_prov(diampu, spu)
 Aspp  = rhomin*bw*dz; spp = s_acero(Aspp,"5/8\"")
 phiVcpu= phic*0.53*math.sqrt(fc)*bw*dz
-Vupu  = abs(1.7*(5*q1t - q2t)/2*b)
+Vupu = abs(1.7*(q1t*b + 0.5*(q_b - q1t)*b) - 1.4*gc*hz*b)  # cortante neto punta
 
 # ── Cortante pantalla ──
 Vupant  = abs(1.7*(0.5*Ka*gr*Hp**2 + Ka*gr*hs*Hp))
