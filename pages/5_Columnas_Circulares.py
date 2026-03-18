@@ -17,11 +17,12 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
+st.set_page_config(page_title=_t("Columnas Circulares P-M", "Circular Columns P-M"), layout="wide")
 
-
-
+st.image(r"assets/circular_concrete_column_technical_render.png", use_container_width=False, width=700)
 st.title(_t("Diagrama P-M para Columnas Circulares — Multi-Norma", "P-M Diagram for Circular Columns — Multi-Code"))
 st.markdown(_t("Generación del diagrama de interacción **P–M** para columnas circulares de concreto reforzado. Soporta normativa de **Colombia, EE.UU., Ecuador, Perú, México, Venezuela, Bolivia y Argentina**.", "Generation of the **P-M** interaction diagram for reinforced concrete circular columns. Supports codes from **Colombia, USA, Ecuador, Peru, Mexico, Venezuela, Bolivia and Argentina**."))
+
 with st.expander(_t("📺 ¿Cómo usar esta herramienta?", "📺 How to use this tool?")):
     st.markdown(_t("""
     **Modo de Uso:**
@@ -76,6 +77,19 @@ STIRRUP_MM = {
     "10 mm": {"area": 0.785, "diam_mm": 10.0},
     "12 mm": {"area": 1.131, "diam_mm": 12.0},
 }
+
+# ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # PARÁMETROS POR NORMA
@@ -462,7 +476,7 @@ with tab3:
 
     if "apu_config" in st.session_state:
         st.markdown("---")
-        st.markdown("### 💰 Presupuesto APU (En Vivo)")
+        st.markdown("### 💰 Presupuesto Estimado (Promedio de Fuentes Regionales)")
         apu = st.session_state.apu_config
         mon = apu["moneda"]
         # Interpolacion cemento basica (usando sacos de 50kg)

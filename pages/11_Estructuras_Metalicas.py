@@ -38,18 +38,18 @@ else:
     term_C = "Perfil C"
     term_Tubo = "Perfil Tubular Rect."
 
-
-
-st.image("assets/steel_header_1773257206595.png", use_container_width=True) st.title(_t("Diseño de Estructuras Metálicas", "Steel Structure Design"))
+st.set_page_config(page_title=_t("Estructuras Metálicas", "Steel Structures"), layout="wide")
+st.image(r"assets/steel_header_1773257206595.png", use_container_width=True)
+st.title(_t("Diseño de Estructuras Metálicas", "Steel Structure Design"))
 st.markdown(_t(f"Cálculo de Propiedades, Compresión y Flexión de Perfiles Laminados en Caliente y Conformados en Frío. Adaptado a la terminología de **{norma_sel}**.", 
                "Properties, Compression, and Flexure computation for Hot-Rolled and Cold-Formed Steel Sections."))
 
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN MATERIAL
-st.sidebar.header(_t("⚙️ Configuración Material", "⚙️ Material Settings"))
-Fy_adm = st.sidebar.number_input(_t("Esfuerzo de Fluencia Fy [MPa]", "Yield Stress Fy [MPa]"), 100.0, 500.0, 250.0, 10.0) # Typical A36 is ~250 MPa
-Fu_adm = st.sidebar.number_input(_t("Esfuerzo Último Fu [MPa]", "Ultimate Stress Fu [MPa]"), 300.0, 600.0, 400.0, 10.0)
-E_steel = st.sidebar.number_input(_t("Módulo Elasticidad E [MPa]", "Modulus of Elasticity E [MPa]"), 100000.0, 250000.0, 200000.0, 1000.0)
+st.sidebar.header(_t("⚙️ Materiales", "⚙️ Materials"))
+Fy_adm = st.sidebar.number_input(_t("Esfuerzo de Fluencia Fy [MPa]", "Yield Stress Fy [MPa]"), 100.0, 500.0, st.session_state.get("st_fy", 250.0), 10.0, key="st_fy")
+Fu_adm = st.sidebar.number_input(_t("Esfuerzo Último Fu [MPa]", "Ultimate Stress Fu [MPa]"), 300.0, 600.0, st.session_state.get("st_fu", 400.0), 10.0, key="st_fu")
+E_steel = st.sidebar.number_input(_t("Módulo Elasticidad E [MPa]", "Modulus of Elasticity E [MPa]"), 100000.0, 250000.0, st.session_state.get("st_E", 200000.0), 1000.0, key="st_E")
 G_steel = E_steel / (2 * (1 + 0.3)) # Shear modulus approx
 
 peso_esp_acero = 7850.0 # kg/m3
@@ -120,10 +120,10 @@ with tab_P:
     p1, p2, p3 = st.columns([1,2,1])
     with p1:
         st.subheader("Dimensiones [mm]")
-        dw = st.number_input("Peralte total (d) [mm]", 50.0, 1500.0, 300.0, 1.0)
-        bfw = st.number_input("Ancho patín (bf) [mm]", 50.0, 800.0, 150.0, 1.0)
-        tfw = st.number_input("Espesor patín (tf) [mm]", 2.0, 100.0, 10.0, 0.5)
-        tww = st.number_input("Espesor alma (tw) [mm]", 2.0, 100.0, 6.0, 0.5)
+        dw = st.number_input("Peralte total (d) [mm]", 50.0, 1500.0, st.session_state.get("st_p_d", 300.0), 1.0, key="st_p_d")
+        bfw = st.number_input("Ancho patín (bf) [mm]", 50.0, 800.0, st.session_state.get("st_p_bf", 150.0), 1.0, key="st_p_bf")
+        tfw = st.number_input("Espesor patín (tf) [mm]", 2.0, 100.0, st.session_state.get("st_p_tf", 10.0), 0.5, key="st_p_tf")
+        tww = st.number_input("Espesor alma (tw) [mm]", 2.0, 100.0, st.session_state.get("st_p_tw", 6.0), 0.5, key="st_p_tw")
         
     with p2:
         # Calculos basicos
@@ -153,38 +153,41 @@ with tab_P:
 with tab_C:
     st.header(_t(f"Resistencia a Compresión Axial", f"Axial Compression Resistance"))
     
-    tipo_comp = st.selectbox("Seleccione Perfil Laminado en Caliente a evaluar:", [term_W, "Perfil T", "Perfil L (Angular)"])
+    comp_opts = [term_W, "Perfil T", "Perfil L (Angular)"]
+    tipo_comp = st.selectbox("Seleccione Perfil Laminado en Caliente a evaluar:", comp_opts, 
+                             index=comp_opts.index(st.session_state.get("st_c_tipo", comp_opts[0])),
+                             key="st_c_tipo")
     
     col_c1, col_c2, col_c3 = st.columns([1,1.5,1.5])
     with col_c1:
         st.subheader("Datos Compresión")
-        L_c_m = st.number_input("Longitud No Arriostrada (Lc) [m]", 0.5, 20.0, 3.0, 0.5)
-        P_u = st.number_input("Carga Axial Requerida Pu [kN]", 10.0, 10000.0, 500.0, 10.0)
+        L_c_m = st.number_input("Longitud No Arriostrada (Lc) [m]", 0.5, 20.0, st.session_state.get("st_c_L", 3.0), 0.5, key="st_c_L")
+        P_u = st.number_input("Carga Axial Requerida Pu [kN]", 10.0, 10000.0, st.session_state.get("st_c_Pu", 500.0), 10.0, key="st_c_Pu")
         
     with col_c2:
         if tipo_comp == term_W:
-            d_c = st.number_input(f"{tipo_comp} - Peralte d [mm]", 50.0, 1000.0, 300.0, key="dcw")
-            bf_c = st.number_input(f"{tipo_comp} - Ancho bf [mm]", 50.0, 500.0, 150.0, key="bfcw")
-            tf_c = st.number_input(f"{tipo_comp} - tf [mm]", 2.0, 50.0, 10.0, key="tfcw")
-            tw_c = st.number_input(f"{tipo_comp} - tw [mm]", 2.0, 50.0, 6.0, key="twcw")
+            d_c = st.number_input(f"{tipo_comp} - Peralte d [mm]", 50.0, 1000.0, st.session_state.get("st_cw_d", 300.0), key="st_cw_d")
+            bf_c = st.number_input(f"{tipo_comp} - Ancho bf [mm]", 50.0, 500.0, st.session_state.get("st_cw_bf", 150.0), key="st_cw_bf")
+            tf_c = st.number_input(f"{tipo_comp} - tf [mm]", 2.0, 50.0, st.session_state.get("st_cw_tf", 10.0), key="st_cw_tf")
+            tw_c = st.number_input(f"{tipo_comp} - tw [mm]", 2.0, 50.0, st.session_state.get("st_cw_tw", 6.0), key="st_cw_tw")
             A_c = 2 * (bf_c * tf_c) + (d_c - 2*tf_c)*tw_c
             Iy_c = 2*((tf_c*bf_c**3)/12.0) + ((d_c-2*tf_c)*tw_c**3)/12.0 # Minimum inertia usually Iy
             r_c = math.sqrt(Iy_c / A_c)
             fig_c = plot_W(d_c, bf_c, tw_c, tf_c)
             
         elif tipo_comp == "Perfil T":
-            d_c = st.number_input("Perfil T - Peralte d [mm]", 50.0, 500.0, 150.0)
-            bf_c = st.number_input("Perfil T - Ancho bf [mm]", 50.0, 500.0, 150.0)
-            tf_c = st.number_input("Perfil T - tf [mm]", 2.0, 50.0, 10.0)
-            tw_c = st.number_input("Perfil T - tw [mm]", 2.0, 50.0, 8.0)
+            d_c = st.number_input("Perfil T - Peralte d [mm]", 50.0, 500.0, st.session_state.get("st_ct_d", 150.0), key="st_ct_d")
+            bf_c = st.number_input("Perfil T - Ancho bf [mm]", 50.0, 500.0, st.session_state.get("st_ct_bf", 150.0), key="st_ct_bf")
+            tf_c = st.number_input("Perfil T - tf [mm]", 2.0, 50.0, st.session_state.get("st_ct_tf", 10.0), key="st_ct_tf")
+            tw_c = st.number_input("Perfil T - tw [mm]", 2.0, 50.0, st.session_state.get("st_ct_tw", 8.0), key="st_ct_tw")
             A_c = (bf_c * tf_c) + (d_c - tf_c)*tw_c
             Iy_c = ((tf_c*bf_c**3)/12.0) + ((d_c-tf_c)*tw_c**3)/12.0
             r_c = math.sqrt(Iy_c / A_c)
             fig_c = plot_T(d_c, bf_c, tw_c, tf_c)
             
         else: # Perfil L
-            b_c = st.number_input("Perfil L - Altura/Base b [mm]", 20.0, 300.0, 100.0)
-            t_c = st.number_input("Perfil L - Espesor t [mm]", 2.0, 30.0, 10.0)
+            b_c = st.number_input("Perfil L - Altura/Base b [mm]", 20.0, 300.0, st.session_state.get("st_cl_b", 100.0), key="st_cl_b")
+            t_c = st.number_input("Perfil L - Espesor t [mm]", 2.0, 30.0, st.session_state.get("st_cl_t", 10.0), key="st_cl_t")
             A_c = (2 * b_c - t_c) * t_c
             # Approx minimal radius of gyration rz para angulos lados iguales is ~ 0.2*b
             r_c = 0.2 * b_c
@@ -224,15 +227,15 @@ with tab_F:
     
     f_c1, f_c2, f_c3 = st.columns(3)
     with f_c1:
-        Mu = st.number_input("Momento Último Solicitante Mu [kN-m]", 10.0, 5000.0, 150.0, 10.0)
-        Lb_m = st.number_input("Longitud No Arriostrada Lateramente Lb [m]", 0.5, 20.0, 2.0, 0.5)
-        Cb = st.number_input("Coeficiente de Momento (Cb)", 1.0, 3.0, 1.0, 0.1)
+        Mu = st.number_input("Momento Último Solicitante Mu [kN-m]", 10.0, 5000.0, st.session_state.get("st_f_Mu", 150.0), 10.0, key="st_f_Mu")
+        Lb_m = st.number_input("Longitud No Arriostrada Lateramente Lb [m]", 0.5, 20.0, st.session_state.get("st_f_Lb", 2.0), 0.5, key="st_f_Lb")
+        Cb = st.number_input("Coeficiente de Momento (Cb)", 1.0, 3.0, st.session_state.get("st_f_Cb", 1.0), 0.1, key="st_f_Cb")
     
     with f_c2:
-        d_f = st.number_input(f"Peralte d [mm]", 100.0, 1500.0, 300.0, key="df")
-        bf_f = st.number_input(f"Ancho bf [mm]", 50.0, 800.0, 150.0, key="bff")
-        tf_f = st.number_input(f"Espesor tf [mm]", 2.0, 50.0, 10.0, key="tff")
-        tw_f = st.number_input(f"Espesor tw [mm]", 2.0, 50.0, 6.0, key="twf")
+        d_f = st.number_input(f"Peralte d [mm]", 100.0, 1500.0, st.session_state.get("st_fw_d", 300.0), 1.0, key="st_fw_d")
+        bf_f = st.number_input(f"Ancho bf [mm]", 50.0, 800.0, st.session_state.get("st_fw_bf", 150.0), 1.0, key="st_fw_bf")
+        tf_f = st.number_input(f"Espesor tf [mm]", 2.0, 50.0, st.session_state.get("st_fw_tf", 10.0), 0.5, key="st_fw_tf")
+        tw_f = st.number_input(f"Espesor tw [mm]", 2.0, 50.0, st.session_state.get("st_fw_tw", 6.0), 0.5, key="st_fw_tw")
     
     with f_c3:
         # Properties for LTB
@@ -287,17 +290,20 @@ with tab_F:
 with tab_CF:
     st.header(_t("Perfiles Conformados en Frío (Cold-Formed)", "Cold-Formed Sections"))
     
-    tipo_cf = st.selectbox("Seleccione Perfil Conformado en Frío:", [f"{term_C} con labios (rígido)", f"{term_C} sin labios (U)", term_Tubo])
+    cf_opts = [f"{term_C} con labios (rígido)", f"{term_C} sin labios (U)", term_Tubo]
+    tipo_cf = st.selectbox("Seleccione Perfil Conformado en Frío:", cf_opts, 
+                             index=cf_opts.index(st.session_state.get("st_cf_tipo", cf_opts[0])),
+                             key="st_cf_tipo")
     
     col_cf1, col_cf2 = st.columns([1,2])
     
     with col_cf1:
-        h_cf = st.number_input("Altura total h [mm]", 20.0, 400.0, 150.0, key="hcf")
-        b_cf = st.number_input("Ancho base b [mm]", 20.0, 200.0, 50.0, key="bcf")
-        t_cf = st.number_input("Espesor de lámina t [mm]", 0.5, 10.0, 2.0, 0.1, key="tcf")
+        h_cf = st.number_input("Altura total h [mm]", 20.0, 400.0, st.session_state.get("st_cf_h", 150.0), 1.0, key="st_cf_h")
+        b_cf = st.number_input("Ancho base b [mm]", 20.0, 200.0, st.session_state.get("st_cf_b", 50.0), 1.0, key="st_cf_b")
+        t_cf = st.number_input("Espesor de lámina t [mm]", 0.5, 10.0, st.session_state.get("st_cf_t", 2.0), 0.1, key="st_cf_t")
         
         if "labios" in tipo_cf:
-            d_lip = st.number_input("Pestaña/Labio d [mm]", 0.0, 50.0, 15.0)
+            d_lip = st.number_input("Pestaña/Labio d [mm]", 0.0, 50.0, st.session_state.get("st_cf_l", 15.0), key="st_cf_l")
             A_cf = (h_cf + 2*b_cf + 2*d_lip - 4*t_cf) * t_cf
             fig_cf = plot_C(h_cf, b_cf, d_lip, t_cf)
         elif tipo_cf == term_Tubo:
@@ -315,8 +321,8 @@ with tab_CF:
         
     with col_cf2:
         st.subheader("Verificación de Compresión")
-        L_cf = st.number_input("Longitud No Arriostrada [m]", 0.5, 10.0, 2.0)
-        Pu_cf = st.number_input("Carga Axial Pu [kN]", 5.0, 500.0, 50.0, key="pucf")
+        L_cf = st.number_input("Longitud No Arriostrada [m]", 0.5, 10.0, st.session_state.get("st_cf_L", 2.0), key="st_cf_L")
+        Pu_cf = st.number_input("Carga Axial Pu [kN]", 5.0, 500.0, st.session_state.get("st_cf_Pu", 50.0), key="st_cf_Pu")
         
         # Simple AISI approximation for Cold-Formed (using unreduced Area for a very conservative check, or Q factor)
         # Real AISI requires effective width calculations for localized buckling.
@@ -393,7 +399,7 @@ with tab_E:
         if "apu_config" in st.session_state:
             apu = st.session_state.apu_config
             mon = apu["moneda"]
-            precio_kg = st.number_input(f"Costo por Kg de Acero Estructural Suministrado y Armado [{mon}/kg]", 1.0, 100000.0, 8000.0 if mon=="COP$" else 4.0)
+            precio_kg = st.number_input(f"Costo por Kg de Acero Estructural Suministrado y Armado [{mon}/kg]", 1.0, 100000.0, st.session_state.get("st_price_kg", 8000.0 if mon=="COP$" else 4.0), key="st_price_kg")
             
             st.write(f"Total Kilogramos de perfileria analizada: **{global_costo:.2f} kg**")
             costo_directo = global_costo * precio_kg

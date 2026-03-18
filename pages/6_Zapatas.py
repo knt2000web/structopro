@@ -1,5 +1,4 @@
 import streamlit as st
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -18,10 +17,24 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
+st.set_page_config(page_title=_t("Zapatas y Suelos", "Footings and Soils"), layout="wide")
 
-
+st.image(r"assets/concrete_isolated_footing_1773262985104.png", use_container_width=True)
 st.title(_t("Cimentaciones: Zapatas y Geotecnia", "Foundations: Footings and Geotechnics"))
+st.markdown(_t("Módulo integral para diseño de cimentaciones superficiales (Zapata Aislada), capacidad portante y esfuerzos en la masa de suelo. Soporta normativa internacional ACI 318 / NSR-10 / Multi-Norma.", "Comprehensive module for shallow foundation design (Isolated Footing), bearing capacity and soil stresses. Supports international codes ACI 318 / NSR-10 / Multi-Code."))
 
+# ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN GENERAL Y APU
@@ -46,8 +59,8 @@ phi_f = 0.90 # Flexión
 if "E.060" in norma_sel:
     phi_v = 0.85
 
-fc_basico = st.sidebar.number_input(_t("f'c Zapata [MPa]", "f'c Footing [MPa]"), 15.0, 50.0, 21.0, 1.0)
-fy_basico = st.sidebar.number_input(_t("fy Acero [MPa]", "fy Steel [MPa]"), 240.0, 500.0, 420.0, 10.0)
+fc_basico = st.sidebar.number_input(_t("f'c Zapata [MPa]", "f'c Footing [MPa]"), 15.0, 50.0, st.session_state.get("z_fc", 21.0), 1.0, key="z_fc")
+fy_basico = st.sidebar.number_input(_t("fy Acero [MPa]", "fy Steel [MPa]"), 240.0, 500.0, st.session_state.get("z_fy", 420.0), 10.0, key="z_fy")
 
 # ─── CONVERSOR GLOBAL DE UNIDADES DE SUELO ← Visible en toda la página
 st.sidebar.markdown("---")
@@ -82,11 +95,11 @@ with st.expander(_t("🌍 1. Esfuerzos en masa de suelo debajo de zapata", "🌍
     st.info(_t("📺 **Modo de uso:** Ingresa las dimensiones de la zapata y la carga aplicada. El programa usa la solución de Boussinesq (integración de carga rectangular) para encontrar el incremento de esfuerzo vertical a cierta profundidad Z debajo del centro de la zapata.", "📺 **How to use:** Enter footing dimensions and load. Uses Boussinesq method to find vertical stress increment at depth Z."))
     c1, c2 = st.columns(2)
     with c1:
-        P_bous = st.number_input("Carga en Zapata P [kN]", 10.0, 10000.0, 1000.0, 100.0, key="b1")
-        B_bous = st.number_input("Ancho B [m]", 0.5, 10.0, 2.0, 0.1, key="b2")
-        L_bous = st.number_input("Largo L [m]", 0.5, 10.0, 2.0, 0.1, key="b3")
+        P_bous = st.number_input("Carga en Zapata P [kN]", 10.0, 10000.0, st.session_state.get("z_bous_P", 1000.0), 100.0, key="z_bous_P")
+        B_bous = st.number_input("Ancho B [m]", 0.5, 10.0, st.session_state.get("z_bous_B", 2.0), 0.1, key="z_bous_B")
+        L_bous = st.number_input("Largo L [m]", 0.5, 10.0, st.session_state.get("z_bous_L", 2.0), 0.1, key="z_bous_L")
     with c2:
-        Z_bous = st.number_input("Profundidad de análisis Z [m]", 0.1, 20.0, 2.0, 0.5, key="b4")
+        Z_bous = st.number_input("Profundidad de análisis Z [m]", 0.1, 20.0, st.session_state.get("z_bous_Z", 2.0), 0.5, key="z_bous_Z")
         q_0 = P_bous / (B_bous * L_bous) # Esfuerzo de contacto kN/m2
         st.markdown(_t(f"**Esfuerzo de contacto ($q_0$):** {q_0:.2f} kPa = {q_0/9.80665:.3f} t/m² = {q_0/98.0665:.4f} kg/cm²",
                        f"**Contact Stress ($q_0$):** {q_0:.2f} kPa = {q_0/9.80665:.3f} t/m² = {q_0/98.0665:.4f} kg/cm²"))
@@ -162,20 +175,21 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi)", "🛑 2. B
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        phi_ang = st.number_input(_t("Ángulo de fricción φ [°]", "Friction angle φ [°]"), 0.0, 50.0, 30.0, 1.0)
+        phi_ang = st.number_input(_t("Ángulo de fricción φ [°]", "Friction angle φ [°]"), 0.0, 50.0, st.session_state.get("z_phi", 30.0), 1.0, key="z_phi")
         coh_unit = st.selectbox(_t("Unidad cohesión:", "Cohesion Unit:"), ["kPa", "kg/cm²", "ton/m²"], key="coh_u")
-        coh_val = st.number_input(f"c [{coh_unit}]", 0.0, 200.0, 5.0 if coh_unit=="kPa" else 0.05, 0.5 if coh_unit=="kPa" else 0.01)
+        coh_val = st.number_input(f"c [{coh_unit}]", 0.0, 200.0, st.session_state.get("coh_val", 5.0 if coh_unit=="kPa" else 0.05), 0.5 if coh_unit=="kPa" else 0.01, key="coh_val")
         coh_c = coh_val if coh_unit=="kPa" else (coh_val*98.0665 if coh_unit=="kg/cm²" else coh_val*9.80665)
         gam_unit = st.selectbox(_t("Unidad γ:", "γ Unit:"), ["kN/m³", "ton/m³", "kg/m³"], key="gam_u")
-        gam_val = st.number_input(f"γ [{gam_unit}]", 10.0, 25.0 if gam_unit!="kg/m³" else 2500.0, 18.0 if gam_unit!="kg/m³" else 1800.0, 0.5)
+        gam_val = st.number_input(f"γ [{gam_unit}]", 10.0, 25.0 if gam_unit!="kg/m³" else 2500.0, st.session_state.get("gam_val", 18.0 if gam_unit!="kg/m³" else 1800.0), 0.5, key="gam_val")
         gamma_s = gam_val if gam_unit=="kN/m³" else (gam_val*9.80665 if gam_unit=="ton/m³" else gam_val*0.00980665)
     with c2:
         forma_zap = st.selectbox(_t("Forma de zapata", "Footing shape"), 
-                                 ["Cuadrada", "Continua (Muro)", "Circular"] if lang=="Español" else ["Square", "Continuous (Wall)", "Circular"])
-        B_cp = st.number_input(_t("Ancho/Diámetro B [m]", "Width/Diameter B [m]"), 0.5, 10.0, 1.5, 0.1, key="cp_b")
-        Df_cp = st.number_input(_t("Profundidad Df [m]", "Depth Df [m]"), 0.0, 10.0, 1.0, 0.1, key="cp_df")
+                                 ["Cuadrada", "Continua (Muro)", "Circular"] if lang=="Español" else ["Square", "Continuous (Wall)", "Circular"],
+                                 key="z_shape")
+        B_cp = st.number_input(_t("Ancho/Diámetro B [m]", "Width/Diameter B [m]"), 0.5, 10.0, st.session_state.get("cp_b", 1.5), 0.1, key="cp_b")
+        Df_cp = st.number_input(_t("Profundidad Df [m]", "Depth Df [m]"), 0.0, 10.0, st.session_state.get("cp_df", 1.0), 0.1, key="cp_df")
     with c3:
-        FS_terz = st.number_input(_t("Factor de Seguridad (FS)", "Safety Factor (FS)"), 1.0, 5.0, 3.0, 0.1)
+        FS_terz = st.number_input(_t("Factor de Seguridad (FS)", "Safety Factor (FS)"), 1.0, 5.0, st.session_state.get("z_fs", 3.0), 0.1, key="z_fs")
         
     phi_rad = math.radians(phi_ang)
     if phi_ang == 0:
@@ -492,7 +506,7 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
 
         if "apu_config" in st.session_state:
             st.markdown("---")
-            st.markdown("### 💰 Presupuesto APU (En Vivo de Ferreterías)")
+            st.markdown("### 💰 Presupuesto Estimado (Promedio de Fuentes Regionales)")
             apu = st.session_state.apu_config
             mon = apu["moneda"]
             c_excav = vol_excavacion * 25000 # Costo local asumido manual por m3

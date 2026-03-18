@@ -15,6 +15,19 @@ def _t(es, en):
 
 st.title(_t("Otras Estructuras — Suite (Multi-Norma)", "Other Structures — Suite (Multi-Code)"))
 
+# ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)
+
 # CODES dict
 CODES = {
     "NSR-10 (Colombia)": {"phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"NSR-10 Título C"},
@@ -48,8 +61,8 @@ code = CODES[norma_sel]
 st.sidebar.markdown(f"📖 `{code['ref']}`")
 
 st.sidebar.header(_t("⚙️ Materiales", "⚙️ Materials"))
-fc = st.sidebar.number_input(_t("f'c [MPa]:", "f'c [MPa]:"), 15.0, 80.0, 21.0, 1.0)
-fy = st.sidebar.number_input(_t("fy [MPa]:", "fy [MPa]:"), 200.0, 500.0, 420.0, 10.0)
+fc = st.sidebar.number_input(_t("f'c [MPa]:", "f'c [MPa]:"), 15.0, 80.0, st.session_state.get("o_fc", 21.0), 1.0, key="o_fc")
+fy = st.sidebar.number_input(_t("fy [MPa]:", "fy [MPa]:"), 200.0, 500.0, st.session_state.get("o_fy", 420.0), 10.0, key="o_fy")
 phi_v = code["phi_shear"]
 phi_c = code["phi_comp"]
 
@@ -60,13 +73,13 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
     st.info(_t("📺 **Modo de uso:** Ingresa la carga distribuida Wu, la longitud de la viga y la distancia X. La app calculará el cortante Vu en ese punto y el espaciamiento requerido de estribos.", "📺 **How to use:** Enter load Wu, span L and distance X. Shows required shear at that section."))
     c1, c2 = st.columns(2)
     with c1:
-        L_vga = st.number_input(_t("Longitud luz libre [m]", "Clear span (m)"), 1.0, 20.0, 5.0, 0.5, key="cx_L")
-        wu_vga= st.number_input(_t("Carga distribuida Wu [kN/m]", "Factored load Wu (kN/m)"), 1.0, 500.0, 50.0, 5.0, key="cx_wu")
-        x_dist= st.number_input(_t("Distancia X desde el apoyo [m]", "Distance X from support (m)"), 0.0, L_vga/2, 1.0, 0.1, key="cx_x")
+        L_vga = st.number_input(_t("Longitud luz libre [m]", "Clear span (m)"), 1.0, 20.0, st.session_state.get("o_cx_L", 5.0), 0.5, key="o_cx_L")
+        wu_vga= st.number_input(_t("Carga distribuida Wu [kN/m]", "Factored load Wu (kN/m)"), 1.0, 500.0, st.session_state.get("o_cx_wu", 50.0), 5.0, key="o_cx_wu")
+        x_dist= st.number_input(_t("Distancia X desde el apoyo [m]", "Distance X from support (m)"), 0.0, L_vga/2, st.session_state.get("o_cx_x", 1.0), 0.1, key="o_cx_x")
     with c2:
-        bw_cx = st.number_input("Ancho bw [cm]", 10.0, 100.0, 25.0, 5.0, key="cx_bw")
-        d_cx  = st.number_input("Peralte efectivo d [cm]", 10.0, 150.0, 40.0, 5.0, key="cx_d")
-        ramas = st.number_input("Ramas del estribo (#3)", 2, 6, 2, 1, key="cx_ramas")
+        bw_cx = st.number_input("Ancho bw [cm]", 10.0, 100.0, st.session_state.get("o_cx_bw", 25.0), 5.0, key="o_cx_bw")
+        d_cx  = st.number_input("Peralte efectivo d [cm]", 10.0, 150.0, st.session_state.get("o_cx_d", 40.0), 5.0, key="o_cx_d")
+        ramas = st.number_input("Ramas del estribo (#3)", 2, 6, st.session_state.get("o_cx_ramas", 2), 1, key="o_cx_ramas")
     
     # Simple beam shear equation: V(x) = wu * L / 2 - wu * x
     Vu_x = wu_vga * L_vga / 2.0 - wu_vga * x_dist
@@ -96,12 +109,12 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
     st.info(_t("📺 **Modo de uso:** Ingresa la carga vertical Vu y la fuerza horizontal Nuc. Define la geometría de la ménsula. Se calculará el acero principal, los estribos horizontales cerrados, y el acero de colgado.", "📺 **How to use:** Enter Vertical load Vu, Horizontal Nuc and geometry. Calculates main steel and closed ties."))
     c1,c2 = st.columns(2)
     with c1:
-        Vu_men = st.number_input(_t("Carga Vertical Vu [kN]", "Vertical Load Vu [kN]"), 50.0, 2000.0, 300.0, 50.0, key="men_vu")
-        Nuc_men= st.number_input(_t("Tensión Horiz. Nuc [kN]", "Horiz. Tension Nuc [kN]"), 0.0, 1000.0, 60.0, 10.0, key="men_nuc")
-        a_men  = st.number_input(_t("Brazo de palanca a [cm]", "Shear span a [cm]"), 5.0, 50.0, 15.0, 5.0, key="men_a")
+        Vu_men = st.number_input(_t("Carga Vertical Vu [kN]", "Vertical Load Vu [kN]"), 50.0, 2000.0, st.session_state.get("o_men_vu", 300.0), 50.0, key="o_men_vu")
+        Nuc_men= st.number_input(_t("Tensión Horiz. Nuc [kN]", "Horiz. Tension Nuc [kN]"), 0.0, 1000.0, st.session_state.get("o_men_nuc", 60.0), 10.0, key="o_men_nuc")
+        a_men  = st.number_input(_t("Brazo de palanca a [cm]", "Shear span a [cm]"), 5.0, 50.0, st.session_state.get("o_men_a", 15.0), 5.0, key="o_men_a")
     with c2:
-        bw_men = st.number_input(_t("Ancho ménsula bw [cm]", "Corbel width bw [cm]"), 20.0, 100.0, 30.0, 5.0, key="men_bw")
-        h_men  = st.number_input(_t("Alto total ménsula h [cm]", "Total height h [cm]"), 20.0, 150.0, 45.0, 5.0, key="men_h")
+        bw_men = st.number_input(_t("Ancho ménsula bw [cm]", "Corbel width bw [cm]"), 20.0, 100.0, st.session_state.get("o_men_bw", 30.0), 5.0, key="o_men_bw")
+        h_men  = st.number_input(_t("Alto total ménsula h [cm]", "Total height h [cm]"), 20.0, 150.0, st.session_state.get("o_men_h", 45.0), 5.0, key="o_men_h")
         dp_men = 4.0 # recubrimiento
     
     d_men = h_men - dp_men
@@ -140,13 +153,15 @@ with st.expander(_t("📐 Predimensionamiento de Columnas", "📐 Column Prelimi
     st.info(_t("📺 **Modo de uso:** Ingresa la carga viva y muerta estimada por piso, el número de pisos y el área tributaria. Te recomendaré dimensiones de columna base.", "📺 **How to use:** Enter estimated load per floor, number of floors, and tributary area. Predicts base column section."))
     c1, c2 = st.columns(2)
     with c1:
-        area_trib = st.number_input(_t("Área Tributaria [m²]", "Tributary Area [m²]"), 5.0, 100.0, 20.0, 5.0, key="pre_a")
-        pisos     = st.number_input(_t("Total de Pisos", "Total Floors"), 1, 50, 5, 1, key="pre_p")
-        W_piso    = st.number_input(_t("Carga estimada por piso (D+L) [kN/m²]", "Estimated Floor Load (D+L) [kN/m²]"), 5.0, 20.0, 12.0, 1.0, key="pre_w")
+        area_trib = st.number_input(_t("Área Tributaria [m²]", "Tributary Area [m²]"), 5.0, 100.0, st.session_state.get("o_pre_a", 20.0), 5.0, key="o_pre_a")
+        pisos     = st.number_input(_t("Total de Pisos", "Total Floors"), 1, 50, st.session_state.get("o_pre_p", 5), 1, key="o_pre_p")
+        W_piso    = st.number_input(_t("Carga estimada por piso (D+L) [kN/m²]", "Estimated Floor Load (D+L) [kN/m²]"), 5.0, 20.0, st.session_state.get("o_pre_w", 12.0), 1.0, key="o_pre_w")
     with c2:
         tipo_col  = st.selectbox(_t("Posición (afecta k):", "Column Position (affects k):"), 
-                                 ["Céntrica (k=0.30)", "Esquinera/Borde (k=0.20-0.25)"] if lang == "Español" else ["Central (k=0.30)", "Edge/Corner (k=0.20-0.25)"], key="pre_tipo")
-        rho_p     = st.number_input(_t("Cuantía acero estimada [%]", "Estimated steel ratio [%]"), 1.0, 4.0, 1.5, 0.5, key="pre_r")
+                                 ["Céntrica (k=0.30)", "Esquinera/Borde (k=0.20-0.25)"] if lang == "Español" else ["Central (k=0.30)", "Edge/Corner (k=0.20-0.25)"], 
+                                 index=["Céntrica (k=0.30)", "Esquinera/Borde (k=0.20-0.25)"].index(st.session_state.get("o_pre_tipo", "Céntrica (k=0.30)") if lang=="Español" else "Central (k=0.30)"),
+                                 key="o_pre_tipo")
+        rho_p     = st.number_input(_t("Cuantía acero estimada [%]", "Estimated steel ratio [%]"), 1.0, 4.0, st.session_state.get("o_pre_r", 1.5), 0.5, key="o_pre_r")
     
     # Pu = W_piso * area_trib * pisos
     Pu_estimado = W_piso * area_trib * pisos # kN (unfactored usually used for presizing, or we can assume factor 1.2D+1.6L ~ 1.4 avg)
@@ -170,13 +185,17 @@ with st.expander(_t("🧱 Capacidad Axial Pn,max (Columnas Cortas)", "🧱 Axial
     st.info(_t("📺 **Modo de uso:** Ingresa la sección transversal probada y su armadura. El sistema calculará la carga axial máxima que soporta, ignorando el pandeo.", "📺 **How to use:** Enter section and steel. Calculates max axial capacity (ignoring slenderness)."))
     c1,c2 = st.columns(2)
     with c1:
-        b_c = st.number_input("b [cm]", 20.0, 150.0, 40.0, 5.0, key="cap_b")
-        h_c = st.number_input("h [cm]", 20.0, 150.0, 40.0, 5.0, key="cap_h")
-        estribo = st.selectbox(_t("Forma columna:", "Column Shape:"), 
-                               ["Estribada (Cuadrada/Rectg)", "Sunchada (Espiral)"] if lang == "Español" else ["Tied (Square/Rect)", "Spiral"], key="cap_est")
+        b_c = st.number_input("b [cm]", 20.0, 150.0, st.session_state.get("o_cap_b", 40.0), 5.0, key="o_cap_b")
+        h_c = st.number_input("h [cm]", 20.0, 150.0, st.session_state.get("o_cap_h", 40.0), 5.0, key="o_cap_h")
+        estribo_tipo = st.selectbox(_t("Forma columna:", "Column Shape:"), 
+                               ["Estribada (Cuadrada/Rectg)", "Sunchada (Espiral)"] if lang == "Español" else ["Tied (Square/Rect)", "Spiral"], 
+                               index=["Estribada (Cuadrada/Rectg)", "Sunchada (Espiral)"].index(st.session_state.get("o_cap_est", "Estribada (Cuadrada/Rectg)") if lang=="Español" else "Tied (Square/Rect)"),
+                               key="o_cap_est")
     with c2:
-        varillas = st.number_input(_t("No. Varillas", "No. Rebars"), 4, 40, 8, 2, key="cap_n")
-        dia_bar  = st.selectbox("Varilla:", ["#5 (Ø15.9mm)", "#6 (Ø19.1mm)", "#7 (Ø22.2mm)", "#8 (Ø25.4mm)"], key="cap_db")
+        varillas = st.number_input(_t("No. Varillas", "No. Rebars"), 4, 40, st.session_state.get("o_cap_n", 8), 2, key="o_cap_n")
+        dia_bar  = st.selectbox("Varilla:", ["#5 (Ø15.9mm)", "#6 (Ø19.1mm)", "#7 (Ø22.2mm)", "#8 (Ø25.4mm)"], 
+                                index=["#5 (Ø15.9mm)", "#6 (Ø19.1mm)", "#7 (Ø22.2mm)", "#8 (Ø25.4mm)"].index(st.session_state.get("o_cap_db", "#6 (Ø19.1mm)")),
+                                key="o_cap_db")
         area_bar = REBAR_US[dia_bar]
     
     Ag_c = b_c * h_c # cm2
@@ -201,11 +220,14 @@ with st.expander(_t("🏗️ Momentos en Losas 2D (Método ACI Coeficientes)", "
     st.info(_t("📺 **Modo de uso:** Ingresa las luces la y lb del tablero. Sirve para diseñar losas apoyadas perimetralmente en vigas. Calcula los momentos en ambas direcciones.", "📺 **How to use:** Enter short and long spans. Useful for edge-supported slabs. Calculates moments in both directions."))
     c1,c2 = st.columns(2)
     with c1:
-        la_losa = st.number_input(_t("Luz corta La [m]", "Short span La [m]"), 2.0, 15.0, 4.0, 0.5, key="lo2_la")
-        lb_losa = st.number_input(_t("Luz larga Lb [m]", "Long span Lb [m]"), 2.0, 15.0, 5.0, 0.5, key="lo2_lb")
+        la_losa = st.number_input(_t("Luz corta La [m]", "Short span La [m]"), 2.0, 15.0, st.session_state.get("lo2_la", 4.0), 0.5, key="lo2_la")
+        lb_losa = st.number_input(_t("Luz larga Lb [m]", "Long span Lb [m]"), 2.0, 15.0, st.session_state.get("lo2_lb", 5.0), 0.5, key="lo2_lb")
     with c2:
-        wu_losa = st.number_input("Carga distribuida factorizada Wu [kN/m²]", 2.0, 50.0, 10.0, 0.5, key="lo2_wu")
-        caso_borde= st.selectbox("Condición de Borde (ACI):", ["Caso 1 (Interior)", "Caso 2 (4 bordes discontinuos)", "Caso 3 (1 borde continuo)", "Caso 4 (2 bordes ady. continuos)"], key="lo2_caso")
+        wu_losa = st.number_input("Carga distribuida factorizada Wu [kN/m²]", 2.0, 50.0, st.session_state.get("lo2_wu", 10.0), 0.5, key="lo2_wu")
+        casos = ["Caso 1 (Interior)", "Caso 2 (4 bordes discontinuos)", "Caso 3 (1 borde continuo)", "Caso 4 (2 bordes ady. continuos)"]
+        caso_borde = st.selectbox("Condición de Borde (ACI):", casos, 
+                                  index=casos.index(st.session_state.get("lo2_caso", "Caso 1 (Interior)")),
+                                  key="lo2_caso")
         
     m_ratio = la_losa / lb_losa if lb_losa > 0 else 1.0
     if m_ratio < 0.5:

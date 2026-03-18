@@ -3,11 +3,13 @@ import json
 import pandas as pd
 import datetime
 
+import os
 st.set_page_config(
-    page_title="Hormigón Armado Suite",
+    page_title="Reinforced Concrete Suite",
     page_icon="🏗️",
     layout="wide",
 )
+st.sidebar.info(f"📍 Servidor ejecutándose desde: {os.getcwd()}")
 
 st.title("🏗️ Suite de Diseño — Hormigón Armado (Multi-Norma)")
 st.markdown("---")
@@ -67,9 +69,9 @@ _norm_displayed = st.sidebar.selectbox(
     "Selecciona la Normativa de Diseño:",
     options=NORMAS_DISPONIBLES,
     format_func=lambda k: NORMA_DISPLAY.get(k, k),
-    index=NORMAS_DISPONIBLES.index(st.session_state.norma_sel),
+    index=NORMAS_DISPONIBLES.index(st.session_state.get("norma_sel", NORMAS_DISPONIBLES[0])),
+    key="norma_sel"
 )
-st.session_state.norma_sel = _norm_displayed
 
 # Guardar la bandera (Imagen HD) en session_state para que la usen todas las páginas
 _NORMA_FLAG_URL = {
@@ -119,15 +121,10 @@ else:
 st.sidebar.markdown("---")
 st.sidebar.subheader("📂 Gestor de Proyectos")
 
-project_name = st.sidebar.text_input("Nombre del Proyecto:", value=st.session_state.get("project_name", "Mi_Edificio"))
-project_owner = st.sidebar.text_input("Propietario / Cliente:", value=st.session_state.get("project_owner", ""))
-project_address = st.sidebar.text_input("Dirección de Obra:", value=st.session_state.get("project_address", ""))
-project_phone = st.sidebar.text_input("Teléfono de Contacto:", value=st.session_state.get("project_phone", ""))
-
-st.session_state.project_name = project_name
-st.session_state.project_owner = project_owner
-st.session_state.project_address = project_address
-st.session_state.project_phone = project_phone
+project_name = st.sidebar.text_input("Nombre del Proyecto:", value=st.session_state.get("project_name", "Mi_Edificio"), key="project_name")
+project_owner = st.sidebar.text_input("Propietario / Cliente:", value=st.session_state.get("project_owner", ""), key="project_owner")
+project_address = st.sidebar.text_input("Dirección de Obra:", value=st.session_state.get("project_address", ""), key="project_address")
+project_phone = st.sidebar.text_input("Teléfono de Contacto:", value=st.session_state.get("project_phone", ""), key="project_phone")
 
 def serialize_state():
     state_dict = {}
@@ -179,3 +176,16 @@ if "apu_config" not in st.session_state:
     }
 
 st.info("💡 Cada herramienta incluye Códigos Normativos en LaTeX, Paneles de Ayuda (Modo de uso), Generación de planos 3D y presupuestos APU locales.")
+
+# ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)

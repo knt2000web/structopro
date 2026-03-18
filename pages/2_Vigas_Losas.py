@@ -14,11 +14,24 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
-
-
-st.image("assets/beam_header_1773257190287.png", use_container_width=True)
+st.set_page_config(page_title=_t("Suite Hormigón Armado", "Reinforced Concrete Suite"), layout="wide")
+st.image(r"assets/beam_header_1773257190287.png", use_container_width=True)
 st.title(_t("Suite de Diseño — Vigas y Losas", "Design Suite — Beams & Slabs"))
 st.markdown(_t("Herramientas de diseño de concreto reforzado según **10 normativas internacionales**.", "Reinforced concrete design tools based on **10 international codes**."))
+
+# ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)
+
 # ══════════════════════════════════════════
 # CODES DICT (phi factors for beams/slabs)
 # ══════════════════════════════════════════
@@ -383,7 +396,7 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
 
                 if "apu_config" in st.session_state:
                     st.markdown("---")
-                    st.markdown("### 💰 Presupuesto APU Viga (Sólo Acero Long.)")
+                    st.markdown("### 💰 Presupuesto Estimado (Promedio de Fuentes Regionales)")
                     apu = st.session_state.apu_config
                     mon = apu["moneda"]
                     

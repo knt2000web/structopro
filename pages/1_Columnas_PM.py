@@ -17,9 +17,9 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
+st.set_page_config(page_title=_t("Diagramas de Interacción", "Interaction Diagrams"), layout="wide")
 
-
-
+st.image(r"assets/columnas_pm_header_1773261175144.png", use_container_width=False, width=700)
 st.title(_t("🏗️ Diagrama de Interacción P–M y Diseño de Estribos", "🏗️ P-M Interaction Diagram & Tie Design"))
 st.markdown(_t(
     "Generador interactivo de capacidad a flexocompresión biaxial y cortante para **Columnas Cuadradas y Rectangulares**.",
@@ -295,7 +295,7 @@ if fc_unit == "PSI":
         "Personalizado": None
     }
     psi_choice = st.sidebar.selectbox("Resistencia f'c [PSI]", list(psi_options.keys()), 
-                                      index=list(psi_options.keys()).index(st.session_state.c_pm_psi_choice) if "c_pm_psi_choice" in st.session_state and st.session_state.c_pm_psi_choice in psi_options else 1,
+                                      index=list(psi_options.keys()).index(st.session_state.get("c_pm_psi_choice", list(psi_options.keys())[1])) if st.session_state.get("c_pm_psi_choice", list(psi_options.keys())[1]) in psi_options else 1,
                                       key="c_pm_psi_choice")
     fc_psi = float(psi_options[psi_choice]) if psi_options[psi_choice] is not None else st.sidebar.number_input("f'c personalizado [PSI]", min_value=2000.0, max_value=12000.0, value=st.session_state.get("c_pm_fc_psi_custom", 3000.0), step=100.0, key="c_pm_fc_psi_custom")
     fc = fc_psi * 0.00689476
@@ -311,7 +311,7 @@ elif fc_unit == "kg/cm²":
         "Personalizado": None
     }
     kgcm2_choice = st.sidebar.selectbox("Resistencia f'c [kg/cm²]", list(kgcm2_options.keys()), 
-                                        index=list(kgcm2_options.keys()).index(st.session_state.c_pm_kgcm2_choice) if "c_pm_kgcm2_choice" in st.session_state and st.session_state.c_pm_kgcm2_choice in kgcm2_options else 1,
+                                        index=list(kgcm2_options.keys()).index(st.session_state.get("c_pm_kgcm2_choice", list(kgcm2_options.keys())[1])) if st.session_state.get("c_pm_kgcm2_choice", list(kgcm2_options.keys())[1]) in kgcm2_options else 1,
                                         key="c_pm_kgcm2_choice")
     fc_kgcm2 = float(kgcm2_options[kgcm2_choice]) if kgcm2_options[kgcm2_choice] is not None else st.sidebar.number_input("f'c personalizado [kg/cm²]", min_value=100.0, max_value=1200.0, value=st.session_state.get("c_pm_fc_kgcm2_custom", 210.0), step=10.0, key="c_pm_fc_kgcm2_custom")
     fc = fc_kgcm2 / 10.1972
@@ -346,7 +346,7 @@ else:
     default_rebar = "16 mm"
 
 rebar_type = st.sidebar.selectbox("Diámetro de las Varillas", list(rebar_dict.keys()),
-    index=list(rebar_dict.keys()).index(st.session_state.c_pm_rebar_type) if "c_pm_rebar_type" in st.session_state and st.session_state.c_pm_rebar_type in rebar_dict else list(rebar_dict.keys()).index(default_rebar),
+    index=list(rebar_dict.keys()).index(st.session_state.get("c_pm_rebar_type", default_rebar)) if st.session_state.get("c_pm_rebar_type", default_rebar) in rebar_dict else 0,
     key="c_pm_rebar_type")
 rebar_area  = rebar_dict[rebar_type]["area"]    # cm²
 rebar_diam  = rebar_dict[rebar_type]["diam_mm"] # mm
@@ -381,7 +381,7 @@ else:
     default_stirrup = "8 mm"
 
 stirrup_type = st.sidebar.selectbox("Diámetro del Estribo", list(stirrup_dict.keys()),
-    index=list(stirrup_dict.keys()).index(st.session_state.c_pm_stirrup_type) if "c_pm_stirrup_type" in st.session_state and st.session_state.c_pm_stirrup_type in stirrup_dict else list(stirrup_dict.keys()).index(default_stirrup),
+    index=list(stirrup_dict.keys()).index(st.session_state.get("c_pm_stirrup_type", default_stirrup)) if st.session_state.get("c_pm_stirrup_type", default_stirrup) in stirrup_dict else 0,
     key="c_pm_stirrup_type")
 stirrup_area = stirrup_dict[stirrup_type]["area"]     # cm²
 stirrup_diam = stirrup_dict[stirrup_type]["diam_mm"]  # mm
@@ -393,7 +393,7 @@ st.sidebar.header("5. Factores de Diseño")
 col_type_options = ["Estribos (Tied)", "Espiral (Spiral)"] if lang == "Español" else ["Tied", "Spiral"]
 col_type = st.sidebar.selectbox(_t("Tipo de Columna", "Column Type"), 
                                 col_type_options,
-                                index=col_type_options.index(st.session_state.c_pm_col_type) if "c_pm_col_type" in st.session_state and st.session_state.c_pm_col_type in col_type_options else 0,
+                                index=col_type_options.index(st.session_state.get("c_pm_col_type", col_type_options[0])) if st.session_state.get("c_pm_col_type", col_type_options[0]) in col_type_options else 0,
                                 key="c_pm_col_type")
 if "Estrib" in col_type or col_type == "Tied":
     phi_c_max  = code["phi_tied"]
@@ -407,9 +407,18 @@ rho_min_code  = code["rho_min"]
 rho_max_code  = code["rho_max"]
 eps_full      = code["eps_tension_full"]
 
-# -----------------------------------------------------------------------------
-# GESTOR GLOBAL DE PROYECTOS (SAVE / LOAD)
-# -----------------------------------------------------------------------------
+# ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)
 import json
 import datetime
 st.sidebar.markdown("---")
@@ -462,7 +471,7 @@ if uploaded_project is not None:
 # SIDEBAR — VERIFICACIÓN Y UNIDADES
 # ─────────────────────────────────────────────
 st.sidebar.header("6. Verificación de Diseño")
-unidades_salida = st.sidebar.radio("Unidades del Diagrama (Resultados):", ["KiloNewtons (kN, kN-m)", "Toneladas Fuerza (tonf, tonf-m)"])
+unidades_salida = st.sidebar.radio("Unidades del Diagrama (Resultados):", ["KiloNewtons (kN, kN-m)", "Toneladas Fuerza (tonf, tonf-m)"], key="c_pm_output_units")
 
 if unidades_salida == "Toneladas Fuerza (tonf, tonf-m)":
     factor_fuerza = 0.1019716
@@ -474,8 +483,8 @@ else:
     unidad_mom    = "kN-m"
 
 st.sidebar.markdown(f"Cargas últimas en **{unidad_fuerza}** y **{unidad_mom}**:")
-M_u_input = st.sidebar.number_input(f"Momento Último (Mu) [{unidad_mom}]",   value=round(45.0 * factor_fuerza, 2), step=round(10.0 * factor_fuerza, 2))
-P_u_input = st.sidebar.number_input(f"Carga Axial Última (Pu) [{unidad_fuerza}]", value=round(2700.0 * factor_fuerza, 2), step=round(50.0 * factor_fuerza, 2))
+M_u_input = st.sidebar.number_input(f"Momento Último (Mu) [{unidad_mom}]", value=st.session_state.get("c_pm_mu", round(45.0 * factor_fuerza, 2)), step=round(10.0 * factor_fuerza, 2), key="c_pm_mu")
+P_u_input = st.sidebar.number_input(f"Carga Axial Última (Pu) [{unidad_fuerza}]", value=st.session_state.get("c_pm_pu", round(2700.0 * factor_fuerza, 2)), step=round(50.0 * factor_fuerza, 2), key="c_pm_pu")
 
 # ─────────────────────────────────────────────
 # CÁLCULO DEL DIAGRAMA P-M
@@ -1339,7 +1348,7 @@ Arena: densidad suelta ≈ 1500 kg/m³ · Grava: densidad suelta ≈ 1600 kg/m³
     # ══════════════ APU (PRESUPUESTO) ══════════════
     if "apu_config" in st.session_state:
         st.markdown("---")
-        st.markdown("### 💰 Presupuesto Estimado de Materiales (APU)")
+        st.markdown("### 💰 Presupuesto Estimado (Promedio de Fuentes Regionales)")
         apu = st.session_state.apu_config
         mon = apu["moneda"]
         

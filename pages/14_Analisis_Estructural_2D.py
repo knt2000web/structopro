@@ -88,10 +88,10 @@ with tab_mat:
     with c_mat2:
         st.subheader("Mecánica de Suelos y Materiales")
         st.info("Requerido para el Diseño Automático de Zapatas y Refuerzo.")
-        qa_suelo = st.number_input("Capacidad Portante Suelo (qa) [kN/m²]", 10.0, 1000.0, 150.0, 10.0) # approx 15 ton/m2
-        fc_concreto = st.number_input("Resistencia Concreto f'c [MPa]", 15.0, 60.0, 21.0, 1.0)
-        fy_acero = st.number_input("Fluencia Acero fy [MPa]", 200.0, 600.0, 420.0, 10.0)
-        recubrimiento = st.number_input("Recubrimiento Vigas/Col [cm]", 2.0, 10.0, 4.0, 0.5)
+        qa_suelo = st.number_input("Capacidad Portante Suelo (qa) [kN/m²]", 10.0, 1000.0, st.session_state.get("an2_qa", 150.0), 10.0, key="an2_qa")
+        fc_concreto = st.number_input("Resistencia Concreto f'c [MPa]", 15.0, 60.0, st.session_state.get("an2_fc", 21.0), 1.0, key="an2_fc")
+        fy_acero = st.number_input("Fluencia Acero fy [MPa]", 200.0, 600.0, st.session_state.get("an2_fy", 420.0), 10.0, key="an2_fy")
+        recubrimiento = st.number_input("Recubrimiento Vigas/Col [cm]", 2.0, 10.0, st.session_state.get("an2_rec", 4.0), 0.5, key="an2_rec")
 
 # ─────────────────────────────────────────────
 # CALCULO ENGINE (Ejecuta automaticamente o con boton)

@@ -74,17 +74,24 @@ with tab_conv:
     col_cv1, col_cv2, col_cv3 = st.columns([1,1,1])
     
     with col_cv1:
-        categoria = st.selectbox(_t("Categoría de Magnitud", "Magnitude Category"), list(CONV_DICT.keys()))
+        cat_opts = list(CONV_DICT.keys())
+        categoria = st.selectbox(_t("Categoría de Magnitud", "Magnitude Category"), cat_opts, 
+                                 index=cat_opts.index(st.session_state.get("ut_cat", cat_opts[0])),
+                                 key="ut_cat")
         
         # Get units for this category (excluding the "Base" key)
         unidades = [k for k in CONV_DICT[categoria].keys() if k != "Base"]
         
     with col_cv2:
-        unit_in = st.selectbox(_t("Unidad de Origen (De)", "From Unit"), unidades)
-        val_in = st.number_input(_t("Valor a Convertir", "Value to Convert"), value=1.0)
+        unit_in = st.selectbox(_t("Unidad de Origen (De)", "From Unit"), unidades, 
+                               index=unidades.index(st.session_state.get("ut_unit_in", unidades[0])) if st.session_state.get("ut_unit_in", unidades[0]) in unidades else 0,
+                               key="ut_unit_in")
+        val_in = st.number_input(_t("Valor a Convertir", "Value to Convert"), value=st.session_state.get("ut_val_in", 1.0), key="ut_val_in")
         
     with col_cv3:
-        unit_out = st.selectbox(_t("Unidad de Destino (A)", "To Unit"), unidades, index=1 if len(unidades)>1 else 0)
+        unit_out = st.selectbox(_t("Unidad de Destino (A)", "To Unit"), unidades, 
+                                 index=unidades.index(st.session_state.get("ut_unit_out", unidades[1] if len(unidades)>1 else unidades[0])) if st.session_state.get("ut_unit_out", unidades[1] if len(unidades)>1 else unidades[0]) in unidades else (1 if len(unidades)>1 else 0),
+                                 key="ut_unit_out")
         
         # Convert to Base first
         val_base = val_in * CONV_DICT[categoria][unit_in]

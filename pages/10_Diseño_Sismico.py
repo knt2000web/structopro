@@ -14,10 +14,9 @@ from docx import Document
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 
-
-
+st.set_page_config(page_title=_t("Diseño Sísmico", "Seismic Design"), layout="wide")
+st.image(r"assets/seismic_header_1773257220819.png", use_container_width=True)
 st.title(_t("Diseño Sísmico y Espectros", "Seismic Design and Spectra"))
-st.image("assets/seismic_header_1773257220819.png", use_container_width=True)
 st.markdown(_t("Análisis dinámico simplificado (frecuencia natural 1 GDL) y Generación de Espectros de Respuesta de Diseño para diversas normativas de América (NSR, E.030, NB 1225001, ASCE 7, etc).", 
                "Simplified dynamic analysis (1 DOF natural frequency) and Design Response Spectrum Generation for various American codes (NSR, E.030, NB 1225001, ASCE 7, etc)."))
 
@@ -29,6 +28,19 @@ _iso = _PAIS_ISO.get(norma_sel, "un")
 st.sidebar.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
 # SEC 1: 1-DOF FREQUENCY CALCULATOR
 # ─────────────────────────────────────────────
 with st.expander(_t("⏱️ 1. Frecuencia Natural de Vibración (1 GDL)", "⏱️ 1. Natural Frequency of Vibration (1 DOF)"), expanded=False):
@@ -36,11 +48,11 @@ with st.expander(_t("⏱️ 1. Frecuencia Natural de Vibración (1 GDL)", "⏱�
                "Calculates the basic dynamic properties of a structure simplified to a single degree of freedom (Mass-Spring)."))
     f1, f2, f3 = st.columns([1,1,2])
     with f1:
-        peso_W = st.number_input(_t("Peso de la estructura W [kN]", "Structure Weight W [kN]"), 10.0, 50000.0, 1000.0, 10.0)
+        peso_W = st.number_input(_t("Peso de la estructura W [kN]", "Structure Weight W [kN]"), 10.0, 50000.0, st.session_state.get("s_W", 1000.0), 10.0, key="s_W")
         masa_m = peso_W / 9.81 # ton
         st.write(f"Masa $m$: **{masa_m:.2f} t**")
     with f2:
-        rigidez_k = st.number_input(_t("Rigidez Lateral k [kN/m]", "Lateral Stiffness k [kN/m]"), 100.0, 500000.0, 15000.0, 100.0)
+        rigidez_k = st.number_input(_t("Rigidez Lateral k [kN/m]", "Lateral Stiffness k [kN/m]"), 100.0, 500000.0, st.session_state.get("s_k", 15000.0), 100.0, key="s_k")
     
     omega_n = math.sqrt(rigidez_k / masa_m)
     freq_n = omega_n / (2*math.pi)
@@ -84,7 +96,9 @@ with s1:
     # ─── LOGIC PER COUNTRY ───
     if "NSR" in norma_sel:
         st.write("**Norma: NSR-10 (Colombia)**")
-        ciudad = st.selectbox("Ciudad Principal:", ["Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", "Otra / Custom"])
+        ciudad = st.selectbox("Ciudad Principal:", ["Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", "Otra / Custom"], 
+                               index=["Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", "Otra / Custom"].index(st.session_state.get("s_ciudad", "Bogotá")), 
+                               key="s_ciudad")
         if ciudad == "Bogotá": Aa_def=0.15; Av_def=0.20
         elif ciudad == "Medellín": Aa_def=0.15; Av_def=0.20
         elif ciudad == "Cali": Aa_def=0.25; Av_def=0.25
@@ -92,17 +106,21 @@ with s1:
         elif ciudad == "Bucaramanga": Aa_def=0.25; Av_def=0.25
         else: Aa_def=0.20; Av_def=0.20
         
-        Aa = st.number_input("Aa (Aceleración pico efectiva)", 0.05, 0.50, Aa_def, 0.05)
-        Av = st.number_input("Av (Velocidad pico efectiva)", 0.05, 0.50, Av_def, 0.05)
+        Aa = st.number_input("Aa (Aceleración pico efectiva)", 0.05, 0.50, st.session_state.get("s_Aa", Aa_def), 0.05, key="s_Aa")
+        Av = st.number_input("Av (Velocidad pico efectiva)", 0.05, 0.50, st.session_state.get("s_Av", Av_def), 0.05, key="s_Av")
         
-        perfil = st.selectbox("Perfil de Suelo (NSR-10)", ["A", "B", "C", "D", "E"], index=3)
+        perfil = st.selectbox("Perfil de Suelo (NSR-10)", ["A", "B", "C", "D", "E"], 
+                               index=["A", "B", "C", "D", "E"].index(st.session_state.get("s_perfil", "D")), 
+                               key="s_perfil")
         # Simplified Fa/Fv logic for app
         Fa_vals = {"A":0.8, "B":1.0, "C":1.2, "D":1.4, "E":2.5}
         Fv_vals = {"A":0.8, "B":1.0, "C":1.6, "D":2.0, "E":3.2}
         Fa = Fa_vals[perfil]; Fv = Fv_vals[perfil]
         st.write(f"Coeficientes de sitio: $F_a={Fa}$, $F_v={Fv}$")
         
-        I_group = st.selectbox("Grupo de Uso (Importancia I)", [1.0, 1.1, 1.25, 1.5], index=0)
+        I_group = st.selectbox("Grupo de Uso (Importancia I)", [1.0, 1.1, 1.25, 1.5], 
+                                index=[1.0, 1.1, 1.25, 1.5].index(st.session_state.get("s_I", 1.0)), 
+                                key="s_I")
         
         Tc = 0.48 * (Av * Fv) / (Aa * Fa)
         T0 = 0.1 * Tc
@@ -119,21 +137,27 @@ with s1:
 
     elif "E.060" in norma_sel or "Perú" in norma_sel:
         st.write("**Norma: E.030 (Perú)**")
-        ciudad = st.selectbox("Zona / Ciudad:", ["Zona 4 (Lima, Costa)", "Zona 3 (Arequipa)", "Zona 2 (Cusco)", "Zona 1 (Selva)"])
-        if "4" in ciudad: Z = 0.45
-        elif "3" in ciudad: Z = 0.35
-        elif "2" in ciudad: Z = 0.25
+        ciudad_peru = st.selectbox("Zona / Ciudad:", ["Zona 4 (Lima, Costa)", "Zona 3 (Arequipa)", "Zona 2 (Cusco)", "Zona 1 (Selva)"], 
+                                     index=["Zona 4 (Lima, Costa)", "Zona 3 (Arequipa)", "Zona 2 (Cusco)", "Zona 1 (Selva)"].index(st.session_state.get("s_peru_ciudad", "Zona 4 (Lima, Costa)")), 
+                                     key="s_peru_ciudad")
+        if "4" in ciudad_peru: Z = 0.45
+        elif "3" in ciudad_peru: Z = 0.35
+        elif "2" in ciudad_peru: Z = 0.25
         else: Z = 0.10
         st.write(f"Factor de Zona $Z$ = {Z}")
         
-        suelo = st.selectbox("Perfil de Suelo (S0, S1, S2, S3)", ["S0", "S1", "S2", "S3"], index=2)
+        suelo_peru = st.selectbox("Perfil de Suelo (S0, S1, S2, S3)", ["S0", "S1", "S2", "S3"], 
+                                    index=["S0", "S1", "S2", "S3"].index(st.session_state.get("s_peru_suelo", "S2")), 
+                                    key="s_peru_suelo")
         S_dict = {"S0": 0.8, "S1": 1.0, "S2": 1.15, "S3": 1.4}
         Tp_dict = {"S0": 0.3, "S1": 0.4, "S2": 0.6, "S3": 1.0}
         Tl_dict = {"S0": 3.0, "S1": 2.5, "S2": 2.0, "S3": 1.6}
-        S = S_dict[suelo]; Tp = Tp_dict[suelo]; Tl = Tl_dict[suelo]
+        S = S_dict[suelo_peru]; Tp = Tp_dict[suelo_peru]; Tl = Tl_dict[suelo_peru]
         
-        U = st.selectbox("Uso o Importancia U (A=1.5, B=1.3, C=1.0)", [1.5, 1.3, 1.0], index=2)
-        R = st.number_input("Coeficiente R (Reducción sísmica) [Usa 1.0 para Elástico]", 1.0, 10.0, 1.0, 0.5)
+        U_peru = st.selectbox("Uso o Importancia U (A=1.5, B=1.3, C=1.0)", [1.5, 1.3, 1.0], 
+                                index=[1.5, 1.3, 1.0].index(st.session_state.get("s_peru_U", 1.0)), 
+                                key="s_peru_U")
+        R_peru = st.number_input("Coeficiente R (Reducción sísmica) [Usa 1.0 para Elástico]", 1.0, 10.0, st.session_state.get("s_peru_R", 1.0), 0.5, key="s_peru_R")
         
         for i, t in enumerate(T_domain):
             if t < 0.2*Tp: C = 1 + 1.5 * (t / (0.2*Tp)) # Pseudo rama ascendente para dibujo claro
@@ -141,19 +165,23 @@ with s1:
             elif t <= Tl: C = 2.5 * (Tp / t)
             else: C = 2.5 * ((Tp * Tl) / (t**2))
             
-            Sa_vals[i] = (Z * U * C * S) / R
+            Sa_vals[i] = (Z * U_peru * C * S) / R_peru
             
-        params_texto = [f"País: Perú (Norme E.030)", f"Zona Z = {Z}", f"Suelo {suelo} -> S={S}, Tp={Tp}, Tl={Tl}", f"Uso U = {U}", f"R = {R}"]
+        params_texto = [f"País: Perú (Norme E.030)", f"Zona Z = {Z}", f"Suelo {suelo_peru} -> S={S}, Tp={Tp}, Tl={Tl}", f"Uso U = {U_peru}", f"R = {R_peru}"]
 
     elif "1225001" in norma_sel or "Bolivia" in norma_sel:
         st.write("**Norma: GBDS NB 1225001-2020 (Bolivia)**")
-        zona = st.selectbox("Zona Sísmica:", ["1 (Baja)", "2 (Media - ej. La Paz)", "3 (Alta)", "4 (Muy Alta)", "5 (Severa)"], index=1)
+        zona_bol = st.selectbox("Zona Sísmica:", ["1 (Baja)", "2 (Media - ej. La Paz)", "3 (Alta)", "4 (Muy Alta)", "5 (Severa)"], 
+                                 index=["1 (Baja)", "2 (Media - ej. La Paz)", "3 (Alta)", "4 (Muy Alta)", "5 (Severa)"].index(st.session_state.get("s_bol_zona", "2 (Media - ej. La Paz)")), 
+                                 key="s_bol_zona")
         # Aproximación de A0 (aceleración referencial %g):
         Z_vals = {0: 0.05, 1: 0.10, 2: 0.15, 3: 0.20, 4: 0.25}
-        Z = Z_vals.get(int(zona.split(" ")[0]) - 1, 0.15)
+        Z = Z_vals.get(int(zona_bol.split(" ")[0]) - 1, 0.15)
         st.write(f"Z_0 = {Z}g")
         
-        suelo = st.selectbox("Clase de Sitio", ["A (Roca dura)", "B (Roca)", "C (Suelo Muy Denso)", "D (Suelo Rígido)", "E (Suelo Blando)"], index=3)
+        suelo_bol = st.selectbox("Clase de Sitio", ["A (Roca dura)", "B (Roca)", "C (Suelo Muy Denso)", "D (Suelo Rígido)", "E (Suelo Blando)"], 
+                                  index=["A (Roca dura)", "B (Roca)", "C (Suelo Muy Denso)", "D (Suelo Rígido)", "E (Suelo Blando)"].index(st.session_state.get("s_bol_suelo", "D (Suelo Rígido)")), 
+                                  key="s_bol_suelo")
         # Factor S simplificado para Bolivia 
         F_a = 1.2 # Asumption basica para suelo D
         F_v = 1.4
@@ -164,14 +192,14 @@ with s1:
             else: sa = 2.5 * Z * F_a * (Tc / t)
             Sa_vals[i] = sa
             
-        params_texto = [f"País: Bolivia (GBDS 2020)", f"Zona = {zona} (Z={Z})", f"Suelo tipo {suelo[0]}", f"Tc estimado = {Tc}"]
+        params_texto = [f"País: Bolivia (GBDS 2020)", f"Zona = {zona_bol} (Z={Z})", f"Suelo tipo {suelo_bol[0]}", f"Tc estimado = {Tc}"]
 
     else:
         st.write("**Norma General / ACI 318 / ASCE 7 (EE.UU.)**")
-        Ss = st.number_input("S_S (Short Period Acc)", 0.1, 3.0, 1.0, 0.1)
-        S1 = st.number_input("S_1 (1-sec Period Acc)", 0.05, 1.5, 0.4, 0.1)
-        Fa = st.number_input("F_a (Corto Periodo)", 0.5, 3.0, 1.1, 0.1)
-        Fv = st.number_input("F_v (Largo Periodo)", 0.5, 3.5, 1.6, 0.1)
+        Ss = st.number_input("S_S (Short Period Acc)", 0.1, 3.0, st.session_state.get("s_Ss", 1.0), 0.1, key="s_Ss")
+        S1 = st.number_input("S_1 (1-sec Period Acc)", 0.05, 1.5, st.session_state.get("s_S1", 0.4), 0.1, key="s_S1")
+        Fa = st.number_input("F_a (Corto Periodo)", 0.5, 3.0, st.session_state.get("s_Fa", 1.1), 0.1, key="s_Fa")
+        Fv = st.number_input("F_v (Largo Periodo)", 0.5, 3.5, st.session_state.get("s_Fv", 1.6), 0.1, key="s_Fv")
         
         S_DS = (2.0/3.0) * Ss * Fa
         S_D1 = (2.0/3.0) * S1 * Fv

@@ -29,10 +29,13 @@ with tab_mohr:
     col_m1, col_m2, col_m3 = st.columns([1, 1, 1.5])
     with col_m1:
         st.subheader(_t("Esfuerzos Iniciales", "Initial Stresses"))
-        sig_x = st.number_input(r"$\sigma_x$ (tracción +, comp -)", -1000.0, 1000.0, 50.0)
-        sig_y = st.number_input(r"$\sigma_y$ (tracción +, comp -)", -1000.0, 1000.0, -10.0)
-        tau_xy = st.number_input(r"$\tau_{xy}$ (corte)", -1000.0, 1000.0, 40.0)
-        unidades_m = st.selectbox(_t("Unidades", "Units"), ["MPa", "psi", "ksi", "kgf/cm²"])
+        sig_x = st.number_input(r"$\sigma_x$ (tracción +, comp -)", -1000.0, 1000.0, st.session_state.get("mo_sx", 50.0), key="mo_sx")
+        sig_y = st.number_input(r"$\sigma_y$ (tracción +, comp -)", -1000.0, 1000.0, st.session_state.get("mo_sy", -10.0), key="mo_sy")
+        tau_xy = st.number_input(r"$\tau_{xy}$ (corte)", -1000.0, 1000.0, st.session_state.get("mo_txy", 40.0), key="mo_txy")
+        u_opts = ["MPa", "psi", "ksi", "kgf/cm²"]
+        unidades_m = st.selectbox(_t("Unidades", "Units"), u_opts, 
+                                  index=u_opts.index(st.session_state.get("mo_unit", "MPa")),
+                                  key="mo_unit")
         
     # Calculos Mohr
     sig_avg = (sig_x + sig_y) / 2.0
@@ -98,21 +101,24 @@ with tab_centroide:
     
     with col_s1:
         st.subheader(_t("Agregar Figura", "Add Shape"))
-        s_tipo = st.selectbox(_t("Forma", "Shape"), ["Rectángulo", "Círculo", "Triángulo Rectángulo"])
-        s_x = st.number_input("Posición origen local X_0", -1000.0, 1000.0, 0.0, 1.0)
-        s_y = st.number_input("Posición origen local Y_0", -1000.0, 1000.0, 0.0, 1.0)
+        tipo_opts = ["Rectángulo", "Círculo", "Triángulo Rectángulo"]
+        s_tipo = st.selectbox(_t("Forma", "Shape"), tipo_opts, 
+                              index=tipo_opts.index(st.session_state.get("ge_tipo", "Rectángulo")),
+                              key="ge_tipo")
+        s_x = st.number_input("Posición origen local X_0", -1000.0, 1000.0, st.session_state.get("ge_x", 0.0), 1.0, key="ge_x")
+        s_y = st.number_input("Posición origen local Y_0", -1000.0, 1000.0, st.session_state.get("ge_y", 0.0), 1.0, key="ge_y")
         
         if s_tipo == "Rectángulo":
-            s_b = st.number_input("Base b (+ sólido, - hueco)", -1000.0, 1000.0, 10.0, 1.0)
-            s_h = st.number_input("Altura h (+ sólido, - hueco)", -1000.0, 1000.0, 20.0, 1.0)
+            s_b = st.number_input("Base b (+ sólido, - hueco)", -1000.0, 1000.0, st.session_state.get("ge_b", 10.0), 1.0, key="ge_b")
+            s_h = st.number_input("Altura h (+ sólido, - hueco)", -1000.0, 1000.0, st.session_state.get("ge_h", 20.0), 1.0, key="ge_h")
             s_prop = {"tipo": "Rect", "x": s_x, "y": s_y, "b": s_b, "h": s_h}
         elif s_tipo == "Círculo":
-            s_r = st.number_input("Radio r (+ sólido, - radio hueco genera área negativa)", -1000.0, 1000.0, 10.0, 1.0)
+            s_r = st.number_input("Radio r (+ sólido, - radio hueco genera área negativa)", -1000.0, 1000.0, st.session_state.get("ge_r", 10.0), 1.0, key="ge_r")
             s_prop = {"tipo": "Circ", "x": s_x, "y": s_y, "r": s_r}
         else:
-            s_b = st.number_input("Base Triángulo b", -1000.0, 1000.0, 10.0, 1.0)
-            s_h = st.number_input("Altura Triángulo h", -1000.0, 1000.0, 10.0, 1.0)
-            s_prop = {"tipo": "Triang", "x": s_x, "y": s_y, "b": s_b, "h": s_h}
+            s_b_t = st.number_input("Base Triángulo b", -1000.0, 1000.0, st.session_state.get("ge_bt", 10.0), 1.0, key="ge_bt")
+            s_h_t = st.number_input("Altura Triángulo h", -1000.0, 1000.0, st.session_state.get("ge_ht", 10.0), 1.0, key="ge_ht")
+            s_prop = {"tipo": "Triang", "x": s_x, "y": s_y, "b": s_b_t, "h": s_h_t}
             
         if st.button(_t("➕ Añadir Figura", "➕ Add Shape")):
             st.session_state.shapes_list.append(s_prop)

@@ -15,10 +15,9 @@ def _t(es, en): return en if lang == "English" else es
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 norma_flag = st.session_state.get("norma_flag_url", "")
 
+st.set_page_config(page_title=_t("Generador Maestro 3D", "Master 3D Generator"), layout="wide")
 
-st.image("assets/generador_3d_header_1773257156151.png", use_container_width=True)
-
-
+st.image(r"assets/generador_3d_header_1773257156151.png", use_container_width=True)
 html_title = """
 <div style="font-family:'Segoe UI', sans-serif;margin-bottom:10px;">
     <h1 style="color:#ffffff; margin-bottom:5px; font-size: 2.2em;">Generador Maestro 3D Paramétrico</h1>
@@ -138,33 +137,27 @@ if "g3d_nudos" not in st.session_state:
 # UI: CONFIGURACION DEL LOTE Y EDIFICIO
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.header(_t("🌍 Norma de Diseño", "🌍 Design Code"))
-    NORMAS_DISP = [
-        "NSR-10 (Colombia)", "ACI 318-25 (EE.UU.)", "ACI 318-19 (EE.UU.)", 
-        "ACI 318-14 (EE.UU.)", "NEC-SE-HM (Ecuador)", "E.060 (Perú)", 
-        "NTC-EM (México)", "COVENIN 1753-2006 (Venezuela)", 
-        "NB 1225001-2020 (Bolivia)", "CIRSOC 201-2025 (Argentina)"
-    ]
-    if "norma_sel" not in st.session_state: st.session_state.norma_sel = NORMAS_DISP[0]
-    
-    nuevo_norma = st.selectbox("Selecciona la Normativa:", NORMAS_DISP, index=NORMAS_DISP.index(st.session_state.norma_sel) if st.session_state.norma_sel in NORMAS_DISP else 0)
-    if nuevo_norma != st.session_state.norma_sel:
-        st.session_state.norma_sel = nuevo_norma
-        st.rerun()
-    norma_sel = st.session_state.norma_sel
+    _iso = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}.get(norma_sel, "un")
+    st.sidebar.markdown(
+        f'<div style="background:#1e3a1e;border-radius:6px;padding:8px 12px;margin-bottom:4px;">'  
+        f'<img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
+        f'<span style="color:#7ec87e;font-weight:600;font-size:13px;">{_t("Norma Activa:","Active Code:")} {norma_sel}</span>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
     st.markdown("---")
     
     st.header(_t("📏 Parametrización Geométrica", "📏 Geometric Parametrization"))
     
     st.subheader("Lote (Planta)")
-    L_x = st.number_input("Frente Lote X (m)", value=12.0, min_value=2.0)
-    L_z = st.number_input("Fondo Lote Z (m)", value=15.0, min_value=2.0)
+    L_x = st.number_input("Frente Lote X (m)", value=st.session_state.get("g3d_lx", 12.0), min_value=2.0, key="g3d_lx")
+    L_z = st.number_input("Fondo Lote Z (m)", value=st.session_state.get("g3d_lz", 15.0), min_value=2.0, key="g3d_lz")
     
-    n_x = st.number_input("N° Columnas en Frente (eje X)", value=4, min_value=2, help="Columnas a lo ancho del frente")
-    n_z = st.number_input("N° Columnas en Fondo (eje Z)", value=5, min_value=2, help="Columnas a lo largo de la profundidad")
+    n_x = st.number_input("N° Columnas en Frente (eje X)", value=st.session_state.get("g3d_nx", 4), min_value=2, key="g3d_nx", help="Columnas a lo ancho del frente")
+    n_z = st.number_input("N° Columnas en Fondo (eje Z)", value=st.session_state.get("g3d_nz", 5), min_value=2, key="g3d_nz", help="Columnas a lo largo de la profundidad")
     
     st.subheader("Alzado (Elevación)")
-    n_pisos = st.number_input("Número de Pisos", value=3, min_value=1)
+    n_pisos = st.number_input("Número de Pisos", value=st.session_state.get("g3d_npisos", 3), min_value=1, key="g3d_npisos")
     
     if "alturas_df" not in st.session_state or len(st.session_state.alturas_df) != n_pisos:
         data_h = []
@@ -177,21 +170,24 @@ with st.sidebar:
     alturas_list = st.session_state.alturas_df["Altura (m)"].tolist()
     
     st.subheader("Secciones (Dimensiones en metros)")
-    col_dim_b = st.number_input("Base Columnas (m)", value=0.40, step=0.05)
-    col_dim_h = st.number_input("Altura Columnas (m)", value=0.40, step=0.05)
+    col_dim_b = st.number_input("Base Columnas (m)", value=st.session_state.get("g3d_cb", 0.40), step=0.05, key="g3d_cb")
+    col_dim_h = st.number_input("Altura Columnas (m)", value=st.session_state.get("g3d_ch", 0.40), step=0.05, key="g3d_ch")
     
-    vig_dim_b = st.number_input("Base Vigas (m)", value=0.30, step=0.05)
-    vig_dim_h = st.number_input("Altura Vigas (m)", value=0.40, step=0.05)
+    vig_dim_b = st.number_input("Base Vigas (m)", value=st.session_state.get("g3d_vb", 0.30), step=0.05, key="g3d_vb")
+    vig_dim_h = st.number_input("Altura Vigas (m)", value=st.session_state.get("g3d_vh", 0.40), step=0.05, key="g3d_vh")
     
     st.markdown("---")
     st.subheader("Sistema de Entrepiso (Losas)")
-    tipo_losa = st.selectbox("Tipo de Losa:", ["Maciza", "Aligerada con Ladrillo", "Aligerada con Poliestireno (EPS)", "Metaldeck (Placa Colaborante)"])
-    espesor_losa = st.number_input("Espesor Total Losa (m)", value=0.20 if "Aligerada" not in tipo_losa else 0.40, step=0.05)
+    losa_opts = ["Maciza", "Aligerada con Ladrillo", "Aligerada con Poliestireno (EPS)", "Metaldeck (Placa Colaborante)"]
+    tipo_losa = st.selectbox("Tipo de Losa:", losa_opts, 
+                             index=losa_opts.index(st.session_state.get("g3d_losa_t", "Maciza")),
+                             key="g3d_losa_t")
+    espesor_losa = st.number_input("Espesor Total Losa (m)", value=st.session_state.get("g3d_losa_e", 0.20 if "Aligerada" not in tipo_losa else 0.40), step=0.05, key="g3d_losa_e")
     
     st.markdown("---")
     st.subheader("Cargas de Diseño (Estándar)")
-    q_muerta = st.number_input("Carga Muerta CM (kN/m²)", value=4.5)
-    q_viva = st.number_input("Carga Viva CV (kN/m²)", value=2.0)
+    q_muerta = st.number_input("Carga Muerta CM (kN/m²)", value=st.session_state.get("g3d_qm", 4.5), key="g3d_qm")
+    q_viva = st.number_input("Carga Viva CV (kN/m²)", value=st.session_state.get("g3d_qv", 2.0), key="g3d_qv")
     
     if st.button("🏗️ Generar / Actualizar Malla 3D", type="primary", use_container_width=True):
         dn, dc, dvx, dvz, dz = generar_malla_3d(L_x, L_z, n_x, n_z, alturas_list, col_dim_b, col_dim_h, vig_dim_b, vig_dim_h)

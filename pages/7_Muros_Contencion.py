@@ -17,12 +17,24 @@ def _t(es, en):
     return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
+st.set_page_config(page_title=_t("Muros de Contención", "Retaining Walls"), layout="wide")
 
-
-
-st.image("assets/retaining_wall_header_1773256923525.png", use_container_width=True)
+st.image(r"assets/retaining_wall_header_1773256923525.png", use_container_width=True)
 st.title(_t("Muros de Contención y Estabilidad", "Retaining Walls and Stability"))
 st.markdown(_t("Herramientas para revisar la estabilidad al volcamiento y deslizamiento de muros de contención de gravedad y en voladizo, considerando empujes de tierras y sobrecargas.", "Tools to verify overturning and sliding stability for gravity and cantilever retaining walls, considering earth pressures and surcharges."))
+
+# ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN GENERAL
@@ -39,18 +51,18 @@ st.sidebar.markdown(
     f'<span style="color:#7ec87e;font-weight:600;font-size:13px;">{_t("Norma Activa:","Active Code:")} {norma_sel}</span>'
     f'</div>', unsafe_allow_html=True
 )
-H_muro = st.sidebar.number_input("Altura Total H [m]", 1.0, 15.0, 4.0, 0.5)
-B_base = st.sidebar.number_input("Ancho de Base B [m]", 0.5, 10.0, 2.5, 0.5)
-espesor_base = st.sidebar.number_input("Espesor de la Base (Zapata) [m]", 0.2, 2.0, 0.5, 0.1)
-pie_muro = st.sidebar.number_input("Longitud del Pie (Toe) [m]", 0.0, 5.0, 0.6, 0.1)
-corona = st.sidebar.number_input("Ancho Corona (Top) [m]", 0.2, 2.0, 0.3, 0.1)
-base_pantalla = st.sidebar.number_input("Ancho Base Pantalla [m]", 0.2, 3.0, 0.4, 0.1)
+H_muro = st.sidebar.number_input("Altura Total H [m]", 1.0, 15.0, st.session_state.get("m_H", 4.0), 0.5, key="m_H")
+B_base = st.sidebar.number_input("Ancho de Base B [m]", 0.5, 10.0, st.session_state.get("m_B", 2.5), 0.5, key="m_B")
+espesor_base = st.sidebar.number_input("Espesor de la Base (Zapata) [m]", 0.2, 2.0, st.session_state.get("m_ebase", 0.5), 0.1, key="m_ebase")
+pie_muro = st.sidebar.number_input("Longitud del Pie (Toe) [m]", 0.0, 5.0, st.session_state.get("m_pie", 0.6), 0.1, key="m_pie")
+corona = st.sidebar.number_input("Ancho Corona (Top) [m]", 0.2, 2.0, st.session_state.get("m_corona", 0.3), 0.1, key="m_corona")
+base_pantalla = st.sidebar.number_input("Ancho Base Pantalla [m]", 0.2, 3.0, st.session_state.get("m_bpantalla", 0.4), 0.1, key="m_bpantalla")
 
 st.sidebar.header(_t("🌱 Propiedades del Suelo", "🌱 Soil Properties"))
-gamma_s = st.sidebar.number_input(_t("Peso Unitario Suelo γ [kN/m³]", "Soil Unit Weight γ [kN/m³]"), 10.0, 22.0, 18.0, 0.5)
-phi_ang = st.sidebar.number_input(_t("Ángulo de Fricción φ [°]", "Friction Angle φ [°]"), 20.0, 45.0, 30.0, 1.0)
-c_base = st.sidebar.number_input(_t("Cohesión en la base c [kPa]", "Base cohesion c [kPa]"), 0.0, 100.0, 0.0, 5.0)
-delta_ang = st.sidebar.number_input(_t("Fricción suelo-muro δ [°] (Fricción base)", "Soil-wall friction δ [°]"), 10.0, 40.0, 20.0, 1.0)
+gamma_s = st.sidebar.number_input(_t("Peso Unitario Suelo γ [kN/m³]", "Soil Unit Weight γ [kN/m³]"), 10.0, 22.0, st.session_state.get("m_gamma_s", 18.0), 0.5, key="m_gamma_s")
+phi_ang = st.sidebar.number_input(_t("Ángulo de Fricción φ [°]", "Friction Angle φ [°]"), 20.0, 45.0, st.session_state.get("m_phi", 30.0), 1.0, key="m_phi")
+c_base = st.sidebar.number_input(_t("Cohesión en la base c [kPa]", "Base cohesion c [kPa]"), 0.0, 100.0, st.session_state.get("m_c", 0.0), 5.0, key="m_c")
+delta_ang = st.sidebar.number_input(_t("Fricción suelo-muro δ [°] (Fricción base)", "Soil-wall friction δ [°]"), 10.0, 40.0, st.session_state.get("m_delta", 20.0), 1.0, key="m_delta")
 gamma_conc = 24.0 # kN/m3
 
 # Cálculos Geométricos Base
@@ -67,11 +79,11 @@ with st.expander(_t("⚖️ Estabilidad al Volcamiento y Deslizamiento (Terrapl�
     
     c1, c2 = st.columns(2)
     with c1:
-        beta_ang = st.number_input("Inclinación del Terraplén β [°]", 0.0, phi_ang-0.1, 0.0, 1.0)
-        q_sobrecarga = st.number_input("Sobrecarga uniforme q [kPa]", 0.0, 100.0, 10.0, 2.0)
+        beta_ang = st.number_input("Inclinación del Terraplén β [°]", 0.0, phi_ang-0.1, st.session_state.get("m_beta", 0.0), 1.0, key="m_beta")
+        q_sobrecarga = st.number_input("Sobrecarga uniforme q [kPa]", 0.0, 100.0, st.session_state.get("m_q", 10.0), 2.0, key="m_q")
     with c2:
-        FS_v_min = st.number_input("FS Volcamiento Mínimo", value=1.5, step=0.1)
-        FS_d_min = st.number_input("FS Deslizamiento Mínimo", value=1.5, step=0.1)
+        FS_v_min = st.number_input("FS Volcamiento Mínimo", value=st.session_state.get("m_fsv_min", 1.5), step=0.1, key="m_fsv_min")
+        FS_d_min = st.number_input("FS Deslizamiento Mínimo", value=st.session_state.get("m_fsd_min", 1.5), step=0.1, key="m_fsd_min")
         
     # Coeficiente Activo Ka (Ecuación general para beta inclinado)
     phi_rad = math.radians(phi_ang)
@@ -279,7 +291,7 @@ with st.expander(_t("⚖️ Estabilidad al Volcamiento y Deslizamiento (Terrapl�
         
         if "apu_config" in st.session_state:
             st.markdown("---")
-            st.markdown("### 💰 Presupuesto APU Muro (Por Metro Lineal)")
+            st.markdown("### 💰 Presupuesto Estimado (Promedio de Fuentes Regionales)")
             apu = st.session_state.apu_config
             mon = apu["moneda"]
             c_excav = vol_excav_muro * 20000 

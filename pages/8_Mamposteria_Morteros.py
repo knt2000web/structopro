@@ -22,6 +22,19 @@ st.markdown(_t("Herramienta integral para el cálculo de cantidades de materiale
                "Comprehensive tool for calculating partition/masonry materials (bricks and mortar) and exact mortar mix dosing based on required volume."))
 
 # ─────────────────────────────────────────────
+# PIE DE PÁGINA / DERECHOS RESERVADOS
+# ─────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="text-align: center; color: gray; font-size: 11px;">
+    © 2026 Todos los derechos reservados.<br>
+    <b>Realizado por:</b><br>
+    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+</div>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
 # CONFIGURACIÓN GENERAL
 # ─────────────────────────────────────────────
 st.sidebar.header(_t("⚙️ Configuración Global", "⚙️ Global Settings"))
@@ -108,14 +121,17 @@ with st.expander(_t("🧱 1. Cantidades de Mampostería (Ladrillos y Juntas)", "
     
     with col1:
         st.write(_t("#### Geometría del Muro", "#### Wall Geometry"))
-        L_muro = st.number_input(_t("Largo del Muro (L) [m]", "Wall Length (L) [m]"), 0.5, 100.0, 5.0, 0.5)
-        H_muro = st.number_input(_t("Altura del Muro (H) [m]", "Wall Height (H) [m]"), 0.5, 10.0, 2.5, 0.1)
+        L_muro = st.number_input(_t("Largo del Muro (L) [m]", "Wall Length (L) [m]"), 0.5, 100.0, st.session_state.get("mam_L", 5.0), 0.5, key="mam_L")
+        H_muro = st.number_input(_t("Altura del Muro (H) [m]", "Wall Height (H) [m]"), 0.5, 10.0, st.session_state.get("mam_H", 2.5), 0.1, key="mam_H")
         area_muro = L_muro * H_muro
         st.markdown(f"**Área Bruta del Muro:** {area_muro:.2f} m²")
     
     with col2:
         st.write(_t("#### Dimensiones del Ladrillo", "#### Brick Dimensions"))
-        ladrillo_sel = st.selectbox(_t("Tipo de Ladrillo (Norma Activa)", "Brick Type (Active Code)"), lista_ladrillos)
+        ladrillo_sel = st.selectbox(_t("Tipo de Ladrillo (Norma Activa)", "Brick Type (Active Code)"), 
+                                     lista_ladrillos,
+                                     index=lista_ladrillos.index(st.session_state.get("mam_lad_sel", lista_ladrillos[0])) if st.session_state.get("mam_lad_sel", lista_ladrillos[0]) in lista_ladrillos else 0,
+                                     key="mam_lad_sel")
         
         if ladrillo_sel == _t("Típico Personalizado...", "Custom Size..."):
             dimL_base = 24.0
@@ -128,15 +144,18 @@ with st.expander(_t("🧱 1. Cantidades de Mampostería (Ladrillos y Juntas)", "
             
         c2_1, c2_2, c2_3 = st.columns(3)
         with c2_1:
-            dimL = st.number_input("Largo [cm]", 5.0, 60.0, float(dimL_base), 1.0, disabled=(ladrillo_sel != _t("Típico Personalizado...", "Custom Size...")))
+            dimL = st.number_input("Largo [cm]", 5.0, 60.0, st.session_state.get("mam_dimL", float(dimL_base)), 1.0, disabled=(ladrillo_sel != _t("Típico Personalizado...", "Custom Size...")), key="mam_dimL")
         with c2_2:
-            dimW = st.number_input("Ancho [cm]", 5.0, 40.0, float(dimW_base), 1.0, disabled=(ladrillo_sel != _t("Típico Personalizado...", "Custom Size...")))
+            dimW = st.number_input("Ancho [cm]", 5.0, 40.0, st.session_state.get("mam_dimW", float(dimW_base)), 1.0, disabled=(ladrillo_sel != _t("Típico Personalizado...", "Custom Size...")), key="mam_dimW")
         with c2_3:
-            dimH = st.number_input("Alto [cm]", 3.0, 40.0, float(dimH_base), 1.0, disabled=(ladrillo_sel != _t("Típico Personalizado...", "Custom Size...")))
+            dimH = st.number_input("Alto [cm]", 3.0, 40.0, st.session_state.get("mam_dimH", float(dimH_base)), 1.0, disabled=(ladrillo_sel != _t("Típico Personalizado...", "Custom Size...")), key="mam_dimH")
         
+        disp_opts = ["Soga (Grosor = Ancho)", "Tizón (Grosor = Largo)", "Canto (Grosor = Alto)"] if lang=="Español" else ["Stretcher (Thick = Width)", "Header (Thick = Length)", "Shiner (Thick = Height)"]
         disposicion = st.radio(_t("Disposición del muro:", "Wall Disposition:"), 
-                               ["Soga (Grosor = Ancho)", "Tizón (Grosor = Largo)", "Canto (Grosor = Alto)"] if lang=="Español" else ["Stretcher (Thick = Width)", "Header (Thick = Length)", "Shiner (Thick = Height)"], 
-                               horizontal=True)
+                               disp_opts, 
+                               index=disp_opts.index(st.session_state.get("mam_disp", disp_opts[0])) if st.session_state.get("mam_disp", disp_opts[0]) in disp_opts else 0,
+                               horizontal=True,
+                               key="mam_disp")
         # Adapt dimensions to perspective
         if lang == "Español":
             if "Soga" in disposicion:
@@ -167,10 +186,10 @@ with st.expander(_t("🧱 1. Cantidades de Mampostería (Ladrillos y Juntas)", "
     
     with col3:
         st.write(_t("#### Juntas y Desperdicios", "#### Joints & Waste"))
-        junta_h = st.number_input(_t("Espesor junta Hz. [cm]", "Horizontal joint [cm]"), 0.5, 3.0, 1.5, 0.1)
-        junta_v = st.number_input(_t("Espesor junta Vt. [cm]", "Vertical joint [cm]"), 0.5, 3.0, 1.5, 0.1)
-        desp_lad = st.number_input(_t("Desperdicio Ladrillos [%]", "Brick waste [%]"), 0.0, 20.0, 5.0, 1.0)
-        desp_mor = st.number_input(_t("Desperdicio Mortero [%]", "Mortar waste [%]"), 0.0, 25.0, 10.0, 1.0)
+        junta_h = st.number_input(_t("Espesor junta Hz. [cm]", "Horizontal joint [cm]"), 0.5, 3.0, st.session_state.get("mam_jh", 1.5), 0.1, key="mam_jh")
+        junta_v = st.number_input(_t("Espesor junta Vt. [cm]", "Vertical joint [cm]"), 0.5, 3.0, st.session_state.get("mam_jv", 1.5), 0.1, key="mam_jv")
+        desp_lad = st.number_input(_t("Desperdicio Ladrillos [%]", "Brick waste [%]"), 0.0, 20.0, st.session_state.get("mam_desp_l", 5.0), 1.0, key="mam_desp_l")
+        desp_mor = st.number_input(_t("Desperdicio Mortero [%]", "Mortar waste [%]"), 0.0, 25.0, st.session_state.get("mam_desp_m", 10.0), 1.0, key="mam_desp_m")
         
     # --- CALCULO MATEMATICO TABIQUE ---
     # Convert parameters to meters
@@ -229,8 +248,11 @@ with st.expander(_t("💧 2. Dosificación y Diseño de Morteros (Cemento, Arena
     
     dc1, dc2, dc3 = st.columns(3)
     with dc1:
+        mezcla_opts = list(DOSIFICACIONES_EN.keys()) if lang=="English" else list(DOSIFICACIONES.keys())
         mezcla_sel = st.selectbox(_t("Proporción Cemento:Arena", "Cement:Sand Ratio"), 
-                                  list(DOSIFICACIONES_EN.keys()) if lang=="English" else list(DOSIFICACIONES.keys()), index=3)
+                                  mezcla_opts, 
+                                  index=mezcla_opts.index(st.session_state.get("mam_mezcla_sel", mezcla_opts[3])) if st.session_state.get("mam_mezcla_sel", mezcla_opts[3]) in mezcla_opts else 3,
+                                  key="mam_mezcla_sel")
         if lang=="English":
             val_mezcla = DOSIFICACIONES_EN[mezcla_sel]
         else:
@@ -238,9 +260,12 @@ with st.expander(_t("💧 2. Dosificación y Diseño de Morteros (Cemento, Arena
             
     with dc2:
         vol_producir = st.number_input(_t("Volumen de Mortero a Fabricar [m³]", "Mortar Volume to Produce [m³]"), 
-                                       0.0, 1000.0, float(vol_mortero_pedido), 0.1) # Autolinks directly to Tabique!
+                                       0.0, 1000.0, st.session_state.get("mam_vol_prod", float(vol_mortero_pedido)), 0.1, key="mam_vol_prod") # Autolinks directly to Tabique!
     with dc3:
-        bulto_kg = st.selectbox(_t("Peso Bulto Cemento", "Cement Bag Weight"), ["50 kg", "42.5 kg"], index=0)
+        bulto_opts = ["50 kg", "42.5 kg"]
+        bulto_kg = st.selectbox(_t("Peso Bulto Cemento", "Cement Bag Weight"), bulto_opts, 
+                                 index=bulto_opts.index(st.session_state.get("mam_bulto_kg", "50 kg")),
+                                 key="mam_bulto_kg")
         val_bulto_kg = 50.0 if bulto_kg == "50 kg" else 42.5
         
     cemento_kg_total = vol_producir * val_mezcla[0]
@@ -265,12 +290,16 @@ with st.expander(_t("⚖️ 3. Peso Superficial de Muros de Mampostería", "⚖�
     col_w1, col_w2, col_w3 = st.columns(3)
     
     with col_w1:
-        densidad_pieza = st.selectbox(_t("Material de la Pieza (Densidad)", "Block Material (Density)"), [
+        dens_opts = [
             "Arcilla Cocida (1800 kg/m³)",
             "Concreto de Peso Normal (2200 kg/m³)",
             "Concreto Liviano (1500 kg/m³)",
             "Sílico-Calcáreo (1900 kg/m³)"
-        ])
+        ]
+        densidad_pieza = st.selectbox(_t("Material de la Pieza (Densidad)", "Block Material (Density)"), 
+                                      dens_opts,
+                                      index=dens_opts.index(st.session_state.get("mam_densidad_pieza", dens_opts[0])) if st.session_state.get("mam_densidad_pieza", dens_opts[0]) in dens_opts else 0,
+                                      key="mam_densidad_pieza")
         str_dens = dict(zip([_t("Arcilla Cocida", "Fired Clay"), _t("Concreto Normal", "Normal Weight Concrete"), _t("Concreto Liviano", "Lightweight Concrete"), _t("Sílico-calcáreo", "Calcium-Silicate")], [1800.0, 2200.0, 1500.0, 1900.0]))
         # Extract density implicitly
         d_p_v = 1800.0
@@ -279,10 +308,10 @@ with st.expander(_t("⚖️ 3. Peso Superficial de Muros de Mampostería", "⚖�
         elif "Liviano" in densidad_pieza: d_p_v = 1500.0
         elif "Sílico" in densidad_pieza: d_p_v = 1900.0
         
-        huecos_pct = st.number_input(_t("Porcentaje de Huecos de la Pieza [%]", "Percentage of voids in piece [%]"), 0.0, 70.0, 30.0, 5.0)
+        huecos_pct = st.number_input(_t("Porcentaje de Huecos de la Pieza [%]", "Percentage of voids in piece [%]"), 0.0, 70.0, st.session_state.get("mam_huecos_pct", 30.0), 5.0, key="mam_huecos_pct")
         
     with col_w2:
-        densidad_mortero = st.number_input(_t("Densidad del Mortero [kg/m³]", "Mortar Density [kg/m³]"), 1000.0, 3000.0, 2000.0, 50.0)
+        densidad_mortero = st.number_input(_t("Densidad del Mortero [kg/m³]", "Mortar Density [kg/m³]"), 1000.0, 3000.0, st.session_state.get("mam_dens_mor", 2000.0), 50.0, key="mam_dens_mor")
         st.write(f"**Volumen Neto Ladrillo/m2:** {(vol_ladrillos_1m2 * (1 - huecos_pct/100.0)):.4f} m³/m²")
         st.write(f"**Volumen Mortero/m2:** {vol_mortero_1m2_neto:.4f} m³/m²")
         
