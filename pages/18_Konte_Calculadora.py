@@ -591,6 +591,24 @@ p["ceramica"]=st.sidebar.number_input(f"🪟 {R['ceramica']} [{moneda}/m²]",val
 st.session_state.kc_precios=p
 st.sidebar.markdown("---")
 
+# ── Resumen de precios vigentes (siempre visible) ──────────────────────
+st.sidebar.markdown("### 📋 Precios vigentes")
+st.sidebar.markdown(f"""
+<div style="background:#0d1b2a;border:1px solid #1e4d8c;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.8;">
+  <div>🧱 Cemento: <b>{moneda} {p.get('cemento',0):,.0f}</b> / bolsa</div>
+  <div>🏖️ Arena: <b>{moneda} {p.get('arena',0):,.0f}</b> / m³</div>
+  <div>🪨 Grava: <b>{moneda} {p.get('grava',0):,.0f}</b> / m³</div>
+  <div>🔩 Varilla: <b>{moneda} {p.get('acero_kg',0):,.0f}</b> / kg</div>
+  <div>🧱 Bloque: <b>{moneda} {p.get('bloque',0):,.0f}</b> / und</div>
+  <div>🏠 Ladrillo: <b>{moneda} {p.get('ladrillo',0):,.0f}</b> / und</div>
+  <div>🎨 Pintura: <b>{moneda} {p.get('pintura',0):,.0f}</b> / galón</div>
+  <div>🪟 Cerámica: <b>{moneda} {p.get('ceramica',0):,.0f}</b> / m²</div>
+</div>
+<div style="margin-top:6px;font-size:10px;color:#ff8f00;">
+  ⚠️ Si los valores parecen incorrectos (ej: 30 en vez de 30.000), cambia los precios arriba.
+</div>
+""", unsafe_allow_html=True)
+st.sidebar.markdown("---")
 
 st.sidebar.markdown('<div style="text-align:center;color:gray;font-size:10px;">© 2026 Konte — Ing. Msc. César A. Giraldo<br><i>⚠️ Uso profesional exclusivo</i></div>',unsafe_allow_html=True)
 
@@ -915,6 +933,40 @@ with tabs[0]:
         f'<span style="color:#90caf9;">+ {desp_pct}% desperdicio = <b>{vol_t:.4f} m³</b></span>'
         f'&nbsp;&nbsp; <span style="color:#ffcc80;">Dosificación: <b>{mix["dos"]}</b> | f\'c = <b>{mix["fc_kgcm2"]} kg/cm²</b> ({mix["fc_mpa"]} MPa)</span>'
         f'</div>', unsafe_allow_html=True)
+    # ── Panel de precios aplicados (diagnóstico rápido) ──────────────────
+    with st.expander("🔍 Precios unitarios aplicados en este cálculo", expanded=False):
+        _pr = st.session_state.kc_precios
+        st.markdown(f"""
+<div style="display:flex;flex-wrap:wrap;gap:10px;padding:4px 0;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:8px 16px;min-width:160px;">
+    <div style="color:#90caf9;font-size:11px;margin-bottom:2px;">🧱 Cemento / bolsa</div>
+    <div style="font-size:1.15em;font-weight:700;color:#fff;">{moneda} {_pr.get('cemento', 0):,.0f}</div>
+    <div style="font-size:10px;color:#7ec87e;">Bolsas usadas: {bolsas}</div>
+    <div style="font-size:10px;color:#ffcc80;">Subtotal: {moneda} {bolsas * _pr.get('cemento', 0):,.0f}</div>
+  </div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:8px 16px;min-width:160px;">
+    <div style="color:#90caf9;font-size:11px;margin-bottom:2px;">🏖️ Arena / m³</div>
+    <div style="font-size:1.15em;font-weight:700;color:#fff;">{moneda} {_pr.get('arena', 0):,.0f}</div>
+    <div style="font-size:10px;color:#7ec87e;">m³ usados: {arena_c:.3f}</div>
+    <div style="font-size:10px;color:#ffcc80;">Subtotal: {moneda} {arena_c * _pr.get('arena', 0):,.0f}</div>
+  </div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:8px 16px;min-width:160px;">
+    <div style="color:#90caf9;font-size:11px;margin-bottom:2px;">🪨 Grava / m³</div>
+    <div style="font-size:1.15em;font-weight:700;color:#fff;">{moneda} {_pr.get('grava', 0):,.0f}</div>
+    <div style="font-size:10px;color:#7ec87e;">m³ usados: {grava_c:.3f}</div>
+    <div style="font-size:10px;color:#ffcc80;">Subtotal: {moneda} {grava_c * _pr.get('grava', 0):,.0f}</div>
+  </div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:8px 16px;min-width:160px;align-self:center;">
+    <div style="color:#ffcc80;font-size:11px;margin-bottom:2px;">💰 TOTAL MATERIALES</div>
+    <div style="font-size:1.3em;font-weight:800;color:#ffdd57;">{moneda} {costo_c:,.0f}</div>
+    <div style="font-size:10px;color:#aaa;">Norma: {norma_sel}</div>
+  </div>
+</div>
+<div style="margin-top:8px;padding:6px 10px;background:#1a1000;border-left:3px solid #ff8f00;border-radius:4px;font-size:11px;color:#ffcc80;">
+  ⚠️ Si los precios se ven muy bajos o muy altos, verifica la moneda en el sidebar (<b>{moneda}</b>).
+  Los precios se pueden ajustar manualmente en <b>💰 Precios de Materiales</b> (panel izquierdo).
+</div>
+""", unsafe_allow_html=True)
     if st.button(f"➕ Agregar {elemento_conc} al Resumen", key="kc_add_conc", type="primary"):
         label = desc_elem if desc_elem else elemento_conc
         st.session_state.kc_rows.extend([
