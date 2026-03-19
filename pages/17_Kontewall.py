@@ -500,6 +500,7 @@ Eah = 0.5 * Ka * gr * Hp**2
 Esch = Ka * gr * hs * Hp
 Ep = 0.5 * Kp * gf * (hz + hd)**2 if hd > 0 else 0.5 * Kp * gf * hz**2
 Es = 0.5 * (Kea - Ka) * (1 - Kv) * gr * Hp**2 if sismo else 0.0
+# Wm eliminado: ya separado en W2 (triángulo) + W3 (rectángulo)
 Eav = (Eah + Es) * math.sin(deltr)
 Escv = Esch * math.sin(deltr)
 Cy = 0.6 * Hp + hz
@@ -591,7 +592,6 @@ shext_sup = s_acero(2/3 * Asmin_sup, "1/2\"")
 shint_sup = s_acero(1/3 * Asmin_sup, "3/8\"")
 shext = shext_inf
 shint = shint_inf
-
 # Corte de acero
 dc = 0.0
 if Asp > 0:
