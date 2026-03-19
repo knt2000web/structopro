@@ -1121,7 +1121,26 @@ with tabs[1]:
             a3.metric("Arena", f"{arena_rep+arena_afin:.3f} m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
             
         st.info(f"💰 Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
-        
+        with st.expander("🔍 Precios unitarios aplicados", expanded=False):
+            _pr = st.session_state.kc_precios
+            st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Cemento/bolsa</div>
+    <b>{moneda} {_pr.get('cemento',0):,.0f}</b>
+  </div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🏖️ Arena/m³</div>
+    <b>{moneda} {_pr.get('arena',0):,.0f}</b>
+  </div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Bloque/und</div>
+    <b>{moneda} {_pr.get('bloque',0):,.0f}</b>
+  </div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#ffcc80;font-size:11px;">💰 TOTAL</div>
+    <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
+  </div>
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠️ Moneda activa: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
         if st.button("➕ Agregar al Resumen",key="kc_add_b",type="primary"):
             lb = desc_pared or f"Muro {tipo_b}"
             st.session_state.kc_rows.extend([
@@ -1173,6 +1192,26 @@ with tabs[1]:
             a3.metric("Arena", f"{arena_rep+arena_afin:.3f} m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
             
         st.info(f"💰 Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("🔍 Precios unitarios aplicados", expanded=False):
+            _pr = st.session_state.kc_precios
+            st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Cemento/bolsa</div>
+    <b>{moneda} {_pr.get('cemento',0):,.0f}</b>
+  </div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🏖️ Arena/m³</div>
+    <b>{moneda} {_pr.get('arena',0):,.0f}</b>
+  </div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🏠 Ladrillo/und</div>
+    <b>{moneda} {_pr.get('ladrillo',0):,.0f}</b>
+  </div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#ffcc80;font-size:11px;">💰 TOTAL</div>
+    <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
+  </div>
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠️ Moneda activa: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
         if st.button("➕ Agregar al Resumen",key="kc_add_l",type="primary"):
             lb=desc_pared or f"Muro {tipo_l}"
             st.session_state.kc_rows.extend([
@@ -1227,6 +1266,26 @@ with tabs[1]:
             a3.metric("Arena", f"{arena_rep+arena_afin:.3f} m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
 
         st.info(f"💰 Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("🔍 Precios unitarios aplicados", expanded=False):
+            _pr = st.session_state.kc_precios
+            st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Cemento/bolsa</div>
+    <b>{moneda} {_pr.get('cemento',0):,.0f}</b>
+  </div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🏖️ Arena/m³</div>
+    <b>{moneda} {_pr.get('arena',0):,.0f}</b>
+  </div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#90caf9;font-size:11px;">🪨 Grava(Piedra)/m³</div>
+    <b>{moneda} {_pr.get('grava',0):,.0f}</b>
+  </div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:140px;">
+    <div style="color:#ffcc80;font-size:11px;">💰 TOTAL</div>
+    <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
+  </div>
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠️ Moneda activa: <b>{moneda}</b></div>""", unsafe_allow_html=True)
         if st.button("➕ Agregar al Resumen",key="kc_add_c",type="primary"):
             lb=desc_pared or "Muro Ciclópeo"
             st.session_state.kc_rows.extend([
@@ -1285,6 +1344,20 @@ with tabs[1]:
             a3.metric("Arena", f"{arena_rep+arena_afin:.3f} m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
 
         st.info(f"💰 Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("🔍 Precios unitarios aplicados", expanded=False):
+            _pr = st.session_state.kc_precios
+            st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Cemento/bolsa</div><b>{moneda} {_pr.get('cemento',0):,.0f}</b></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🏖️ Arena/m³</div><b>{moneda} {_pr.get('arena',0):,.0f}</b></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🪨 Grava/m³</div><b>{moneda} {_pr.get('grava',0):,.0f}</b></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🔩 Acero/kg</div><b>{moneda} {_pr.get('acero_kg',0):,.0f}</b></div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#ffcc80;font-size:11px;">💰 TOTAL</div><b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b></div>
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠️ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
         if st.button("➕ Agregar al Resumen",key="kc_add_pca",type="primary"):
             lb=desc_pared or f"Muro CA Por%"
             st.session_state.kc_rows.extend([
@@ -1369,6 +1442,20 @@ with tabs[1]:
             a3.metric("Arena", f"{arena_rep+arena_afin:.3f} m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
             
         st.info(f"💰 Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("🔍 Precios unitarios aplicados", expanded=False):
+            _pr = st.session_state.kc_precios
+            st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Cemento/bolsa</div><b>{moneda} {_pr.get('cemento',0):,.0f}</b></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🏖️ Arena/m³</div><b>{moneda} {_pr.get('arena',0):,.0f}</b></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🪨 Grava/m³</div><b>{moneda} {_pr.get('grava',0):,.0f}</b></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🔩 Acero/kg</div><b>{moneda} {_pr.get('acero_kg',0):,.0f}</b></div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#ffcc80;font-size:11px;">💰 TOTAL</div><b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b></div>
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠️ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
         if st.button("➕ Agregar al Resumen",key="kc_add_dim",type="primary"):
             lb=desc_pared or "Muro CA Dimensión"
             st.session_state.kc_rows.extend([
@@ -1761,6 +1848,30 @@ with tabs[2]:
         f'h={alt_col} m | V1:{n_v1} brs + V2:{n_v2} brs | E.1:{n_est_e1} estrib.</span></div>',
         unsafe_allow_html=True)
 
+    with st.expander("🔍 Precios unitarios aplicados en Columna", expanded=False):
+        _pr = st.session_state.kc_precios
+        _cp_cem2 = float(_pr.get('cemento', 0))
+        _cp_are2 = float(_pr.get('arena', 0))
+        _cp_gra2 = float(_pr.get('grava', 0))
+        _cp_ace2 = float(_pr.get('acero_kg', 0))
+        st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Cemento/bolsa</div>
+    <b>{moneda} {_cp_cem2:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{bol_col} bultos = {moneda} {bol_col*_cp_cem2:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🏖️ Arena/m³</div>
+    <b>{moneda} {_cp_are2:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{arena_col:.3f} m³ = {moneda} {arena_col*_cp_are2:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🪨 Grava/m³</div>
+    <b>{moneda} {_cp_gra2:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{grava_col:.3f} m³ = {moneda} {grava_col*_cp_gra2:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🔩 Acero/kg</div>
+    <b>{moneda} {_cp_ace2:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{kg_ace_total:.1f} kg = {moneda} {kg_ace_total*_cp_ace2:,.0f}</span></div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#ffcc80;font-size:11px;">💰 COSTO TOTAL</div>
+    <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_col:,.0f}</b></div>
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠️ Moneda: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
+
     if st.button("➕ Agregar Columna al Resumen", key="kc_add_col", type="primary"):
         lb = desc_col or "Columna"
         st.session_state.kc_rows.extend([
@@ -2010,6 +2121,29 @@ with tabs[3]:
         f'<span style="color:#ffcc80;">f\'c={fc_viga} kg/cm² | {a_viga}×{b_viga}m | '
         f'L={largo_viga}m | A+:{nb_pos}brs {var_pos} | A-:{nb_neg}brs {var_neg} | E.1:{n_est_v}estr.</span></div>',
         unsafe_allow_html=True)
+    with st.expander("🔍 Precios unitarios aplicados en Viga", expanded=False):
+        _pr = st.session_state.kc_precios
+        _pv_cem = float(_pr.get('cemento', 0))
+        _pv_are = float(_pr.get('arena', 0))
+        _pv_gra = float(_pr.get('grava', 0))
+        _pv_ace = float(_pr.get('acero_kg', 0))
+        st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Cemento/bolsa</div>
+    <b>{moneda} {_pv_cem:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{bol_viga} bultos = {moneda} {bol_viga*_pv_cem:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🏖️ Arena/m³</div>
+    <b>{moneda} {_pv_are:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{arena_v:.3f} m³ = {moneda} {arena_v*_pv_are:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🪨 Grava/m³</div>
+    <b>{moneda} {_pv_gra:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{grava_v:.3f} m³ = {moneda} {grava_v*_pv_gra:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🔩 Acero/kg</div>
+    <b>{moneda} {_pv_ace:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{kg_ace_v:.1f} kg = {moneda} {kg_ace_v*_pv_ace:,.0f}</span></div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#ffcc80;font-size:11px;">💰 COSTO TOTAL</div>
+    <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_v:,.0f}</b></div>
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠️ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
     if st.button("➕ Agregar Viga al Resumen", key="kc_add_viga", type="primary"):
         lb = desc_viga or "Viga"
         st.session_state.kc_rows.extend([
@@ -2288,6 +2422,29 @@ with tabs[4]:
         f'<span style="color:#ffcc80;">{tipo_losa} | {largo_l}×{ancho_l}m | e={esp_l}m | '
         f'f\'c={fc_l}kg/cm² | {kg_ace_l:.1f}kg acero | Vol={vol_neto:.3f}m³</span></div>',
         unsafe_allow_html=True)
+    with st.expander("🔍 Precios unitarios aplicados en Losa", expanded=False):
+        _pr = st.session_state.kc_precios
+        _pl_cem = float(_pr.get('cemento', 0))
+        _pl_are = float(_pr.get('arena', 0))
+        _pl_gra = float(_pr.get('grava', 0))
+        _pl_ace = float(_pr.get('acero_kg', 0))
+        st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🧱 Cemento/bolsa</div>
+    <b>{moneda} {_pl_cem:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{bol_l} bultos = {moneda} {bol_l*_pl_cem:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🏖️ Arena/m³</div>
+    <b>{moneda} {_pl_are:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{arena_l:.3f} m³ = {moneda} {arena_l*_pl_are:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🪨 Grava/m³</div>
+    <b>{moneda} {_pl_gra:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{grava_l:.3f} m³ = {moneda} {grava_l*_pl_gra:,.0f}</span></div>
+  <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#90caf9;font-size:11px;">🔩 Acero/kg</div>
+    <b>{moneda} {_pl_ace:,.0f}</b><br><span style="font-size:10px;color:#7ec87e;">{kg_ace_l:.1f} kg = {moneda} {kg_ace_l*_pl_ace:,.0f}</span></div>
+  <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
+    <div style="color:#ffcc80;font-size:11px;">💰 COSTO TOTAL</div>
+    <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_l:,.0f}</b></div>
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠️ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
     if st.button("➕ Agregar Losa al Resumen", key="kc_add_losa", type="primary"):
         lb = desc_losa or f"Losa {tipo_losa[:5]}"
         st.session_state.kc_rows.extend([
