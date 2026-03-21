@@ -812,6 +812,34 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
     n_barras_Z = n_barras_B
     separacion_S = sep_B
 
+    # --- CÁLCULO DE GANCHOS Y DOBLECES (NSR-10 / ACI 318) ---
+    # Diámetro mínimo de doblez (D_doblez)
+    db_mm = db_bar_z
+    if db_mm <= 25.4: # Hasta #8 (1")
+        D_doblez_mm = 6 * db_mm
+    elif db_mm <= 35.8: # #9 a #11
+        D_doblez_mm = 8 * db_mm
+    else: # #14 a #18
+        D_doblez_mm = 10 * db_mm
+    D_doblez_cm = D_doblez_mm / 10.0
+
+    # Longitud de extensión del gancho a 90° (L_ext)
+    # Norma ACI/NSR-10: max(12*db, 150mm) usualmente para estribos, pero para anclaje en tracción (gancho estándar 90°) es 12*db
+    L_ext_gancho_mm = 12 * db_mm
+    L_ext_gancho_cm = L_ext_gancho_mm / 10.0
+    
+    # Radios para dibujo
+    radio_doblez_cm = D_doblez_cm / 2.0
+    
+    # Longitudes de desarrollo disponibles
+    ldh_disp_B = (B_use*100 - c1_col)/2 - recub_z
+    ldh_disp_L = (L_use*100 - c2_col)/2 - recub_z
+    
+    # Altura disponible para el gancho
+    h_gancho_disp = H_zap - 2*recub_z
+    L_gancho_real_cm = min(h_gancho_disp, L_ext_gancho_cm + radio_doblez_cm + db_mm/10.0) # Lo que cabe en la zapata
+
+
     tab_res, tab_dwg, tab_apu = st.tabs(["📋 Resultados del Diseño", "📏 Plano 3000 (DXF)", "💰 Cantidades APU"])
     
     with tab_res:
@@ -837,6 +865,7 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
             {"Revisión": "Presión de Contacto qu_max", "Solicitado": f"{qu_max:.2f} kPa", "Capacidad/Provisto": f"qu_min = {qu_min:.2f} kPa", "Estado": "✅ Sin tensión" if qu_min >= 0 else "⚠️ Tensión en suelo"},
             {"Revisión": "Flexión Dir. B — cara col.", "Solicitado": f"Mu_B = {Mu_flex_B:.1f} kN-m", "Capacidad/Provisto": f"As_B = {As_req_B:.1f} cm² → {n_barras_B} {bar_z} c/{sep_B:.1f}cm", "Estado": "✅ OK" if disc_B>0 else "❌ Rompe en compresión"},
             {"Revisión": "Flexión Dir. L — cara col.", "Solicitado": f"Mu_L = {Mu_flex_L:.1f} kN-m", "Capacidad/Provisto": f"As_L = {As_req_L:.1f} cm² → {n_barras_L} {bar_z} c/{sep_L:.1f}cm", "Estado": "✅ OK" if disc_L>0 else "❌ Rompe en compresión"},
+            {"Revisión": "Gancho Estándar 90°", "Solicitado": f"D_min doblez: {D_doblez_cm:.1f} cm", "Capacidad/Provisto": f"Extensión recta: {L_ext_gancho_cm:.1f} cm", "Estado": "ℹ️ Info"},
         ]
         st.table(pd.DataFrame(data_res))
         
@@ -873,10 +902,19 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
         doc_zap.add_paragraph(f"  DIR. L (malla sobre el ancho B={B_use:.2f}m):")
         doc_zap.add_paragraph(f"    Mu_L = {Mu_flex_L:.1f} kN·m  |  As_L = {As_req_L:.2f} cm²  |  ρ_L = {rho_use_L:.4f}")
         doc_zap.add_paragraph(f"    Arreglo: {n_barras_L} varillas {bar_z}  c/ {sep_L:.1f} cm  {'✅ OK' if disc_L>0 else '❌ Aumentar H'}")
+        doc_zap.add_paragraph(f"  DETALLES DE DOBLADO (Gancho 90° estándar ACI/NSR-10):")
+        doc_zap.add_paragraph(f"    Diámetro mín. de doblez = {D_doblez_cm:.1f} cm")
+        doc_zap.add_paragraph(f"    Extensión recta después de la curva = {L_ext_gancho_cm:.1f} cm")
+        doc_zap.add_paragraph(f"    Altura del gancho ajustada a zapata = {L_gancho_real_cm:.1f} cm")
         doc_zap.add_heading("7. CANTIDADES DE MATERIALES (APU)", level=1)
         _area_m2_doc = REBAR_DICT[bar_z]["area"] * 1e-4
-        _pe_B = n_barras_B * (L_use + 2*H_zap/100.0) * _area_m2_doc * 7850
-        _pe_L = n_barras_L * (B_use + 2*H_zap/100.0) * _area_m2_doc * 7850
+        # Longitud exacta considerando tramo recto, curva y extensión
+        # Tramo recto + 2 * (desarrollo curva + extension)
+        _long_gancho_m = ( (math.pi * radio_doblez_cm / 2) + L_ext_gancho_cm ) / 100.0
+        _long_var_B = L_use - 2*(recub_z/100.0) + 2*_long_gancho_m
+        _long_var_L = B_use - 2*(recub_z/100.0) + 2*_long_gancho_m
+        _pe_B = n_barras_B * _long_var_B * _area_m2_doc * 7850
+        _pe_L = n_barras_L * _long_var_L * _area_m2_doc * 7850
         _pe_tot = _pe_B + _pe_L
         _vol_exc = (B_use + 0.5) * (L_use + 0.5) * Df_z
         _vol_conc = B_use * L_use * (H_zap/100.0)
@@ -963,7 +1001,27 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
         for i in range(n_barras_Z):
             xi = recub_z + i * separacion_S
             ax_z.add_patch(plt.Circle((xi, recub_z), db_bar_z/10, color='#ff6b35', zorder=5))
-        ax_z.text(B_use*100/2, H_zap/2, f"{n_barras_Z} varillas {bar_z} L={L_use}m\nSep:{separacion_S:.1f}cm", color='white', ha='center', va='center')
+        # Dibujar perfil del doblez para la varilla principal (Dir B)
+        # Tramo horizontal inferior
+        _x_start = recub_z + radio_doblez_cm
+        _x_end = B_use*100 - recub_z - radio_doblez_cm
+        _y_bar = recub_z
+        ax_z.add_patch(patches.Rectangle((_x_start, _y_bar - db_bar_z/20.0), _x_end - _x_start, db_bar_z/10.0, color='#ffd54f', zorder=4))
+        
+        # Gancho Izquierdo
+        arc_izq = patches.Arc((_x_start, _y_bar + radio_doblez_cm), D_doblez_cm, D_doblez_cm, angle=180, theta1=90, theta2=180, color='#ffd54f', lw=3, zorder=4)
+        ax_z.add_patch(arc_izq)
+        ax_z.plot([recub_z, recub_z], [_y_bar + radio_doblez_cm, _y_bar + radio_doblez_cm + L_ext_gancho_cm], color='#ffd54f', lw=3, zorder=4)
+        
+        # Gancho Derecho
+        arc_der = patches.Arc((_x_end, _y_bar + radio_doblez_cm), D_doblez_cm, D_doblez_cm, angle=270, theta1=90, theta2=180, color='#ffd54f', lw=3, zorder=4)
+        ax_z.add_patch(arc_der)
+        ax_z.plot([B_use*100 - recub_z, B_use*100 - recub_z], [_y_bar + radio_doblez_cm, _y_bar + radio_doblez_cm + L_ext_gancho_cm], color='#ffd54f', lw=3, zorder=4)
+        
+        # Cota del doblez
+        ax_z.annotate(f"{L_ext_gancho_cm:.1f}cm", xy=(recub_z, _y_bar + radio_doblez_cm + L_ext_gancho_cm/2), xytext=(-15, _y_bar + radio_doblez_cm + L_ext_gancho_cm/2), arrowprops=dict(arrowstyle="->", color='yellow'), color='yellow', fontsize=8, va='center')
+
+        ax_z.text(B_use*100/2, H_zap/2, f"{n_barras_Z} varillas {bar_z} L={L_use}m\nSep:{separacion_S:.1f}cm\nGancho: 90°", color='white', ha='center', va='center')
         ax_z.set_xlim(-20, B_use*100+20)
         ax_z.set_ylim(-10, H_zap+70)
         ax_z.axis('off')
