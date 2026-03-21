@@ -1153,52 +1153,119 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
             {"Material": "💧 Agua",            "Cantidad": f"{litros_agua:.0f}",   "Unidad": "litros"},
             {"Material": "🏋️ Acero refuerzo",  "Cantidad": f"{peso_total_acero_zap:.1f}", "Unidad": "kg"},
         ])
-        st.dataframe(df_mat, use_container_width=True, hide_index=True)
+        # Integrar precios en tiempo real si están disponibles
+        _has_prices = "apu_config" in st.session_state
+        _apu = st.session_state.get("apu_config", {})
+        _mon = _apu.get("moneda", "")
+        _p_cem = _apu.get("cemento", 0.0)
+        _p_ace = _apu.get("acero",   0.0)
+        _p_are = _apu.get("arena",   0.0)
+        _p_gra = _apu.get("grava",   0.0)
+        c_excav_u = _apu.get("costo_excav_m3", 25000.0)   # fallback COP
 
-        # ─── SECCIÓN 2: Despiece de Varillas ───────────────────────────────
+        _c_cem  = bultos_zap * _p_cem
+        _c_ace  = peso_total_acero_zap * _p_ace
+        _c_are  = vol_arena_z * _p_are
+        _c_gra  = vol_grava_z * _p_gra
+        _c_exc  = vol_excavacion * c_excav_u if _has_prices else 0.0
+
+        if _has_prices:
+            st.success(f"💱 Precios actualizados del scraping — {_mon}")
+        else:
+            st.info("ℹ️ Ve a **APU Mercado** para ver los costos en tiempo real aquí mismo.")
+
+        # TABLA: Materiales con costos
+        _mat_rows = [
+            {"Material": "⛏️ Excavación",    "Cantidad": f"{vol_excavacion:.2f}", "Unidad": "m³",           "Precio Unit.": f"{c_excav_u:,.0f} {_mon}" if _has_prices else "—", "Subtotal": f"{_c_exc:,.0f} {_mon}" if _has_prices else "—"},
+            {"Material": "🧱 Cemento",        "Cantidad": f"{bultos_zap:.1f}",    "Unidad": "bultos (50kg)", "Precio Unit.": f"{_p_cem:,.0f} {_mon}" if _has_prices else "—",   "Subtotal": f"{_c_cem:,.0f} {_mon}" if _has_prices else "—"},
+            {"Material": "🏖️ Arena",          "Cantidad": f"{vol_arena_z:.3f}",   "Unidad": "m³",           "Precio Unit.": f"{_p_are:,.0f} {_mon}" if _has_prices else "—",   "Subtotal": f"{_c_are:,.0f} {_mon}" if _has_prices else "—"},
+            {"Material": "🪨 Gravilla",        "Cantidad": f"{vol_grava_z:.3f}",   "Unidad": "m³",           "Precio Unit.": f"{_p_gra:,.0f} {_mon}" if _has_prices else "—",   "Subtotal": f"{_c_gra:,.0f} {_mon}" if _has_prices else "—"},
+            {"Material": "💧 Agua",            "Cantidad": f"{litros_agua:.0f}",   "Unidad": "litros",       "Precio Unit.": "—", "Subtotal": "—"},
+            {"Material": "🏋️ Acero refuerzo",  "Cantidad": f"{peso_total_acero_zap:.1f}", "Unidad": "kg",  "Precio Unit.": f"{_p_ace:,.0f} {_mon}" if _has_prices else "—",   "Subtotal": f"{_c_ace:,.0f} {_mon}" if _has_prices else "—"},
+        ]
+        st.dataframe(pd.DataFrame(_mat_rows), use_container_width=True, hide_index=True)
+
+        if _has_prices:
+            _total_mat = _c_exc + _c_cem + _c_are + _c_gra + _c_ace
+            st.metric(f"💰 Total Materiales [{_mon}]", f"{_total_mat:,.0f}")
+
+        # ─── SECCIÓN 2: Despiece de Acero con costos ─────────────────────────
         st.markdown("#### 🔩 Despiece de Acero de Refuerzo")
         db_mm_apu    = REBAR_DICT[bar_z]["db"]
         area_cm2_apu = REBAR_DICT[bar_z]["area"]
-        df_desp = pd.DataFrame([
-            {
-                "Dir.": "B  (⟵ L_use →)",
-                "Varilla": bar_z,
-                "db [mm]": f"{db_mm_apu:.1f}",
-                "Área [cm²]": f"{area_cm2_apu:.3f}",
-                "N° Barras": n_barras_B,
-                "Separación": f"{sep_B:.1f} cm",
-                "L gancho 90° [cm]": f"{L_ext_gancho_cm:.1f}",
-                "L total c/gancho [m]": f"{_long_var_B:.3f}",
-                "kg/m": f"{_kg_por_m:.3f}",
-                "Peso Total [kg]": f"{peso_barras_B_apu:.2f}",
-            },
-            {
-                "Dir.": "L  (⟵ B_use →)",
-                "Varilla": bar_z,
-                "db [mm]": f"{db_mm_apu:.1f}",
-                "Área [cm²]": f"{area_cm2_apu:.3f}",
-                "N° Barras": n_barras_L,
-                "Separación": f"{sep_L:.1f} cm",
-                "L gancho 90° [cm]": f"{L_ext_gancho_cm:.1f}",
-                "L total c/gancho [m]": f"{_long_var_L:.3f}",
-                "kg/m": f"{_kg_por_m:.3f}",
-                "Peso Total [kg]": f"{peso_barras_L_apu:.2f}",
-            },
-            {
-                "Dir.": "━━ TOTAL ━━",
-                "Varilla": "",
-                "db [mm]": "",
-                "Área [cm²]": "",
-                "N° Barras": n_barras_B + n_barras_L,
-                "Separación": "",
-                "L gancho 90° [cm]": "",
-                "L total c/gancho [m]": f"{n_barras_B*_long_var_B + n_barras_L*_long_var_L:.2f}",
-                "kg/m": "",
-                "Peso Total [kg]": f"{peso_total_acero_zap:.2f}",
-            }
-        ])
-        st.dataframe(df_desp, use_container_width=True, hide_index=True)
-        st.caption(f"ℹ️  Gancho estándar 90° ACI/NSR-10: radio mín. doblez = {radio_doblez_cm:.1f} cm | extensión = {L_ext_gancho_cm:.1f} cm | varilla {bar_z} (db={db_mm_apu:.1f}mm)")
+        _c_ace_B = peso_barras_B_apu * _p_ace
+        _c_ace_L = peso_barras_L_apu * _p_ace
+
+        _row_B = {
+            "Dir.": "B  (⟵ sobre L →)",
+            "Varilla": bar_z, "db [mm]": f"{db_mm_apu:.1f}",
+            "N° Barras": n_barras_B, "Sep. [cm]": f"{sep_B:.1f}",
+            "L gancho [cm]": f"{L_ext_gancho_cm:.1f}",
+            "L total [m]": f"{_long_var_B:.3f}",
+            "kg/m": f"{_kg_por_m:.3f}", "Peso [kg]": f"{peso_barras_B_apu:.2f}",
+        }
+        _row_L = {
+            "Dir.": "L  (⟵ sobre B →)",
+            "Varilla": bar_z, "db [mm]": f"{db_mm_apu:.1f}",
+            "N° Barras": n_barras_L, "Sep. [cm]": f"{sep_L:.1f}",
+            "L gancho [cm]": f"{L_ext_gancho_cm:.1f}",
+            "L total [m]": f"{_long_var_L:.3f}",
+            "kg/m": f"{_kg_por_m:.3f}", "Peso [kg]": f"{peso_barras_L_apu:.2f}",
+        }
+        _row_tot = {
+            "Dir.": "━━ TOTAL ━━",
+            "Varilla": "", "db [mm]": "",
+            "N° Barras": n_barras_B + n_barras_L, "Sep. [cm]": "",
+            "L gancho [cm]": "",
+            "L total [m]": f"{n_barras_B*_long_var_B + n_barras_L*_long_var_L:.2f}",
+            "kg/m": "", "Peso [kg]": f"{peso_total_acero_zap:.2f}",
+        }
+        if _has_prices:
+            _row_B[f"Costo [{_mon}]"] = f"{_c_ace_B:,.0f}"
+            _row_L[f"Costo [{_mon}]"] = f"{_c_ace_L:,.0f}"
+            _row_tot[f"Costo [{_mon}]"] = f"{(_c_ace_B+_c_ace_L):,.0f}"
+
+        st.dataframe(pd.DataFrame([_row_B, _row_L, _row_tot]), use_container_width=True, hide_index=True)
+        st.caption(f"Gancho 90° ACI/NSR-10: D_doblez mín = {radio_doblez_cm*2:.1f} cm | ext. = {L_ext_gancho_cm:.1f} cm")
+
+        # ─── GRÁFICO: Despiece visual ────────────────────────────────────────
+        st.markdown("#### 📊 Diagrama de Despiece")
+        _items_g   = ["Excavación", "Cemento", "Arena", "Gravilla", "Acero Dir.B", "Acero Dir.L"]
+        _qty_g     = [vol_excavacion, bultos_zap, vol_arena_z, vol_grava_z, peso_barras_B_apu, peso_barras_L_apu]
+        _units_g   = ["m³", "bultos", "m³", "m³", "kg", "kg"]
+        _colors_g  = ["#5c8a5a","#e8c07d","#c2a06b","#9b7b5c","#ff6b35","#ffd54f"]
+
+        _fig_desp = go.Figure()
+        _fig_desp.add_trace(go.Bar(
+            x=_items_g, y=_qty_g,
+            marker_color=_colors_g,
+            text=[f"{q:.2f} {u}" for q, u in zip(_qty_g, _units_g)],
+            textposition="outside",
+            name="Cantidad"
+        ))
+
+        if _has_prices:
+            _cost_g = [_c_exc, _c_cem, _c_are, _c_gra, _c_ace_B, _c_ace_L]
+            _fig_desp.add_trace(go.Bar(
+                x=_items_g, y=_cost_g,
+                marker_color=[c + "88" for c in _colors_g],
+                text=[f"{v:,.0f} {_mon}" for v in _cost_g],
+                textposition="outside",
+                name=f"Costo [{_mon}]",
+                yaxis="y2"
+            ))
+            _fig_desp.update_layout(yaxis2=dict(title=f"Costo [{_mon}]", overlaying="y", side="right", showgrid=False, tickfont=dict(color="#aaa")))
+
+        _fig_desp.update_layout(
+            paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+            font_color="white", barmode="group",
+            xaxis=dict(showgrid=False),
+            yaxis=dict(title="Cantidad", showgrid=True, gridcolor="#222"),
+            legend=dict(facecolor="#111", font_color="white"),
+            margin=dict(l=20, r=20, t=30, b=20), height=380,
+            title=dict(text=f"Despiece Zapata {B_use:.2f}x{L_use:.2f}m — {bar_z}", font_color="white")
+        )
+        st.plotly_chart(_fig_desp, use_container_width=True)
 
 
 
