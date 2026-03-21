@@ -1021,10 +1021,10 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
                        yaxis=dict(showgrid=True, gridcolor='#333'),
                        zaxis=dict(showgrid=True, gridcolor='#333')),
             margin=dict(l=0, r=0, b=0, t=30), height=550,
-            showlegend=True, dragmode='turntable', paper_bgcolor='#0f1117', font_color='white',
+            showlegend=True, dragmode='turntable', paper_bgcolor='#0f1117', font=dict(color='white'),
             title=dict(text=f"Zapata {B_use:.2f}x{L_use:.2f}m | H={H_zap:.0f}cm | "
                            f"Dir.B: {n_barras_B}×{bar_z} c/{sep_B:.1f}cm | Dir.L: {n_barras_L}×{bar_z} c/{sep_L:.1f}cm",
-                       font_color='white'))
+                       font=dict(color='white')))
         st.plotly_chart(fig3d, use_container_width=True)
         
         st.markdown("---")
@@ -1273,7 +1273,7 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
 
         _fig_desp.update_layout(
             paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
-            font_color="white", barmode="group",
+            font=dict(color="white"), barmode="group",
             xaxis=dict(showgrid=False),
             yaxis=dict(title="Cantidad", showgrid=True, gridcolor="#222"),
             legend=dict(bgcolor="#111", font=dict(color="white")),
