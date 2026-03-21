@@ -524,6 +524,12 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
         tab_r,tab_s,tab_3d,tab_q = st.tabs(["📊 Resultados","🔲 Sección 2D","🧊 Visualización 3D","📦 Cantidades"])
         with tab_r:
             st.markdown(f"**Tipo de sección:** {sec_type} | **φ={phi_f}**")
+
+            rho_prov_vt = As_prov_vt / (bw_vt * d_vt)
+            ok_rho_max_T = rho_prov_vt <= rho_max
+            if not ok_rho_max_T:
+                st.warning(f"⚠️ Cuantía de acero (ρ={rho_prov_vt:.4f}) excede el máximo permitido (ρ_max={rho_max:.4f}). Aumente la sección o use más acero.")
+            
             rows_vt = [
                 ("bf × bw × hf × h", f"{bf_vt:.0f} × {bw_vt:.0f} × {hf_vt:.0f} × {ht_vt:.0f} cm"),
                 ("d efectivo", f"{d_vt:.1f} cm"),
@@ -598,6 +604,7 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
             vol_t = (bf_vt*hf_vt + bw_vt*(ht_vt-hf_vt))/10000 * L_vt
             peso_t = As_prov_vt * L_vt * 0.785
             m = mix_for_fc(fc)
+            bags = m[0]*vol_t/bag_kg
             qty_table([("Concreto Viga T", f"{vol_t:.4f} m³"),
                        (f"Acero ({n_bt} barras)", f"{peso_t:.2f} kg"),
                        (f"Cemento ({bag_kg:.0f}kg/bulto)", f"{m[0]*vol_t/bag_kg:.1f} bultos"),
@@ -645,7 +652,7 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
                 st.markdown("#### 🧱 Resumen de Materiales y Costos")
                 data_apu = {
                     "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)"],
-                    "Cantidad": [f"{bags:.1f}", f"{{peso_t:.1f}}", f"{{(m[2]*vol_t/1600):.2f}}", f"{{(m[3]*vol_t/1600):.2f}}"],
+                    "Cantidad": [f"{bags:.1f}", f"{peso_t:.1f}", f"{{(m[2]*vol_t/1600):.2f}}", f"{{(m[3]*vol_t/1600):.2f}}"],
                     "Precio Unit.": [apu.get('cemento',0), apu.get('acero',0), apu.get('arena',0), apu.get('grava',0)],
                     "Subtotal": [f"{c_cem:,.2f}", f"{c_ace:,.2f}", f"{c_are:,.2f}", f"{c_gra:,.2f}"]
                 }
@@ -970,6 +977,7 @@ with st.expander(_t("🏗️ Diseño de Losa en Una Dirección", "🏗️ One-Wa
             peso_flex_ls = As_prov_ls * ln_ls * 0.785
             peso_temp_ls = As_temp * ln_ls * 0.785
             m = mix_for_fc(fc)
+            bags = m[0]*vol_ls/bag_kg
             qty_table([
                 ("Concreto (1m de ancho)", f"{vol_ls:.4f} m³"),
                 (f"Acero flexión {bar_ls} @ {s_use_ls:.1f}cm", f"{peso_flex_ls:.2f} kg/m"),
@@ -1020,7 +1028,7 @@ with st.expander(_t("🏗️ Diseño de Losa en Una Dirección", "🏗️ One-Wa
                 st.markdown("#### 🧱 Resumen de Materiales y Costos")
                 data_apu = {
                     "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)"],
-                    "Cantidad": [f"{bags:.1f}", f"{{(peso_flex_ls + peso_temp_ls):.1f}}", f"{{(m[2]*vol_ls/1600):.2f}}", f"{{(m[3]*vol_ls/1600):.2f}}"],
+                    "Cantidad": [f"{bags:.1f}", f"{(peso_flex_ls + peso_temp_ls):.1f}", f"{{(m[2]*vol_ls/1600):.2f}}", f"{{(m[3]*vol_ls/1600):.2f}}"],
                     "Precio Unit.": [apu.get('cemento',0), apu.get('acero',0), apu.get('arena',0), apu.get('grava',0)],
                     "Subtotal": [f"{c_cem:,.2f}", f"{c_ace:,.2f}", f"{c_are:,.2f}", f"{c_gra:,.2f}"]
                 }
