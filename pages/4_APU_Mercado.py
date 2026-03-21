@@ -420,8 +420,8 @@ st.markdown("#### 👷 Mano de Obra e Impuestos")
 c4, c5 = st.columns(2)
 with c4:
     salario_base = st.number_input(f"Salario Mensual Base (ej: SMMLV) [{moneda}]", value=st.session_state.get("apu_sal", 1300000.0 if pais_manual=="Colombia" else 400.0), key="apu_sal")
-    dias_mes = 30
-    factor_prestacional = st.number_input("Factor Prestacional (Sociales+Parafiscales) [%]", 1.0, 100.0, st.session_state.get("apu_fact", 65.0), 1.0, key="apu_fact") / 100.0
+    dias_mes = st.number_input("Días laborables al mes", 1, 31, st.session_state.get("apu_dias", 26), 1, key="apu_dias")
+    factor_prestacional = st.number_input("Factor Prestacional (Sociales+Parafiscales) [%]", 1.0, 150.0, st.session_state.get("apu_fact", 65.0), 1.0, key="apu_fact") / 100.0
     costo_dia_real = (salario_base / dias_mes) * (1 + factor_prestacional)
     st.caption(f"Costo Real Día/Trabajador: **{moneda} {costo_dia_real:,.2f}**")
     

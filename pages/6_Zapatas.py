@@ -1168,11 +1168,26 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
         _c_are  = vol_arena_z * _p_are
         _c_gra  = vol_grava_z * _p_gra
         _c_exc  = vol_excavacion * c_excav_u if _has_prices else 0.0
+        
+        _total_mat = _c_exc + _c_cem + _c_are + _c_gra + _c_ace
 
+        # Calcular Gran Total si hay precios
+        _gran_total = 0.0
         if _has_prices:
-            st.success(f"💱 Precios actualizados del scraping — {_mon}")
+            total_dias_mo = (peso_total_acero_zap * 0.04) + (vol_concreto_zap * 0.4) + (vol_excavacion * 0.3)
+            costo_mo = total_dias_mo * _apu.get("costo_dia_mo", 69333.33)
+            costo_directo = _total_mat + costo_mo
+            herramienta = costo_mo * _apu.get("pct_herramienta", 0.05)
+            aiu = costo_directo * _apu.get("pct_aui", 0.30)
+            utilidad = costo_directo * _apu.get("pct_util", 0.05)
+            iva = utilidad * _apu.get("iva", 0.19)
+            _gran_total = costo_directo + herramienta + aiu + iva
+
+            col_msg, col_metric = st.columns([2, 1])
+            col_msg.success(f"💱 Precios actualizados del scraping — {_mon}")
+            col_metric.metric(f"💎 Gran Total Proyecto [{_mon}]", f"{_gran_total:,.0f}")
         else:
-            st.info("ℹ️ Ve a **APU Mercado** para ver los costos en tiempo real aquí mismo.")
+            st.info("ℹ️ Ve a **APU Mercado** para descargar los costos en tiempo real aquí mismo.")
 
         # TABLA: Materiales con costos
         _mat_rows = [
