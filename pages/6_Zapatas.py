@@ -1116,19 +1116,91 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
                            mime="application/dxf")
 
     with tab_apu:
-        vol_excavacion = (B_use + 0.5) * (L_use + 0.5) * Df_z
-        vol_concreto_zap = B_use * L_use * (H_zap/100.0)
-        _area_m2 = REBAR_DICT[bar_z]["area"] * 1e-4
-        _long_B = L_use + 2*H_zap/100.0
-        _long_L = B_use + 2*H_zap/100.0
-        peso_barras_B_apu = n_barras_B * _long_B * _area_m2 * 7850
-        peso_barras_L_apu = n_barras_L * _long_L * _area_m2 * 7850
+        # ─── Cantidades base ────────────────────────────────────────────────
+        vol_excavacion   = (B_use + 0.5) * (L_use + 0.5) * Df_z
+        vol_concreto_zap = B_use * L_use * (H_zap / 100.0)
+
+        # Longitud de varilla con gancho real (arco + extensión)
+        _area_m2  = REBAR_DICT[bar_z]["area"] * 1e-4
+        _long_gancho_m  = ((math.pi * radio_doblez_cm / 2) + L_ext_gancho_cm) / 100.0
+        _long_var_B = L_use - 2*(recub_z/100.0) + 2*_long_gancho_m
+        _long_var_L = B_use - 2*(recub_z/100.0) + 2*_long_gancho_m
+        _kg_por_m   = REBAR_DICT[bar_z]["area"] * 1e-4 * 7850          # kg/m por varilla
+        peso_barras_B_apu = n_barras_B * _long_var_B * _kg_por_m
+        peso_barras_L_apu = n_barras_L * _long_var_L * _kg_por_m
         peso_total_acero_zap = peso_barras_B_apu + peso_barras_L_apu
-        
-        st.write(f"**Excavación:** {vol_excavacion:.2f} m³")
-        st.write(f"**Concreto:** {vol_concreto_zap:.2f} m³")
-        st.write(f"**Acero de Refuerzo:** {peso_total_acero_zap:.1f} kg")
-        st.write(f"**Cuantía (kg/m³)** {(peso_total_acero_zap/vol_concreto_zap):.1f} kg/m³")
+
+        # Proporciones concreto (ACI 211 aprox. para fc 21 MPa)
+        pct_arena_apu = 0.55; pct_grava_apu = 0.80
+        bultos_zap    = vol_concreto_zap * 350 / 50.0               # bultos de 50 kg
+        vol_arena_z   = vol_concreto_zap * pct_arena_apu             # m³
+        vol_grava_z   = vol_concreto_zap * pct_grava_apu             # m³
+        litros_agua   = vol_concreto_zap * 185.0                     # l/m³  (rel a/c ≈0.53)
+
+        # ─── SECCIÓN 1: Resumen de materiales ──────────────────────────────
+        st.markdown("### 📦 Resumen de Materiales — Quantiy Take-Off")
+        cols_m = st.columns(4)
+        cols_m[0].metric("⛏️ Excavación", f"{vol_excavacion:.2f} m³")
+        cols_m[1].metric("🧱 Vol. Concreto", f"{vol_concreto_zap:.2f} m³")
+        cols_m[2].metric("🏋️ Acero Total", f"{peso_total_acero_zap:.1f} kg")
+        cols_m[3].metric("📐 Cuantía", f"{peso_total_acero_zap/vol_concreto_zap:.1f} kg/m³")
+
+        st.markdown("#### 🪣 Ingredientes de Concreto")
+        df_mat = pd.DataFrame([
+            {"Material": "🧱 Cemento",        "Cantidad": f"{bultos_zap:.1f}",    "Unidad": "bultos (50 kg)"},
+            {"Material": "🏖️ Arena",          "Cantidad": f"{vol_arena_z:.3f}",   "Unidad": "m³"},
+            {"Material": "🪨 Gravilla",        "Cantidad": f"{vol_grava_z:.3f}",   "Unidad": "m³"},
+            {"Material": "💧 Agua",            "Cantidad": f"{litros_agua:.0f}",   "Unidad": "litros"},
+            {"Material": "🏋️ Acero refuerzo",  "Cantidad": f"{peso_total_acero_zap:.1f}", "Unidad": "kg"},
+        ])
+        st.dataframe(df_mat, use_container_width=True, hide_index=True)
+
+        # ─── SECCIÓN 2: Despiece de Varillas ───────────────────────────────
+        st.markdown("#### 🔩 Despiece de Acero de Refuerzo")
+        db_mm_apu    = REBAR_DICT[bar_z]["db"]
+        area_cm2_apu = REBAR_DICT[bar_z]["area"]
+        df_desp = pd.DataFrame([
+            {
+                "Dir.": "B  (⟵ L_use →)",
+                "Varilla": bar_z,
+                "db [mm]": f"{db_mm_apu:.1f}",
+                "Área [cm²]": f"{area_cm2_apu:.3f}",
+                "N° Barras": n_barras_B,
+                "Separación": f"{sep_B:.1f} cm",
+                "L gancho 90° [cm]": f"{L_ext_gancho_cm:.1f}",
+                "L total c/gancho [m]": f"{_long_var_B:.3f}",
+                "kg/m": f"{_kg_por_m:.3f}",
+                "Peso Total [kg]": f"{peso_barras_B_apu:.2f}",
+            },
+            {
+                "Dir.": "L  (⟵ B_use →)",
+                "Varilla": bar_z,
+                "db [mm]": f"{db_mm_apu:.1f}",
+                "Área [cm²]": f"{area_cm2_apu:.3f}",
+                "N° Barras": n_barras_L,
+                "Separación": f"{sep_L:.1f} cm",
+                "L gancho 90° [cm]": f"{L_ext_gancho_cm:.1f}",
+                "L total c/gancho [m]": f"{_long_var_L:.3f}",
+                "kg/m": f"{_kg_por_m:.3f}",
+                "Peso Total [kg]": f"{peso_barras_L_apu:.2f}",
+            },
+            {
+                "Dir.": "━━ TOTAL ━━",
+                "Varilla": "",
+                "db [mm]": "",
+                "Área [cm²]": "",
+                "N° Barras": n_barras_B + n_barras_L,
+                "Separación": "",
+                "L gancho 90° [cm]": "",
+                "L total c/gancho [m]": f"{n_barras_B*_long_var_B + n_barras_L*_long_var_L:.2f}",
+                "kg/m": "",
+                "Peso Total [kg]": f"{peso_total_acero_zap:.2f}",
+            }
+        ])
+        st.dataframe(df_desp, use_container_width=True, hide_index=True)
+        st.caption(f"ℹ️  Gancho estándar 90° ACI/NSR-10: radio mín. doblez = {radio_doblez_cm:.1f} cm | extensión = {L_ext_gancho_cm:.1f} cm | varilla {bar_z} (db={db_mm_apu:.1f}mm)")
+
+
 
         if "apu_config" in st.session_state:
             st.markdown("---")
