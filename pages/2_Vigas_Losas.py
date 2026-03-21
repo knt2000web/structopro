@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import pandas as pd
 import math
+from docx import Document
+from docx.shared import Pt, Cm, Inches
+import ezdxf
+from datetime import datetime
+
 import io
 import plotly.graph_objects as go
 
@@ -327,7 +332,7 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
 
             with tab_s:
                 fig, ax = sec_dark_fig(b_vr, h_vr, f"Sección {b_vr:.0f}×{h_vr:.0f} cm")
-                recub = dp_vr - db_vr/20
+                recub = max(dp_vr - db_vr/20, 0.5)
                 r_bar = db_vr/20
                 ax.add_patch(patches.Rectangle((recub,recub),b_vr-2*recub,h_vr-2*recub,linewidth=1.5,edgecolor='#00d4ff',facecolor='none',linestyle='--'))
                 xs = [b_vr/2] if n_bars == 1 else np.linspace(dp_vr, b_vr-dp_vr, n_bars) if n_bars>1 else [b_vr/2]
@@ -359,21 +364,26 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
                                                 mode='lines', line=dict(color='darkred', width=line_width),
                                                 name=f'Varilla {bar_vr}', showlegend=(idx==0)))
                                                 
+                                
                 # Estribos (Ties)
                 tie_color = 'cornflowerblue'
                 tie_width = max(2, (9.5/10.0) * 3)
-                sep_ties = 15 # cm
+                sep_ties = st.slider("Separación Estribos (cm)", 5, 50, int(st.session_state.get('cv_s_diseno', 15)), 1, key="vr_sep_tie")
                 
                 # Bounding box for tie
                 tx = [-b_vr/2 + dp_vr/2, b_vr/2 - dp_vr/2, b_vr/2 - dp_vr/2, -b_vr/2 + dp_vr/2, -b_vr/2 + dp_vr/2]
                 ty = [dp_vr/2, dp_vr/2, h_vr - dp_vr/2, h_vr - dp_vr/2, dp_vr/2]
                 
                 L_cm = int(L_mm_3d)
+                
+                # Optimize 3D Plotly with None gaps
+                tx_all, ty_all, tz_all = [], [], []
                 for zt in range(15, L_cm, sep_ties):
-                    z_t_arr = [zt] * 5
-                    fig3d.add_trace(go.Scatter3d(x=tx, y=ty, z=z_t_arr, mode='lines', 
-                                                 line=dict(color=tie_color, width=tie_width), name='Estribo', showlegend=(zt==15)))
-                                                
+                    tx_all.extend(tx + [None])
+                    ty_all.extend(ty + [None])
+                    tz_all.extend([zt]*5 + [None])
+                fig3d.add_trace(go.Scatter3d(x=tx_all, y=ty_all, z=tz_all, mode='lines', 
+                                             line=dict(color=tie_color, width=tie_width), name='Estribos Largos', showlegend=True))
                 fig3d.update_layout(scene=dict(aspectmode='data', xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)'),
                                     margin=dict(l=0, r=0, b=0, t=0), height=450, dragmode='turntable')
                 st.plotly_chart(fig3d, use_container_width=True)
@@ -454,6 +464,55 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
                         margin=dict(l=0, r=0, t=40, b=0), height=300
                     )
                     st.plotly_chart(fig_chart, use_container_width=True)
+                    # 5. Generación de Archivos (DOCX, DXF)
+                    st.markdown("---")
+                    st.markdown("#### 📄 Documentos del Proyecto (Viga Rectangular)")
+                    cd, cdx = st.columns(2)
+                    with cd:
+                        doc = Document()
+                        doc.add_heading(f"Memoria de Cálculo Viga: {b_vr:.0f}x{h_vr:.0f} cm", 0)
+                        doc.add_paragraph(f"Generado el: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+                        doc.add_heading("1. Materiales", level=1)
+                        doc.add_paragraph(f"Concreto: f'c = {fc:.1f} MPa")
+                        doc.add_paragraph(f"Acero: fy = {fy:.0f} MPa")
+                        doc.add_heading("2. Diseño a Flexión", level=1)
+                        doc.add_paragraph(f"Mu solicitado = {Mu_vr:.2f} kN·m")
+                        doc.add_paragraph(f"Acero Provisto = {As_prov:.2f} cm² ({n_bars} vars. {bar_vr})")
+                        doc.add_paragraph(f"Momento Resistente φMn = {phi_Mn_kNm:.2f} kN·m")
+                        doc.add_paragraph(f"Cuantía ρ = {rho_prov*100:.3f}% (ρ_min={rho_min*100:.3f}%, ρ_max={rho_max*100:.3f}%)")
+                        if "Vu_cv" in locals():
+                            doc.add_heading("3. Diseño a Cortante", level=1)
+                            doc.add_paragraph(f"Vu = {Vu_cv:.2f} kN, φVc = {phi_Vc:.2f} kN")
+                        
+                        bio = io.BytesIO()
+                        doc.save(bio)
+                        st.download_button("📥 Descargar Memoria (DOCX)", data=bio.getvalue(), file_name=f"Memoria_Viga_{b_vr:.0f}x{h_vr:.0f}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", key="btn_docx_vr")
+                    with cdx:
+                        try:
+                            dxf = ezdxf.new('R2010')
+                            msp = dxf.modelspace()
+                            
+                            # Draw Outline
+                            points = [(0,0), (b_vr,0), (b_vr,h_vr), (0,h_vr), (0,0)]
+                            msp.add_lwpolyline(points)
+                            
+                            # Draw stirrup
+                            cr = max(dp_vr, 2)
+                            tx = [cr, b_vr-cr, b_vr-cr, cr, cr]
+                            ty = [cr, cr, h_vr-cr, h_vr-cr, cr]
+                            msp.add_lwpolyline(list(zip(tx,ty)), dxfattribs={'color': 5})
+                            
+                            # Draw Rebar (tension bars at bottom, roughly)
+                            db_cm = db_vr/10
+                            for xb in xs[:n_bars]:
+                                msp.add_circle((xb, cr + db_cm/2), radius=db_cm/2, dxfattribs={'color': 1})
+                                
+                            dxf_io = io.StringIO()
+                            dxf.write(dxf_io)
+                            st.download_button("📥 Descargar Plano (DXF)", data=dxf_io.getvalue().encode('utf-8'), file_name=f"Viga_{b_vr:.0f}x{h_vr:.0f}.dxf", mime="application/dxf", key="btn_dxf_vr")
+                        except Exception as e:
+                            st.error(f"Error ezdxf: {e}")
+
                 else:
                     st.info("💡 Ve a la página **'4. APU Mercado'** para configurar los precios de materiales y activar el presupuesto y gráficos detallados.")
 
@@ -537,6 +596,9 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
                 (f"Varillas ({bar_vt})", f"{n_bt} barras — As prov = {As_prov_vt:.3f} cm²"),
                 ("φMn calculado", f"{phi_Mn_vt:.2f} kN·m"),
                 ("Mu solicitado", f"{Mu_vt:.2f} kN·m"),
+                ("ρ provisto", f"{(As_prov_vt/(bw_vt*d_vt))*100:.4f}%"),
+                ("ρ máximo", f"{rho_max*100:.4f}%"),
+                ("Validación ρ", "✅ CUMPLE" if ok_rho_max_T else "❌ EXCEDE (Sobrearmada)"),
                 ("Estado", "✅ CUMPLE" if ok_vt else "❌ DEFICIENTE"),
             ]
             qty_table(rows_vt)
@@ -581,21 +643,23 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
                                             mode='lines', line=dict(color='darkred', width=line_width),
                                             name=f'Varilla {bar_vt}', showlegend=(idx==0)))
                                             
-            # Estribos (Ties) - Ajustado al Alma (Web)
+                        # Estribos (Ties) - Ajustado al Alma (Web)
             tie_color = 'cornflowerblue'
             tie_width = max(2, (9.5/10.0) * 3)
-            sep_ties = 15 # cm
+            sep_ties = st.slider("Separación Estribos (cm) ", 5, 50, int(st.session_state.get('cv_s_diseno', 15)), 1, key="vt_sep_tie")
             
             # Bounding box for tie in T Web
             tx = [-bw_vt/2 + dp_vt/2, bw_vt/2 - dp_vt/2, bw_vt/2 - dp_vt/2, -bw_vt/2 + dp_vt/2, -bw_vt/2 + dp_vt/2]
             ty = [dp_vt/2, dp_vt/2, ht_vt - dp_vt/2, ht_vt - dp_vt/2, dp_vt/2]
             
             L_cm = int(L_mm_3d)
+            tx_all, ty_all, tz_all = [], [], []
             for zt in range(15, L_cm, sep_ties):
-                z_t_arr = [zt] * 5
-                fig3d.add_trace(go.Scatter3d(x=tx, y=ty, z=z_t_arr, mode='lines', 
-                                             line=dict(color=tie_color, width=tie_width), name='Estribo', showlegend=(zt==15)))
-                                            
+                tx_all.extend(tx + [None])
+                ty_all.extend(ty + [None])
+                tz_all.extend([zt]*5 + [None])
+            fig3d.add_trace(go.Scatter3d(x=tx_all, y=ty_all, z=tz_all, mode='lines', 
+                                         line=dict(color=tie_color, width=tie_width), name='Estribos Alma', showlegend=True))
             fig3d.update_layout(scene=dict(aspectmode='data', xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)'),
                                 margin=dict(l=0, r=0, b=0, t=0), height=450, dragmode='turntable')
             st.plotly_chart(fig3d, use_container_width=True)
@@ -716,6 +780,7 @@ with st.expander(_t("⚡ Diseño a Cortante — Vigas de Concreto", "⚡ Shear D
         s_max_mm = min(d_mm_cv/2, 600)
     s_diseno_mm = min(s_calc_mm, s_max_mm)
     s_diseno_cm = s_diseno_mm/10
+    st.session_state['cv_s_diseno'] = s_diseno_cm
 
     n_estribos = math.ceil(L_cv*100/s_diseno_cm) + 1
     Vs_prov_kN = Av_cv*100*fy*d_mm_cv/(s_diseno_mm*1000)
