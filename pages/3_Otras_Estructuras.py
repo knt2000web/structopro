@@ -416,7 +416,6 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
             
             # Varilla longitudinal principal (zona de tracción superior, y = h_men - dp_men)
             _y_bar = h_men - dp_men
-            _db_cm = rebar_dict[bar_men].get('diam_mm', 16) / 10 if hasattr(rebar_dict, 'get') and bar_men in rebar_dict else 1.6
             _z_spacing = _col_dep / (n_bars + 1)
             for _bi in range(n_bars):
                 _zi = _z_spacing * (_bi + 1)

@@ -6,6 +6,9 @@ import math
 import io
 import ezdxf
 from docx import Document
+from docx.shared import Inches, Pt
+from datetime import datetime
+import json
 
 # ─────────────────────────────────────────────
 # IDIOMA GLOBAL Y NORMA
@@ -13,360 +16,722 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 
-
+st.set_page_config(page_title=_t("StructMaster 2D", "StructMaster 2D"), layout="wide")
 st.title(_t("StructMaster 2D - Diseño Estructural Automatizado", "StructMaster 2D - Automated Structural Design"))
 st.markdown(_t(f"Análisis Matricial Interactivo con Recomendaciones Automáticas de Acero y Cimentación según **{norma_sel}**.", 
                f"Interactive Matrix Analysis with Automated Steel and Foundation Recommendations per **{norma_sel}**."))
 
 # ─────────────────────────────────────────────
-# INIT DATAFRAMES
+# CODES (φ factores)
+CODES = {
+    "NSR-10 (Colombia)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"NSR-10"},
+    "ACI 318-25 (EE.UU.)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"ACI 318-25"},
+    "ACI 318-19 (EE.UU.)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"ACI 318-19"},
+    "ACI 318-14 (EE.UU.)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"ACI 318-14"},
+    "NEC-SE-HM (Ecuador)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"NEC-SE-HM"},
+    "E.060 (Perú)": {"phi_flex":0.90, "phi_shear":0.85, "phi_comp":0.70, "lambda":1.0, "ref":"E.060"},
+    "NTC-EM (México)": {"phi_flex":0.85, "phi_shear":0.80, "phi_comp":0.70, "lambda":1.0, "ref":"NTC-EM"},
+    "COVENIN 1753-2006 (Venezuela)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.70, "lambda":1.0, "ref":"COVENIN"},
+    "NB 1225001-2020 (Bolivia)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"NB"},
+    "CIRSOC 201-2025 (Argentina)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"CIRSOC"},
+}
+code = CODES.get(norma_sel, CODES["NSR-10 (Colombia)"])
+phi_flex = code["phi_flex"]
+phi_shear = code["phi_shear"]
+phi_comp = code["phi_comp"]
+lam = code["lambda"]
+
+# ─────────────────────────────────────────────
+# FUNCIONES AUXILIARES
+def get_beta1(fc):
+    if fc <= 28: return 0.85
+    return max(0.85 - 0.05*(fc-28)/7.0, 0.65)
+
+def get_rho_min(fc, fy):
+    return max(0.25*math.sqrt(fc)/fy, 1.4/fy)
+
+def get_rho_max_beam(fc, fy, beta1):
+    eps_cu = 0.003
+    eps_t_min = 0.005
+    return (0.85*fc*beta1/fy)*(eps_cu/(eps_cu+eps_t_min))
+
+def design_footing(Pu, Mu, qa, fc, fy, recub=5, B_init=1.0, tolerancia=0.05, max_iter=20):
+    """Diseña zapata cuadrada con momento (flexión uniaxial). Retorna (B, H, As_req)"""
+    # Para simplificar, asumimos zapata cuadrada con momento en una dirección.
+    # Cálculo iterativo de B para que q_max ≤ qa
+    B = B_init
+    for _ in range(max_iter):
+        A = B * B
+        q_max = Pu/A + 6*Mu/(B*B*B)  # fórmula para zapata cuadrada
+        if q_max <= qa * 1.01:
+            break
+        B *= 1.05
+    # Espesor mínimo por corte (cortante unidireccional aproximado)
+    # Suponemos columna 40x40 cm para calcular d, pero podría tomarse de la estructura.
+    # Para simplificar, usamos regla empírica: H = max(0.4, B/4)
+    H = max(0.4, B/4)
+    d = H - recub/100 - 0.015  # m, asumiendo varilla 15 mm
+    # Acero requerido (mínimo)
+    As_min = 0.0018 * B * 100 * H * 100  # cm²
+    # Momento de diseño (considerando presión neta)
+    # Para zapata cuadrada, momento en la cara de la columna
+    # Suponemos columna 40x40 cm, volado = (B - 0.4)/2
+    L_v = (B - 0.4)/2
+    if L_v > 0:
+        # Presión de diseño para acero (usamos qu_promedio en volado)
+        qu = Pu/A
+        Mu_zap = qu * B * (L_v**2)/2
+    else:
+        Mu_zap = 0
+    # Acero por flexión
+    d_cm = d*100
+    b_cm = B*100
+    Rn = (Mu_zap * 1e6) / (phi_flex * b_cm * d_cm**2)
+    if Rn > 0:
+        disc = 1 - 2*Rn/(0.85*fc)
+        if disc > 0:
+            rho = (0.85*fc/fy)*(1 - math.sqrt(disc))
+        else:
+            rho = 0.0018
+    else:
+        rho = 0.0018
+    As_req = rho * b_cm * d_cm
+    As_req = max(As_req, As_min)
+    return B, H, As_req
+
+def design_beam(Mu, Vu, b_cm, h_cm, fc, fy, recub=5):
+    """Diseño de viga rectangular: acero longitudinal y estribos."""
+    d_cm = h_cm - recub - 1  # asumiendo estribo 10 mm
+    # Flexión
+    Rn = (Mu * 1e6) / (phi_flex * b_cm * d_cm**2)
+    disc = 1 - 2*Rn/(0.85*fc)
+    if disc > 0:
+        rho = (0.85*fc/fy)*(1 - math.sqrt(disc))
+    else:
+        rho = 0.0018
+    rho_min = get_rho_min(fc, fy)
+    rho_max = get_rho_max_beam(fc, fy, get_beta1(fc))
+    rho_use = max(rho, rho_min)
+    As = rho_use * b_cm * d_cm
+    # Cortante
+    Vc = 0.17 * lam * math.sqrt(fc) * b_cm * d_cm / 10  # kN
+    phi_Vc = phi_shear * Vc
+    if Vu > phi_Vc/2:
+        Vs = Vu / phi_shear - Vc
+        # Asumimos estribos #3 (0.71 cm²) de 2 ramas
+        Av = 2 * 0.71  # cm²
+        s = Av * fy * d_cm / Vs  # cm
+        s = max(5, min(s, 60, d_cm/2))
+    else:
+        s = 0  # no requiere estribos
+    return As, s
+
+def design_column(Pu, Mu, b_cm, h_cm, fc, fy, recub=5):
+    """Diseño preliminar de columna rectangular (verificación P-M simplificada)."""
+    # Acero mínimo por cuantía 1%
+    Ag = b_cm * h_cm
+    As_min = 0.01 * Ag
+    # Verificación aproximada: capacidad de la columna con acero mínimo
+    # Asumimos acero distribuido uniformemente. Simplificamos con fórmula de carga axial máxima.
+    phi = phi_comp
+    # Capacidad de la columna (sin considerar momento)
+    Pn_max = 0.85 * fc * (Ag - As_min) + fy * As_min
+    phi_Pn_max = phi * Pn_max
+    # Para momento, se requiere diagrama P-M, pero lo dejamos como advertencia
+    if Pu > phi_Pn_max:
+        ok = False
+    else:
+        ok = True
+    return As_min, ok
+
+# ─────────────────────────────────────────────
+# INICIALIZACIÓN DE DATOS (estado)
 if "nudos_df" not in st.session_state:
     st.session_state.nudos_df = pd.DataFrame([{"ID":1,"X (m)":0.0,"Y (m)":0.0}, {"ID":2,"X (m)":0.0,"Y (m)":3.0}, {"ID":3,"X (m)":4.0,"Y (m)":3.0}, {"ID":4,"X (m)":4.0,"Y (m)":0.0}])
 if "barras_df" not in st.session_state:
     st.session_state.barras_df = pd.DataFrame([
-        {"Nudo I":1, "Nudo J":2, "E (MPa)":21000.0, "A (cm²)":1200.0, "I (cm⁴)":160000.0}, # Columna 30x40
-        {"Nudo I":2, "Nudo J":3, "E (MPa)":21000.0, "A (cm²)":1200.0, "I (cm⁴)":250000.0}, # Viga 30x50
-        {"Nudo I":3, "Nudo J":4, "E (MPa)":21000.0, "A (cm²)":1200.0, "I (cm⁴)":160000.0}  # Columna 30x40
+        {"Nudo I":1, "Nudo J":2, "E (MPa)":21000.0, "A (cm²)":1200.0, "I (cm⁴)":160000.0, "b (cm)":30.0, "h (cm)":40.0, "w_uniforme (kN/m)":0.0, "w_triangular (kN/m)":0.0, "direccion_w": "Y"},
+        {"Nudo I":2, "Nudo J":3, "E (MPa)":21000.0, "A (cm²)":1200.0, "I (cm⁴)":250000.0, "b (cm)":30.0, "h (cm)":50.0, "w_uniforme (kN/m)":0.0, "w_triangular (kN/m)":0.0, "direccion_w": "Y"},
+        {"Nudo I":3, "Nudo J":4, "E (MPa)":21000.0, "A (cm²)":1200.0, "I (cm⁴)":160000.0, "b (cm)":30.0, "h (cm)":40.0, "w_uniforme (kN/m)":0.0, "w_triangular (kN/m)":0.0, "direccion_w": "Y"}
     ])
 if "apoyos_df" not in st.session_state:
     st.session_state.apoyos_df = pd.DataFrame([{"Nudo":1,"Fijo X":True,"Fijo Y":True,"Fijo Rz":True}, {"Nudo":4,"Fijo X":True,"Fijo Y":True,"Fijo Rz":True}])
 if "cargas_nudo_df" not in st.session_state:
     st.session_state.cargas_nudo_df = pd.DataFrame([{"Nudo":2,"FX (kN)":20.0,"FY (kN)":-50.0,"Mz (kN-m)":0.0}, {"Nudo":3,"FX (kN)":0.0,"FY (kN)":-50.0,"Mz (kN-m)":0.0}])
+if "resultados" not in st.session_state:
+    st.session_state.resultados = None
 
 # ─────────────────────────────────────────────
-# TABS PRINCIPALES
-tab_gr, tab_mat, tab_res, tab_dis = st.tabs([
-    _t("1. Geometría", "1. Geometry"), 
+# TABS
+tab_geo, tab_cargas, tab_res, tab_dis = st.tabs([
+    _t("1. Geometría", "1. Geometry"),
     _t("2. Cargas y Suelo", "2. Loads & Soil"),
-    _t("3. Fuerzas Internas", "3. Internal Forces"),
-    _t("4. Diseño Automático", "4. Auto-Design")
+    _t("3. Resultados", "3. Results"),
+    _t("4. Exportaciones", "4. Exports")
 ])
 
 # ─────────────────────────────────────────────
-# FUNCION DIBUJO GEOMETRIA
-def plot_frame(df_n, df_b, df_sup, df_load):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_n['X (m)'], y=df_n['Y (m)'], mode='markers+text', text=df_n['ID'], textposition="top right", marker=dict(size=10, color='blue'), name="Nudos"))
-    for idx, b in df_b.iterrows():
-        try:
-            n_i = df_n[df_n['ID'] == b['Nudo I']].iloc[0]; n_j = df_n[df_n['ID'] == b['Nudo J']].iloc[0]
-            fig.add_trace(go.Scatter(x=[n_i['X (m)'], n_j['X (m)']], y=[n_i['Y (m)'], n_j['Y (m)']], mode='lines+text', text=[f"Bar {idx+1}", ""], textposition="middle right", line=dict(color='black', width=3), name=f"B{idx+1}"))
-        except: pass
-    for idx, s in df_sup.iterrows():
-        try:
-            n = df_n[df_n['ID'] == s['Nudo']].iloc[0]
-            fig.add_trace(go.Scatter(x=[n['X (m)']], y=[n['Y (m)']], mode='markers', marker=dict(size=14, color='red', symbol='triangle-up'), name="Apoyo"))
-        except: pass
-    for idx, c in df_load.iterrows():
-        try:
-            n = df_n[df_n['ID'] == c['Nudo']].iloc[0]
-            if c['FX (kN)'] != 0: fig.add_annotation(x=n['X (m)'], y=n['Y (m)'], ax=n['X (m)']-np.sign(c['FX (kN)'])*1, ay=n['Y (m)'], xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowcolor="green", text=f"{c['FX (kN)']} kN")
-            if c['FY (kN)'] != 0: fig.add_annotation(x=n['X (m)'], y=n['Y (m)'], ax=n['X (m)'], ay=n['Y (m)']-np.sign(c['FY (kN)'])*1, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowcolor="green", text=f"{c['FY (kN)']} kN")
-        except: pass
-    fig.update_layout(title="Lienzo Estructural Vectorizado", xaxis=dict(title="X (m)", showgrid=True, scaleanchor="y", scaleratio=1), yaxis=dict(title="Y (m)"), plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='white'), showlegend=False, dragmode='pan', margin=dict(l=20, r=20, t=40, b=20))
-    return fig
+# TAB 1: GEOMETRÍA
+with tab_geo:
+    st.subheader(_t("Nudos", "Nodes"))
+    st.session_state.nudos_df = st.data_editor(st.session_state.nudos_df, num_rows="dynamic", use_container_width=True)
+    st.subheader(_t("Elementos (Barras)", "Elements (Beams/Columns)"))
+    st.session_state.barras_df = st.data_editor(st.session_state.barras_df, num_rows="dynamic", use_container_width=True)
+    st.subheader(_t("Apoyos", "Supports"))
+    st.session_state.apoyos_df = st.data_editor(st.session_state.apoyos_df, num_rows="dynamic", use_container_width=True)
+
+    # Botón para guardar/cargar modelo
+    col_save, col_load = st.columns(2)
+    with col_save:
+        model_data = {
+            "nudos": st.session_state.nudos_df.to_dict(orient="records"),
+            "barras": st.session_state.barras_df.to_dict(orient="records"),
+            "apoyos": st.session_state.apoyos_df.to_dict(orient="records"),
+            "cargas_nudo": st.session_state.cargas_nudo_df.to_dict(orient="records"),
+            "norma": norma_sel
+        }
+        st.download_button(_t("💾 Guardar Modelo", "💾 Save Model"), data=json.dumps(model_data, indent=2), file_name="modelo.json", mime="application/json")
+    with col_load:
+        uploaded = st.file_uploader(_t("📂 Cargar Modelo", "📂 Load Model"), type=["json"])
+        if uploaded:
+            model = json.load(uploaded)
+            st.session_state.nudos_df = pd.DataFrame(model["nudos"])
+            st.session_state.barras_df = pd.DataFrame(model["barras"])
+            st.session_state.apoyos_df = pd.DataFrame(model["apoyos"])
+            st.session_state.cargas_nudo_df = pd.DataFrame(model["cargas_nudo"])
+            st.rerun()
 
 # ─────────────────────────────────────────────
-# TAB 1 & 2: INPUTS
-with tab_gr:
-    c_geo1, c_geo2 = st.columns([1, 2])
-    with c_geo1:
-        st.subheader("Nudos (X, Y)")
-        st.session_state.nudos_df = st.data_editor(st.session_state.nudos_df, num_rows="dynamic", use_container_width=True)
-        st.subheader("Elementos (Barras)")
-        st.session_state.barras_df = st.data_editor(st.session_state.barras_df, num_rows="dynamic", use_container_width=True)
-    with c_geo2:
-        st.plotly_chart(plot_frame(st.session_state.nudos_df, st.session_state.barras_df, st.session_state.apoyos_df, st.session_state.cargas_nudo_df), use_container_width=True)
+# TAB 2: CARGAS Y SUELO
+with tab_cargas:
+    st.subheader(_t("Cargas nodales", "Nodal loads"))
+    st.session_state.cargas_nudo_df = st.data_editor(st.session_state.cargas_nudo_df, num_rows="dynamic", use_container_width=True)
 
-with tab_mat:
-    c_mat1, c_mat2 = st.columns([1.5, 1])
-    with c_mat1:
-        st.subheader("Restricciones en Nudos (Apoyos)")
-        st.session_state.apoyos_df = st.data_editor(st.session_state.apoyos_df, num_rows="dynamic", use_container_width=True)
-        st.subheader("Fuerzas Nodales")
-        st.session_state.cargas_nudo_df = st.data_editor(st.session_state.cargas_nudo_df, num_rows="dynamic", use_container_width=True)
-    with c_mat2:
-        st.subheader("Mecánica de Suelos y Materiales")
-        st.info("Requerido para el Diseño Automático de Zapatas y Refuerzo.")
-        qa_suelo = st.number_input("Capacidad Portante Suelo (qa) [kN/m²]", 10.0, 1000.0, st.session_state.get("an2_qa", 150.0), 10.0, key="an2_qa")
-        fc_concreto = st.number_input("Resistencia Concreto f'c [MPa]", 15.0, 60.0, st.session_state.get("an2_fc", 21.0), 1.0, key="an2_fc")
-        fy_acero = st.number_input("Fluencia Acero fy [MPa]", 200.0, 600.0, st.session_state.get("an2_fy", 420.0), 10.0, key="an2_fy")
-        recubrimiento = st.number_input("Recubrimiento Vigas/Col [cm]", 2.0, 10.0, st.session_state.get("an2_rec", 4.0), 0.5, key="an2_rec")
+    st.subheader(_t("Cargas distribuidas en barras", "Distributed loads on bars"))
+    # Las cargas distribuidas ya están en barras_df, se editan en la misma tabla
+    st.dataframe(st.session_state.barras_df[["Nudo I","Nudo J","w_uniforme (kN/m)","w_triangular (kN/m)","direccion_w"]], use_container_width=True)
+    st.info(_t("Edite las cargas distribuidas directamente en la tabla de barras (pestaña Geometría).", "Edit distributed loads directly in the bar table (Geometry tab)."))
+
+    st.subheader(_t("Propiedades de materiales y suelo", "Material and soil properties"))
+    col_mat1, col_mat2 = st.columns(2)
+    with col_mat1:
+        fc = st.number_input(_t("Resistencia concreto f'c [MPa]", "Concrete strength f'c [MPa]"), 15.0, 80.0, st.session_state.get("ana_fc", 21.0), 1.0, key="ana_fc")
+        fy = st.number_input(_t("Fluencia acero fy [MPa]", "Steel yield fy [MPa]"), 200.0, 600.0, st.session_state.get("ana_fy", 420.0), 10.0, key="ana_fy")
+        recub = st.number_input(_t("Recubrimiento [cm]", "Cover [cm]"), 2.0, 10.0, st.session_state.get("ana_rec", 5.0), 0.5, key="ana_rec")
+    with col_mat2:
+        qa_suelo = st.number_input(_t("Capacidad portante suelo qa [kN/m²]", "Soil bearing capacity qa [kN/m²]"), 10.0, 1000.0, st.session_state.get("ana_qa", 150.0), 10.0, key="ana_qa")
+
+    if st.button(_t("🔁 Analizar estructura", "🔁 Analyze structure")):
+        with st.spinner(_t("Analizando...", "Analyzing...")):
+            # Copiamos datos actuales
+            nodes = st.session_state.nudos_df.copy().dropna()
+            elements = st.session_state.barras_df.copy().dropna()
+            supports = st.session_state.apoyos_df.copy().dropna()
+            loads = st.session_state.cargas_nudo_df.copy().dropna()
+
+            # Validaciones
+            if nodes.empty:
+                st.error(_t("No hay nudos definidos.", "No nodes defined."))
+                st.stop()
+            if elements.empty:
+                st.error(_t("No hay elementos definidos.", "No elements defined."))
+                st.stop()
+            # Mapa ID a índice
+            node_ids = nodes['ID'].tolist()
+            id_to_idx = {nid: i for i, nid in enumerate(node_ids)}
+            # Verificar IDs de barras
+            for _, e in elements.iterrows():
+                if e['Nudo I'] not in id_to_idx or e['Nudo J'] not in id_to_idx:
+                    st.error(_t(f"Barra {e.name}: nudo I o J no existe.", f"Bar {e.name}: node I or J does not exist."))
+                    st.stop()
+            # Verificar apoyos
+            for _, s in supports.iterrows():
+                if s['Nudo'] not in id_to_idx:
+                    st.error(_t(f"Apoyo en nudo {s['Nudo']} no existe.", f"Support at node {s['Nudo']} does not exist."))
+                    st.stop()
+
+            num_nudos = len(nodes)
+            num_gdl = num_nudos * 3
+            # Inicializar matriz de rigidez y vector de fuerzas
+            K = np.zeros((num_gdl, num_gdl))
+            F = np.zeros(num_gdl)
+
+            # Cargas nodales
+            for _, c in loads.iterrows():
+                if c['Nudo'] in id_to_idx:
+                    n_idx = id_to_idx[c['Nudo']]
+                    F[n_idx*3 + 0] += c.get('FX (kN)', 0.0)
+                    F[n_idx*3 + 1] += c.get('FY (kN)', 0.0)
+                    F[n_idx*3 + 2] += c.get('Mz (kN-m)', 0.0)
+
+            # Ensamblaje de barras y generación de fuerzas de empotramiento por cargas distribuidas
+            element_results = []
+            for idx, e in elements.iterrows():
+                # Coordenadas
+                xi = nodes.loc[nodes['ID']==e['Nudo I'], 'X (m)'].values[0]
+                yi = nodes.loc[nodes['ID']==e['Nudo I'], 'Y (m)'].values[0]
+                xj = nodes.loc[nodes['ID']==e['Nudo J'], 'X (m)'].values[0]
+                yj = nodes.loc[nodes['ID']==e['Nudo J'], 'Y (m)'].values[0]
+                L = math.hypot(xj-xi, yj-yi)
+                cx = (xj-xi)/L
+                cy = (yj-yi)/L
+                theta = math.atan2(yj-yi, xj-xi)
+
+                # Propiedades
+                E = e['E (MPa)'] * 1e3  # kPa
+                A = e['A (cm²)'] / 1e4   # m²
+                I = e['I (cm⁴)'] / 1e8   # m⁴
+                # Matriz de rigidez local
+                v1 = E*A/L
+                v2 = 12*E*I/(L**3)
+                v3 = 6*E*I/(L**2)
+                v4 = 4*E*I/L
+                v5 = 2*E*I/L
+                k_local = np.zeros((6,6))
+                k_local[0,0]=v1; k_local[0,3]=-v1; k_local[3,3]=v1
+                k_local[1,1]=v2; k_local[1,2]=v3; k_local[1,4]=-v2; k_local[1,5]=v3
+                k_local[2,1]=v3; k_local[2,2]=v4; k_local[2,4]=-v3; k_local[2,5]=v5
+                k_local[4,1]=-v2; k_local[4,2]=-v3; k_local[4,4]=v2; k_local[4,5]=-v3
+                k_local[5,1]=v3; k_local[5,2]=v5; k_local[5,4]=-v3; k_local[5,5]=v4
+
+                # Matriz de rotación
+                T = np.zeros((6,6))
+                T[0,0]=cx; T[0,1]=cy
+                T[1,0]=-cy; T[1,1]=cx
+                T[2,2]=1
+                T[3,3]=cx; T[3,4]=cy
+                T[4,3]=-cy; T[4,4]=cx
+                T[5,5]=1
+
+                k_glob = T.T @ k_local @ T
+
+                # Fuerzas de empotramiento por cargas distribuidas (solo en dirección local Y)
+                w_uniform = e.get('w_uniforme (kN/m)', 0.0)
+                w_tri = e.get('w_triangular (kN/m)', 0.0)
+                direc = e.get('direccion_w', 'Y')
+                f_fixed_local = np.zeros(6)
+                if w_uniform != 0 and direc == 'Y':
+                    # Carga uniforme en dirección Y local (transversal)
+                    f_fixed_local[1] = w_uniform * L / 2.0
+                    f_fixed_local[2] = w_uniform * L**2 / 12.0
+                    f_fixed_local[4] = w_uniform * L / 2.0
+                    f_fixed_local[5] = -w_uniform * L**2 / 12.0
+                if w_tri != 0 and direc == 'Y':
+                    # Triangular (máxima en nodo I)
+                    f_fixed_local[1] += w_tri * L / 3.0
+                    f_fixed_local[2] += w_tri * L**2 / 20.0
+                    f_fixed_local[4] += w_tri * L / 6.0
+                    f_fixed_local[5] += -w_tri * L**2 / 30.0
+                # Rotar fuerzas a global
+                f_fixed_glob = T.T @ f_fixed_local
+                # Obtener grados de libertad
+                i_idx = id_to_idx[e['Nudo I']]
+                j_idx = id_to_idx[e['Nudo J']]
+                dofs = [i_idx*3, i_idx*3+1, i_idx*3+2, j_idx*3, j_idx*3+1, j_idx*3+2]
+                # Sumar a la matriz de rigidez
+                for r in range(6):
+                    for c in range(6):
+                        K[dofs[r], dofs[c]] += k_glob[r,c]
+                    F[dofs[r]] -= f_fixed_glob[r]
+
+                element_results.append({
+                    "ID": idx+1, "Nudo I": e['Nudo I'], "Nudo J": e['Nudo J'],
+                    "L": L, "theta": theta, "E": E, "A": A, "I": I,
+                    "b_cm": e.get('b (cm)', 30.0), "h_cm": e.get('h (cm)', 40.0),
+                    "dofs": dofs, "T": T, "k_local": k_local, "f_fixed_local": f_fixed_local
+                })
+
+            # Eliminación de grados de libertad fijos (método directo)
+            fixed_dofs = []
+            for _, s in supports.iterrows():
+                n_idx = id_to_idx[s['Nudo']]
+                if s.get('Fijo X', False): fixed_dofs.append(n_idx*3 + 0)
+                if s.get('Fijo Y', False): fixed_dofs.append(n_idx*3 + 1)
+                if s.get('Fijo Rz', False): fixed_dofs.append(n_idx*3 + 2)
+            free_dofs = [d for d in range(num_gdl) if d not in fixed_dofs]
+
+            if len(free_dofs) == 0:
+                st.error(_t("No hay grados de libertad libres. Verifique los apoyos.", "No free DOFs. Check supports."))
+                st.stop()
+
+            # Resolver sistema reducido
+            Kff = K[np.ix_(free_dofs, free_dofs)]
+            Ff = F[free_dofs]
+            try:
+                Uf = np.linalg.solve(Kff, Ff)
+            except np.linalg.LinAlgError:
+                st.error(_t("Matriz de rigidez singular. Verifique la estructura (apoyos insuficientes o rigidez cero).", "Singular stiffness matrix. Check structure (insufficient supports or zero stiffness)."))
+                st.stop()
+
+            # Desplazamientos totales
+            U = np.zeros(num_gdl)
+            U[free_dofs] = Uf
+            # Reacciones
+            R = K @ U
+            # Fuerzas internas en elementos (en coordenadas locales)
+            for e in element_results:
+                u_glob = U[e['dofs']]
+                u_loc = e['T'] @ u_glob
+                # Sumar fuerzas de empotramiento a las deformaciones
+                # Las fuerzas totales son: f = k_local * u_loc + f_fixed_local
+                f_loc = e['k_local'] @ u_loc + e['f_fixed_local']
+                e['N'] = f_loc[0]
+                e['V'] = f_loc[1]
+                e['M_i'] = f_loc[2]
+                e['M_j'] = f_loc[5]
+
+            # Guardar resultados
+            st.session_state.resultados = {
+                "U": U, "R": R, "elements": element_results,
+                "nodes": nodes, "node_ids": node_ids, "id_to_idx": id_to_idx,
+                "num_gdl": num_gdl, "free_dofs": free_dofs, "fixed_dofs": fixed_dofs
+            }
+            st.success(_t("Análisis completado.", "Analysis completed."))
 
 # ─────────────────────────────────────────────
-# CALCULO ENGINE (Ejecuta automaticamente o con boton)
-# ─────────────────────────────────────────────
-nodes = st.session_state.nudos_df.copy().dropna()
-elements = st.session_state.barras_df.copy().dropna()
-supports = st.session_state.apoyos_df.copy().dropna()
-loads = st.session_state.cargas_nudo_df.copy().dropna()
-
-num_nudos = len(nodes)
-num_gdl = num_nudos * 3
-node_ids = nodes['ID'].tolist()
-id_to_idx = {nid: i for i, nid in enumerate(node_ids)}
-
-F = np.zeros(num_gdl)
-for idx, c in loads.iterrows():
-    if c['Nudo'] in id_to_idx:
-        n_idx = id_to_idx[c['Nudo']]
-        F[n_idx*3 + 0] += c.get('FX (kN)', 0.0)
-        F[n_idx*3 + 1] += c.get('FY (kN)', 0.0)
-        F[n_idx*3 + 2] += c.get('Mz (kN-m)', 0.0)
-
-K = np.zeros((num_gdl, num_gdl))
-element_results = [] # Almacenara k_local, T, dofs, L, angulo, etc
-
-for idx, e in elements.iterrows():
-    if e['Nudo I'] not in id_to_idx or e['Nudo J'] not in id_to_idx: continue
-    i_idx = id_to_idx[e['Nudo I']]; j_idx = id_to_idx[e['Nudo J']]
-    xi = nodes.loc[nodes['ID']==e['Nudo I'], 'X (m)'].values[0]
-    yi = nodes.loc[nodes['ID']==e['Nudo I'], 'Y (m)'].values[0]
-    xj = nodes.loc[nodes['ID']==e['Nudo J'], 'X (m)'].values[0]
-    yj = nodes.loc[nodes['ID']==e['Nudo J'], 'Y (m)'].values[0]
-    
-    L = np.sqrt((xj-xi)**2 + (yj-yi)**2)
-    if L == 0: continue
-    cx = (xj-xi)/L; cy = (yj-yi)/L
-    theta_rad = math.atan2(yj-yi, xj-xi)
-    
-    E = e['E (MPa)'] * 1e3; A_m2 = e['A (cm²)'] / 1e4; I_m4 = e['I (cm⁴)'] / 1e8
-    k_local = np.zeros((6,6))
-    v1 = E*A_m2/L; v2 = 12*E*I_m4/(L**3); v3 = 6*E*I_m4/(L**2); v4 = 4*E*I_m4/L; v5 = 2*E*I_m4/L
-    k_local[0,0]=v1; k_local[0,3]=-v1; k_local[3,3]=v1; k_local[3,0]=-v1
-    k_local[1,1]=v2; k_local[1,2]=v3; k_local[1,4]=-v2; k_local[1,5]=v3
-    k_local[2,1]=v3; k_local[2,2]=v4; k_local[2,4]=-v3; k_local[2,5]=v5
-    k_local[4,1]=-v2; k_local[4,2]=-v3; k_local[4,4]=v2; k_local[4,5]=-v3
-    k_local[5,1]=v3; k_local[5,2]=v5; k_local[5,4]=-v3; k_local[5,5]=v4
-    
-    T = np.zeros((6,6))
-    T[0,0]=cx; T[0,1]=cy; T[1,0]=-cy; T[1,1]=cx; T[2,2]=1
-    T[3,3]=cx; T[3,4]=cy; T[4,3]=-cy; T[4,4]=cx; T[5,5]=1
-    
-    k_glob = T.T @ k_local @ T
-    dofs = [i_idx*3, i_idx*3+1, i_idx*3+2, j_idx*3, j_idx*3+1, j_idx*3+2]
-    for r in range(6):
-        for c in range(6): K[dofs[r], dofs[c]] += k_glob[r,c]
-            
-    element_results.append({
-        "ID": idx+1, "Nudo I": e['Nudo I'], "Nudo J": e['Nudo J'], "L": L, "theta_rad": theta_rad, 
-        "k_local": k_local, "T": T, "dofs": dofs, "A_cm2": e['A (cm²)'], "I_cm4": e['I (cm⁴)'], "xi":xi, "yi":yi, "xj":xj, "yj":yj
-    })
-
-K_solve = np.copy(K)
-penalty = 1e12
-apoyos_idx = []
-for idx, s in supports.iterrows():
-    if s['Nudo'] in id_to_idx:
-        n_idx = id_to_idx[s['Nudo']]
-        if s.get('Fijo X', False): K_solve[n_idx*3+0, n_idx*3+0] += penalty
-        if s.get('Fijo Y', False): K_solve[n_idx*3+1, n_idx*3+1] += penalty
-        if s.get('Fijo Rz', False): K_solve[n_idx*3+2, n_idx*3+2] += penalty
-
-try:
-    U = np.linalg.solve(K_solve, F)
-    R_rx = K @ U
-    calc_success = True
-except:
-    calc_success = False
-
-# ─────────────────────────────────────────────
-# TAB 3: FUERZAS INTERNAS Y GRAFICOS BMD
+# TAB 3: RESULTADOS (solo si existe)
 with tab_res:
-    if not calc_success:
-        st.error("Error Matemático Estructural (Matriz Singular). Revise los apoyos.")
+    if st.session_state.resultados is None:
+        st.info(_t("Realice el análisis en la pestaña 'Cargas y Suelo'.", "Run the analysis in 'Loads & Soil' tab."))
     else:
-        st.subheader("Resultados Analíticos: Fuerzas en Elementos")
-        
-        # Calculate local forces f = k_local * T * U_element
-        df_forzas = []
-        fig_bmd = go.Figure()
-        
-        for e in element_results:
-            u_global = U[e['dofs']]
-            u_local = e['T'] @ u_global
-            f_local = e['k_local'] @ u_local # [Ni, Vi, Mi, Nj, Vj, Mj]
-            
-            Ni = f_local[0]; Vi = f_local[1]; Mi = f_local[2]
-            Nj = f_local[3]; Vj = f_local[4]; Mj = f_local[5]
-            
-            e['Ni'] = Ni; e['Vi'] = Vi; e['Mi'] = Mi
-            e['Nj'] = Nj; e['Vj'] = Vj; e['Mj'] = Mj
-            
-            df_forzas.append({
-                "Barra": e['ID'], "Axial I (kN)": Ni, "V Corte I (kN)": Vi, "Momento I (kN-m)": Mi,
-                "Axial J (kN)": Nj, "V Corte J (kN)": Vj, "Momento J (kN-m)": Mj
-            })
-            
-            # --- BMD PLOTTING ALGORITHM ---
-            # Momento linearly drawn perpendicular to the bar
-            scale_BMD = 0.05 # Scaling factor for visualization
-            
-            # Coordinates of bar ends
-            L = e['L']; theta = e['theta_rad']
-            
-            # Sign convention standard frame: M > 0 is drawn on tension side.
-            mi_plot = Mi * scale_BMD
-            mj_plot = -Mj * scale_BMD # Reverse Mj for continuous plotting assuming equilibrium
-            
-            # Vector perp
-            nx = -math.sin(theta); ny = math.cos(theta)
-            
-            # Plot Polygon for BMD
-            p_xi = e['xi']; p_yi = e['yi']
-            p_xj = e['xj']; p_yj = e['yj']
-            
-            # Offsets
-            o_xi = p_xi + nx * mi_plot; o_yi = p_yi + ny * mi_plot
-            o_xj = p_xj + nx * mj_plot; o_yj = p_yj + ny * mj_plot
-            
-            # Dibujar Area del Momento
-            fig_bmd.add_trace(go.Scatter(
-                x=[p_xi, o_xi, o_xj, p_xj, p_xi],
-                y=[p_yi, o_yi, o_yj, p_yj, p_yi],
-                fill="toself", fillcolor="rgba(0, 150, 255, 0.4)", line=dict(color="blue", width=1),
-                name=f"BMD {e['ID']}", hoverinfo="text", 
-                text=f"M_i: {Mi:.1f} kN-m<br>M_j: {-Mj:.1f} kN-m"
-            ))
-            # Dibujar Linea Barra Fuerte
-            fig_bmd.add_trace(go.Scatter(x=[p_xi, p_xj], y=[p_yi, p_yj], mode='lines', line=dict(color='white', width=4), showlegend=False))
-            # Textos
-            fig_bmd.add_annotation(x=o_xi, y=o_yi, text=f"{abs(Mi):.1f}", showarrow=False, font=dict(color="yellow", size=10))
-            fig_bmd.add_annotation(x=o_xj, y=o_yj, text=f"{abs(Mj):.1f}", showarrow=False, font=dict(color="yellow", size=10))
+        res = st.session_state.resultados
+        U = res["U"]
+        R = res["R"]
+        elements = res["elements"]
+        nodes = res["nodes"]
+        node_ids = res["node_ids"]
+        id_to_idx = res["id_to_idx"]
 
-        st.dataframe(pd.DataFrame(df_forzas).style.format("{:.2f}").background_gradient(cmap='coolwarm'), use_container_width=True)
-        
-        st.subheader("Diagrama de Momentos Flectores (BMD)")
-        fig_bmd.update_layout(title="BMD (Tension Side Plot)", plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='white'), yaxis_scaleanchor="x", showlegend=False, height=600)
+        # Tabla de desplazamientos
+        st.subheader(_t("Desplazamientos nodales", "Nodal displacements"))
+        desp_data = []
+        for nid in node_ids:
+            idx = id_to_idx[nid]
+            desp_data.append({
+                "Nudo": nid,
+                "dx (mm)": U[idx*3+0]*1000,
+                "dy (mm)": U[idx*3+1]*1000,
+                "rz (rad)": U[idx*3+2]
+            })
+        st.dataframe(pd.DataFrame(desp_data), use_container_width=True)
+
+        # Tabla de reacciones
+        st.subheader(_t("Reacciones en apoyos", "Support reactions"))
+        react_data = []
+        for _, s in st.session_state.apoyos_df.iterrows():
+            nid = s['Nudo']
+            if nid in id_to_idx:
+                idx = id_to_idx[nid]
+                react_data.append({
+                    "Nudo": nid,
+                    "Rx (kN)": R[idx*3+0],
+                    "Ry (kN)": R[idx*3+1],
+                    "Mz (kN-m)": R[idx*3+2]
+                })
+        st.dataframe(pd.DataFrame(react_data), use_container_width=True)
+
+        # Tabla de fuerzas internas
+        st.subheader(_t("Fuerzas internas en elementos", "Element internal forces"))
+        forces_data = []
+        for e in elements:
+            forces_data.append({
+                "Barra": e["ID"],
+                "Axial I (kN)": e["N"],
+                "Corte I (kN)": e["V"],
+                "Momento I (kN-m)": e["M_i"],
+                "Axial J (kN)": -e["N"],
+                "Corte J (kN)": -e["V"],
+                "Momento J (kN-m)": e["M_j"]
+            })
+        st.dataframe(pd.DataFrame(forces_data), use_container_width=True)
+
+        # Gráfico de momentos flectores (BMD)
+        st.subheader(_t("Diagrama de momentos flectores", "Bending moment diagram"))
+        fig_bmd = go.Figure()
+        for e in elements:
+            xi = nodes.loc[nodes['ID']==e["Nudo I"], 'X (m)'].values[0]
+            yi = nodes.loc[nodes['ID']==e["Nudo I"], 'Y (m)'].values[0]
+            xj = nodes.loc[nodes['ID']==e["Nudo J"], 'X (m)'].values[0]
+            yj = nodes.loc[nodes['ID']==e["Nudo J"], 'Y (m)'].values[0]
+            L = e["L"]
+            theta = e["theta"]
+            Mi = e["M_i"]
+            Mj = e["M_j"]
+            # Escala para visualización
+            max_mom = max(abs(Mi), abs(Mj))
+            scale = max_mom / 50 if max_mom > 0 else 1
+            # Dibujar barra
+            fig_bmd.add_trace(go.Scatter(x=[xi, xj], y=[yi, yj], mode='lines', line=dict(color='white', width=2), showlegend=False))
+            # Dibujar línea del momento (perpendicular a la barra)
+            nx = -math.sin(theta)
+            ny = math.cos(theta)
+            # Puntos desplazados
+            x_i = xi + nx * Mi/scale
+            y_i = yi + ny * Mi/scale
+            x_j = xj + nx * Mj/scale
+            y_j = yj + ny * Mj/scale
+            # Polígono relleno
+            fig_bmd.add_trace(go.Scatter(
+                x=[xi, x_i, x_j, xj, xi],
+                y=[yi, y_i, y_j, yj, yi],
+                fill="toself",
+                fillcolor="rgba(0, 150, 255, 0.4)",
+                line=dict(color="blue", width=1),
+                name=f"BMD {e['ID']}",
+                hoverinfo="text",
+                text=f"M_i: {Mi:.1f} kN-m<br>M_j: {Mj:.1f} kN-m"
+            ))
+            # Etiquetas
+            fig_bmd.add_annotation(x=x_i, y=y_i, text=f"{abs(Mi):.1f}", showarrow=False, font=dict(color="yellow", size=10))
+            fig_bmd.add_annotation(x=x_j, y=y_j, text=f"{abs(Mj):.1f}", showarrow=False, font=dict(color="yellow", size=10))
+        fig_bmd.update_layout(title=_t("Diagrama de momentos (escala indicativa)", "Moment diagram (indicative scale)"), 
+                              plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='white'), height=600)
         st.plotly_chart(fig_bmd, use_container_width=True)
 
 # ─────────────────────────────────────────────
-# TAB 4: DISEÑO AUTOMATIZADO (ZAPATAS, VIGAS, COLUMNAS)
+# TAB 4: EXPORTACIONES (diseño automático y exportaciones)
 with tab_dis:
-    st.header(_t("⚡ Reporte de Diseño Estructural Automatizado", "⚡ Automated Structural Design Report"))
-    if not calc_success:
-        st.warning("Resuelve la estructura primero.")
+    if st.session_state.resultados is None:
+        st.info(_t("Realice el análisis en la pestaña 'Cargas y Suelo'.", "Run the analysis in 'Loads & Soil' tab."))
     else:
-        st.markdown(f"**Normativa Aplicada:** {norma_sel} | **$f'_c$:** {fc_concreto} MPa | **$f_y$:** {fy_acero} MPa | **$q_a$ Suelo:** {qa_suelo} kN/m²", unsafe_allow_html=True)
-        doc_mem = Document()
-        doc_mem.add_heading(f"Memoria de Diseño Estructural Auto - {norma_sel}", 0)
-        doc_mem.add_paragraph(f"Propiedades del Material: fc={fc_concreto} MPa, fy={fy_acero} MPa, qa={qa_suelo} kN/m²")
-        
-        autores_c1, autores_c2, autores_c3 = st.columns(3)
-        doc_mem.add_heading("1. Diseño de Zapatas (Cimentación)", level=1)
-        
-        with autores_c1:
-            st.subheader("🪨 Dimensionamiento de Cimentación")
-            zapatas_dxf_data = [] # Array dicts [x, y, B, L]
-            for idx, s in supports.iterrows():
-                nid = s['Nudo']
-                if nid in id_to_idx:
-                    n_idx = id_to_idx[nid]
-                    Ry = abs(R_rx[n_idx*3+1]) # Reaccion vertical abs
-                    # Req area = Pu / qa
-                    Arear = Ry / qa_suelo
-                    # Dimension cuadrada B = sqrt(A)
-                    B_calc = math.sqrt(Arear) if Arear > 0 else 0.5
-                    # Redondear a multiplos de 0.05m superio
-                    B_final = math.ceil(max(B_calc, 0.8) / 0.05) * 0.05
-                    # Espesor zapatas (h) min 0.30m, regla dedo D/4
-                    H_zap = max(0.30, math.ceil((B_final/4)/0.05)*0.05)
-                    
-                    st.success(f"**Zapata en Nudo {nid}**: R_y = {Ry:.1f} kN")
-                    st.markdown(f"- Área req: **{Arear:.2f} m²**")
-                    st.markdown(f"- Dims Auto: **{B_final:.2f}m x {B_final:.2f}m x {H_zap:.2f}m**")
-                    st.markdown(f"- Acero Sugerido: Parrilla **#4 @ 15 cm** ambas dirs.")
-                    
-                    doc_mem.add_paragraph(f"Zapata Nudo {nid}: Ry={Ry:.1f} kN. Dimensions: {B_final} x {B_final} x {H_zap} m. Parrilla: #4 @ 15 cm.")
-                    n_x = nodes.loc[nodes['ID']==nid, 'X (m)'].values[0]
-                    n_y = nodes.loc[nodes['ID']==nid, 'Y (m)'].values[0]
-                    zapatas_dxf_data.append({"x": n_x, "y": n_y, "B": B_final})
-                    
-        with autores_c2:
-            st.subheader("📏 Diseño Vigas A Flexión")
-            doc_mem.add_heading("2. Diseño de Vigas (Flexión)", level=1)
-            # Find horizontal bars (theta near 0 or 180)
-            for e in element_results:
-                deg = abs(np.degrees(e['theta_rad']))
-                is_beam = (deg < 5) or (abs(deg - 180) < 5)
-                if is_beam:
-                    M_max = max(abs(e['Mi']), abs(e['Mj']))
-                    # Approx b and h from Area and Inertia assuming rectangular 
-                    A_cm2 = e['A_cm2']
-                    # b*h = A_cm2; b*h^3/12 = I_cm4. h^2 = 12*I/A 
-                    h_cm = math.sqrt(12 * e['I_cm4'] / A_cm2)
-                    b_cm = A_cm2 / h_cm
-                    
-                    d_eff = h_cm - recubrimiento - 1.0 # 1cm estribo
-                    
-                    # ACI Bending As calculation
-                    phi = 0.90
-                    Rn = (M_max * 1e6) / (phi * (b_cm*10) * (d_eff*10)**2) # MPa
-                    rho = (0.85 * fc_concreto / fy_acero) * (1 - math.sqrt(1 - (2*Rn)/(0.85*fc_concreto)))
-                    if np.isnan(rho) or rho < 0.0033: rho = 0.0033 # rho min
-                    if rho > 0.025: st.error(f"Viga {e['ID']}: Falla frágil. Aumentar sección."); rho_ok = False
-                    else: rho_ok = True
-                    As_req = rho * b_cm * d_eff # cm2
-                    
-                    st.info(f"**Viga {e['ID']} (b={b_cm:.0f}, h={h_cm:.0f}cm):** $M_u$ = {M_max:.1f} kN-m")
-                    st.markdown(f"- Acero Requerido: **$A_s$ = {As_req:.2f} cm²**")
-                    cant_v5 = math.ceil(As_req / 1.99)
-                    st.markdown(f"- Armado Tentativo: **{cant_v5} vars #5**")
-                    doc_mem.add_paragraph(f"Viga {e['ID']}: Mu={M_max:.1f} kN-m. b={b_cm:.0f}cm, h={h_cm:.0f}cm. As_req={As_req:.2f} cm2. D={cant_v5} vars #5.")
-                    
-        with autores_c3:
-            st.subheader("🏛️ Revisión de Columnas")
-            doc_mem.add_heading("3. Carga en Columnas", level=1)
-            for e in element_results:
-                deg = abs(np.degrees(e['theta_rad']))
-                is_col = (abs(deg - 90) < 5) or (abs(deg - 270) < 5)
-                if is_col:
-                    P_max = max(abs(e['Ni']), abs(e['Nj']))
-                    M_max_c = max(abs(e['Mi']), abs(e['Mj']))
-                    A_cm2 = e['A_cm2']
-                    h_cm = math.sqrt(12 * e['I_cm4'] / A_cm2); b_cm = A_cm2 / h_cm
-                    
-                    # Axial max limit ACI phi_Pn max
-                    phi_c = 0.65
-                    Pn_max = phi_c * 0.80 * (0.85 * fc_concreto * (A_cm2*100) / 1000.0) # Approx
-                    rho_c = 0.01 # 1% min normative steel inside column
-                    As_min_c = rho_c * A_cm2
-                    
-                    st.warning(f"**Columna {e['ID']} ({b_cm:.0f}x{h_cm:.0f}cm):** $P_u$={P_max:.1f} kN, $M_u$={M_max_c:.1f} kN-m")
-                    if P_max > Pn_max: st.error("❌ Excede carga máxima.")
-                    st.markdown(f"- Acero Mín. Longitudinal ($\rho=1\%$): **{As_min_c:.2f} cm²**")
-                    st.markdown(f"- Estribos conf.: **#3 @ 10 cm** nudos, **@ 20 cm** luz.")
-                    doc_mem.add_paragraph(f"Columna {e['ID']}: Pu={P_max:.1f} kN, Mu={M_max_c:.1f} kN-m. As min {rho_c*100}% = {As_min_c:.2f} cm2.")
+        res = st.session_state.resultados
+        elements = res["elements"]
+        R = res["R"]
+        id_to_idx = res["id_to_idx"]
 
+        st.header(_t("⚡ Diseño automático de elementos", "⚡ Automated element design"))
+
+        # Preparar datos para exportación
+        design_data = {
+            "zapatas": [],
+            "vigas": [],
+            "columnas": []
+        }
+
+        # Diseño de zapatas (apoyos)
+        st.subheader(_t("Zapatas", "Footings"))
+        for _, s in st.session_state.apoyos_df.iterrows():
+            nid = s['Nudo']
+            if nid in id_to_idx:
+                idx = id_to_idx[nid]
+                Ry = abs(R[idx*3+1])
+                Rx = abs(R[idx*3+0])
+                Mz = abs(R[idx*3+2])
+                # Momento transmitido a la zapata (puede ser debido a excentricidad)
+                # Para simplificar, usamos Mz como momento de diseño
+                Pu = Ry
+                Mu = Mz
+                B, H, As = design_footing(Pu, Mu, qa_suelo, fc, fy, recub)
+                design_data["zapatas"].append({
+                    "Nudo": nid,
+                    "Pu (kN)": Pu,
+                    "Mu (kN-m)": Mu,
+                    "B (m)": B,
+                    "H (m)": H,
+                    "As (cm²)": As
+                })
+                st.success(f"**Zapata en nudo {nid}** → B = {B:.2f} m, H = {H:.2f} m, As ≈ {As:.1f} cm²/m")
+
+        # Diseño de vigas y columnas
+        st.subheader(_t("Vigas", "Beams"))
+        for e in elements:
+            # Determinar si es viga (ángulo cercano a 0° o 180°)
+            deg = abs(np.degrees(e["theta"]))
+            is_beam = (deg < 5) or (abs(deg - 180) < 5)
+            if is_beam:
+                # Momento máximo
+                Mmax = max(abs(e["M_i"]), abs(e["M_j"]))
+                # Cortante máximo
+                Vmax = max(abs(e["V"]), abs(e["-V"]))  # corte en ambos extremos
+                b = e["b_cm"]
+                h = e["h_cm"]
+                As, s = design_beam(Mmax, Vmax, b, h, fc, fy, recub)
+                design_data["vigas"].append({
+                    "Barra": e["ID"],
+                    "Mmax (kN-m)": Mmax,
+                    "Vmax (kN)": Vmax,
+                    "b (cm)": b,
+                    "h (cm)": h,
+                    "As (cm²)": As,
+                    "s_estribos (cm)": s if s > 0 else "No requiere"
+                })
+                st.info(f"**Viga {e['ID']}** (b={b:.0f} cm, h={h:.0f} cm): Mu={Mmax:.1f} kN-m → As ≈ {As:.1f} cm², cortante → s = {s:.1f} cm")
+            else:
+                # Columna
+                # Carga axial y momento en extremos
+                # Para simplificar, tomamos el máximo de ambos extremos
+                P_axial = max(abs(e["N"]), abs(-e["N"]))
+                M_max = max(abs(e["M_i"]), abs(e["M_j"]))
+                b = e["b_cm"]
+                h = e["h_cm"]
+                As_min, ok = design_column(P_axial, M_max, b, h, fc, fy, recub)
+                design_data["columnas"].append({
+                    "Barra": e["ID"],
+                    "Pu (kN)": P_axial,
+                    "Mu (kN-m)": M_max,
+                    "b (cm)": b,
+                    "h (cm)": h,
+                    "As_min (cm²)": As_min,
+                    "Verificación": "OK" if ok else "Falla"
+                })
+                if ok:
+                    st.success(f"**Columna {e['ID']}** (b={b:.0f} cm, h={h:.0f} cm): Pu={P_axial:.1f} kN, Mu={M_max:.1f} kN-m → As_min ≈ {As_min:.1f} cm²")
+                else:
+                    st.error(f"**Columna {e['ID']}** NO cumple: Pu={P_axial:.1f} kN > capacidad ≈ {0.85*fc*(b*h-As_min)+fy*As_min:.0f} kN")
+
+        # Exportaciones
         st.markdown("---")
-        # EXPORTS EXCEL, DOCX, DXF
-        st.subheader("📥 Exportaciones del Modelo Resolvido y Diseñado")
-        col_ex1, col_ex2, col_ex3 = st.columns(3)
-        
-        # WORD MEMORIA
-        f_doc = io.BytesIO(); doc_mem.save(f_doc); f_doc.seek(0)
-        col_ex1.download_button("📥 Descargar Memoria.docx", data=f_doc, file_name="StructMaster2D_Memoria.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-        
-        # EXCEL RESULTADOS
-        output_excel = io.BytesIO()
-        df_reacciones = []; df_desp = []
-        for nid in node_ids: n_idx=id_to_idx[nid]; df_desp.append({"Nudo": nid, "Dx (mm)": U[n_idx*3+0]*1000, "Dy (mm)": U[n_idx*3+1]*1000, "Rz (rad)": U[n_idx*3+2]})
-        for idx, s in supports.iterrows(): n_idx=id_to_idx[s['Nudo']]; df_reacciones.append({"Nudo":s['Nudo'], "Rx":R_rx[n_idx*3+0],"Ry":R_rx[n_idx*3+1],"Mz":R_rx[n_idx*3+2]})
-        with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
-            pd.DataFrame(df_reacciones).to_excel(writer, index=False, sheet_name='Reacciones')
-            pd.DataFrame(df_desp).to_excel(writer, index=False, sheet_name='Desplazamientos Nodos')
-        output_excel.seek(0)
-        col_ex2.download_button("📥 Descargar Matrices.xlsx", data=output_excel, file_name="StructMaster2D_Resultados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        
-        # DXF STRUCTURAL PLAN
-        try:
-            doc_dxf = ezdxf.new('R2010'); msp = doc_dxf.modelspace()
-            # Draw frame
-            for e in element_results: msp.add_lwpolyline([(e['xi'], e['yi']), (e['xj'], e['yj'])], dxfattribs={'layer': 'VIGAS_COLUMNAS', 'color': 3})
-            # Draw Zapatas
-            for zap in zapatas_dxf_data:
-                zx = zap["x"]; zy = zap["y"]; hz = zap["B"]/2.0
-                msp.add_lwpolyline([(zx-hz, zy-hz), (zx+hz, zy-hz), (zx+hz, zy+hz), (zx-hz, zy+hz), (zx-hz, zy-hz)], dxfattribs={'layer': 'ZAPATAS_AUTO', 'color': 4, 'closed': True})
-            out_dxf = io.StringIO(); doc_dxf.write(out_dxf)
-            col_ex3.download_button("📥 Descargar Planos Auto Zapatas.dxf", data=out_dxf.getvalue(), file_name="StructMaster_Planos.dxf", mime="application/dxf")
-        except: pass
+        st.subheader(_t("📥 Exportar resultados", "📥 Export results"))
+
+        col_ex1, col_ex2, col_ex3, col_ex4 = st.columns(4)
+
+        # 1. Excel
+        with col_ex1:
+            if st.button(_t("📊 Exportar a Excel", "📊 Export to Excel")):
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    # Reacciones
+                    react = []
+                    for _, s in st.session_state.apoyos_df.iterrows():
+                        nid = s['Nudo']
+                        if nid in id_to_idx:
+                            idx = id_to_idx[nid]
+                            react.append({"Nudo": nid, "Rx": R[idx*3+0], "Ry": R[idx*3+1], "Mz": R[idx*3+2]})
+                    pd.DataFrame(react).to_excel(writer, sheet_name="Reacciones", index=False)
+                    # Desplazamientos
+                    desp = []
+                    for nid in res["node_ids"]:
+                        idx = id_to_idx[nid]
+                        desp.append({"Nudo": nid, "dx (mm)": U[idx*3+0]*1000, "dy (mm)": U[idx*3+1]*1000, "rz (rad)": U[idx*3+2]})
+                    pd.DataFrame(desp).to_excel(writer, sheet_name="Desplazamientos", index=False)
+                    # Fuerzas internas
+                    forces = []
+                    for e in elements:
+                        forces.append({"Barra": e["ID"], "Axial I": e["N"], "Corte I": e["V"], "Momento I": e["M_i"], "Momento J": e["M_j"]})
+                    pd.DataFrame(forces).to_excel(writer, sheet_name="Fuerzas_internas", index=False)
+                    # Diseño
+                    pd.DataFrame(design_data["zapatas"]).to_excel(writer, sheet_name="Zapatas", index=False)
+                    pd.DataFrame(design_data["vigas"]).to_excel(writer, sheet_name="Vigas", index=False)
+                    pd.DataFrame(design_data["columnas"]).to_excel(writer, sheet_name="Columnas", index=False)
+                output.seek(0)
+                st.download_button(_t("📥 Descargar Excel", "📥 Download Excel"), data=output, file_name="resultados_estructura.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        # 2. DXF
+        with col_ex2:
+            if st.button(_t("📐 Exportar a DXF", "📐 Export to DXF")):
+                doc_dxf = ezdxf.new('R2010')
+                doc_dxf.units = ezdxf.units.M
+                msp = doc_dxf.modelspace()
+                # Capas
+                for lay, col in [('ESTRUCTURA', 3), ('ZAPATAS', 4), ('COTAS', 2), ('TEXTO', 1)]:
+                    if lay not in doc_dxf.layers:
+                        doc_dxf.layers.add(lay, color=col)
+                # Dibujar estructura
+                for e in elements:
+                    xi = nodes.loc[nodes['ID']==e["Nudo I"], 'X (m)'].values[0]
+                    yi = nodes.loc[nodes['ID']==e["Nudo I"], 'Y (m)'].values[0]
+                    xj = nodes.loc[nodes['ID']==e["Nudo J"], 'X (m)'].values[0]
+                    yj = nodes.loc[nodes['ID']==e["Nudo J"], 'Y (m)'].values[0]
+                    msp.add_line((xi, yi), (xj, yj), dxfattribs={'layer': 'ESTRUCTURA'})
+                # Dibujar zapatas
+                for zap in design_data["zapatas"]:
+                    nid = zap["Nudo"]
+                    x = nodes.loc[nodes['ID']==nid, 'X (m)'].values[0]
+                    y = nodes.loc[nodes['ID']==nid, 'Y (m)'].values[0]
+                    B = zap["B (m)"]
+                    half = B/2
+                    msp.add_lwpolyline([(x-half, y-half), (x+half, y-half), (x+half, y+half), (x-half, y+half), (x-half, y-half)],
+                                       close=True, dxfattribs={'layer': 'ZAPATAS'})
+                # Texto con cotas mínimas
+                msp.add_text(_t("Estructura 2D", "2D Structure"), dxfattribs={'layer': 'TEXTO', 'height': 0.2, 'insert': (0, 0)})
+                out_dxf = io.StringIO()
+                doc_dxf.write(out_dxf)
+                st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_2d.dxf", mime="application/dxf")
+
+        # 3. DOCX Memoria
+        with col_ex3:
+            if st.button(_t("📄 Generar Memoria DOCX", "📄 Generate DOCX Report")):
+                doc = Document()
+                doc.add_heading(_t("Memoria de análisis estructural 2D", "2D Structural Analysis Report"), 0)
+                doc.add_paragraph(_t(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}", f"Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}"))
+                doc.add_paragraph(_t(f"Norma aplicada: {norma_sel}", f"Applied code: {norma_sel}"))
+                doc.add_paragraph(_t(f"Materiales: f'c = {fc} MPa, fy = {fy} MPa", f"Materials: f'c = {fc} MPa, fy = {fy} MPa"))
+                # Reacciones
+                doc.add_heading(_t("Reacciones en apoyos", "Support reactions"), level=1)
+                react_table = doc.add_table(rows=1+len(react), cols=4)
+                react_table.style = 'Table Grid'
+                hdr = react_table.rows[0].cells
+                hdr[0].text = "Nudo"
+                hdr[1].text = "Rx (kN)"
+                hdr[2].text = "Ry (kN)"
+                hdr[3].text = "Mz (kN-m)"
+                for i, r in enumerate(react):
+                    cells = react_table.rows[i+1].cells
+                    cells[0].text = str(r["Nudo"])
+                    cells[1].text = f"{r['Rx']:.1f}"
+                    cells[2].text = f"{r['Ry']:.1f}"
+                    cells[3].text = f"{r['Mz']:.1f}"
+                # Desplazamientos
+                doc.add_heading(_t("Desplazamientos", "Displacements"), level=1)
+                desp_table = doc.add_table(rows=1+len(desp), cols=4)
+                desp_table.style = 'Table Grid'
+                hdr = desp_table.rows[0].cells
+                hdr[0].text = "Nudo"
+                hdr[1].text = "dx (mm)"
+                hdr[2].text = "dy (mm)"
+                hdr[3].text = "rz (rad)"
+                for i, d in enumerate(desp):
+                    cells = desp_table.rows[i+1].cells
+                    cells[0].text = str(d["Nudo"])
+                    cells[1].text = f"{d['dx (mm)']:.2f}"
+                    cells[2].text = f"{d['dy (mm)']:.2f}"
+                    cells[3].text = f"{d['rz (rad)']:.4f}"
+                # Diseño
+                doc.add_heading(_t("Diseño de elementos", "Element design"), level=1)
+                if design_data["zapatas"]:
+                    doc.add_heading(_t("Zapatas", "Footings"), level=2)
+                    for z in design_data["zapatas"]:
+                        doc.add_paragraph(f"Nudo {z['Nudo']}: B={z['B (m)']:.2f} m, H={z['H (m)']:.2f} m, As≈{z['As (cm²)']:.1f} cm²/m")
+                if design_data["vigas"]:
+                    doc.add_heading(_t("Vigas", "Beams"), level=2)
+                    for v in design_data["vigas"]:
+                        doc.add_paragraph(f"Barra {v['Barra']}: b={v['b (cm)']:.0f} cm, h={v['h (cm)']:.0f} cm, As={v['As (cm²)']:.2f} cm², estribos @ {v['s_estribos (cm)']} cm")
+                if design_data["columnas"]:
+                    doc.add_heading(_t("Columnas", "Columns"), level=2)
+                    for c in design_data["columnas"]:
+                        doc.add_paragraph(f"Barra {c['Barra']}: b={c['b (cm)']:.0f} cm, h={c['h (cm)']:.0f} cm, As_min={c['As_min (cm²)']:.2f} cm², verificación: {c['Verificación']}")
+
+                buf_doc = io.BytesIO()
+                doc.save(buf_doc)
+                buf_doc.seek(0)
+                st.download_button(_t("📥 Descargar Memoria", "📥 Download Report"), data=buf_doc, file_name="memoria_estructura_2d.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+        # 4. APU (presupuesto)
+        with col_ex4:
+            if st.button(_t("💰 Presupuesto APU", "💰 APU Budget")):
+                if "apu_config" in st.session_state:
+                    apu = st.session_state.apu_config
+                    mon = apu.get("moneda", "$")
+                    # Estimación simple de volumen de concreto y acero
+                    vol_conc = 0.0
+                    peso_acero = 0.0
+                    # Zapatas
+                    for z in design_data["zapatas"]:
+                        vol_conc += z["B (m)"]**2 * z["H (m)"]  # aproximado
+                        peso_acero += z["As (cm²)"] * z["B (m)"] * 100 * 0.785  # kg
+                    # Vigas
+                    for v in design_data["vigas"]:
+                        vol_conc += v["b (cm)"] * v["h (cm)"] * v.get("L", 4) / 10000  # m³, L aprox
+                        peso_acero += v["As (cm²)"] * v.get("L", 4) * 0.785
+                    # Columnas
+                    for c in design_data["columnas"]:
+                        vol_conc += c["b (cm)"] * c["h (cm)"] * 3 / 10000  # altura típica 3 m
+                        peso_acero += c["As_min (cm²)"] * 3 * 0.785
+                    # Costos
+                    costo_conc = vol_conc * apu.get("precio_concreto_m3", 0) if apu.get("usar_concreto_premezclado", False) else 0
+                    costo_ace = peso_acero * apu.get("acero", 0)
+                    st.write(f"Volumen de concreto estimado: {vol_conc:.2f} m³")
+                    st.write(f"Peso de acero estimado: {peso_acero:.1f} kg")
+                    st.write(f"**Costo total materiales:** {mon} {costo_conc + costo_ace:,.2f}")
+                else:
+                    st.info(_t("Configure precios en la página 'APU Mercado'.", "Configure prices in 'APU Mercado' page."))

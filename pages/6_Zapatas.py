@@ -1263,7 +1263,7 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
             _cost_g = [_c_exc, _c_cem, _c_are, _c_gra, _c_ace_B, _c_ace_L]
             _fig_desp.add_trace(go.Bar(
                 x=_items_g, y=_cost_g,
-                marker_color=[c + "88" for c in _colors_g],
+                marker_color=_colors_g, opacity=0.5,
                 text=[f"{v:,.0f} {_mon}" for v in _cost_g],
                 textposition="outside",
                 name=f"Costo [{_mon}]",

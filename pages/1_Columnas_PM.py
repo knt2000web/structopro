@@ -641,9 +641,29 @@ with tab2:
     tt_x = [rect_x[0]-diam_reb_cm/2, rect_x[1]+diam_reb_cm/2, rect_x[1]+diam_reb_cm/2, rect_x[0]-diam_reb_cm/2, rect_x[0]-diam_reb_cm/2]
     tt_y = [rect_y[0]-diam_reb_cm/2, rect_y[0]-diam_reb_cm/2, rect_y[1]+diam_reb_cm/2, rect_y[1]+diam_reb_cm/2, rect_y[0]-diam_reb_cm/2]
     L_cm = int(L_col)
-    for zt in range(15, L_cm, 15):
+    z_positions = []
+    if zona_especial:
+        y = s_conf / 2
+        while y <= Lo_conf:
+            z_positions.append(y)
+            y += s_conf
+        y = Lo_conf + s_basico
+        while y < L_col - Lo_conf:
+            z_positions.append(y)
+            y += s_basico
+        y = L_col - Lo_conf + s_conf / 2
+        while y <= L_col:
+            z_positions.append(y)
+            y += s_conf
+    else:
+        y = s_basico / 2
+        while y <= L_col:
+            z_positions.append(y)
+            y += s_basico
+
+    for idx, zt in enumerate(z_positions):
         z_t_arr = [zt] * 5
-        fig3d.add_trace(go.Scatter3d(x=tt_x, y=tt_y, z=z_t_arr, mode='lines', line=dict(color=tie_color, width=tie_width), name='Estribo', showlegend=(zt==15)))
+        fig3d.add_trace(go.Scatter3d(x=tt_x, y=tt_y, z=z_t_arr, mode='lines', line=dict(color=tie_color, width=tie_width), name='Estribo', showlegend=(idx==0)))
     fig3d.update_layout(scene=dict(aspectmode='data', xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)'),
                         margin=dict(l=0, r=0, b=0, t=0), height=450, dragmode='turntable')
     st.plotly_chart(fig3d, use_container_width=True)

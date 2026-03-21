@@ -1,0 +1,80 @@
+[
+  {
+    "elemento": "Columna — Cemento gris (Argos/Holcim)",
+    "unidad": "bultos",
+    "cant": 5,
+    "precio": 34000.0
+  },
+  {
+    "elemento": "Columna — Arena de peña (m³)",
+    "unidad": "m³",
+    "cant": 0.378,
+    "precio": 80000.0
+  },
+  {
+    "elemento": "Columna — Triturado / Gravilla (m³)",
+    "unidad": "m³",
+    "cant": 0.748,
+    "precio": 90000.0
+  },
+  {
+    "elemento": "Columna — Agua",
+    "unidad": "lt",
+    "cant": 124.0,
+    "precio": 0
+  },
+  {
+    "elemento": "Muro B-10x20x40 cm — Bloque de concreto",
+    "unidad": "und",
+    "cant": 132,
+    "precio": 3700.0
+  },
+  {
+    "elemento": "Muro B-10x20x40 cm — Cemento Base",
+    "unidad": "bulto",
+    "cant": 2,
+    "precio": 34000.0
+  },
+  {
+    "elemento": "Muro B-10x20x40 cm — Cemento Acabados",
+    "unidad": "bulto",
+    "cant": 5,
+    "precio": 34000.0
+  },
+  {
+    "elemento": "Muro B-10x20x40 cm — Arena",
+    "unidad": "m³",
+    "cant": 0.426,
+    "precio": 80000.0
+  },
+  {
+    "elemento": "Columna — Cemento gris (Argos/Holcim)",
+    "unidad": "bultos",
+    "cant": 5,
+    "precio": 34000.0
+  },
+  {
+    "elemento": "Columna — Arena",
+    "unidad": "m³",
+    "cant": 0.344,
+    "precio": 80000.0
+  },
+  {
+    "elemento": "Columna — Grava",
+    "unidad": "m³",
+    "cant": 0.595,
+    "precio": 90000.0
+  },
+  {
+    "elemento": "Columna — Acero long. N5 - 5/8\"",
+    "unidad": "kg",
+    "cant": 45.33,
+    "precio": 4800.0
+  },
+  {
+    "elemento": "Columna — Estribos N3 - 3/8\"",
+    "unidad": "kg",
+    "cant": 36.04,
+    "precio": 4800.0
+  }
+]

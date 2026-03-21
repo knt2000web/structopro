@@ -21,7 +21,7 @@ def _t(es, en):
 
 st.set_page_config(page_title=_t("Columnas Circulares P-M", "Circular Columns P-M"), layout="wide")
 
-st.image(r"assets/circular_concrete_column_technical_render.png", use_container_width=False, width=700)
+# st.image(r"assets/circular_concrete_column_technical_render.png", use_container_width=False, width=700)
 st.title(_t("Diagrama P-M para Columnas Circulares — Multi-Norma", "P-M Diagram for Circular Columns — Multi-Code"))
 st.markdown(_t("Generación del diagrama de interacción **P–M** para columnas circulares de concreto reforzado. Soporta normativa de **Colombia, EE.UU., Ecuador, Perú, México, Venezuela, Bolivia y Argentina**.", "Generation of the **P-M** interaction diagram for reinforced concrete circular columns. Supports codes from **Colombia, USA, Ecuador, Peru, Mexico, Venezuela, Bolivia and Argentina**."))
 
@@ -382,19 +382,40 @@ peso_acero_long_kg = Ast * long_varilla_m * 0.785  # kg
 
 # Estribos / espiral
 if "Estrib" in col_type or "Tied" in col_type:
-    # Separación de estribos según ACI 318-25 25.7.2
-    s_max_mm = min(16 * rebar_diam, 48 * stirrup_diam, D_col * 10)
-    s_estribo_cm = min(s_max_mm / 10, 30)  # limitamos a 30 cm para simplificar
+    smax1 = 16 * rebar_diam / 10
+    smax2 = 48 * stirrup_diam / 10
+    smax3 = D_col
+    s_basico = min(smax1, smax2, smax3, 30.0)
+    s_conf = min(6 * rebar_diam / 10, D_col / 4.0, 15.0)
+    Lo_conf = max(D_col, L_col / 6.0, 45.0)
+    
+    nivel_lower = nivel_sismico.lower()
+    zona_especial = any(k in nivel_lower for k in ["des ", "disipación especial", "smf", "special moment frame", "ga —", "ductilidad alta", "pe —", "pórtico especial", "de —", "diseño especial sísmico", "mrle"])
+    
+    if zona_especial:
+        n_estribos_zona = math.ceil(Lo_conf / s_conf) + 1
+        n_estribos_zona_dos = n_estribos_zona * 2
+        longitud_zona_libre = max(0, L_col - 2 * Lo_conf)
+        n_estribos_centro = max(0, math.ceil(longitud_zona_libre / s_basico) - 1)
+        n_estribos = n_estribos_zona_dos + n_estribos_centro
+        s_estribo_cm = s_conf
+    else:
+        n_estribos = math.ceil(L_col / s_basico) + 1
+        s_estribo_cm = s_basico
+        Lo_conf = 0.0
+
     perim_estribo_m = math.pi * (D_col/100 - 2*recub/100)
-    n_estribos = math.ceil(L_col/100 / (s_estribo_cm/100)) + 1
-    long_estribos_m = n_estribos * perim_estribo_m
-    long_estribos_m += n_estribos * 0.1  # ganchos
+    long_estribos_m = n_estribos * perim_estribo_m + n_estribos * 0.1  # ganchos
 else:
     # Espiral
-    s_estribo_cm = min(8 * rebar_diam / 10, 10)  # paso máximo 8*db o 10 cm
-    paso_espiral = s_estribo_cm / 100
-    diam_espiral_m = D_col/100 - 2*recub/100
-    long_estribos_m = math.sqrt((math.pi * diam_espiral_m)**2 + paso_espiral**2) * (L_col/100 / paso_espiral)
+    s_estribo_cm = min(8 * rebar_diam / 10, 10.0)
+    paso_espiral = s_estribo_cm / 100.0
+    diam_espiral_m = (D_col - 2*recub)/100.0
+    long_estribos_m = math.sqrt((math.pi * diam_espiral_m)**2 + paso_espiral**2) * (L_col/100.0 / paso_espiral)
+    zona_especial = False
+    Lo_conf = 0.0
+    s_basico = s_estribo_cm
+    s_conf = s_estribo_cm
 peso_acero_estribos_kg = long_estribos_m * stirrup_area * 0.785
 peso_total_acero_kg = peso_acero_long_kg + peso_acero_estribos_kg
 relacion_acero_kg_m3 = peso_total_acero_kg / vol_concreto_m3 if vol_concreto_m3 > 0 else 0
@@ -550,13 +571,30 @@ with tab2:
         theta_ring = np.linspace(0, 2*np.pi, 50)
         x_ring = R_ext_cm * np.cos(theta_ring)
         y_ring = R_ext_cm * np.sin(theta_ring)
-        n_rings = int(z_top / (s_estribo_cm/10)) + 1
-        for k in range(n_rings):
-            z_pos = k * (s_estribo_cm/10)
+        
+        z_positions = []
+        if zona_especial:
+            z = s_conf / 2
+            while z <= Lo_conf:
+                z_positions.append(z)
+                z += s_conf
+            z = Lo_conf + s_basico
+            while z < z_top - Lo_conf:
+                z_positions.append(z)
+                z += s_basico
+            z = z_top - Lo_conf + s_conf / 2
+            while z <= z_top:
+                z_positions.append(z)
+                z += s_conf
+        else:
+            n_rings = int(z_top / s_estribo_cm) + 1
+            z_positions = [k * s_estribo_cm for k in range(n_rings)]
+            
+        for idx, z_pos in enumerate(z_positions):
             if z_pos <= z_top:
                 fig3d.add_trace(go.Scatter3d(x=x_ring, y=y_ring, z=np.full_like(theta_ring, z_pos),
                                              mode='lines', line=dict(color=tie_color, width=tie_width),
-                                             name=_t('Estribo', 'Tie'), showlegend=(k==0)))
+                                             name=_t('Estribo', 'Tie'), showlegend=(idx==0)))
 
     fig3d.update_layout(scene=dict(aspectmode='data', xaxis_title='X (cm)', yaxis_title='Y (cm)', zaxis_title='L (cm)'),
                         margin=dict(l=0, r=0, b=0, t=0), height=450, showlegend=False, dragmode='turntable',
@@ -625,23 +663,41 @@ with tab2:
         msp.add_line((x_pos, L_col), (x_pos - hook_len, L_col), dxfattribs={'layer': 'VARILLAS'})
     
     # Estribos en elevación (líneas horizontales con ganchos)
-    n_est_elev = int(L_col / s_estribo_cm) + 1
-    for i in range(n_est_elev):
-        z = i * s_estribo_cm
+    z_positions = []
+    if zona_especial:
+        z = s_conf / 2
+        while z <= Lo_conf:
+            z_positions.append(z)
+            z += s_conf
+        z = Lo_conf + s_basico
+        while z < L_col - Lo_conf:
+            z_positions.append(z)
+            z += s_basico
+        z = L_col - Lo_conf + s_conf / 2
+        while z <= L_col:
+            z_positions.append(z)
+            z += s_conf
+    else:
+        n_est_elev = int(L_col / s_estribo_cm) + 1
+        z_positions = [i * s_estribo_cm for i in range(n_est_elev)]
+
+    for z in z_positions:
         if z <= L_col:
             # Línea horizontal del estribo
             msp.add_line((off_x, z), (off_x + D_col, z), dxfattribs={'layer': 'ESTRIBOS'})
             # Ganchos a 135° (simplificados como pequeñas líneas inclinadas)
             hook_ang = 45  # grados
-            hook_len = 6 * stirrup_diam / 10  # cm
+            hook_len_cm = 6 * stirrup_diam / 10  # cm
+            dx = hook_len_cm * math.cos(math.radians(hook_ang))
+            dy = hook_len_cm * math.sin(math.radians(hook_ang))
             # Extremo izquierdo
             x_left = off_x
-            msp.add_line((x_left, z), (x_left - hook_len*math.cos(math.radians(hook_ang)), z + hook_len*math.sin(math.radians(hook_ang))), dxfattribs={'layer': 'ESTRIBOS'})
-            msp.add_line((x_left, z), (x_left - hook_len*math.cos(math.radians(hook_ang)), z - hook_len*math.sin(math.radians(hook_ang))), dxfattribs={'layer': 'ESTRIBOS'})
+            msp.add_line((x_left, z), (x_left - dx, z + dy), dxfattribs={'layer': 'ESTRIBOS'})
+            msp.add_line((x_left, z), (x_left - dx, z - dy), dxfattribs={'layer': 'ESTRIBOS'})
             # Extremo derecho
             x_right = off_x + D_col
-            msp.add_line((x_right, z), (x_right + hook_len*math.cos(math.radians(hook_ang)), z + hook_len*math.sin(math.radians(hook_ang))), dxfattribs={'layer': 'ESTRIBOS'})
-            msp.add_line((x_right, z), (x_right + hook_len*math.cos(math.radians(hook_ang)), z - hook_len*math.sin(math.radians(hook_ang))), dxfattribs={'layer': 'ESTRIBOS'})
+            msp.add_line((x_right, z), (x_right + dx, z + dy), dxfattribs={'layer': 'ESTRIBOS'})
+            msp.add_line((x_right, z), (x_right + dx, z - dy), dxfattribs={'layer': 'ESTRIBOS'})
     
     # Zona de empalme (sombreado)
     if splice_zone_height > 0:

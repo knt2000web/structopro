@@ -208,7 +208,7 @@ with tab_P:
         st.write(f"**Peso total para L={L_ref:.2f} m:** {peso_total:.2f} kg")
 
         # Opción para agregar al despiece
-        if st.button(_t("Agregar este perfil al despiece", "Add this profile to the list")):
+        if st.button(_t("Agregar este perfil al despiece", "Add this profile to the list"), key="btn_add_prop_w"):
             agregar_al_despiece(
                 tipo=f"{term_W} (propiedades)",
                 seccion=f"{dw}x{bfw}x{tww}x{tfw} mm",
@@ -431,7 +431,7 @@ with tab_CF:
             st.error("❌ El perfil falla por compresión / pandeo global o local.")
         st.pyplot(fig_cf)
 
-        if st.button(_t("Agregar este perfil al despiece", "Add this profile to the list")):
+        if st.button(_t("Agregar este perfil al despiece", "Add this profile to the list"), key="btn_add_cf_section"):
             agregar_al_despiece(
                 tipo=f"{tipo_cf} (conformado)",
                 seccion=f"{h_cf}x{b_cf}x{t_cf} mm",
@@ -587,9 +587,9 @@ with tab_E:
                 (-tww/2, -dw/2 + tfw), (-tww/2, dw/2 - tfw), (-bfw/2, dw/2 - tfw), (-bfw/2, dw/2)
             ]
             msp.add_lwpolyline(points, dxfattribs={'layer': 'PERFIL_W', 'color': 5, 'closed': True})
-            out_dxf = io.BytesIO()
+            out_dxf = io.StringIO()
             doc_dxf.write(out_dxf)
-            st.download_button(_t("📥 Descargar Perfil_W.dxf", "📥 Download Perfil_W.dxf"), data=out_dxf.getvalue(),
+            st.download_button(_t("📥 Descargar Perfil_W.dxf", "📥 Download Perfil_W.dxf"), data=out_dxf.getvalue().encode('utf-8'),
                                file_name=f"Perfil_W_{dw}x{bfw}.dxf", mime="application/dxf")
         else:
             st.warning(_t("Primero defina un perfil W en la pestaña de propiedades.", "First define a W-shape in the properties tab."))
