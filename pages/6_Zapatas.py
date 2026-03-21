@@ -83,10 +83,42 @@ st.sidebar.markdown(f"""
 | **psi** | `{_ck/6.89476:.2f}` |
 """)
 
-REBAR_MM = {
-    "10 mm": 0.785, "12 mm": 1.131, "14 mm": 1.539, "16 mm": 2.011,
-    "18 mm": 2.545, "20 mm": 3.142, "22 mm": 3.801, "25 mm": 4.909
-}
+if any(n in norma_sel for n in ["Colombia", "EE.UU.", "Perú", "México", "Venezuela"]):
+    REBAR_DICT = {
+        "N.3 (3/8\")": {"area": 0.71, "db": 9.5},
+        "N.4 (1/2\")": {"area": 1.29, "db": 12.7},
+        "N.5 (5/8\")": {"area": 1.99, "db": 15.9},
+        "N.6 (3/4\")": {"area": 2.84, "db": 19.1},
+        "N.7 (7/8\")": {"area": 3.87, "db": 22.2},
+        "N.8 (1\")":   {"area": 5.10, "db": 25.4},
+    }
+    def_idx = 1 # N.4
+else:
+    REBAR_DICT = {
+        "10 mm": {"area": 0.785, "db": 10.0},
+        "12 mm": {"area": 1.131, "db": 12.0},
+        "14 mm": {"area": 1.539, "db": 14.0},
+        "16 mm": {"area": 2.011, "db": 16.0},
+        "18 mm": {"area": 2.545, "db": 18.0},
+        "20 mm": {"area": 3.142, "db": 20.0},
+        "22 mm": {"area": 3.801, "db": 22.0},
+        "25 mm": {"area": 4.909, "db": 25.0},
+    }
+    def_idx = 1 # 12 mm
+
+# ─────────────────────────────────────────────
+# HELPER GLOBAL: BOUSSINESQ INFLUENCE FACTOR
+# (defined here to be accessible from all sections)
+# ─────────────────────────────────────────────
+def I_z_bous(m, n):
+    V1 = m**2 + n**2 + 1
+    V2 = m**2 * n**2
+    term1 = (2*m*n*math.sqrt(V1)) / (V1 + V2) if (V1 + V2) != 0 else 0
+    term2 = (V1 + 1) / V1 if V1 != 0 else 0
+    angulo = math.atan2(2*m*n*math.sqrt(V1), (V1 - V2))
+    if V1 - V2 < 0:
+        angulo += math.pi
+    return (1 / (4 * math.pi)) * (term1 * term2 + angulo)
 
 # ─────────────────────────────────────────────
 # T1: ESFUERZOS EN EL SUELO (BOUSSINESQ)
@@ -107,19 +139,6 @@ with st.expander(_t("🌍 1. Esfuerzos en masa de suelo debajo de zapata", "🌍
     # Fadum/Boussinesq bajo el centro: dividimos el rectangulo en 4 rectangulos de B/2 x L/2
     m = (B_bous/2.0) / Z_bous
     n = (L_bous/2.0) / Z_bous
-    
-    def I_z_bous(m, n):
-        V1 = m**2 + n**2 + 1
-        V2 = m**2 * n**2
-        term1 = (2*m*n*math.sqrt(V1)) / (V1 + V2)
-        term2 = (V1 + 1) / V1
-        # Use atan2 to avoid division by zero when V1 == V2
-        angulo = math.atan2(2*m*n*math.sqrt(V1), (V1 - V2))
-        if V1 - V2 < 0:
-            angulo += math.pi
-        I_z = (1 / (4 * math.pi)) * (term1 * term2 + angulo)
-        return I_z
-        
     delta_sigma_z = 4 * q_0 * I_z_bous(m, n)
     
     st.success(f"📈 Incremento de esfuerzo vertical bajo el centro a Z={Z_bous}m: **Δσ_z = {delta_sigma_z:.2f} kPa**")
@@ -310,18 +329,20 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
         st.caption(_t(f"🔄 **Equivalencia:** {q_adm_z:.1f} kPa | {q_adm_z/9.80665:.3f} ton/m² | {q_adm_z/98.0665:.4f} kg/cm² | {q_adm_z/6.89476:.2f} psi",
                       f"🔄 **Equivalence:** {q_adm_z:.1f} kPa | {q_adm_z/9.80665:.3f} ton/m² | {q_adm_z/98.0665:.4f} kg/cm² | {q_adm_z/6.89476:.2f} psi"))
 
-        c1_col = st.number_input(_t("Dim. Columna c1 (dir. B) [cm]", "Column dim. c1 (B dir.) [cm]"), value=40.0, step=5.0)
-        c2_col = st.number_input(_t("Dim. Columna c2 (dir. L) [cm]", "Column dim. c2 (L dir.) [cm]"), value=40.0, step=5.0)
+        c1_col = st.number_input(_t("Dim. Columna c1 (dir. B) [cm]", "Column dim. c1 (B dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
+        c2_col = st.number_input(_t("Dim. Columna c2 (dir. L) [cm]", "Column dim. c2 (L dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
         gamma_prom = st.number_input(_t("γ_promedio (suelo+concreto) [kN/m³]", "γ_avg (soil+concrete) [kN/m³]"), value=20.0)
         Df_z = st.number_input(_t("Desplante Df [m]", "Footing Depth Df [m]"), value=1.0, step=0.1)
+        st.caption(_t("ℹ️ Si hay momento, se aplica en la dirección de L. Use Mu en la dirección B para la verificación manual.",
+                      "ℹ️ Moment applied along L direction. For B-direction moment, verify manually."))
 
     with colC:
         st.write("#### Diseño Estructural")
         H_zap = st.number_input("Espesor H propuesto [cm]", value=50.0, step=5.0)
         recub_z = st.number_input("Recubrimiento al suelo [cm]", value=7.5, step=0.5)
-        bar_z = st.selectbox("Varilla a utilizar:", list(REBAR_MM.keys()), index=4)
-        A_bar_z = REBAR_MM[bar_z] * 100 # mm2
-        db_bar_z = float(bar_z.split(" ")[0]) # mm
+        bar_z = st.selectbox("Varilla a utilizar:", list(REBAR_DICT.keys()), index=def_idx)
+        A_bar_z = REBAR_DICT[bar_z]["area"] * 100 # mm2
+        db_bar_z = REBAR_DICT[bar_z]["db"] # mm
         
     # Paso 1: Dimensionamiento en planta
     q_net = q_adm_z - gamma_prom * Df_z # Esfuerzo neto disponible
@@ -339,57 +360,90 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
     B_use = cB.number_input("B usado para cálculo [m]", value=max(2.0, B_zap), step=0.1)
     L_use = cL.number_input("L usado para cálculo [m]", value=max(2.0, L_zap), step=0.1)
     
-    # Presion de contacto factorizada qu
+    # ─── Validación de entradas críticas ──────────────────────────────────────
+    if c1_col <= 0 or c2_col <= 0:
+        st.error("❌ Las dimensiones de la columna (c1, c2) deben ser mayores a 0 cm.")
+        st.stop()
+
+    # Presion de contacto factorizada qu (momento aplicado en eje L)
     A_use = B_use * L_use
     qu_max = P_ult / A_use + (6 * M_ult / (B_use * L_use**2) if M_ult > 0 else 0)
-    
+    qu_min = P_ult / A_use - (6 * M_ult / (B_use * L_use**2) if M_ult > 0 else 0)
+    # Presión promedio en la sección critica de cortante y punzonamiento
+    qu_avg = (qu_max + max(qu_min, 0)) / 2.0
+
     # Peralte efectivo d
     d_z = H_zap - recub_z - (db_bar_z/10.0)
     d_z_m = d_z / 100.0
-    
+
     # Cortante Unidireccional (Viga) a 'd' de la cara de la columna
-    lv_b = (B_use - c1_col/100.0) / 2.0
+    lv_b = (B_use - c1_col/100.0) / 2.0  # voladizo en dir. B
+    lv_l = (L_use - c2_col/100.0) / 2.0  # voladizo en dir. L
     x_corte = lv_b - d_z_m
     if x_corte > 0:
-        Vu_1way = qu_max * L_use * x_corte
+        Vu_1way = qu_avg * L_use * x_corte
     else:
         Vu_1way = 0.0
-        
-    phi_Vc_1way = phi_v * 0.17 * 1.0 * math.sqrt(fc_basico) * (L_use * 1000) * (d_z * 10) / 1000.0 # kN
+
+    phi_Vc_1way = phi_v * 0.17 * 1.0 * math.sqrt(fc_basico) * (L_use * 1000) * (d_z * 10) / 1000.0  # kN
     ok_1way = phi_Vc_1way >= Vu_1way
-    
-    # Punzonamiento a d/2
+
+    # Punzonamiento a d/2 — usando presión promedio sobre el área crítica
     bo_1 = c1_col/100.0 + d_z_m
     bo_2 = c2_col/100.0 + d_z_m
     bo_perim = 2 * (bo_1 + bo_2)
     Area_punz = bo_1 * bo_2
-    Vu_punz = P_ult - qu_max * Area_punz
-    
-    beta_c = max(c1_col, c2_col) / min(c1_col, c2_col)
-    alpha_s = 40 # interior column default
-    Vc1 = 0.33 * math.sqrt(fc_basico)
-    Vc2 = 0.17 * (1 + 2/beta_c) * math.sqrt(fc_basico)
-    Vc3 = 0.083 * (2 + alpha_s * (d_z*10) / (bo_perim*1000)) * math.sqrt(fc_basico)
-    vc_min_MPa = min(Vc1, Vc2, Vc3)
-    
-    phi_Vc_punz = phi_v * vc_min_MPa * (bo_perim * 1000) * (d_z * 10) / 1000.0 # kN
+    Vu_punz = P_ult - qu_avg * Area_punz  # presión promedio en zona critica
+
+    _min_col = min(c1_col, c2_col)
+    beta_c = max(c1_col, c2_col) / _min_col if _min_col > 0 else 1.0
+    alpha_s = 40  # columna interior por defecto
+    try:
+        Vc1 = 0.33 * math.sqrt(fc_basico)
+        Vc2 = 0.17 * (1 + 2/beta_c) * math.sqrt(fc_basico)
+        Vc3 = 0.083 * (2 + alpha_s * (d_z*10) / (bo_perim*1000)) * math.sqrt(fc_basico)
+        vc_min_MPa = min(Vc1, Vc2, Vc3)
+    except ZeroDivisionError:
+        vc_min_MPa = 0.0
+        st.warning("⚠️ División por cero al calcular resistencia a punzonamiento — revise dimensiones.")
+
+    phi_Vc_punz = phi_v * vc_min_MPa * (bo_perim * 1000) * (d_z * 10) / 1000.0  # kN
     ok_punz = phi_Vc_punz >= Vu_punz
-    
-    # Diseño a Flexión en la cara de la columna
-    Mu_flex = qu_max * L_use * (lv_b**2) / 2.0 # kN-m en ancho L
-    phi_Mn_max = phi_f * (0.319*fc_basico) * (L_use*1000) * (d_z*10)**2 / 1e6 # limite tope approx de falla balanceada
-    
-    Rn_z = (Mu_flex * 1e6) / (phi_f * (L_use*1000) * (d_z*10)**2)
-    disc_z = 1 - 2*Rn_z/(0.85*fc_basico)
-    if disc_z > 0:
-        rho_req = (0.85*fc_basico/fy_basico)*(1 - math.sqrt(disc_z))
-    else:
-        rho_req = 0.02 # Falla, necesita mas peralte
-    rho_min_zap = 0.0018
-    rho_use = max(rho_req, rho_min_zap)
-    As_req_total = rho_use * (L_use*100) * d_z # cm2
-    n_barras_Z = math.ceil(As_req_total / (REBAR_MM[bar_z]))
-    separacion_S = (B_use*100 - 2*recub_z) / max(1, n_barras_Z - 1)
+
+    # ─── Diseño a Flexión — DIRECCIÓN B (malla en dir. L) ───────────────────
+    Mu_flex_B = qu_avg * L_use * (lv_b**2) / 2.0  # kN-m, ancho L
+    try:
+        Rn_B = (Mu_flex_B * 1e6) / (phi_f * (L_use*1000) * (d_z*10)**2)
+        disc_B = 1 - 2*Rn_B/(0.85*fc_basico)
+        rho_B = (0.85*fc_basico/fy_basico)*(1 - math.sqrt(max(disc_B, 0)))
+    except (ZeroDivisionError, ValueError):
+        rho_B = 0.02
+        disc_B = 0
+    rho_use_B = max(rho_B, 0.0018)
+    As_req_B = rho_use_B * (L_use*100) * d_z  # cm2 para ancho L
+    n_barras_B = math.ceil(As_req_B / REBAR_DICT[bar_z]["area"])
+    sep_B = (B_use*100 - 2*recub_z) / max(1, n_barras_B - 1)
+
+    # ─── Diseño a Flexión — DIRECCIÓN L (malla en dir. B) ───────────────────
+    Mu_flex_L = qu_avg * B_use * (lv_l**2) / 2.0  # kN-m, ancho B
+    try:
+        Rn_L = (Mu_flex_L * 1e6) / (phi_f * (B_use*1000) * (d_z*10)**2)
+        disc_L = 1 - 2*Rn_L/(0.85*fc_basico)
+        rho_L = (0.85*fc_basico/fy_basico)*(1 - math.sqrt(max(disc_L, 0)))
+    except (ZeroDivisionError, ValueError):
+        rho_L = 0.02
+        disc_L = 0
+    rho_use_L = max(rho_L, 0.0018)
+    As_req_L = rho_use_L * (B_use*100) * d_z  # cm2 para ancho B
+    n_barras_L = math.ceil(As_req_L / REBAR_DICT[bar_z]["area"])
+    sep_L = (L_use*100 - 2*recub_z) / max(1, n_barras_L - 1)
+
+    # aliases for backward compat with display / DXF code
+    Mu_flex = Mu_flex_B
+    disc_z = disc_B
+    As_req_total = As_req_B
+    n_barras_Z = n_barras_B
+    separacion_S = sep_B
     
     tab_res, tab_dwg, tab_apu = st.tabs(["📋 Resultados del Diseño", "📏 Plano 3000 (DXF)", "💰 Cantidades APU"])
     
@@ -414,9 +468,9 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
         st.markdown("---")
         data_res = [
             {"Revisión": "Geometría Propuesta", "Solicitado": f"Area Req = {Area_req:.2f} m²", "Capacidad/Provisto": f"Area Prov. = {A_use:.2f} m²", "Estado": "✅ OK" if A_use>=Area_req else "⚠️ Subdimensionado"},
-            {"Revisión": "Esfuerzo de Contacto (qu)", "Solicitado": f"{qu_max:.2f} kPa", "Capacidad/Provisto": f"N/A", "Estado": "N/A"},
-            {"Revisión": "Flexión en Cara de Col.", "Solicitado": f"Mu = {Mu_flex:.1f} kN-m", "Capacidad/Provisto": f"As_req = {As_req_total:.1f} cm²", "Estado": "✅ OK" if disc_z>0 else "❌ Rompe en compresión"},
-            {"Revisión": "Distribución Acero", "Solicitado": f"Usar {n_barras_Z} vars", "Capacidad/Provisto": f"Sep. = {separacion_S:.1f} cm", "Estado": "✅ Aprobado" if separacion_S<=45 else "⚠️ Separación muy alta"},
+            {"Revisión": "Presión de Contacto qu_max", "Solicitado": f"{qu_max:.2f} kPa", "Capacidad/Provisto": f"qu_min = {qu_min:.2f} kPa", "Estado": "✅ Sin tensión" if qu_min >= 0 else "⚠️ Tensión en suelo"},
+            {"Revisión": "Flexión Dir. B — cara col.", "Solicitado": f"Mu_B = {Mu_flex_B:.1f} kN-m", "Capacidad/Provisto": f"As_B = {As_req_B:.1f} cm² → {n_barras_B} {bar_z} c/{sep_B:.1f}cm", "Estado": "✅ OK" if disc_B>0 else "❌ Rompe en compresión"},
+            {"Revisión": "Flexión Dir. L — cara col.", "Solicitado": f"Mu_L = {Mu_flex_L:.1f} kN-m", "Capacidad/Provisto": f"As_L = {As_req_L:.1f} cm² → {n_barras_L} {bar_z} c/{sep_L:.1f}cm", "Estado": "✅ OK" if disc_L>0 else "❌ Rompe en compresión"},
         ]
         st.table(pd.DataFrame(data_res))
         
@@ -486,18 +540,22 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
             xi = recub_z + i * separacion_S
             msp.add_circle((xi, recub_z), db_bar_z/10, dxfattribs={'layer': 'ACERO', 'color': 1})
             
-        out_stream = io.StringIO()
+        out_stream = io.BytesIO()
         doc_dxf.write(out_stream)
         st.download_button(label="Descargar Plano DXF (Elevación)", data=out_stream.getvalue(), file_name=f"Elevacion_Zapata_{B_use}x{L_use}.dxf", mime="application/dxf")
 
     with tab_apu:
-        vol_excavacion = (B_use + 0.5) * (L_use + 0.5) * Df_z # Sobre excavacion de 25cm por lado
+        vol_excavacion = (B_use + 0.5) * (L_use + 0.5) * Df_z  # Sobre-excav. 25cm por lado
         vol_concreto_zap = B_use * L_use * (H_zap/100.0)
-        # Asumiendo 2 mallas iguales (inferiores) en B y L para simplificar
-        peso_barras_B = n_barras_Z * (L_use + 2*H_zap/100.0) * REBAR_MM[bar_z]*100 * 7.85e-3 # gancho
-        n_barras_L = math.ceil(As_req_total / REBAR_MM[bar_z]) # simplificacion si fuera cuadrada, asumiendo misma cuantia
-        peso_barras_L = n_barras_L * (B_use + 2*H_zap/100.0) * REBAR_MM[bar_z]*100 * 7.85e-3
-        peso_total_acero_zap = peso_barras_B + peso_barras_L
+        # Peso acero: Área (cm²) * Longitud (m) * factor 7850 kg/m³ * 1e-4 (cm²→m²) = kg
+        # Fórmula correcta: kg = n_barras * longitud_m * area_m2 * 7850
+        # area_m2 = area_cm2 * 1e-4
+        _area_m2 = REBAR_DICT[bar_z]["area"] * 1e-4
+        _long_B = L_use + 2*H_zap/100.0  # Long. con gancho en dirección B
+        _long_L = B_use + 2*H_zap/100.0  # Long. con gancho en dirección L
+        peso_barras_B_apu = n_barras_B * _long_B * _area_m2 * 7850
+        peso_barras_L_apu = n_barras_L * _long_L * _area_m2 * 7850
+        peso_total_acero_zap = peso_barras_B_apu + peso_barras_L_apu
         
         st.write(f"**Excavación:** {vol_excavacion:.2f} m³")
         st.write(f"**Concreto:** {vol_concreto_zap:.2f} m³")
