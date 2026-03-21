@@ -1261,9 +1261,9 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
             font_color="white", barmode="group",
             xaxis=dict(showgrid=False),
             yaxis=dict(title="Cantidad", showgrid=True, gridcolor="#222"),
-            legend=dict(facecolor="#111", font_color="white"),
+            legend=dict(bgcolor="#111", font=dict(color="white")),
             margin=dict(l=20, r=20, t=30, b=20), height=380,
-            title=dict(text=f"Despiece Zapata {B_use:.2f}x{L_use:.2f}m — {bar_z}", font_color="white")
+            title=dict(text=f"Despiece Zapata {B_use:.2f}x{L_use:.2f}m — {bar_z}", font=dict(color="white"))
         )
         st.plotly_chart(_fig_desp, use_container_width=True)
 
