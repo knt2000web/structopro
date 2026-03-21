@@ -318,9 +318,9 @@ with tab_dxf:
             # Texto con parámetros
             texto = "\n".join(params_texto[:5])
             msp.add_text(texto, dxfattribs={'layer':'TEXTO','height':0.1,'insert':(0.1, escala_y-0.2)})
-            out = io.BytesIO()
-            doc_dxf.write(out)
-            st.download_button(_t("📥 Descargar Espectro.dxf", "📥 Download Spectrum.dxf"), data=out.getvalue(),
+            _out_dxf = io.StringIO()
+            doc_dxf.write(_out_dxf)
+            st.download_button(_t("📥 Descargar Espectro.dxf", "📥 Download Spectrum.dxf"), data=_out_dxf.getvalue().encode("utf-8"),
                                file_name=f"Espectro_{norma_sel[:5]}.dxf", mime="application/dxf")
 
 with tab_doc:
@@ -368,16 +368,24 @@ with tab_xls:
         apu = st.session_state.apu_config
         mon = apu["moneda"]
         honorarios = st.number_input(_t(f"Honorarios Globales por Estudio Sísmico [{mon}]", f"Global Fee for Seismic Study [{mon}]"), 500.0, 50000.0, 1500.0, 100.0, key="s_honorarios")
+        
+        # Display Table and Gran Total
+        _aiu_cost = honorarios * apu.get("pct_aui", 0.30)
+        _total_ds = honorarios + _aiu_cost
+        st.markdown(_t("### 💰 Presupuesto Estimado", "### 💰 Estimated Budget"))
+        df_apu = pd.DataFrame({
+            "Item": [_t("Estudio de Vulnerabilidad Sísmica y Espectro", "Seismic Vulnerability Study and Spectrum"),
+                     _t("A.I.U. (Administración, Imprevistos, Utilidad)", "A.I.U. (Management, Contingency, Profit)")],
+            "Cantidad": [1, 1],
+            "Costo Unitario": [honorarios, _aiu_cost]
+        })
+        df_apu["Subtotal"] = df_apu["Cantidad"] * df_apu["Costo Unitario"]
+        st.dataframe(df_apu, use_container_width=True, hide_index=True)
+        st.metric(f"💎 Gran Total Proyecto [{mon}]", f"{_total_ds:,.0f}")
+        
         output_excel = io.BytesIO()
         with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
             df_spectrum.to_excel(writer, index=False, sheet_name='Espectro')
-            df_apu = pd.DataFrame({
-                "Item": [_t("Estudio de Vulnerabilidad Sísmica y Espectro", "Seismic Vulnerability Study and Spectrum"),
-                         _t("A.I.U. (Administración, Imprevistos, Utilidad)", "A.I.U. (Management, Contingency, Profit)")],
-                "Cantidad": [1, 1],
-                "Costo Unitario": [honorarios, honorarios * apu.get("pct_aui", 0.30)]
-            })
-            df_apu["Subtotal"] = df_apu["Cantidad"] * df_apu["Costo Unitario"]
             df_apu.to_excel(writer, index=False, sheet_name='APU_Sismica')
             workbook = writer.book
             worksheet = writer.sheets['APU_Sismica']
