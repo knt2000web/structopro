@@ -957,26 +957,62 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
         fig3d.add_trace(go.Mesh3d(x=x_c, y=y_c, z=z_c, alphahull=0, opacity=0.5,
                                   color='slategray', name='Columna', showlegend=True))
 
-        # Varillas Dir. B
+        # Medidas para ganchos en 3D
+        _r_m = radio_doblez_cm / 100.0          # radio de curva en metros
+        _ext_m = L_ext_gancho_cm / 100.0         # extensión recta en metros
+        _hook_h = (math.pi * _r_m / 2) + _ext_m  # altura total del gancho (arco + recta)
+
+        # Varillas Dir. B (barras corren en Y=dirección L)
         _xs_barB = np.linspace(-B_use/2 + rec_m, B_use/2 - rec_m, n_barras_B)
         _show_B = True
+        _show_Bh = True
         for xi in _xs_barB:
+            # Tramo recto horizontal
             fig3d.add_trace(go.Scatter3d(
                 x=[xi, xi], y=[-L_use/2 + rec_m, L_use/2 - rec_m], z=[z_bar, z_bar],
                 mode='lines', line=dict(color='#ff6b35', width=5),
                 name='Acero Dir.B' if _show_B else None, showlegend=_show_B, legendgroup='aB'))
             _show_B = False
+            # Gancho extremo -Y (sube verticalmente)
+            fig3d.add_trace(go.Scatter3d(
+                x=[xi, xi], y=[-L_use/2 + rec_m, -L_use/2 + rec_m],
+                z=[z_bar, z_bar + _hook_h],
+                mode='lines', line=dict(color='#ff9a6c', width=3, dash='dot'),
+                name='Ganchos Dir.B' if _show_Bh else None, showlegend=_show_Bh, legendgroup='aBh'))
+            # Gancho extremo +Y
+            fig3d.add_trace(go.Scatter3d(
+                x=[xi, xi], y=[L_use/2 - rec_m, L_use/2 - rec_m],
+                z=[z_bar, z_bar + _hook_h],
+                mode='lines', line=dict(color='#ff9a6c', width=3, dash='dot'),
+                name=None, showlegend=False, legendgroup='aBh'))
+            _show_Bh = False
 
-        # Varillas Dir. L
+        # Varillas Dir. L (barras corren en X=dirección B)
         _ys_barL = np.linspace(-L_use/2 + rec_m, L_use/2 - rec_m, n_barras_L)
         _z_barL  = z_bar + db_m
+        _hook_h_L = _hook_h + db_m   # ligeramente más alto porque van encima
         _show_L = True
+        _show_Lh = True
         for yi in _ys_barL:
+            # Tramo recto horizontal
             fig3d.add_trace(go.Scatter3d(
                 x=[-B_use/2 + rec_m, B_use/2 - rec_m], y=[yi, yi], z=[_z_barL, _z_barL],
                 mode='lines', line=dict(color='#ffd54f', width=5),
                 name='Acero Dir.L' if _show_L else None, showlegend=_show_L, legendgroup='aL'))
             _show_L = False
+            # Gancho extremo -X (sube verticalmente)
+            fig3d.add_trace(go.Scatter3d(
+                x=[-B_use/2 + rec_m, -B_use/2 + rec_m], y=[yi, yi],
+                z=[_z_barL, _z_barL + _hook_h_L],
+                mode='lines', line=dict(color='#ffe57f', width=3, dash='dot'),
+                name='Ganchos Dir.L' if _show_Lh else None, showlegend=_show_Lh, legendgroup='aLh'))
+            # Gancho extremo +X
+            fig3d.add_trace(go.Scatter3d(
+                x=[B_use/2 - rec_m, B_use/2 - rec_m], y=[yi, yi],
+                z=[_z_barL, _z_barL + _hook_h_L],
+                mode='lines', line=dict(color='#ffe57f', width=3, dash='dot'),
+                name=None, showlegend=False, legendgroup='aLh'))
+            _show_Lh = False
 
         fig3d.update_layout(
             scene=dict(aspectmode='data', xaxis_title='B (m)', yaxis_title='L (m)', zaxis_title='Z (m)',
