@@ -857,10 +857,13 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
             mon = apu["moneda"]
             c_excav = vol_excavacion * 25000 # Costo local asumido manual por m3
             
-            bultos_zap = vol_concreto_zap * 350 / 50.0 
-            vol_arena_z = vol_concreto_zap * 0.55
-            vol_grava_z = vol_concreto_zap * 0.8
-            
+            bultos_zap  = vol_concreto_zap * 350 / 50.0
+            # Proporciones de mezcla — leer de apu_config si están definidas, si no usar defaults ACI
+            pct_arena = apu.get("pct_arena_mezcla", 0.55)  # m³ arena por m³ de concreto
+            pct_grava = apu.get("pct_grava_mezcla", 0.80)  # m³ grava por m³ de concreto
+            vol_arena_z = vol_concreto_zap * pct_arena
+            vol_grava_z = vol_concreto_zap * pct_grava
+
             c_cem = bultos_zap * apu["cemento"]
             c_ace = peso_total_acero_zap * apu["acero"]
             c_are = vol_arena_z * apu["arena"]
@@ -919,7 +922,10 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
                 worksheet.write_formula(row, 3, f'=D{row-1}*{apu.get("pct_aui", 0.30)}', money_fmt)
                 row += 1
                 worksheet.write(row, 0, "IVA s/ Utilidad", bold)
-                worksheet.write_formula(row, 3, f'=D{row-1}*{apu.get("pct_util", 0.05)/apu.get("pct_aui", 0.30)}*{apu.get("iva", 0.19)}', money_fmt)
+                # IVA = utilidad (ya calculado en Python) * tasa IVA
+                # Usamos el valor numérico directamente para evitar fórmulas confusas
+                _row_util = row - 1  # fila de utilidad en Excel
+                worksheet.write_formula(row, 3, f'=D{_row_util}*{apu.get("iva", 0.19)}', money_fmt)
                 row += 1
                 worksheet.write(row, 0, "TOTAL PRESUPUESTO", bold)
                 worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
