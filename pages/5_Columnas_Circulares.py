@@ -660,8 +660,9 @@ with tab2:
                   f"GANCHOS: 90° en longitudinales (12db)\n135° en estribos (6db)")
     msp.add_text(table_text, dxfattribs={'layer': 'TEXTO', 'height': 2, 'insert': (off_x + D_col + 10, L_col - 20)})
     
-    out_stream = io.BytesIO()
-    doc_dxf.write(out_stream)
+    out_sio = io.StringIO()
+    doc_dxf.write(out_sio)
+    out_stream = out_sio.getvalue().encode('utf-8')
     st.download_button(label=_t("Descargar Plano DXF (Planta + Elevación con Empalmes y Ganchos)", "Download DXF Drawing (Plan + Elevation with Splices and Hooks)"),
                        data=out_stream.getvalue(), file_name=f"Columna_Circular_D{D_col:.0f}cm.dxf", mime="application/dxf")
 
@@ -755,6 +756,63 @@ with tab3:
                                   f"**{total_proyecto:,.2f}**"]
         }
         st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
+
+        # ── DESPIECE TABLE ──────────────────────────────────────────
+        st.markdown(_t("#### 📏 Despiece de Acero (Cantidades y Costos)", "#### 📏 Rebar Schedule (Quantities & Costs)"))
+        desp_rows = [
+            {
+                "Elemento": _t("Longitudinal", "Longitudinal"),
+                "Varilla": rebar_type,
+                "Cant.": n_barras_total,
+                "L. Unit. (m)": f"{long_varilla_m:.2f}",
+                "Peso Total (kg)": f"{peso_acero_long_kg:.1f}",
+                f"Costo [{mon}]": f"{peso_acero_long_kg * apu.get('acero', 0):,.2f}"
+            },
+            {
+                "Elemento": _t("Estribos / Espiral", "Ties / Spiral"),
+                "Varilla": stirrup_type,
+                "Cant.": f"@ {s_estribo_cm:.1f} cm",
+                "L. Unit. (m)": f"{long_estribos_m:.2f} (total)",
+                "Peso Total (kg)": f"{peso_acero_estribos_kg:.1f}",
+                f"Costo [{mon}]": f"{peso_acero_estribos_kg * apu.get('acero', 0):,.2f}"
+            },
+            {
+                "Elemento": _t("TOTAL ACERO", "TOTAL STEEL"),
+                "Varilla": "",
+                "Cant.": "",
+                "L. Unit. (m)": "",
+                "Peso Total (kg)": f"{peso_total_acero_kg:.1f}",
+                f"Costo [{mon}]": f"{c_ace:,.2f}"
+            },
+        ]
+        import pandas as _pd2
+        st.dataframe(_pd2.DataFrame(desp_rows), use_container_width=True, hide_index=True)
+
+        # ── COST VS QUANTITY CHART ───────────────────────────────────
+        st.markdown(_t("#### 📊 Cantidades vs Costos", "#### 📊 Quantities vs Costs"))
+        _items = [_t("Cemento (bultos)", "Cement (bags)"), _t("Acero (kg)", "Steel (kg)"),
+                  _t("Arena (m³)", "Sand (m³)"), _t("Grava (m³)", "Gravel (m³)")]
+        _qtys  = [bags_cement if not apu.get("usar_concreto_premezclado", False) else 0,
+                  peso_total_acero_kg,
+                  vol_arena if not apu.get("usar_concreto_premezclado", False) else vol_concreto_m3,
+                  vol_grava if not apu.get("usar_concreto_premezclado", False) else 0]
+        _costs = [c_cem, c_ace, c_are, c_gra]
+
+        import plotly.graph_objects as _go2
+        _fig = _go2.Figure()
+        _fig.add_trace(_go2.Bar(name=_t('Cantidad', 'Quantity'), x=_items, y=_qtys,
+                                yaxis='y', marker_color='#4a4a6a'))
+        _fig.add_trace(_go2.Bar(name=_t('Costo', 'Cost'), x=_items, y=_costs,
+                                yaxis='y2', marker_color='#ff6b35'))
+        _fig.update_layout(
+            title=dict(text=_t('Cantidades vs Costos — Columna Circular', 'Quantities vs Costs — Circular Column'), font=dict(color='white')),
+            yaxis=dict(title=dict(text=_t('Cantidades', 'Quantities'), font=dict(color='#4a4a6a')), tickfont=dict(color='#4a4a6a')),
+            yaxis2=dict(title=dict(text=_t('Costo', 'Cost'), font=dict(color='#ff6b35')), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
+            barmode='group', paper_bgcolor='#1a1a2e', plot_bgcolor='#1a1a2e',
+            legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.1)', font=dict(color='white')),
+            margin=dict(l=0, r=0, t=40, b=0), height=320
+        )
+        st.plotly_chart(_fig, use_container_width=True)
         
         # Excel APU
         output_excel = io.BytesIO()
