@@ -241,10 +241,10 @@ with st.expander(_t("🔩 Tabla de Secciones de Acero de Refuerzo", "🔩 Rebar 
     rows_us, rows_mm = [], []
     for k,a in REBAR_US.items():
         d_bar = DIAM_US[k]
-        rows_us.append({"Barra":k,"Ø (mm)":f"{d_bar:.2f}","Área (cm²)":f"{a:.3f}","Peso (kg/m)":f"{a*100*7.85e-3/0.01:.3f}"})
+        rows_us.append({"Barra":k,"Ø (mm)":f"{d_bar:.2f}","Área (cm²)":f"{a:.3f}","Peso (kg/m)":f"{a * 0.785:.3f}"})
     for k,a in REBAR_MM.items():
         d_bar = DIAM_MM[k]
-        rows_us_mm = {"Barra (SI)":k,"Ø (mm)":f"{d_bar:.0f}","Área (cm²)":f"{a:.4f}","Peso (kg/m)":f"{a*100*7.85e-3/0.01:.3f}"}
+        rows_us_mm = {"Barra (SI)":k,"Ø (mm)":f"{d_bar:.0f}","Área (cm²)":f"{a:.4f}","Peso (kg/m)":f"{a * 0.785:.3f}"}
         rows_mm.append(rows_us_mm)
     c1,c2 = st.columns(2)
     with c1:
@@ -330,7 +330,7 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
                 recub = dp_vr - db_vr/20
                 r_bar = db_vr/20
                 ax.add_patch(patches.Rectangle((recub,recub),b_vr-2*recub,h_vr-2*recub,linewidth=1.5,edgecolor='#00d4ff',facecolor='none',linestyle='--'))
-                xs = np.linspace(dp_vr, b_vr-dp_vr, max(n_bars,2)) if n_bars>1 else [b_vr/2]
+                xs = [b_vr/2] if n_bars == 1 else np.linspace(dp_vr, b_vr-dp_vr, n_bars) if n_bars>1 else [b_vr/2]
                 for x in xs[:n_bars]:
                     ax.add_patch(plt.Circle((x, dp_vr), r_bar, color='#ff6b35', zorder=5))
                 ax.annotate('',xy=(b_vr,-0.8*h_vr/h_vr),xytext=(0,-0.8*h_vr/h_vr),arrowprops=dict(arrowstyle='<->',color='white'))
@@ -380,7 +380,7 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
 
             with tab_q:
                 vol_horm = b_vr/100*h_vr/100*L_vr
-                peso_long = As_prov*100*(L_vr*1000)*7.85e-3  # kg
+                peso_long = As_prov * L_vr * 0.785  # kg
                 m = mix_for_fc(fc)
                 bags = m[0]/bag_kg * vol_horm
                 rows_q = [
@@ -394,79 +394,68 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
                 ]
                 qty_table(rows_q)
 
+
                 if "apu_config" in st.session_state:
-                    st.markdown("---")
-                    st.markdown("### 💰 Presupuesto Estimado (Promedio de Fuentes Regionales)")
                     apu = st.session_state.apu_config
-                    mon = apu["moneda"]
+                    mon = apu.get("moneda", "$")
                     
-                    c_cem = bags * apu["cemento"]
-                    c_ace = peso_long * apu["acero"]
-                    c_are = (m[2]*vol_horm/1600) * apu["arena"] # Approx 1600kg/m3
-                    c_gra = (m[3]*vol_horm/1600) * apu["grava"]
+                    st.markdown("---")
+                    st.success("✅ **Precios actualizados del mercado aplicados (APU Mercado).**")
+                    
+                    # 1. Total Estimate
+                    c_cem = bags * apu.get("cemento", 0)
+                    c_ace = peso_long * apu.get("acero", 0)
+                    c_are = (m[2]*vol_horm/1600) * apu.get("arena", 0)
+                    c_gra = (m[3]*vol_horm/1600) * apu.get("grava", 0)
                     total_mat = c_cem + c_ace + c_are + c_gra
                     
-                    # MO
+                    # Labor and Indirects
                     total_dias_mo = (peso_long * 0.04) + (vol_horm * 0.4)
                     costo_mo = total_dias_mo * apu.get("costo_dia_mo", 69333.33)
-                    
-                    # Indirectos
                     costo_directo = total_mat + costo_mo
+                    
                     herramienta = costo_mo * apu.get("pct_herramienta", 0.05)
                     aiu = costo_directo * apu.get("pct_aui", 0.30)
                     utilidad = costo_directo * apu.get("pct_util", 0.05)
-                    iva = utilidad * apu.get("iva", 0.19)
+                    iva_v = utilidad * apu.get("iva", 0.19)
+                    gran_total = costo_directo + herramienta + aiu + iva_v
                     
-                    total_proyecto = costo_directo + herramienta + aiu + iva
+                    st.metric(f"💎 Gran Total Proyecto ({mon})", f"{gran_total:,.2f}")
+                    st.caption("Incluye Materiales, Mano de Obra, Herramienta, A.I.U. e IVA s/Utilidad.")
                     
-                    data_vr_apu = {
-                        "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)", 
-                                 "Mano de Obra (días)", "Herramienta Menor", "A.I.U.", "IVA s/Utilidad", "TOTAL PRESUPUESTO"],
-                        "Cantidad": [f"{bags:.1f}", f"{peso_long:.1f}", f"{m[2]*vol_horm/1600:.2f}", f"{m[3]*vol_horm/1600:.2f}", 
-                                     f"{total_dias_mo:.2f}", f"{apu.get('pct_herramienta', 0.05)*100:.1f}% MO", 
-                                     f"{apu.get('pct_aui', 0.3)*100:.1f}% CD", f"{apu.get('iva', 0.19)*100:.1f}% Util", ""],
-                        f"Subtotal [{mon}]": [f"{c_cem:,.2f}", f"{c_ace:,.2f}", f"{c_are:,.2f}", f"{c_gra:,.2f}", 
-                                              f"{costo_mo:,.2f}", f"{herramienta:,.2f}", f"{aiu:,.2f}", f"{iva:,.2f}", f"**{total_proyecto:,.2f}**"]
+                    # 2. Despiece
+                    st.markdown("#### 📏 Despiece de Acero (Cantidades y Costos)")
+                    despiece_rows = [
+                        {"Elemento": "Longitudinal (Rect)", "Barra": bar_vr, "Cant": n_bars, "L. Unitaria (m)": L_vr, "Peso Total (kg)": peso_long, "Costo Total": c_ace}
+                    ]
+                    df_desp = pd.DataFrame(despiece_rows)
+                    st.dataframe(df_desp.style.format({"Peso Total (kg)": "{:.2f}", "Costo Total": "{:,.2f}", "L. Unitaria (m)": "{:.2f}"}), use_container_width=True, hide_index=True)
+                    
+                    # 3. Material Summary
+                    st.markdown("#### 🧱 Resumen de Materiales y Costos")
+                    data_apu = {
+                        "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)"],
+                        "Cantidad": [f"{bags:.1f}", f"{{peso_long:.1f}}", f"{{(m[2]*vol_horm/1600):.2f}}", f"{{(m[3]*vol_horm/1600):.2f}}"],
+                        "Precio Unit.": [apu.get('cemento',0), apu.get('acero',0), apu.get('arena',0), apu.get('grava',0)],
+                        "Subtotal": [f"{c_cem:,.2f}", f"{c_ace:,.2f}", f"{c_are:,.2f}", f"{c_gra:,.2f}"]
                     }
-                    st.dataframe(pd.DataFrame(data_vr_apu), use_container_width=True, hide_index=True)
-                    
-                    output_excel = io.BytesIO()
-                    with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
-                        df_export = pd.DataFrame({
-                            "Item": ["Cemento", "Acero", "Arena", "Grava", "Mano de Obra"],
-                            "Cantidad": [bags, peso_long, m[2]*vol_horm/1600, m[3]*vol_horm/1600, total_dias_mo],
-                            "Unidad": [apu['cemento'], apu['acero'], apu['arena'], apu['grava'], apu.get('costo_dia_mo', 69333.33)]
-                        })
-                        df_export["Subtotal"] = df_export["Cantidad"] * df_export["Unidad"]
-                        df_export.to_excel(writer, index=False, sheet_name='APU')
-                        workbook = writer.book
-                        worksheet = writer.sheets['APU']
-                        money_fmt = workbook.add_format({'num_format': '#,##0.00'})
-                        bold = workbook.add_format({'bold': True})
-                        worksheet.set_column('A:A', 25)
-                        worksheet.set_column('B:D', 15, money_fmt)
-                        
-                        row = len(df_export) + 1
-                        worksheet.write(row, 0, "Costo Directo (CD)", bold)
-                        worksheet.write_formula(row, 3, f'=SUM(D2:D{row})', money_fmt)
-                        row += 1
-                        worksheet.write(row, 0, "Herramienta Menor", bold)
-                        worksheet.write_formula(row, 3, f'=D7*{apu.get("pct_herramienta", 0.05)}', money_fmt)
-                        row += 1
-                        worksheet.write(row, 0, "A.I.U", bold)
-                        worksheet.write_formula(row, 3, f'=D{row-1}*{apu.get("pct_aui", 0.30)}', money_fmt)
-                        row += 1
-                        worksheet.write(row, 0, "IVA s/ Utilidad", bold)
-                        worksheet.write_formula(row, 3, f'=D{row-1}*{apu.get("pct_util", 0.05)/apu.get("pct_aui", 0.30)}*{apu.get("iva", 0.19)}', money_fmt)
-                        row += 1
-                        worksheet.write(row, 0, "TOTAL PRESUPUESTO", bold)
-                        worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
-                        
-                    output_excel.seek(0)
-                    st.download_button(label="📥 Descargar Presupuesto Excel (.xlsx)", data=output_excel, 
-                                       file_name=f"APU_VigaRect_L{L_vr}m.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
+
+                    # 4. Plotly Chart
+                    fig_chart = go.Figure()
+                    fig_chart.add_trace(go.Bar(name='Cantidad', x=data_apu["Item"], y=[bags, peso_long, (m[2]*vol_horm/1600), (m[3]*vol_horm/1600)], yaxis='y', marker_color='#4a4a6a'))
+                    fig_chart.add_trace(go.Bar(name='Costo', x=data_apu["Item"], y=[c_cem, c_ace, c_are, c_gra], yaxis='y2', marker_color='#ff6b35'))
+                    fig_chart.update_layout(
+                        title=dict(text='Cantidades vs Costos', font=dict(color='white')),
+                        yaxis=dict(title='Cantidades', titlefont=dict(color='#4a4a6a'), tickfont=dict(color='#4a4a6a')),
+                        yaxis2=dict(title='Costo', titlefont=dict(color='#ff6b35'), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
+                        barmode='group', paper_bgcolor='#1a1a2e', plot_bgcolor='#1a1a2e',
+                        legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.1)', font=dict(color='white')),
+                        margin=dict(l=0, r=0, t=40, b=0), height=300
+                    )
+                    st.plotly_chart(fig_chart, use_container_width=True)
                 else:
-                    st.info("💡 Ve a la página 'APU Mercado' para cargar los costos en vivo de ferreterías.")
+                    st.info("💡 Ve a la página **'4. APU Mercado'** para configurar los precios de materiales y activar el presupuesto y gráficos detallados.")
 
 # ══════════════════════════════════════════
 # 3. VIGA T — FLEXIÓN
@@ -607,12 +596,76 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
             
         with tab_q:
             vol_t = (bf_vt*hf_vt + bw_vt*(ht_vt-hf_vt))/10000 * L_vt
-            peso_t = As_prov_vt*100*(L_vt*1000)*7.85e-3
+            peso_t = As_prov_vt * L_vt * 0.785
             m = mix_for_fc(fc)
             qty_table([("Concreto Viga T", f"{vol_t:.4f} m³"),
                        (f"Acero ({n_bt} barras)", f"{peso_t:.2f} kg"),
                        (f"Cemento ({bag_kg:.0f}kg/bulto)", f"{m[0]*vol_t/bag_kg:.1f} bultos"),
                        ("Referencia", code["ref"])])
+
+
+
+            if "apu_config" in st.session_state:
+                apu = st.session_state.apu_config
+                mon = apu.get("moneda", "$")
+                
+                st.markdown("---")
+                st.success("✅ **Precios actualizados del mercado aplicados (APU Mercado).**")
+                
+                # 1. Total Estimate
+                c_cem = bags * apu.get("cemento", 0)
+                c_ace = peso_t * apu.get("acero", 0)
+                c_are = (m[2]*vol_t/1600) * apu.get("arena", 0)
+                c_gra = (m[3]*vol_t/1600) * apu.get("grava", 0)
+                total_mat = c_cem + c_ace + c_are + c_gra
+                
+                # Labor and Indirects
+                total_dias_mo = (peso_t * 0.04) + (vol_t * 0.4)
+                costo_mo = total_dias_mo * apu.get("costo_dia_mo", 69333.33)
+                costo_directo = total_mat + costo_mo
+                
+                herramienta = costo_mo * apu.get("pct_herramienta", 0.05)
+                aiu = costo_directo * apu.get("pct_aui", 0.30)
+                utilidad = costo_directo * apu.get("pct_util", 0.05)
+                iva_v = utilidad * apu.get("iva", 0.19)
+                gran_total = costo_directo + herramienta + aiu + iva_v
+                
+                st.metric(f"💎 Gran Total Proyecto ({mon})", f"{gran_total:,.2f}")
+                st.caption("Incluye Materiales, Mano de Obra, Herramienta, A.I.U. e IVA s/Utilidad.")
+                
+                # 2. Despiece
+                st.markdown("#### 📏 Despiece de Acero (Cantidades y Costos)")
+                despiece_rows = [
+                    {"Elemento": "Longitudinal (T)", "Barra": bar_vt, "Cant": n_bt, "L. Unitaria (m)": L_vt, "Peso Total (kg)": peso_t, "Costo Total": c_ace}
+                ]
+                df_desp = pd.DataFrame(despiece_rows)
+                st.dataframe(df_desp.style.format({"Peso Total (kg)": "{:.2f}", "Costo Total": "{:,.2f}", "L. Unitaria (m)": "{:.2f}"}), use_container_width=True, hide_index=True)
+                
+                # 3. Material Summary
+                st.markdown("#### 🧱 Resumen de Materiales y Costos")
+                data_apu = {
+                    "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)"],
+                    "Cantidad": [f"{bags:.1f}", f"{{peso_t:.1f}}", f"{{(m[2]*vol_t/1600):.2f}}", f"{{(m[3]*vol_t/1600):.2f}}"],
+                    "Precio Unit.": [apu.get('cemento',0), apu.get('acero',0), apu.get('arena',0), apu.get('grava',0)],
+                    "Subtotal": [f"{c_cem:,.2f}", f"{c_ace:,.2f}", f"{c_are:,.2f}", f"{c_gra:,.2f}"]
+                }
+                st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
+
+                # 4. Plotly Chart
+                fig_chart = go.Figure()
+                fig_chart.add_trace(go.Bar(name='Cantidad', x=data_apu["Item"], y=[bags, peso_t, (m[2]*vol_t/1600), (m[3]*vol_t/1600)], yaxis='y', marker_color='#4a4a6a'))
+                fig_chart.add_trace(go.Bar(name='Costo', x=data_apu["Item"], y=[c_cem, c_ace, c_are, c_gra], yaxis='y2', marker_color='#ff6b35'))
+                fig_chart.update_layout(
+                    title=dict(text='Cantidades vs Costos', font=dict(color='white')),
+                    yaxis=dict(title='Cantidades', titlefont=dict(color='#4a4a6a'), tickfont=dict(color='#4a4a6a')),
+                    yaxis2=dict(title='Costo', titlefont=dict(color='#ff6b35'), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
+                    barmode='group', paper_bgcolor='#1a1a2e', plot_bgcolor='#1a1a2e',
+                    legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.1)', font=dict(color='white')),
+                    margin=dict(l=0, r=0, t=40, b=0), height=300
+                )
+                st.plotly_chart(fig_chart, use_container_width=True)
+            else:
+                st.info("💡 Ve a la página **'4. APU Mercado'** para configurar los precios de materiales y activar el presupuesto y gráficos detallados.")
 
 # ══════════════════════════════════════════
 # 4. CORTANTE EN VIGAS
@@ -701,7 +754,7 @@ with st.expander(_t("⚡ Diseño a Cortante — Vigas de Concreto", "⚡ Shear D
     with tab_q:
         perim_cv = 2*(bw_cv+h_cv) + 6*0.8  # cm approx
         vol_beam_cv = bw_cv/100*h_cv/100*L_cv
-        peso_est_cv = n_estribos*(perim_cv/100)*st_area*100*7.85e-3
+        peso_est_cv = n_estribos * (perim_cv / 100.0) * st_area * 0.785
         m = mix_for_fc(fc)
         qty_table([
             (f"Estribos {st_bar_cv} @ {s_diseno_cm:.1f}cm", f"{n_estribos} estribos"),
@@ -914,8 +967,8 @@ with st.expander(_t("🏗️ Diseño de Losa en Una Dirección", "🏗️ One-Wa
         with tab_q:
             area_losa = ln_ls*1  # m² por franja 1m
             vol_ls = area_losa*h_ls/100
-            peso_flex_ls = As_prov_ls*(ln_ls*1000)*7.85e-3
-            peso_temp_ls = Ab_ls/(s_temp/100)*(ln_ls*1000)*7.85e-3
+            peso_flex_ls = As_prov_ls * ln_ls * 0.785
+            peso_temp_ls = As_temp * ln_ls * 0.785
             m = mix_for_fc(fc)
             qty_table([
                 ("Concreto (1m de ancho)", f"{vol_ls:.4f} m³"),
@@ -924,6 +977,70 @@ with st.expander(_t("🏗️ Diseño de Losa en Una Dirección", "🏗️ One-Wa
                 (f"Cemento ({bag_kg:.0f}kg/bulto)", f"{m[0]*vol_ls/bag_kg:.1f} bultos"),
                 ("Referencia", code["ref"]),
             ])
+
+
+
+            if "apu_config" in st.session_state:
+                apu = st.session_state.apu_config
+                mon = apu.get("moneda", "$")
+                
+                st.markdown("---")
+                st.success("✅ **Precios actualizados del mercado aplicados (APU Mercado).**")
+                
+                # 1. Total Estimate
+                c_cem = bags * apu.get("cemento", 0)
+                c_ace = (peso_flex_ls + peso_temp_ls) * apu.get("acero", 0)
+                c_are = (m[2]*vol_ls/1600) * apu.get("arena", 0)
+                c_gra = (m[3]*vol_ls/1600) * apu.get("grava", 0)
+                total_mat = c_cem + c_ace + c_are + c_gra
+                
+                # Labor and Indirects
+                total_dias_mo = ((peso_flex_ls + peso_temp_ls) * 0.04) + (vol_ls * 0.4)
+                costo_mo = total_dias_mo * apu.get("costo_dia_mo", 69333.33)
+                costo_directo = total_mat + costo_mo
+                
+                herramienta = costo_mo * apu.get("pct_herramienta", 0.05)
+                aiu = costo_directo * apu.get("pct_aui", 0.30)
+                utilidad = costo_directo * apu.get("pct_util", 0.05)
+                iva_v = utilidad * apu.get("iva", 0.19)
+                gran_total = costo_directo + herramienta + aiu + iva_v
+                
+                st.metric(f"💎 Gran Total Proyecto ({mon})", f"{gran_total:,.2f}")
+                st.caption("Incluye Materiales, Mano de Obra, Herramienta, A.I.U. e IVA s/Utilidad.")
+                
+                # 2. Despiece
+                st.markdown("#### 📏 Despiece de Acero (Cantidades y Costos)")
+                despiece_rows = [
+                    {"Elemento": "Flexión + Temp", "Barra": bar_ls, "Cant": 'N/A', "L. Unitaria (m)": ln_ls, "Peso Total (kg)": (peso_flex_ls + peso_temp_ls), "Costo Total": c_ace}
+                ]
+                df_desp = pd.DataFrame(despiece_rows)
+                st.dataframe(df_desp.style.format({"Peso Total (kg)": "{:.2f}", "Costo Total": "{:,.2f}", "L. Unitaria (m)": "{:.2f}"}), use_container_width=True, hide_index=True)
+                
+                # 3. Material Summary
+                st.markdown("#### 🧱 Resumen de Materiales y Costos")
+                data_apu = {
+                    "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)"],
+                    "Cantidad": [f"{bags:.1f}", f"{{(peso_flex_ls + peso_temp_ls):.1f}}", f"{{(m[2]*vol_ls/1600):.2f}}", f"{{(m[3]*vol_ls/1600):.2f}}"],
+                    "Precio Unit.": [apu.get('cemento',0), apu.get('acero',0), apu.get('arena',0), apu.get('grava',0)],
+                    "Subtotal": [f"{c_cem:,.2f}", f"{c_ace:,.2f}", f"{c_are:,.2f}", f"{c_gra:,.2f}"]
+                }
+                st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
+
+                # 4. Plotly Chart
+                fig_chart = go.Figure()
+                fig_chart.add_trace(go.Bar(name='Cantidad', x=data_apu["Item"], y=[bags, (peso_flex_ls + peso_temp_ls), (m[2]*vol_ls/1600), (m[3]*vol_ls/1600)], yaxis='y', marker_color='#4a4a6a'))
+                fig_chart.add_trace(go.Bar(name='Costo', x=data_apu["Item"], y=[c_cem, c_ace, c_are, c_gra], yaxis='y2', marker_color='#ff6b35'))
+                fig_chart.update_layout(
+                    title=dict(text='Cantidades vs Costos', font=dict(color='white')),
+                    yaxis=dict(title='Cantidades', titlefont=dict(color='#4a4a6a'), tickfont=dict(color='#4a4a6a')),
+                    yaxis2=dict(title='Costo', titlefont=dict(color='#ff6b35'), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
+                    barmode='group', paper_bgcolor='#1a1a2e', plot_bgcolor='#1a1a2e',
+                    legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.1)', font=dict(color='white')),
+                    margin=dict(l=0, r=0, t=40, b=0), height=300
+                )
+                st.plotly_chart(fig_chart, use_container_width=True)
+            else:
+                st.info("💡 Ve a la página **'4. APU Mercado'** para configurar los precios de materiales y activar el presupuesto y gráficos detallados.")
 
 # ══════════════════════════════════════════
 # 8. LONGITUD DE DESARROLLO
@@ -963,7 +1080,8 @@ with st.expander("🔗 Longitud de Desarrollo y Empalmes"):
     psig_v = float(psi_g.split("—")[0])
 
     cb_ktr_db = min((cb_ld+Ktr_ld)/db_ld, 2.5)
-    ld_mm = (3/40)*(fy/lam/math.sqrt(fc))*(psit_v*psie_v*psis_v*psig_v/cb_ktr_db)*db_ld
+    psi_prod = min(psit_v * psie_v, 1.7) * psis_v * psig_v
+    ld_mm = (3/40)*(fy/lam/math.sqrt(fc))*(psi_prod/cb_ktr_db)*db_ld
     ld_mm = max(ld_mm, 300)  # min 300mm
 
     # Lap splice lengths
