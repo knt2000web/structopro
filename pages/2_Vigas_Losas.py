@@ -457,8 +457,8 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
                     fig_chart.add_trace(go.Bar(name='Costo', x=data_apu["Item"], y=[c_cem, c_ace, c_are, c_gra], yaxis='y2', marker_color='#ff6b35'))
                     fig_chart.update_layout(
                         title=dict(text='Cantidades vs Costos', font=dict(color='white')),
-                        yaxis=dict(title='Cantidades', titlefont=dict(color='#4a4a6a'), tickfont=dict(color='#4a4a6a')),
-                        yaxis2=dict(title='Costo', titlefont=dict(color='#ff6b35'), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
+                        yaxis=dict(title=dict(text='Cantidades', font=dict(color='#4a4a6a')), tickfont=dict(color='#4a4a6a')),
+                        yaxis2=dict(title=dict(text='Costo', font=dict(color='#ff6b35')), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
                         barmode='group', paper_bgcolor='#1a1a2e', plot_bgcolor='#1a1a2e',
                         legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.1)', font=dict(color='white')),
                         margin=dict(l=0, r=0, t=40, b=0), height=300
@@ -728,8 +728,8 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
                 fig_chart.add_trace(go.Bar(name='Costo', x=data_apu["Item"], y=[c_cem, c_ace, c_are, c_gra], yaxis='y2', marker_color='#ff6b35'))
                 fig_chart.update_layout(
                     title=dict(text='Cantidades vs Costos', font=dict(color='white')),
-                    yaxis=dict(title='Cantidades', titlefont=dict(color='#4a4a6a'), tickfont=dict(color='#4a4a6a')),
-                    yaxis2=dict(title='Costo', titlefont=dict(color='#ff6b35'), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
+                    yaxis=dict(title=dict(text='Cantidades', font=dict(color='#4a4a6a')), tickfont=dict(color='#4a4a6a')),
+                    yaxis2=dict(title=dict(text='Costo', font=dict(color='#ff6b35')), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
                     barmode='group', paper_bgcolor='#1a1a2e', plot_bgcolor='#1a1a2e',
                     legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.1)', font=dict(color='white')),
                     margin=dict(l=0, r=0, t=40, b=0), height=300
@@ -1105,8 +1105,8 @@ with st.expander(_t("🏗️ Diseño de Losa en Una Dirección", "🏗️ One-Wa
                 fig_chart.add_trace(go.Bar(name='Costo', x=data_apu["Item"], y=[c_cem, c_ace, c_are, c_gra], yaxis='y2', marker_color='#ff6b35'))
                 fig_chart.update_layout(
                     title=dict(text='Cantidades vs Costos', font=dict(color='white')),
-                    yaxis=dict(title='Cantidades', titlefont=dict(color='#4a4a6a'), tickfont=dict(color='#4a4a6a')),
-                    yaxis2=dict(title='Costo', titlefont=dict(color='#ff6b35'), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
+                    yaxis=dict(title=dict(text='Cantidades', font=dict(color='#4a4a6a')), tickfont=dict(color='#4a4a6a')),
+                    yaxis2=dict(title=dict(text='Costo', font=dict(color='#ff6b35')), tickfont=dict(color='#ff6b35'), overlaying='y', side='right'),
                     barmode='group', paper_bgcolor='#1a1a2e', plot_bgcolor='#1a1a2e',
                     legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.1)', font=dict(color='white')),
                     margin=dict(l=0, r=0, t=40, b=0), height=300
