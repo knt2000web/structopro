@@ -257,6 +257,38 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
             st.success(f"✅ Aprobado: Estribos {st_bar_cx} @ {s_diseno_cm:.1f} cm")
         else:
             st.error(f"❌ No aprobado: φVn = {phi_Vn:.2f} kN < Vu = {Vu_x:.2f} kN")
+
+        # ── 3D SECCIÓN TRANSVERSAL ─────────────────────────────────────
+        st.markdown("---")
+        st.markdown("#### 🧊 Visualización 3D de la Sección con Estribos")
+        _fig3d_cx = go.Figure()
+        _bw, _d, _L = bw_cx, d_cx, L_vga*100  # cm
+        # Cuerpo de la viga
+        _corners_x = [-_bw/2, _bw/2, _bw/2, -_bw/2, -_bw/2, _bw/2, _bw/2, -_bw/2]
+        _corners_y = [0, 0, _d, _d, 0, 0, _d, _d]
+        _corners_z = [0, 0, 0, 0, _L, _L, _L, _L]
+        _i = [0,0,4,4,0,1,2,3]; _j=[1,3,5,7,4,5,6,7]; _k=[2,2,6,6,1,2,3,0]
+        _fig3d_cx.add_trace(go.Mesh3d(x=_corners_x, y=_corners_y, z=_corners_z,
+                                       i=_i, j=_j, k=_k, opacity=0.15, color='#4a4a6a', name='Concreto'))
+        # Estribos (optimizados con None gaps)
+        _rec = 4  # cm recubrimiento
+        _tx = [-_bw/2+_rec, _bw/2-_rec, _bw/2-_rec, -_bw/2+_rec, -_bw/2+_rec]
+        _ty = [_rec, _rec, _d-_rec, _d-_rec, _rec]
+        _tx_all, _ty_all, _tz_all = [], [], []
+        for _zt in range(5, int(_L), int(s_diseno_cm)):
+            _tx_all.extend(_tx + [None]); _ty_all.extend(_ty + [None]); _tz_all.extend([_zt]*5+[None])
+        _fig3d_cx.add_trace(go.Scatter3d(x=_tx_all, y=_ty_all, z=_tz_all, mode='lines',
+                                          line=dict(color='cornflowerblue', width=4), name='Estribos'))
+        _fig3d_cx.update_layout(
+            scene=dict(aspectmode='data', xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)',
+                       bgcolor='#1a1a2e'),
+            paper_bgcolor='#1a1a2e', font=dict(color='white'), height=400,
+            margin=dict(l=0,r=0,t=40,b=0), dragmode='turntable',
+            title=dict(text=f"Viga {_bw:.0f}×{_d:.0f} cm | Estribos {st_bar_cx} @ {s_diseno_cm:.1f} cm",
+                       font=dict(color='white'))
+        )
+        st.plotly_chart(_fig3d_cx, use_container_width=True)
+
     with tab_q:
         vol_beam = bw_cx/100 * d_cx/100 * L_vga  # m³ (aproximado)
         perim_cx = 2*(bw_cx + d_cx) + 6*0.8  # cm
@@ -358,7 +390,74 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
                 ("Ah requerido (estribos cerrados)", f"{Ah_req_men:.2f} cm²"),
             ]
             qty_table(rows_men)
-            st.success("✅ Armadura principal y estribos definidos.")
+            
+            # ── 3D MÉNSULA REAL ──────────────────────────────────────────────
+            st.markdown("---")
+            st.markdown("#### 🧊 Visualización 3D de la Ménsula (Corbel)")
+            _fm = go.Figure()
+            
+            # Columna de soporte (haz que la ménsula salga de ella)
+            _col_w = bw_men        # misma anchura que la ménsula
+            _col_h = h_men * 2     # doble de la ménsula para dar contexto
+            _col_dep = bw_men      # profundidad de la columna
+            _col_x = [-_col_w/2, _col_w/2, _col_w/2, -_col_w/2, -_col_w/2, _col_w/2, _col_w/2, -_col_w/2]
+            _col_y = [-_col_h, -_col_h, 0, 0, -_col_h, -_col_h, 0, 0]
+            _col_z = [0, 0, 0, 0, _col_dep, _col_dep, _col_dep, _col_dep]
+            _i = [0,0,4,4,0,1,2,3]; _j=[1,3,5,7,4,5,6,7]; _k=[2,2,6,6,1,2,3,0]
+            _fm.add_trace(go.Mesh3d(x=_col_x, y=_col_y, z=_col_z, i=_i, j=_j, k=_k,
+                                    opacity=0.35, color='#5a5a7a', name='Columna'))
+            
+            # Ménsula voladizo (sale hacia la derecha en X con ancho bw_men, alto h_men, prof bw_men)
+            _mx = [0, a_men, a_men, 0, 0, a_men, a_men, 0]  # X de 0 a a_men (brazo de palanca)
+            _my = [0, 0, h_men, h_men, 0, 0, h_men, h_men]  # Y de 0 a h_men
+            _mz = [0, 0, 0, 0, _col_dep, _col_dep, _col_dep, _col_dep]
+            _fm.add_trace(go.Mesh3d(x=_mx, y=_my, z=_mz, i=_i, j=_j, k=_k,
+                                    opacity=0.6, color='#6a6a8a', name='Ménsula'))
+            
+            # Varilla longitudinal principal (zona de tracción superior, y = h_men - dp_men)
+            _y_bar = h_men - dp_men
+            _db_cm = rebar_dict[bar_men].get('diam_mm', 16) / 10 if hasattr(rebar_dict, 'get') and bar_men in rebar_dict else 1.6
+            _z_spacing = _col_dep / (n_bars + 1)
+            for _bi in range(n_bars):
+                _zi = _z_spacing * (_bi + 1)
+                _fm.add_trace(go.Scatter3d(
+                    x=[0, a_men], y=[_y_bar, _y_bar], z=[_zi, _zi],
+                    mode='lines', line=dict(color='#ff6b35', width=6), showlegend=(_bi==0),
+                    name='Acero Principal'
+                ))
+            
+            # Estribos cerrados horizontales (zh)
+            _n_ties = max(2, int(h_men/15))
+            _y_step = h_men / (_n_ties + 1)
+            for _ti in range(_n_ties):
+                _yt = _y_step * (_ti + 1)
+                _ez = [4, _col_dep-4, _col_dep-4, 4, 4, None]
+                _ey = [_yt, _yt, _yt, _yt, _yt, None]
+                _ex = [4, 4, a_men-4, a_men-4, 4, None]
+                _fm.add_trace(go.Scatter3d(x=_ex, y=_ey, z=_ez, mode='lines',
+                                           line=dict(color='cornflowerblue', width=4),
+                                           showlegend=(_ti==0), name='Estribos Cerrados'))
+            
+            # Carga puntual (flecha indicativa)
+            _fm.add_trace(go.Scatter3d(
+                x=[a_men, a_men], y=[h_men+15, h_men+2], z=[_col_dep/2, _col_dep/2],
+                mode='lines+markers+text', line=dict(color='lime', width=5),
+                marker=dict(symbol='arrow', size=8, color='lime'),
+                text=[f'Vu={Vu_men:.0f}kN', ''], textposition='top center',
+                textfont=dict(color='lime', size=11), name='Carga Vu'
+            ))
+            
+            _fm.update_layout(
+                scene=dict(aspectmode='data', bgcolor='#1a1a2e',
+                           xaxis_title='a (cm)', yaxis_title='h (cm)', zaxis_title='Ancho (cm)'),
+                paper_bgcolor='#1a1a2e', font=dict(color='white'),
+                height=480, margin=dict(l=0,r=0,t=40,b=0), dragmode='turntable',
+                showlegend=True, legend=dict(x=0, y=1, bgcolor='rgba(0,0,0,0.3)'),
+                title=dict(text=f"Ménsula {a_men:.0f}×{h_men:.0f}cm | {n_bars}×{bar_men}",
+                           font=dict(color='white'))
+            )
+            st.plotly_chart(_fm, use_container_width=True)
+
         with tab_q:
             vol_men = (bw_men/100) * (h_men/100) * (a_men/100)  # m³
             peso_principal = As_prov_men * (a_men/100 + 2*h_men/100) * 0.785  # kg
@@ -426,6 +525,44 @@ with st.expander(_t("📐 Predimensionamiento de Columnas", "📐 Column Prelimi
     st.write(f"- Carga Axial de Diseño Estimada ($P_u$): **{Pu_fact:.0f} kN**")
     st.write(f"- Área Bruta Requerida ($A_g$): **{Ag_req_cm2:.0f} cm²**")
     st.success(f"Sección Cuadrada Sugerida: **{b_round} cm × {b_round} cm**")
+
+    # ── 3D COLUMNA SUGERIDA ──────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### 🧊 Visualización 3D de la Columna Sugerida")
+    _h_col = pisos * 3.0 * 100  # cm = pisos * 3m
+    _fc2 = go.Figure()
+    _cb = b_round / 2
+    _pts = [
+        (-_cb,-_cb), (_cb,-_cb), (_cb,_cb), (-_cb,_cb), (-_cb,-_cb),
+        (-_cb,-_cb), (_cb,-_cb), (_cb,_cb), (-_cb,_cb), (-_cb,-_cb)
+    ]
+    _fc2.add_trace(go.Scatter3d(
+        x=[p[0] for p in _pts[:5]] + [None] + [p[0] for p in _pts[5:]],
+        y=[p[1] for p in _pts[:5]] + [None] + [p[1] for p in _pts[5:]],
+        z=[0]*5 + [None] + [_h_col]*5,
+        mode='lines', line=dict(color='white', width=3), name='Sección'
+    ))
+    # Lateral edges
+    for _px, _py in [(-_cb,-_cb),(_cb,-_cb),(_cb,_cb),(-_cb,_cb)]:
+        _fc2.add_trace(go.Scatter3d(x=[_px,_px], y=[_py,_py], z=[0,_h_col],
+                                    mode='lines', line=dict(color='white', width=3), showlegend=False))
+    # Rebar (4 esquinas simplificadas)
+    _ro = _cb - 4
+    for _bx, _by in [(-_ro,-_ro),(_ro,-_ro),(_ro,_ro),(-_ro,_ro)]:
+        _fc2.add_trace(go.Scatter3d(x=[_bx,_bx], y=[_by,_by], z=[0,_h_col],
+                                    mode='lines', line=dict(color='#ff6b35', width=6),
+                                    name='Acero Long.', showlegend=(_bx==-_ro and _by==-_ro)))
+
+    _fc2.update_layout(
+        scene=dict(aspectmode='data', bgcolor='#1a1a2e',
+                   xaxis_title='X (cm)', yaxis_title='Y (cm)', zaxis_title='H (cm)'),
+        paper_bgcolor='#1a1a2e', font=dict(color='white'),
+        height=420, margin=dict(l=0,r=0,t=50,b=0), dragmode='turntable',
+        title=dict(text=f"Columna Sugerida: {b_round}×{b_round} cm × {pisos} pisos ({_h_col/100:.1f}m)",
+                   font=dict(color='white'))
+    )
+    st.plotly_chart(_fc2, use_container_width=True)
+
 
     # Memoria y DXF para esta sección
     if st.button("Generar Memoria y DXF de Predimensionamiento"):
