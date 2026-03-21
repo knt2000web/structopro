@@ -440,9 +440,9 @@ with tab_dxf:
     # Cotas
     msp.add_text(f"L = {L_muro:.2f} m", dxfattribs={'layer':'TEXTO','height':0.1,'insert':(off_x+L_muro/2, -0.2)})
     msp.add_text(f"H = {H_muro:.2f} m", dxfattribs={'layer':'TEXTO','height':0.1,'insert':(off_x-0.5, H_muro/2)})
-    out = io.BytesIO()
-    doc_dxf.write(out)
-    st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=out.getvalue(), 
+    _out = io.StringIO()
+    doc_dxf.write(_out)
+    st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=_out.getvalue().encode('utf-8'), 
                        file_name=f"Muro_{L_muro}x{H_muro}.dxf", mime="application/dxf")
 
 with tab_mem:
@@ -573,6 +573,7 @@ with tab_apu:
         ]
     }
     st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
+    st.metric(f"💎 Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
     
     # Exportar Excel
     output_excel = io.BytesIO()

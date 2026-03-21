@@ -638,9 +638,9 @@ with tab2:
     splice_zone = H_muro/3
     msp.add_text(f"Empalme Clase B\nLap={splice_length_mm/10:.0f} cm", dxfattribs={'layer':'TEXTO','height':0.2,'insert':(off_x+pie_muro+base_pantalla+0.2, splice_zone)})
     
-    out = io.BytesIO()
-    doc_dxf.write(out)
-    st.download_button("Descargar DXF", data=out.getvalue(), file_name=f"Muro_{H_muro:.1f}m.dxf", mime="application/dxf")
+    _out = io.StringIO()
+    doc_dxf.write(_out)
+    st.download_button("Descargar DXF", data=_out.getvalue().encode('utf-8'), file_name=f"Muro_{H_muro:.1f}m.dxf", mime="application/dxf")
 
 with tab3:
     st.subheader(_t("🧊 Visualización 3D", "🧊 3D Visualization"))
@@ -751,6 +751,7 @@ with tab4:
                                   f"{costo_mo:,.2f}", f"{herramienta:,.2f}", f"{aiu:,.2f}", f"{iva:,.2f}", f"**{total_proyecto:,.2f}**"]
         }
         st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
+        st.metric(f"💎 Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
         
         # Excel APU total
         output_excel_apu = io.BytesIO()
