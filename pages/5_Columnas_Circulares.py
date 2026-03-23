@@ -720,7 +720,7 @@ with tab2:
     doc_dxf.write(out_sio)
     out_stream = out_sio.getvalue().encode('utf-8')
     st.download_button(label=_t("Descargar Plano DXF (Planta + Elevación con Empalmes y Ganchos)", "Download DXF Drawing (Plan + Elevation with Splices and Hooks)"),
-                       data=out_stream.getvalue(), file_name=f"Columna_Circular_D{D_col:.0f}cm.dxf", mime="application/dxf")
+                       data=out_stream, file_name=f"Columna_Circular_D{D_col:.0f}cm.dxf", mime="application/dxf")
 
 with tab3:
     st.subheader(_t("📦 Cantidades de Materiales y Costos", "📦 Material Quantities and Costs"))

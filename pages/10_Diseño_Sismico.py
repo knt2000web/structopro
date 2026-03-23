@@ -147,18 +147,54 @@ with st.container():
         st.subheader(_t("Parámetros", "Parameters"))
         if "NSR" in norma_sel:
             st.write("**Norma: NSR-10 (Colombia)**")
-            ciudad = st.selectbox(_t("Ciudad Principal:", "Main City:"), 
-                                   ["Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", _t("Otra / Custom", "Other / Custom")],
-                                   index=["Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", "Otra / Custom"].index(st.session_state.get("s_ciudad", "Bogotá")),
-                                   key="s_ciudad")
-            if ciudad == "Bogotá": Aa_def, Av_def = 0.15, 0.20
-            elif ciudad == "Medellín": Aa_def, Av_def = 0.15, 0.20
-            elif ciudad == "Cali": Aa_def, Av_def = 0.25, 0.25
-            elif ciudad == "Barranquilla": Aa_def, Av_def = 0.10, 0.10
-            elif ciudad == "Bucaramanga": Aa_def, Av_def = 0.25, 0.25
-            else: Aa_def, Av_def = 0.20, 0.20
-            Aa = st.number_input("Aa (Aceleración pico efectiva)", 0.05, 0.50, st.session_state.get("s_Aa", Aa_def), 0.05, key="s_Aa")
-            Av = st.number_input("Av (Velocidad pico efectiva)", 0.05, 0.50, st.session_state.get("s_Av", Av_def), 0.05, key="s_Av")
+            _ciudades_col = {
+                "Bogotá": [0.15, 0.20], "Medellín": [0.15, 0.20], "Cali": [0.25, 0.25], 
+                "Barranquilla": [0.10, 0.10], "Bucaramanga": [0.25, 0.25], "Cartagena": [0.10, 0.10],
+                "Cúcuta": [0.35, 0.30], "Pereira": [0.25, 0.25], "Manizales": [0.25, 0.25],
+                "Armenia": [0.25, 0.25], "Ibagué": [0.20, 0.20], "Neiva": [0.25, 0.25],
+                "Pasto": [0.25, 0.25], "Popayán": [0.25, 0.20], "Tunja": [0.20, 0.20],
+                "Villavicencio": [0.35, 0.30], "Santa Marta": [0.15, 0.10], "Sincelejo": [0.15, 0.15],
+                "Valledupar": [0.10, 0.10], "Montería": [0.10, 0.15], "Riohacha": [0.10, 0.15],
+                "Quibdó": [0.35, 0.35], "Yopal": [0.30, 0.20], "Florencia": [0.20, 0.15],
+                "Mocoa": [0.30, 0.25], "Arauca": [0.15, 0.15], "Leticia": [0.05, 0.05],
+                "San Andrés": [0.10, 0.10], "San José del Guaviare": [0.10, 0.10],
+                "Puerto Carreño": [0.05, 0.05], "Inírida": [0.05, 0.05], "Mitú": [0.05, 0.05],
+                "Otra / Custom": [0.20, 0.20]
+            }
+            if "custom_cities_col" not in st.session_state:
+                st.session_state.custom_cities_col = {}
+            # Update with user created custom cities
+            _ciudades_col.update(st.session_state.custom_cities_col)
+            
+            opciones_col = list(_ciudades_col.keys())
+            idx_ciudad = opciones_col.index(st.session_state.get("s_ciudad", "Bogotá")) if st.session_state.get("s_ciudad", "Bogotá") in opciones_col else 0
+            
+            def city_changed():
+                c = st.session_state.s_ciudad
+                if c in _ciudades_col:
+                    st.session_state.s_Aa = float(_ciudades_col[c][0])
+                    st.session_state.s_Av = float(_ciudades_col[c][1])
+
+            ciudad = st.selectbox(_t("Ciudad o Municipio (NSR-10):", "City or Municipality (NSR-10):"), 
+                                   opciones_col, index=idx_ciudad, key="s_ciudad", on_change=city_changed)
+            
+            if ciudad == "Otra / Custom":
+                with st.expander("➕ Insertar Nueva Ciudad (Guardar en Memoria)", expanded=True):
+                    _nc = st.text_input("Nombre de la nueva ciudad / microzona", key="new_custom_c")
+                    _naa = st.number_input("Aa (Nueva ciudad)", 0.05, 0.50, 0.20, 0.05, key="new_custom_aa")
+                    _nav = st.number_input("Av (Nueva ciudad)", 0.05, 0.50, 0.20, 0.05, key="new_custom_av")
+                    if st.button("Guardar Localización"):
+                        if _nc and _nc not in _ciudades_col:
+                            st.session_state.custom_cities_col[_nc] = [_naa, _nav]
+                            st.session_state.s_ciudad = _nc
+                            st.session_state.s_Aa = _naa
+                            st.session_state.s_Av = _nav
+                            st.rerun()
+
+            Aa_def, Av_def = _ciudades_col[ciudad]
+            Aa = st.number_input("Aa (Aceleración pico efectiva)", 0.05, 0.80, st.session_state.get("s_Aa", Aa_def), 0.05, key="s_Aa")
+            Av = st.number_input("Av (Velocidad pico efectiva)", 0.05, 0.80, st.session_state.get("s_Av", Av_def), 0.05, key="s_Av")
+            
             perfil = st.selectbox("Perfil de Suelo (NSR-10)", ["A", "B", "C", "D", "E"], index=["A","B","C","D","E"].index(st.session_state.get("s_perfil", "D")), key="s_perfil")
             Fa_vals = {"A":0.8, "B":1.0, "C":1.2, "D":1.4, "E":2.5}
             Fv_vals = {"A":0.8, "B":1.0, "C":1.6, "D":2.0, "E":3.2}

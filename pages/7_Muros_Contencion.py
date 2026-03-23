@@ -275,7 +275,9 @@ Mr_pesos = sum(w * x for _, w, x in items)
 Mr_Pav_suelo = Pav_suelo * B_base
 Mr_Pav_q = Pav_q * B_base
 Mr_total = Mr_pesos + Mr_Pav_suelo + Mr_Pav_q
-Mo_total = Pah_suelo * y_pa + Pah_q * y_q
+Mo_suelo = Pah_suelo * y_pa
+Mo_q = Pah_q * y_q
+Mo_total = Mo_suelo + Mo_q
 FS_volc = Mr_total / Mo_total if Mo_total > 0 else 999
 
 Fd_total = Pah_suelo + Pah_q

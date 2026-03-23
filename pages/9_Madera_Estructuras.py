@@ -227,7 +227,7 @@ with st.expander(_t("🔨 4. Resistencia de Uniones con Clavos (Corte Lateral)",
                                   _t("Carga de nieve (Cd=1.15)", "Snow load (Cd=1.15)"),
                                   _t("Carga sísmica/viento (Cd=1.6)", "Seismic/wind (Cd=1.6)")],
                                  index=1, key="m_u_cd")
-        cd_val = {"Permanent":0.9, "Live":1.0, "Snow":1.15, "Seismic":1.6}[factor_cd.split("=")[1].replace(")","").strip()]
+        cd_val = float(factor_cd.split("=")[1].replace(")", "").strip())
     with uc3:
         # Factores adicionales
         factor_cm = st.selectbox(_t("Factor de humedad (Cm)", "Moisture factor (Cm)"), 

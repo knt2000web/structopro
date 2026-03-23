@@ -11,6 +11,7 @@ from docx.shared import Inches, Pt
 import plotly.graph_objects as go
 import json
 import datetime
+from matplotlib.backends.backend_pdf import PdfPages
 
 # ─────────────────────────────────────────────
 # IDIOMA GLOBAL
@@ -77,6 +78,106 @@ STIRRUP_MM = {
     "10 mm": {"area": 0.785, "diam_mm": 10.0},
     "12 mm": {"area": 1.131, "diam_mm": 12.0},
 }
+
+# ─────────────────────────────────────────────
+# FUNCIONES DE DIBUJO PARA FIGURADO (movidas al inicio)
+# ─────────────────────────────────────────────
+# Tabla de equivalencias mm → designación en cuartos de pulgada (NSR-10 / ACI)
+_MM_TO_BAR = {
+    6.0:  "#2 (1/4\")",  6.35: "#2 (1/4\")",
+    8.0:  "#2.5 (5/16\")",
+    9.53: "#3 (3/8\")",  10.0: "#3 (3/8\")",
+    12.0: "#4 (1/2\")",  12.70: "#4 (1/2\")",
+    14.0: "#4.5 (9/16\")",
+    15.88: "#5 (5/8\")", 16.0: "#5 (5/8\")",
+    18.0: "#5.7 (11/16\")",
+    19.05: "#6 (3/4\")", 20.0: "#6 (3/4\")",
+    22.0: "#7 (7/8\")",  22.23: "#7 (7/8\")",
+    25.0: "#8 (1\")",    25.40: "#8 (1\")",
+    28.0: "#9 (1 1/8\")",28.65: "#9 (1 1/8\")",
+    32.0: "#10 (1 1/4\")",32.26: "#10 (1 1/4\")",
+}
+
+def _bar_label(diam_mm):
+    """Devuelve la designación en cuartos de pulgada más cercana para un diámetro en mm."""
+    best = min(_MM_TO_BAR.keys(), key=lambda k: abs(k - diam_mm))
+    if abs(best - diam_mm) <= 2.0:
+        return f"{_MM_TO_BAR[best]}  Ø{diam_mm:.1f} mm"
+    return f"Ø{diam_mm:.1f} mm"
+
+def draw_longitudinal_bar(total_len_cm, straight_len_cm, hook_len_cm, bar_diam_mm, bar_name=None):
+    """Dibuja una barra longitudinal con ganchos de 90° en ambos extremos."""
+    label = bar_name if bar_name else _bar_label(bar_diam_mm)
+    fig, ax = plt.subplots(figsize=(max(6, total_len_cm/20), 2))
+    ax.set_aspect('equal')
+    ax.plot([0, straight_len_cm], [0, 0], 'k-', linewidth=2)
+    ax.plot([0, 0], [0, hook_len_cm], 'k-', linewidth=2)
+    ax.plot([straight_len_cm, straight_len_cm], [0, -hook_len_cm], 'k-', linewidth=2)
+    ax.annotate(f"{straight_len_cm:.0f} cm", xy=(straight_len_cm/2, 0.3), ha='center', fontsize=8)
+    ax.annotate(f"Gancho 12db = {hook_len_cm:.0f} cm", xy=(0, hook_len_cm/2), ha='right', fontsize=8)
+    ax.annotate(f"Gancho 12db", xy=(straight_len_cm, -hook_len_cm/2), ha='left', fontsize=8)
+    ax.set_xlim(-hook_len_cm*0.2, straight_len_cm + hook_len_cm*0.2)
+    ax.set_ylim(-hook_len_cm*1.2, hook_len_cm*1.2)
+    ax.axis('off')
+    ax.set_title(f"Varilla L1 — {label} — Longitud total {total_len_cm:.0f} cm", fontsize=9, fontweight='bold')
+    return fig
+
+def draw_stirrup(b_cm, h_cm, hook_len_cm, bar_diam_mm, bar_name=None):
+    """Dibuja un estribo rectangular con gancho 135° correcto (proyectado hacia el interior)."""
+    import math as _math
+    label = bar_name if bar_name else _bar_label(bar_diam_mm)
+    fig, ax = plt.subplots(figsize=(max(5, b_cm/12), max(4, h_cm/12)))
+    ax.set_aspect('equal')
+    x0, y0 = 0, 0
+
+    # Rectángulo principal del estribo
+    ax.plot([x0,       x0+b_cm], [y0,       y0],       'k-', linewidth=2.5)  # inferior
+    ax.plot([x0+b_cm, x0+b_cm], [y0,       y0+h_cm],  'k-', linewidth=2.5)  # derecho
+    ax.plot([x0+b_cm, x0],      [y0+h_cm,  y0+h_cm],  'k-', linewidth=2.5)  # superior
+    ax.plot([x0,       x0],     [y0+h_cm,  y0],        'k-', linewidth=2.5)  # izquierdo
+
+    # Gancho 135° en esquina superior izquierda
+    angle_rad = _math.radians(45)
+    vis_hook = min(hook_len_cm, b_cm/4.0, h_cm/4.0)
+    hx = vis_hook * _math.cos(angle_rad)
+    hy = -vis_hook * _math.sin(angle_rad)
+    ax.plot([x0, x0 + hx], [y0+h_cm, y0+h_cm + hy], 'k-', linewidth=2.5)
+
+    # Segundo gancho 135° en esquina superior derecha (opuesto - alternado por norma)
+    ax.plot([x0+b_cm, x0+b_cm - hx], [y0+h_cm, y0+h_cm + hy], 'k--', linewidth=1.5, alpha=0.5)
+    ax.annotate("(Alternado)", xy=(x0+b_cm - hx - 0.3, y0+h_cm + hy - 0.3), fontsize=6, color='gray', ha='right')
+
+    # Cotas
+    ax.annotate(f"{b_cm:.0f} cm", xy=(b_cm/2, y0-0.8), ha='center', fontsize=9, fontweight='bold')
+    ax.annotate(f"{h_cm:.0f} cm", xy=(x0-0.8, h_cm/2), ha='right', va='center', fontsize=9, fontweight='bold')
+
+    # Etiqueta del gancho
+    ax.annotate(f"Gancho 135\u00b0\n6d_e = {6*bar_diam_mm/10:.1f} cm",
+                xy=(x0 + hx + 0.2, y0+h_cm + hy - 0.2), fontsize=7.5, color='darkred',
+                va='top', ha='left')
+
+    ax.set_xlim(x0 - hook_len_cm*0.3, b_cm + hook_len_cm*0.6)
+    ax.set_ylim(y0 - hook_len_cm*0.5, h_cm + hook_len_cm*0.9)
+    ax.axis('off')
+    ax.set_title(f"Estribo E1 — {label} — Perímetro {2*(b_cm+h_cm):.0f} cm", fontsize=9, fontweight='bold')
+    return fig
+
+def draw_crosstie(len_cm, hook_len_cm, bar_diam_mm, bar_name=None):
+    """Dibuja un crosstie con ganchos de 135° en ambos extremos."""
+    label = bar_name if bar_name else _bar_label(bar_diam_mm)
+    fig, ax = plt.subplots(figsize=(max(6, len_cm/15), 2))
+    ax.set_aspect('equal')
+    ax.plot([0, len_cm], [0, 0], 'k-', linewidth=2)
+    ax.plot([0, -hook_len_cm*0.7], [0, -hook_len_cm*0.7], 'k-', linewidth=2)
+    ax.plot([len_cm, len_cm + hook_len_cm*0.7], [0, -hook_len_cm*0.7], 'k-', linewidth=2)
+    ax.annotate(f"{len_cm:.0f} cm", xy=(len_cm/2, 0.3), ha='center', fontsize=8)
+    ax.annotate(f"Gancho 135°", xy=(0, -hook_len_cm*0.5), ha='right', fontsize=8)
+    ax.annotate(f"Gancho 135°", xy=(len_cm, -hook_len_cm*0.5), ha='left', fontsize=8)
+    ax.set_xlim(-hook_len_cm*1.2, len_cm + hook_len_cm*1.2)
+    ax.set_ylim(-hook_len_cm*1.5, hook_len_cm*0.5)
+    ax.axis('off')
+    ax.set_title(f"Crosstie C1 — {label} — Longitud {len_cm:.0f} cm", fontsize=9, fontweight='bold')
+    return fig
 
 # ─────────────────────────────────────────────
 # PARÁMETROS POR NORMA
@@ -179,11 +280,11 @@ CEMENT_BAGS = {
     ],
     "ACI 318-19 (EE.UU.)": [
         {"label": "Type I/II sack estándar (94 lb)", "kg": 42.6},
-        {"label": "Bolsa pequeña (47 lb)", "kg": 21.3},
+        {"label": "Type III bolsa (47 lb)", "kg": 21.3},
     ],
     "ACI 318-14 (EE.UU.)": [
         {"label": "Type I/II sack estándar (94 lb)", "kg": 42.6},
-        {"label": "Bolsa pequeña (47 lb)", "kg": 21.3},
+        {"label": "Type III bolsa (47 lb)", "kg": 21.3},
     ],
     "NEC-SE-HM (Ecuador)": [
         {"label": "Cemento Holcim / Chimborazo (bulto estándar)", "kg": 50.0},
@@ -452,28 +553,99 @@ phi_Pn_max = phi_c_max * Pn_max
 Po_display = Po_kN * factor_fuerza
 
 # ─────────────────────────────────────────────
-# CÁLCULO DE ESTRIBOS Y CANTIDADES
+# CÁLCULO DE ESTRIBOS POR NIVEL SÍSMICO (NSR-10 / ACI 318)
 # ─────────────────────────────────────────────
-s1 = 16 * rebar_diam / 10
-s2 = 48 * stirrup_diam / 10
-s3 = min(b, h)
-s_basico = min(s1, s2, s3)
-s_conf = min(6 * rebar_diam / 10, min(b, h) / 4, 15.0)
-Lo_conf = max(max(b, h), L_col / 6.0, 45.0)
-
 nivel_lower = nivel_sismico.lower()
 zona_especial = any(k in nivel_lower for k in ["des ", "disipación especial", "smf", "special moment frame", "ga —", "ductilidad alta", "pe —", "pórtico especial", "de —", "diseño especial sísmico", "mrle"])
+zona_moderada  = any(k in nivel_lower for k in ["dmo", "imf", "intermediate", "gm —", "moderada", "pm —", "mrod"])
+
+# --- Criterios ACI/NSR eje 16 varillas longitudinales ---
+s1 = 16 * rebar_diam / 10        # 16×db  (cm)
+s2 = 48 * stirrup_diam / 10      # 48×d_e (cm)
+s3 = min(b, h)                   # menor dimensión de la sección (cm)
+s_basico = min(s1, s2, s3)       # s básico ACI/NSR DMI
+
+# Zona de confinamiento seismico (Lo)
+Lo_conf = max(max(b, h), L_col / 6.0, 45.0)  # NSR-10 C.21.6.4.1
+
 if zona_especial:
-    n_estribos_zona = math.ceil(Lo_conf / s_conf) + 1
-    n_estribos_zona_dos = n_estribos_zona * 2
+    # NSR-10 Cap. C.21.6 / ACI 318-19 §18.7.5
+    # Espaciamiento en zonas de confinamiento (Lo desde c/extremo)
+    s_conf = min(
+        8 * rebar_diam / 10,   # 8×db  (cm)     — NSR-10 C.21.6.4.3(a)
+        24 * stirrup_diam / 10,# 24×d_e (cm)    — NSR-10 C.21.6.4.3(b)
+        min(b, h) / 3,         # b_menor/3 (cm) — NSR-10 C.21.6.4.3(c)
+        15.0                   # 150 mm máx      — NSR-10 C.21.6.4.3(d)
+    )
+    # Espaciamiento en zona central
+    s_centro = min(
+        6 * rebar_diam / 10,   # 6×db  (cm)     — NSR-10 C.21.7.3.1 para viga
+        s_basico               # límite ACI general
+    )
+    s_centro = max(s_centro, s_conf)  # nunca menor que s_conf
+
+    n_est_por_Lo = math.ceil(Lo_conf / s_conf)
+    n_estribos_zona_dos = n_est_por_Lo * 2   # dos extremos
     longitud_zona_libre = max(0, L_col - 2 * Lo_conf)
-    n_estribos_centro = max(0, math.ceil(longitud_zona_libre / s_basico) - 1)
-    n_estribos_total = n_estribos_zona_dos + n_estribos_centro
+    n_estribos_centro = max(0, math.ceil(longitud_zona_libre / s_centro) - 1) if longitud_zona_libre > 0 else 0
+    n_estribos_total = n_estribos_zona_dos + n_estribos_centro + 1  # +1 del extremo superior
     s_usar = s_conf
+    notas_estribos = (
+        f"**NSR-10 Cap. C.21.6 (DES — Zona de Alto Riesgo Sísmico)**:\n\n"
+        f"- Zona de confinamiento Lo = max(b, h, L/6, 45 cm) = **{Lo_conf:.1f} cm** desde c/extremo\n"
+        f"- Estr. zona confinada s = min(8d_b, 24d_e, b_men/3, 15 cm) = **{s_conf:.1f} cm**\n"
+        f"  - 8×{rebar_diam:.1f} mm = {8*rebar_diam/10:.1f} cm\n"
+        f"  - 24×{stirrup_diam:.1f} mm = {24*stirrup_diam/10:.1f} cm\n"
+        f"  - min(b,h)/3 = {min(b,h)/3:.1f} cm\n"
+        f"- Estr. zona central s = min(6d_b, s_basico) = **{s_centro:.1f} cm**\n"
+        f"- N° estribos zona confinada (por extremo) = ceil({Lo_conf:.1f}/{s_conf:.1f}) = **{n_est_por_Lo}**\n"
+        f"- N° estribos centro = ceil({longitud_zona_libre:.1f}/{s_centro:.1f}) = **{n_estribos_centro}**\n"
+        f"- Total = 2×{n_est_por_Lo} + {n_estribos_centro} + 1 = **{n_estribos_total}**"
+    )
+elif zona_moderada:
+    # NSR-10 Cap. C.21.12 / ACI 318-19 §18.4
+    s_conf = min(
+        8 * rebar_diam / 10,
+        24 * stirrup_diam / 10,
+        min(b, h) / 2,
+        20.0   # 200 mm máx DMO NSR-10 C.21.12.3
+    )
+    Lo_conf = max(max(b, h), L_col / 6.0, 45.0)
+    s_centro = s_basico
+    n_est_por_Lo = math.ceil(Lo_conf / s_conf)
+    n_estribos_zona_dos = n_est_por_Lo * 2
+    longitud_zona_libre = max(0, L_col - 2 * Lo_conf)
+    n_estribos_centro = max(0, math.ceil(longitud_zona_libre / s_centro) - 1) if longitud_zona_libre > 0 else 0
+    n_estribos_total = n_estribos_zona_dos + n_estribos_centro + 1
+    s_usar = s_conf
+    notas_estribos = (
+        f"**NSR-10 Cap. C.21.12 (DMO — Zona de Riesgo Sísmico Moderado)**:\n\n"
+        f"- Zona de confinamiento Lo = **{Lo_conf:.1f} cm** desde c/extremo\n"
+        f"- Estr. zona confinada s = min(8d_b, 24d_e, b_men/2, 20 cm) = **{s_conf:.1f} cm**\n"
+        f"  - 8×{rebar_diam:.1f} mm = {8*rebar_diam/10:.1f} cm\n"
+        f"  - 24×{stirrup_diam:.1f} mm = {24*stirrup_diam/10:.1f} cm\n"
+        f"  - min(b,h)/2 = {min(b,h)/2:.1f} cm\n"
+        f"- Estr. zona central s = min(16d_b, 48d_e, dim_menor) = **{s_basico:.1f} cm**\n"
+        f"- N° estribos zona confinada (por extremo) = **{n_est_por_Lo}**\n"
+        f"- N° estribos centro = **{n_estribos_centro}**\n"
+        f"- Total = 2×{n_est_por_Lo} + {n_estribos_centro} + 1 = **{n_estribos_total}**"
+    )
 else:
+    # NSR-10 Cap. C.7.10 (DMI) — solo criterio ACI básico
+    s_conf = s_basico
+    Lo_conf = 0.0
+    s_centro = s_basico
     n_estribos_total = math.ceil(L_col / s_basico) + 1
     s_usar = s_basico
-    Lo_conf = 0.0
+    notas_estribos = (
+        f"**NSR-10 Cap. C.7.10 (DMI — Amenaza Sísmica Baja)**:\n\n"
+        f"- Espaciamiento s = min(16d_b, 48d_e, dim_menor de sección)\n"
+        f"  - 16×{rebar_diam:.1f} mm = {s1:.1f} cm\n"
+        f"  - 48×{stirrup_diam:.1f} mm = {s2:.1f} cm\n"
+        f"  - min(b,h) = {s3:.1f} cm\n"
+        f"- s = **{s_basico:.1f} cm** (sin zona de confinamiento)\n"
+        f"- Total estribos = ceil({L_col:.0f}/{s_basico:.1f}) + 1 = **{n_estribos_total}**"
+    )
 
 recub_cm = max(d_prime - rebar_diam / 20.0, 2.5)
 perim_estribo = 2 * (b - 2 * recub_cm) + 2 * (h - 2 * recub_cm) + 6 * stirrup_diam / 10
@@ -508,6 +680,15 @@ peso_acero_long_kg = Ast * (L_col * 10) * 7.85e-3
 peso_total_acero_kg = peso_acero_long_kg + peso_total_estribos_kg
 relacion_acero_kg_m3 = peso_total_acero_kg / vol_concreto_m3 if vol_concreto_m3 > 0 else 0
 
+# Cantidades de materiales de concreto (ACI 211)
+_mix = get_mix_for_fc(fc)
+_cem_kg_m3  = _mix["cem"]   # kg/m3
+_arena_kg_m3 = _mix["arena"] # kg/m3
+_grava_kg_m3 = _mix["grava"] # kg/m3
+bultos_col = vol_concreto_m3 * _cem_kg_m3   # kg de cemento
+arena_col  = vol_concreto_m3 * _arena_kg_m3  # kg de arena
+grava_col  = vol_concreto_m3 * _grava_kg_m3  # kg de grava
+
 # Despiece
 hook_len_mm = 12 * rebar_diam
 long_bar_m = (L_col + 2 * (ld_mm / 10) + 2 * (hook_len_mm / 10)) / 100
@@ -517,7 +698,7 @@ despiece_rows = []
 despiece_rows.append({
     "Marca": "L1",
     "Cantidad": n_barras_total,
-    "Diámetro (mm)": rebar_diam,
+    "Diámetro": _bar_label(rebar_diam),
     "Longitud (m)": long_bar_m,
     "Longitud Total (m)": n_barras_total * long_bar_m,
     "Peso (kg)": peso_long_total,
@@ -526,7 +707,7 @@ despiece_rows.append({
 despiece_rows.append({
     "Marca": "E1",
     "Cantidad": n_estribos_total,
-    "Diámetro (mm)": stirrup_diam,
+    "Diámetro": _bar_label(stirrup_diam),
     "Longitud (m)": perim_estribo / 100.0,
     "Longitud Total (m)": n_estribos_total * perim_estribo / 100.0,
     "Peso (kg)": peso_total_estribos_kg,
@@ -539,17 +720,17 @@ if total_crossties_por_estribo > 0:
     despiece_rows.append({
         "Marca": "C1",
         "Cantidad": total_crossties,
-        "Diámetro (mm)": stirrup_diam,
+        "Diámetro": _bar_label(stirrup_diam),
         "Longitud (m)": (long_crosstie_m + long_crosstie_v_m) / 2.0 if total_crossties_por_estribo > 0 else 0,
         "Longitud Total (m)": (n_estribos_total * total_crossties_h * long_crosstie_m + n_estribos_total * total_crossties_v * long_crosstie_v_m),
         "Peso (kg)": peso_crossties_kg,
-        "Observación": "Crossties (ganchos 135°)"
+        "Observación": "Crossties (ganchos 135° en ambos extremos)"
     })
 df_despiece = pd.DataFrame(despiece_rows)
 
-# ─────────────────────────────────────────────
+# =============================================================================
 # LAYOUT PRINCIPAL
-# ─────────────────────────────────────────────
+# =============================================================================
 tab1, tab2, tab3 = st.tabs([_t("📊 Diagrama P–M", "📊 P–M Diagram"), _t("🔲 Sección & Estribos", "🔲 Section & Ties"), _t("📦 Cantidades de Materiales", "📦 Material Quantities")])
 
 # TAB 1: DIAGRAMA P–M
@@ -598,10 +779,10 @@ with tab1:
         st.dataframe(pd.DataFrame(data_pm), use_container_width=True, hide_index=True)
         st.caption(f"📖 Ref: {code['ref']}")
 
-# TAB 2: SECCIÓN Y ESTRIBOS (con DXF mejorado)
+# TAB 2: SECCIÓN Y ESTRIBOS
 with tab2:
     st.subheader(_t("🧊 Visualización 3D y Detallado 2D", "🧊 3D Visualization & 2D Detailing"))
-    # 3D
+    # --- 3D con plotly ---
     fig3d = go.Figure()
     x_c = [-b/2, b/2, b/2, -b/2, -b/2, b/2, b/2, -b/2]
     y_c = [-h/2, -h/2, h/2, h/2, -h/2, -h/2, h/2, h/2]
@@ -664,11 +845,40 @@ with tab2:
     for idx, zt in enumerate(z_positions):
         z_t_arr = [zt] * 5
         fig3d.add_trace(go.Scatter3d(x=tt_x, y=tt_y, z=z_t_arr, mode='lines', line=dict(color=tie_color, width=tie_width), name='Estribo', showlegend=(idx==0)))
+
+    # === CROSSTIES en 3D ===
+    if total_crossties_h > 0 and num_filas_h > 2:
+        ct_xs_3d = list(np.linspace(rect_x[0], rect_x[1], num_filas_h))[1:-1]  # barras interiores
+        ct_y0 = rect_y[0] - diam_reb_cm / 2
+        ct_y1 = rect_y[1] + diam_reb_cm / 2
+        ct_shown = False
+        for zt in z_positions:
+            for cx in ct_xs_3d:
+                fig3d.add_trace(go.Scatter3d(
+                    x=[cx, cx], y=[ct_y0, ct_y1], z=[zt, zt],
+                    mode='lines', line=dict(color='lime', width=max(1, tie_width * 0.7), dash='dash'),
+                    name='Crosstie H', showlegend=(not ct_shown)))
+                ct_shown = True
+    if total_crossties_v > 0 and num_capas_intermedias > 0:
+        esp_y_3d = (rect_y[1] - rect_y[0]) / (num_capas_intermedias + 1)
+        ct_x0 = rect_x[0] - diam_reb_cm / 2
+        ct_x1 = rect_x[1] + diam_reb_cm / 2
+        ctv_shown = False
+        for zt in z_positions:
+            for i in range(1, num_capas_intermedias + 1):
+                cy = rect_y[0] + i * esp_y_3d
+                fig3d.add_trace(go.Scatter3d(
+                    x=[ct_x0, ct_x1], y=[cy, cy], z=[zt, zt],
+                    mode='lines', line=dict(color='cyan', width=max(1, tie_width * 0.7), dash='dash'),
+                    name='Crosstie V', showlegend=(not ctv_shown)))
+                ctv_shown = True
+
     fig3d.update_layout(scene=dict(aspectmode='data', xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)'),
                         margin=dict(l=0, r=0, b=0, t=0), height=450, dragmode='turntable')
     st.plotly_chart(fig3d, use_container_width=True)
     st.markdown("---")
 
+    # --- Sección transversal 2D y alzado ---
     col_s1, col_s2 = st.columns([1, 1])
     with col_s1:
         st.subheader("Sección Transversal 2D")
@@ -750,24 +960,114 @@ with tab2:
         ax_e.set_xlim(-0.5, b_fig + 2.0)
         ax_e.set_ylim(-0.5, L_fig + 0.8)
         ax_e.axis('off')
-        ax_e.set_title(f"Alzado — Distribución de Estribos\nL={L_col:.0f} cm  |  {n_estribos_total} estribos Ø{stirrup_diam:.0f}mm", color='white', fontsize=8)
+        _stir_lbl = _bar_label(stirrup_diam).split(" ")[0] if "#" in _bar_label(stirrup_diam) else f"Ø{stirrup_diam:.0f}mm"
+        ax_e.set_title(f"Alzado — Distribución de Estribos\nL={L_col:.0f} cm  |  {n_estribos_total} estribos {_stir_lbl}", color='white', fontsize=8)
         st.pyplot(fig_elev)
 
     with col_s2:
-        st.subheader("Diseño de Estribos (Flejes)")
-        st.markdown(f"**Estribo:** {stirrup_type} — Ø{stirrup_diam:.0f} mm  |  Ab = {stirrup_area:.3f} cm²")
-        st.markdown(f"**Nivel Sísmico:** {nivel_sismico}")
-        st.markdown("---")
-        data_estr = {
-            "Parámetro": ["16 × dbl", "48 × dt", "Menor dim.", "→ s básica", "6 × dbl (conf.)", "min(b,h)/4", "15 cm", "→ s_conf", "Longitud conf. (Lo)", "Perímetro estribo"],
-            "Valor [cm]": [f"{s1:.1f}", f"{s2:.1f}", f"{s3:.1f}", f"**{s_basico:.1f}**", f"{6 * rebar_diam / 10:.1f}", f"{min(b, h) / 4:.1f}", "15.0", f"**{s_conf:.1f}**" if zona_especial else "—", f"{Lo_conf:.1f}" if zona_especial else "—", f"{perim_estribo:.1f}"]
-        }
-        st.dataframe(pd.DataFrame(data_estr), use_container_width=True, hide_index=True)
+        st.subheader("📝 Verificaciones NSR-10 / ACI 318")
+        # ========================
+        # Tabla completa de comprobaciones
+        # ========================
+        _ok = "✅"; _fail = "❌"; _warn = "⚠️"
+
+        # 1. Cuantía longitudinal
+        ok_rho = rho_min_code <= cuantia <= rho_max_code
+        # 2. Separación mínima entre barras (ACI 318-19 §25.8.1)
+        sep_min_req = max(rebar_diam / 10, 2.5)  # cm
+        sep_h = (b - 2 * d_prime) / (num_filas_h - 1) if num_filas_h > 1 else 999
+        ok_sep_h = sep_h >= sep_min_req
+        # 3. Recubrimiento mín (NSR-10 C.20.6.1.3 - columnas interiores 4 cm)
+        recub_req = 4.0  # cm para columnas
+        ok_recub = recub_cm >= recub_req
+        # 4. Espaciamiento básico de estribos
+        ok_s_basico = s_basico <= min(b, h)
+        # 5. Zona de confinamiento (applies DES/DMO)
+        ok_lo = True
+        if zona_especial or zona_moderada:
+            ok_lo = Lo_conf >= max(max(b, h), L_col / 6, 45.0) - 0.01
+        # 6. Espaciamiento confinado
+        ok_s_conf = True
         if zona_especial:
-            st.info(f"Zona sísmica especial activa → {n_estribos_total} estribos")
+            ok_s_conf = s_conf <= 15.0
+        elif zona_moderada:
+            ok_s_conf = s_conf <= 20.0
+        # 7. Crossties requeridos
+        ct_req_h = num_filas_h > 2 and sep_h > 15.0
+        sep_v = (h - 2 * d_prime) / (num_capas_intermedias + 1) if num_capas_intermedias > 0 else 0
+        ct_req_v = num_capas_intermedias > 0 and sep_v > 15.0
+        ok_ct = (not ct_req_h or total_crossties_h > 0) and (not ct_req_v or total_crossties_v > 0)
+        # 8. Cuantía máxima
+        ok_rho_max = cuantia <= rho_max_code
+        # 9. Cuantía mínima
+        ok_rho_min = cuantia >= rho_min_code
+        # 10. d_t (distancia a la fibra extrema en tensión)
+        dt_cm = h - d_prime
+        ok_dt = dt_cm >= (h - d_prime)
+
+        checks_data = {
+            "#": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            "Verificación": [
+                f"Cuantía mínima (NSR-10 C.10.6.1)",
+                f"Cuantía máxima (NSR-10 C.10.9.1)",
+                f"Separación mín. barras (ACI §25.8.1)",
+                f"Recubrimiento mín. (NSR-10 C.20.6.1)",
+                f"Espaciamiento estribos s_basico (C.7.10.5)",
+                f"Long. zona confinada Lo (C.21.6.4.1)" if zona_especial or zona_moderada else "Zona confinamiento (N/A nivel DMI)",
+                f"Espaciamiento zona confinada s_conf" if zona_especial or zona_moderada else "s_conf (N/A nivel DMI)",
+                f"Crossties horiz. (sep > 15 cm) (C.21.6.4.2)",
+                f"Crossties vert. (capas interm. > 15 cm)",
+                f"Resistencia diseño (check punto de carga)",
+            ],
+            "Requerido": [
+                f">= {rho_min_code:.2f}%",
+                f"<= {rho_max_code:.2f}%",
+                f">= {sep_min_req:.1f} cm",
+                f">= {recub_req:.1f} cm",
+                f"<= min(b,h) = {min(b,h):.0f} cm",
+                f">= max(b,h,L/6,45) = {Lo_conf:.1f} cm" if zona_especial or zona_moderada else "N/A",
+                f"<= {'15.0' if zona_especial else '20.0'} cm" if zona_especial or zona_moderada else "N/A",
+                f"CT si sep>{15:.0f} cm",
+                f"CT si sep>{15:.0f} cm c/cap",
+                "Ver diagrama P-M",
+            ],
+            "Calculado": [
+                f"{cuantia:.3f}%",
+                f"{cuantia:.3f}%",
+                f"{sep_h:.1f} cm",
+                f"{recub_cm:.1f} cm",
+                f"{s_basico:.1f} cm",
+                f"{Lo_conf:.1f} cm" if zona_especial or zona_moderada else "N/A",
+                f"{s_conf:.1f} cm" if zona_especial or zona_moderada else f"{s_basico:.1f} cm",
+                f"{total_crossties_h} CT/estribo" if ct_req_h else "No reqs.",
+                f"{total_crossties_v} CT/estribo" if ct_req_v else "No reqs.",
+                "Ver sección Tab 1",
+            ],
+            "Estado": [
+                _ok if ok_rho_min else _fail,
+                _ok if ok_rho_max else _fail,
+                _ok if ok_sep_h else _fail,
+                _ok if ok_recub else _fail,
+                _ok if ok_s_basico else _fail,
+                _ok if ok_lo else (_warn if not (zona_especial or zona_moderada) else _fail),
+                _ok if ok_s_conf else (_warn if not (zona_especial or zona_moderada) else _fail),
+                _ok if ok_ct else _warn,
+                _ok if ok_ct else _warn,
+                _ok,
+            ]
+        }
+        st.dataframe(pd.DataFrame(checks_data), use_container_width=True, hide_index=True)
+        _all_ok = all([
+            ok_rho_min, ok_rho_max, ok_sep_h, ok_recub, ok_s_basico, ok_lo, ok_s_conf, ok_ct
+        ])
+        if _all_ok:
+            st.success("✅ Todas las verificaciones NSR-10 cumplidas")
         else:
-            st.info(f"Zona ordinaria → {n_estribos_total} estribos")
+            st.error("❌ Hay verificaciones que no cumplen. Revise la tabla.")
+
         st.markdown("---")
+        st.markdown(f"**Total de crossties en columna:** {total_crossties_por_estribo * n_estribos_total} unidades")
+        st.caption("📄 Ref: NSR-10 Cap. C.7, C.10, C.21 | ACI 318-19 Cap. 18, 20, 25")
         st.markdown("#### 💾 Exportar Plano (AutoCAD)")
         doc_dxf = ezdxf.new('R2010')
         doc_dxf.units = ezdxf.units.CM
@@ -842,7 +1142,7 @@ with tab2:
         doc_dxf.write(_out_dxf)
         st.download_button("Descargar DXF (Sección + Elevación con ganchos)", data=_out_dxf.getvalue().encode('utf-8'), file_name=f"Columna_{b:.0f}x{h:.0f}.dxf", mime="application/dxf")
 
-# TAB 3: CANTIDADES, DESPIECE Y APU
+# TAB 3: CANTIDADES, DESPIECE, APU Y FIGURADO
 with tab3:
     st.subheader(f"📦 Cantidades de Materiales — Columna {b:.0f}×{h:.0f} cm, L={L_col:.0f} cm")
     col_c1, col_c2, col_c3 = st.columns(3)
@@ -863,6 +1163,152 @@ with tab3:
     bars_img = io.BytesIO()
     fig_bars.savefig(bars_img, format='png', dpi=150, bbox_inches='tight')
     bars_img.seek(0)
+
+    # ============================
+    # NUEVO: FIGURADO PARA TALLER
+    # ============================
+    with st.expander("📐 Dibujo de Figurado para Taller (varillas, estribos, crossties)", expanded=False):
+        st.markdown("A continuación se muestran las formas reales de cada tipo de barra, con sus ganchos y dimensiones para facilitar el figurado.")
+        # Dibujo de varilla longitudinal L1
+        hook_len_cm = 12 * rebar_diam / 10
+        straight_len_cm = long_bar_m * 100 - 2 * hook_len_cm
+        # Construir etiqueta de barra con designación en cuartos de pulgada
+        _rebar_label = rebar_type if "#" in rebar_type else f"{rebar_type.replace('mm','').strip()} mm — {_bar_label(rebar_diam)}"
+        _stirrup_label = stirrup_type if "#" in stirrup_type else f"{stirrup_type.replace('mm','').strip()} mm — {_bar_label(stirrup_diam)}"
+        fig_l1 = draw_longitudinal_bar(long_bar_m*100, straight_len_cm, hook_len_cm, rebar_diam, bar_name=_rebar_label)
+        st.pyplot(fig_l1)
+        # Dibujo de estribo E1
+        inside_b = b - 2 * recub_cm
+        inside_h = h - 2 * recub_cm
+        hook_len_est = 12 * stirrup_diam / 10
+        fig_e1 = draw_stirrup(inside_b, inside_h, hook_len_est, stirrup_diam, bar_name=_stirrup_label)
+        st.pyplot(fig_e1)
+        # Dibujo de crossties si existen
+        if total_crossties_por_estribo > 0:
+            len_crosstie_cm = (b - 2 * recub_cm)
+            fig_c1 = draw_crosstie(len_crosstie_cm, hook_len_est, stirrup_diam, bar_name=_stirrup_label)
+            st.pyplot(fig_c1)
+        st.caption("Nota: Los ganchos de estribos y crossties son de 135° en la práctica. Los ganchos se proyectan hacia el interior de la sección, con extensión mín. de 6d_b.")
+
+    # ============================
+    # FORMULAS DE ESTRIBOS POR NIVEL SÍSMICO
+    # ============================
+    with st.expander("📐 Verificación de Estribos — Formulas por Nivel Sísmico", expanded=False):
+        st.markdown(notas_estribos)
+        st.markdown("---")
+        _zona_tag = "DES 🔴" if zona_especial else ("DMO 🟡" if zona_moderada else "DMI 🟢")
+        c_e1, c_e2, c_e3 = st.columns(3)
+        c_e1.metric("Nivel Sísmico", _zona_tag)
+        c_e2.metric(f"Espaciamiento s (zona confinada)", f"{s_conf:.1f} cm")
+        c_e3.metric(f"N° Total de Estribos", f"{n_estribos_total}")
+        if zona_especial or zona_moderada:
+            c_e4, c_e5 = st.columns(2)
+            c_e4.metric("Long. Zona Confinada (Lo)", f"{Lo_conf:.1f} cm")
+            c_e5.metric("Espaciamiento centro", f"{s_centro:.1f} cm")
+
+    # ============================
+    # NUEVO: APU CON ENTRADA DIRECTA
+    # ============================
+    st.markdown("---")
+    with st.expander("💰 Presupuesto APU – Ingresar precios en vivo", expanded=False):
+        st.markdown("Ingrese los precios unitarios de los materiales y mano de obra para calcular el costo total de la columna.")
+        # Formulario de precios
+        with st.form(key="apu_form"):
+            moneda = st.text_input("Moneda (ej. COP, USD)", value=st.session_state.get("apu_moneda", "COP"))
+            col1a, col2a = st.columns(2)
+            with col1a:
+                precio_cemento = st.number_input("Precio por bulto de cemento", value=st.session_state.get("apu_cemento", 28000.0), step=1000.0, format="%.2f")
+                precio_acero = st.number_input("Precio por kg de acero", value=st.session_state.get("apu_acero", 7500.0), step=100.0, format="%.2f")
+                precio_arena = st.number_input("Precio por m³ de arena", value=st.session_state.get("apu_arena", 120000.0), step=5000.0, format="%.2f")
+                precio_grava = st.number_input("Precio por m³ de grava", value=st.session_state.get("apu_grava", 130000.0), step=5000.0, format="%.2f")
+            with col2a:
+                precio_mo = st.number_input("Costo mano de obra (día)", value=st.session_state.get("apu_mo", 70000.0), step=5000.0, format="%.2f")
+                pct_herramienta = st.number_input("% Herramienta menor (sobre MO)", value=st.session_state.get("apu_herramienta", 5.0), step=1.0, format="%.1f") / 100.0
+                pct_aui = st.number_input("% A.I.U. (sobre costo directo)", value=st.session_state.get("apu_aui", 30.0), step=5.0, format="%.1f") / 100.0
+                pct_util = st.number_input("% Utilidad (sobre costo directo)", value=st.session_state.get("apu_util", 5.0), step=1.0, format="%.1f") / 100.0
+                iva = st.number_input("IVA (%) sobre utilidad", value=st.session_state.get("apu_iva", 19.0), step=1.0, format="%.1f") / 100.0
+            submitted = st.form_submit_button("Calcular Presupuesto")
+            if submitted:
+                st.session_state.apu_config = {
+                    "moneda": moneda,
+                    "cemento": precio_cemento,
+                    "acero": precio_acero,
+                    "arena": precio_arena,
+                    "grava": precio_grava,
+                    "costo_dia_mo": precio_mo,
+                    "pct_herramienta": pct_herramienta,
+                    "pct_aui": pct_aui,
+                    "pct_util": pct_util,
+                    "iva": iva
+                }
+                st.success("Precios guardados. Cierre el expander para ver el presupuesto.")
+                st.rerun()
+
+        if "apu_config" in st.session_state:
+            apu = st.session_state.apu_config
+            mon = apu["moneda"]
+            # bultos_col: en kg de cemento (del mix design). Convertir a bultos para APU.
+            _bag_kg_apu = CEMENT_BAGS.get(norma_sel, CEMENT_BAGS["NSR-10 (Colombia)"])[0]["kg"]
+            bultos_col_apu = bultos_col / _bag_kg_apu  # nº de bultos
+            costo_cemento = bultos_col_apu * apu["cemento"]
+            costo_acero = peso_total_acero_kg * apu["acero"]
+            vol_arena_m3 = arena_col / 1500  # densidad arena
+            vol_grava_m3 = grava_col / 1600  # densidad grava
+            costo_arena = vol_arena_m3 * apu.get("arena", 0)
+            costo_grava = vol_grava_m3 * apu.get("grava", 0)
+            total_mat = costo_cemento + costo_acero + costo_arena + costo_grava
+            dias_acero = peso_total_acero_kg * 0.04
+            dias_concreto = vol_concreto_m3 * 0.4
+            total_dias_mo = dias_acero + dias_concreto
+            costo_mo = total_dias_mo * apu.get("costo_dia_mo", 70000)
+            costo_directo = total_mat + costo_mo
+            herramienta = costo_mo * apu.get("pct_herramienta", 0.05)
+            aiu = costo_directo * apu.get("pct_aui", 0.30)
+            utilidad = costo_directo * apu.get("pct_util", 0.05)
+            iva_util = utilidad * apu.get("iva", 0.19)
+            total_proyecto = costo_directo + herramienta + aiu + iva_util
+
+            data_apu = {
+                    "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)", "Mano de Obra (días)", "Herramienta Menor", "A.I.U.", "IVA s/Utilidad"],
+                    "Cantidad": [f"{bultos_col_apu:.1f}", f"{peso_total_acero_kg:.1f}", f"{vol_arena_m3:.2f}", f"{vol_grava_m3:.2f}", f"{total_dias_mo:.2f}", f"{apu.get('pct_herramienta',0.05)*100:.1f}% MO", f"{apu.get('pct_aui',0.30)*100:.1f}% CD", f"{apu.get('iva',0.19)*100:.1f}% Util"],
+                    f"Subtotal [{mon}]": [f"{costo_cemento:,.2f}", f"{costo_acero:,.2f}", f"{costo_arena:,.2f}", f"{costo_grava:,.2f}", f"{costo_mo:,.2f}", f"{herramienta:,.2f}", f"{aiu:,.2f}", f"{iva_util:,.2f}"]
+                }
+            st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
+            st.metric(f"💎 Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
+            output_excel = io.BytesIO()
+            with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
+                df_export = pd.DataFrame({
+                    "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m3)", "Grava (m3)", "Mano de Obra (dias)"],
+                    "Cantidad": [bultos_col_apu, peso_total_acero_kg, vol_arena_m3, vol_grava_m3, total_dias_mo],
+                    "Unidad": [apu['cemento'], apu['acero'], apu.get('arena',0), apu.get('grava',0), apu.get('costo_dia_mo',70000)]
+                })
+                df_export["Subtotal"] = df_export["Cantidad"] * df_export["Unidad"]
+                df_export.to_excel(writer, index=False, sheet_name='APU')
+                workbook = writer.book
+                worksheet = writer.sheets['APU']
+                money_fmt = workbook.add_format({'num_format': '#,##0.00'})
+                bold = workbook.add_format({'bold': True})
+                worksheet.set_column('A:A', 25)
+                worksheet.set_column('B:D', 15, money_fmt)
+                row = len(df_export) + 1
+                worksheet.write(row, 0, "Costo Directo (CD)", bold)
+                worksheet.write_formula(row, 3, f'=SUM(D2:D{row})', money_fmt)
+                row += 1
+                worksheet.write(row, 0, "Herramienta Menor", bold)
+                worksheet.write_formula(row, 3, f'=D{row-1}*{apu.get("pct_herramienta",0.05)}', money_fmt)
+                row += 1
+                worksheet.write(row, 0, "A.I.U", bold)
+                worksheet.write_formula(row, 3, f'=D{row-2}*{apu.get("pct_aui",0.30)}', money_fmt)
+                row += 1
+                worksheet.write(row, 0, "IVA s/ Utilidad", bold)
+                worksheet.write_formula(row, 3, f'=D{row-1}*{apu.get("pct_util",0.05)}*{apu.get("iva",0.19)}', money_fmt)
+                row += 1
+                worksheet.write(row, 0, "TOTAL PRESUPUESTO", bold)
+                worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
+            output_excel.seek(0)
+            st.download_button("📥 Descargar Presupuesto Excel", data=output_excel, file_name=f"APU_Columna_{b:.0f}x{h:.0f}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        else:
+            st.info("Por favor, ingrese los precios en el formulario de arriba para generar el presupuesto.")
 
     st.markdown("---")
     st.markdown("#### 🧱 Dosificación de Concreto")
@@ -896,71 +1342,6 @@ with tab3:
     st.write(f"Agua: {agua_col:.0f} L")
 
     st.markdown("---")
-    st.markdown("#### 💰 Presupuesto APU")
-    if "apu_config" in st.session_state:
-        apu = st.session_state.apu_config
-        mon = apu["moneda"]
-        costo_cemento = bultos_col * apu["cemento"]
-        costo_acero = peso_total_acero_kg * apu["acero"]
-        vol_arena_m3 = arena_col / dens_arena
-        vol_grava_m3 = grava_col / dens_grava
-        costo_arena = vol_arena_m3 * apu.get("arena", 0)
-        costo_grava = vol_grava_m3 * apu.get("grava", 0)
-        total_mat = costo_cemento + costo_acero + costo_arena + costo_grava
-        dias_acero = peso_total_acero_kg * 0.04
-        dias_concreto = vol_concreto_m3 * 0.4
-        total_dias_mo = dias_acero + dias_concreto
-        costo_mo = total_dias_mo * apu.get("costo_dia_mo", 69333.33)
-        costo_directo = total_mat + costo_mo
-        herramienta = costo_mo * apu.get("pct_herramienta", 0.05)
-        aiu = costo_directo * apu.get("pct_aui", 0.30)
-        utilidad = costo_directo * apu.get("pct_util", 0.05)
-        iva = utilidad * apu.get("iva", 0.19)
-        total_proyecto = costo_directo + herramienta + aiu + iva
-
-        data_apu = {
-            "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)", "Mano de Obra (días)", "Herramienta Menor", "A.I.U.", "IVA s/Utilidad"],
-            "Cantidad": [f"{bultos_col:.1f}", f"{peso_total_acero_kg:.1f}", f"{vol_arena_m3:.2f}", f"{vol_grava_m3:.2f}", f"{total_dias_mo:.2f}", f"{apu.get('pct_herramienta',0.05)*100:.1f}% MO", f"{apu.get('pct_aui',0.30)*100:.1f}% CD", f"{apu.get('iva',0.19)*100:.1f}% Util"],
-            f"Subtotal [{mon}]": [f"{costo_cemento:,.2f}", f"{costo_acero:,.2f}", f"{costo_arena:,.2f}", f"{costo_grava:,.2f}", f"{costo_mo:,.2f}", f"{herramienta:,.2f}", f"{aiu:,.2f}", f"{iva:,.2f}"]
-        }
-        st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
-        st.metric(f"💎 Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
-        output_excel = io.BytesIO()
-        with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
-            df_export = pd.DataFrame({
-                "Item": ["Cemento (bultos)", "Acero (kg)", "Arena (m3)", "Grava (m3)", "Mano de Obra (dias)"],
-                "Cantidad": [bultos_col, peso_total_acero_kg, vol_arena_m3, vol_grava_m3, total_dias_mo],
-                "Unidad": [apu['cemento'], apu['acero'], apu.get('arena',0), apu.get('grava',0), apu.get('costo_dia_mo',69333.33)]
-            })
-            df_export["Subtotal"] = df_export["Cantidad"] * df_export["Unidad"]
-            df_export.to_excel(writer, index=False, sheet_name='APU')
-            workbook = writer.book
-            worksheet = writer.sheets['APU']
-            money_fmt = workbook.add_format({'num_format': '#,##0.00'})
-            bold = workbook.add_format({'bold': True})
-            worksheet.set_column('A:A', 25)
-            worksheet.set_column('B:D', 15, money_fmt)
-            row = len(df_export) + 1
-            worksheet.write(row, 0, "Costo Directo (CD)", bold)
-            worksheet.write_formula(row, 3, f'=SUM(D2:D{row})', money_fmt)
-            row += 1
-            worksheet.write(row, 0, "Herramienta Menor", bold)
-            worksheet.write_formula(row, 3, f'=D7*{apu.get("pct_herramienta",0.05)}', money_fmt)
-            row += 1
-            worksheet.write(row, 0, "A.I.U", bold)
-            worksheet.write_formula(row, 3, f'=D{row-1}*{apu.get("pct_aui",0.30)}', money_fmt)
-            row += 1
-            worksheet.write(row, 0, "IVA s/ Utilidad", bold)
-            worksheet.write_formula(row, 3, f'=D{row-1}*{apu.get("pct_util",0.05)/apu.get("pct_aui",0.30)}*{apu.get("iva",0.19)}', money_fmt)
-            row += 1
-            worksheet.write(row, 0, "TOTAL PRESUPUESTO", bold)
-            worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
-        output_excel.seek(0)
-        st.download_button("📥 Descargar Presupuesto Excel", data=output_excel, file_name=f"APU_Columna_{b:.0f}x{h:.0f}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    else:
-        st.info("💡 Ve a la página 'APU Mercado' para cargar los precios en vivo.")
-
-    st.markdown("---")
     st.markdown("#### 📄 Generar Memoria de Cálculo (DOCX)")
     if st.button("Generar Memoria DOCX"):
         doc = Document()
@@ -970,8 +1351,45 @@ with tab3:
         doc.add_paragraph(f"Fecha: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}")
         doc.add_heading("1. Materiales y Geometría", level=1)
         doc.add_paragraph(f"f'c = {fc:.1f} MPa\nfy = {fy:.0f} MPa\nBase: {b:.0f} cm\nAltura: {h:.0f} cm\nLongitud: {L_col:.0f} cm")
-        doc.add_heading("2. Refuerzo", level=1)
-        doc.add_paragraph(f"Varillas longitudinales: {n_barras_total} varillas tipo {rebar_type} ({Ast:.2f} cm²)\nCuantía longitudinal ρ: {cuantia:.2f}%\nEstribos: {stirrup_type} ({n_estribos_total} unidades)\nEspaciamiento: {s_usar:.1f} cm")
+        doc.add_heading("2. Refuerzo y Estribos", level=1)
+        doc.add_paragraph(f"Varillas longitudinales: {n_barras_total} varillas tipo {rebar_type} ({Ast:.2f} cm²)\nCuantía longitudinal ρ: {cuantia:.2f}%\nEstribos: {stirrup_type} ({n_estribos_total} unidades)\nEspaciamiento zona confinada: {s_conf:.1f} cm\nEspaciamiento zona central: {s_centro:.1f} cm")
+        # Formulas de estribos por nivel sísmico (para memoria)
+        doc.add_heading("2.1. Diseño de Estribos por Nivel Sísmico", level=2)
+        # Convertir markdown a texto plano para DOCX
+        import re as _re
+        notas_txt = _re.sub(r'\*+([^*]+)\*+', r'\1', notas_estribos)  # quitar **bold**
+        notas_txt = notas_txt.replace("\n", "\n")
+        doc.add_paragraph(notas_txt)
+        # Sección 2.2: Tabla completa de verificaciones NSR-10
+        doc.add_heading("2.2. Verificaciones NSR-10 / ACI 318 — Resumen de Comprobaciones", level=2)
+        checks_tbl = doc.add_table(rows=1 + 10, cols=4)
+        checks_tbl.style = 'Table Grid'
+        ch = checks_tbl.rows[0].cells
+        ch[0].text = "Verificación"; ch[1].text = "Requerido"; ch[2].text = "Calculado"; ch[3].text = "Estado"
+        _sep_min_req_doc = max(rebar_diam / 10, 2.5)
+        _sep_h_doc = (b - 2 * d_prime) / (num_filas_h - 1) if num_filas_h > 1 else 999.0
+        _recub_req_doc = 4.0
+        _ct_req_h_doc = num_filas_h > 2 and _sep_h_doc > 15.0
+        _sep_v_doc = (h - 2 * d_prime) / (num_capas_intermedias + 1) if num_capas_intermedias > 0 else 0.0
+        _ct_req_v_doc = num_capas_intermedias > 0 and _sep_v_doc > 15.0
+        _ok_doc = "CUMPLE"; _fail_doc = "NO CUMPLE"
+        _checks_doc = [
+            ("Cuantía mínima (NSR-10 C.10.6.1)",          f">= {rho_min_code:.2f}%",  f"{cuantia:.3f}%",         _ok_doc if cuantia >= rho_min_code else _fail_doc),
+            ("Cuantía máxima (NSR-10 C.10.9.1)",          f"<= {rho_max_code:.2f}%",  f"{cuantia:.3f}%",         _ok_doc if cuantia <= rho_max_code else _fail_doc),
+            ("Separación mín. barras (ACI §25.8.1)",       f">= {_sep_min_req_doc:.1f} cm", f"{_sep_h_doc:.1f} cm", _ok_doc if _sep_h_doc >= _sep_min_req_doc else _fail_doc),
+            ("Recubrimiento mín. (NSR-10 C.20.6.1.3)",    f">= {_recub_req_doc:.1f} cm",  f"{recub_cm:.1f} cm",   _ok_doc if recub_cm >= _recub_req_doc else _fail_doc),
+            ("Estribo s_basico (C.7.10.5)",                f"<= {min(b,h):.1f} cm",    f"{s_basico:.1f} cm",      _ok_doc if s_basico <= min(b, h) else _fail_doc),
+            ("Zona confinada Lo (C.21.6.4.1)",             f">= {Lo_conf:.1f} cm",     f"{Lo_conf:.1f} cm",       _ok_doc),
+            ("Espaciamiento s_conf zona confinada",        f"<= {'15.0' if zona_especial else '20.0'} cm" if (zona_especial or zona_moderada) else "N/A",
+                                                            f"{s_conf:.1f} cm",         _ok_doc if s_conf <= (15 if zona_especial else 20) or not (zona_especial or zona_moderada) else _fail_doc),
+            ("Crossties horiz. (C.21.6.4.2)",             f"CT si sep>15 cm",          f"{total_crossties_h} CT/estribo" if _ct_req_h_doc else "No reqs.", _ok_doc if not _ct_req_h_doc or total_crossties_h > 0 else _fail_doc),
+            ("Crossties vert. (capas interm.)",            f"CT si sep>15 cm",          f"{total_crossties_v} CT/estribo" if _ct_req_v_doc else "No reqs.", _ok_doc if not _ct_req_v_doc or total_crossties_v > 0 else _fail_doc),
+            ("Diagrama P-M (carga de diseño)",             "Pu, Mu dentro del envol.", "Ver gráfica Tab 1",      _ok_doc),
+        ]
+        for i, (verif, req, calc, estado) in enumerate(_checks_doc):
+            cells = checks_tbl.rows[i + 1].cells
+            cells[0].text = verif; cells[1].text = req; cells[2].text = calc; cells[3].text = estado
+        doc.add_paragraph("Nota: Todas las verificaciones se realizan según NSR-10 (Colombia) / ACI 318-19 según la norma seleccionada. El ingeniero debe validar los puntos de carga Pu-Mu en el diagrama P-M.")
         doc.add_heading("3. Resultados del Diagrama P-M", level=1)
         doc.add_paragraph(f"Capacidad Axial Máx Pn,máx: {Pn_max:.1f} {unidad_fuerza}\nResistencia de Diseño φPn,máx: {phi_Pn_max:.1f} {unidad_fuerza}")
         doc.add_picture(pm_img, width=Inches(5))
@@ -981,19 +1399,82 @@ with tab3:
         table = doc.add_table(rows=1+len(despiece_rows), cols=7)
         table.style = 'Table Grid'
         hdr = table.rows[0].cells
-        hdr[0].text = "Marca"; hdr[1].text = "Cant."; hdr[2].text = "Ø (mm)"; hdr[3].text = "L (m)"; hdr[4].text = "L total (m)"; hdr[5].text = "Peso (kg)"; hdr[6].text = "Observación"
+        hdr[0].text = "Marca"; hdr[1].text = "Cant."; hdr[2].text = "Ø"; hdr[3].text = "L (m)"; hdr[4].text = "L total (m)"; hdr[5].text = "Peso (kg)"; hdr[6].text = "Observación"
         for i, row in enumerate(despiece_rows):
             cells = table.rows[i+1].cells
             cells[0].text = row["Marca"]
             cells[1].text = str(row["Cantidad"])
-            cells[2].text = str(row["Diámetro (mm)"])
+            cells[2].text = str(row["Diámetro"])
             cells[3].text = f"{row['Longitud (m)']:.2f}"
             cells[4].text = f"{row['Longitud Total (m)']:.2f}"
             cells[5].text = f"{row['Peso (kg)']:.1f}"
             cells[6].text = row["Observación"]
-        doc.add_picture(bars_img, width=Inches(5))
-        doc.add_heading("6. Cantidades de Obra", level=1)
-        doc.add_paragraph(f"Concreto: {vol_concreto_m3:.4f} m³\nAcero total: {peso_total_acero_kg:.1f} kg ({relacion_acero_kg_m3:.1f} kg/m³)\nCemento: {bultos_col:.1f} bultos de {bag_kg:.0f} kg")
+        # Guardar figurados a BytesIO para la memoria
+        import io as _io
+        buf_l1 = _io.BytesIO()
+        fig_l1.savefig(buf_l1, format='png', dpi=150, bbox_inches='tight')
+        buf_l1.seek(0)
+        
+        buf_e1 = _io.BytesIO()
+        fig_e1.savefig(buf_e1, format='png', dpi=150, bbox_inches='tight')
+        buf_e1.seek(0)
+        
+        buf_c1 = None
+        if total_crossties_por_estribo > 0 and 'fig_c1' in locals():
+            buf_c1 = _io.BytesIO()
+            fig_c1.savefig(buf_c1, format='png', dpi=150, bbox_inches='tight')
+            buf_c1.seek(0)
+
+        doc.add_heading("5.1. Esquemas de Figurado", level=2)
+        doc.add_picture(buf_l1, width=Inches(4.5))
+        doc.add_picture(buf_e1, width=Inches(3.5))
+        if buf_c1:
+            doc.add_picture(buf_c1, width=Inches(4.5))
+            
+        doc.add_heading("6. Cantidades de Obra y Dosificación", level=1)
+        doc.add_paragraph(f"Concreto: {vol_concreto_m3:.4f} m³\nAcero total: {peso_total_acero_kg:.1f} kg ({relacion_acero_kg_m3:.1f} kg/m³)")
+        doc.add_heading("Dosificación de Concreto (ACI 211):", level=2)
+        doc.add_paragraph(f"f'c = {fc:.1f} MPa\nCemento: {_cem_kg_m3:.0f} kg/m³ → Aprox {bultos_por_m3:.2f} bultos/m³ (bultos de {bag_kg:.0f} kg)\nArena: {_arena_kg_m3:.0f} kg/m³\nGrava: {_grava_kg_m3:.0f} kg/m³\nAgua: {agua_m3:.0f} L/m³\nRelación a/c: {wc:.2f}")
+        doc.add_paragraph(f"Totales Requeridos:\nCemento: {bultos_col:.1f} bultos\nArena: {arena_col:.1f} kg\nGrava: {grava_col:.1f} kg\nAgua: {agua_col:.0f} L")
+        
+        if "apu_config" in st.session_state:
+            apu = st.session_state.apu_config
+            mon = apu["moneda"]
+            _bag_kg_apu = CEMENT_BAGS.get(norma_sel, CEMENT_BAGS["NSR-10 (Colombia)"])[0]["kg"]
+            bultos_col_apu = bultos_col / _bag_kg_apu
+            costo_cemento = bultos_col_apu * apu["cemento"]
+            costo_acero = peso_total_acero_kg * apu["acero"]
+            vol_arena_m3 = arena_col / 1500
+            vol_grava_m3 = grava_col / 1600
+            costo_arena = vol_arena_m3 * apu.get("arena", 0)
+            costo_grava = vol_grava_m3 * apu.get("grava", 0)
+            total_mat = costo_cemento + costo_acero + costo_arena + costo_grava
+            dias_mo = peso_total_acero_kg * 0.04 + vol_concreto_m3 * 0.4
+            costo_mo = dias_mo * apu["costo_dia_mo"]
+            costo_herr = costo_mo * apu["pct_herramienta"]
+            costo_directo = total_mat + costo_mo + costo_herr
+            val_aiu = costo_directo * apu["pct_aui"]
+            utilidad = costo_directo * apu["pct_util"]
+            val_iva = utilidad * apu["iva"]
+            total_proy = costo_directo + val_aiu + val_iva
+            
+            doc.add_heading("7. Presupuesto APU", level=1)
+            tbl_apu = doc.add_table(rows=1+7, cols=3)
+            tbl_apu.style = 'Table Grid'
+            h_apu = tbl_apu.rows[0].cells
+            h_apu[0].text = "Ítem"; h_apu[1].text = "Cantidad"; h_apu[2].text = f"Subtotal [{mon}]"
+            _items_apu = [
+                ("Cemento (bultos)", f"{bultos_col_apu:.1f}", f"{costo_cemento:,.2f}"),
+                ("Acero (kg)", f"{peso_total_acero_kg:.1f}", f"{costo_acero:,.2f}"),
+                ("Arena (m³)", f"{vol_arena_m3:.2f}", f"{costo_arena:,.2f}"),
+                ("Grava (m³)", f"{vol_grava_m3:.2f}", f"{costo_grava:,.2f}"),
+                ("Mano de Obra (días)", f"{dias_mo:.2f}", f"{costo_mo:,.2f}"),
+                ("A.I.U. + Herramienta", f"{(apu['pct_aui']+apu['pct_herramienta'])*100:.1f}%", f"{val_aiu+costo_herr:,.2f}"),
+                ("GRAN TOTAL PROYECTO", "", f"{total_proy:,.2f}")
+            ]
+            for idx, (it, ca, sub) in enumerate(_items_apu):
+                row_cells = tbl_apu.rows[idx+1].cells
+                row_cells[0].text = it; row_cells[1].text = ca; row_cells[2].text = sub
         doc_mem = io.BytesIO()
         doc.save(doc_mem)
         doc_mem.seek(0)

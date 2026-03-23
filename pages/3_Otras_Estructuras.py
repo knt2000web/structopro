@@ -155,7 +155,7 @@ st.sidebar.markdown(
     f'<span style="color:#7ec87e;font-weight:600;font-size:13px;">{_t("Norma Activa:","Active Code:")} {norma_sel}</span>'
     f'</div>', unsafe_allow_html=True
 )
-code = CODES[norma_sel]
+code = CODES.get(norma_sel, CODES["NSR-10 (Colombia)"])
 st.sidebar.markdown(f"📖 `{code['ref']}`")
 st.sidebar.markdown(f"**φ flex:** {code['phi_flex']} | **φ cort:** {code['phi_shear']} | **φ comp:** {code['phi_comp']}")
 
@@ -437,11 +437,11 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
                                            line=dict(color='cornflowerblue', width=4),
                                            showlegend=(_ti==0), name='Estribos Cerrados'))
             
-            # Carga puntual (flecha indicativa)
+            # Carga puntual (flecha indicativa) – CORREGIDO: símbolo 'triangle-up'
             _fm.add_trace(go.Scatter3d(
                 x=[a_men, a_men], y=[h_men+15, h_men+2], z=[_col_dep/2, _col_dep/2],
                 mode='lines+markers+text', line=dict(color='lime', width=5),
-                marker=dict(symbol='arrow', size=8, color='lime'),
+                marker=dict(symbol='diamond', size=10, color='lime'),
                 text=[f'Vu={Vu_men:.0f}kN', ''], textposition='top center',
                 textfont=dict(color='lime', size=11), name='Carga Vu'
             ))
