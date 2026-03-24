@@ -100,6 +100,26 @@ with st.sidebar.expander(_t("4️⃣ APU – PRECIOS", "4️⃣ APU – PRICES")
         st.success("Precios guardados")
         st.rerun()
 
+with st.sidebar.expander(_t("5️⃣ AJUSTE MANUAL DE DIMENSIONES", "5️⃣ MANUAL DIMENSION OVERRIDE"), expanded=False):
+    st.caption(_t("Modifique las dimensiones calculadas para realizar verificación manual.", "Override calculated dimensions for manual verification."))
+    man_h_mac = st.number_input(_t("Espesor Losa Maciza (cm)", "Solid Slab h (cm)"), 10, 50, int(h_mac*100), 1, key="man_h_mac") / 100.0
+    man_h_ali = st.number_input(_t("Espesor Losa Nervada (cm)", "Ribbed Slab h (cm)"), 10, 50, int(h_ali*100), 1, key="man_h_ali") / 100.0
+    man_bvx = st.number_input(_t("Viga X – Ancho b (cm)", "Beam X Width b (cm)"), 20, 80, int(b_vx*100), 5, key="man_bvx") / 100.0
+    man_hvx = st.number_input(_t("Viga X – Peralte h (cm)", "Beam X Depth h (cm)"), 30, 120, int(h_vx*100), 5, key="man_hvx") / 100.0
+    man_bvy = st.number_input(_t("Viga Y – Ancho b (cm)", "Beam Y Width b (cm)"), 20, 80, int(b_vy*100), 5, key="man_bvy") / 100.0
+    man_hvy = st.number_input(_t("Viga Y – Peralte h (cm)", "Beam Y Depth h (cm)"), 30, 120, int(h_vy*100), 5, key="man_hvy") / 100.0
+    man_col_c = st.number_input(_t("Columna Central – Lado (cm)", "Central Column Side (cm)"), 20, 120, int(lado_c), 5, key="man_col_c")
+    man_col_b = st.number_input(_t("Columna Borde – Lado (cm)", "Edge Column Side (cm)"), 20, 100, int(lado_b), 5, key="man_col_b")
+    man_col_e = st.number_input(_t("Columna Esquina – Lado (cm)", "Corner Column Side (cm)"), 20, 80, int(lado_e), 5, key="man_col_e")
+    usar_manual = st.checkbox(_t("Usar estas dimensiones en Modelo 3D y Memoria", "Use these in 3D model and Report"), value=False, key="usar_manual")
+
+# Aplicar override si el checkbox está activo
+if st.session_state.get("usar_manual", False):
+    h_mac, h_ali = man_h_mac, man_h_ali
+    b_vx, h_vx   = man_bvx, man_hvx
+    b_vy, h_vy   = man_bvy, man_hvy
+    lado_c, lado_b, lado_e = man_col_c, man_col_b, man_col_e
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("""<div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br><b>Ing. Msc. César Augusto Giraldo Chaparro</b></div>""", unsafe_allow_html=True)
@@ -107,35 +127,48 @@ st.sidebar.markdown("""<div style="text-align: center; color: gray; font-size: 1
 # ─────────────────────────────────────────────
 # FUNCIONES DE CÁLCULO MEJORADAS
 # ─────────────────────────────────────────────
+
+# ─────────────────────────────────────────────
+# FACTORES MULTI-NORMA
+# ─────────────────────────────────────────────
+_NORM_FACTORS = {
+    # clave: (losa_maciza_div, losa_nerv_div, viga_div_simple, viga_div_continua, col_index, col_ref)
+    # col_index = factor en fórmula Pu/(alpha * col_index * fc) — NSR-10/ACI: 0.5525
+    "NSR-10 (Colombia)":         (28, 21, 10, 12, 0.5525, "NSR-10 C.9.5.2.1 / C.10.11"),
+    "ACI 318-25 (EE.UU.)":       (28, 21, 10, 12, 0.5525, "ACI 318-25 Table 9.3.1.1"),
+    "ACI 318-19 (EE.UU.)":       (28, 21, 10, 12, 0.5525, "ACI 318-19 Table 9.3.1.1"),
+    "ACI 318-14 (EE.UU.)":       (28, 21, 10, 12, 0.5525, "ACI 318-14 Table 9.3.1.1"),
+    "E.060 (Perú)":              (25, 20, 10, 12, 0.5000, "E.060 Art.9.1.2 / 10.11"),
+    "NEC-SE-HM (Ecuador)":       (28, 21, 10, 12, 0.5525, "NEC-SE-HM Cap.4 / ACI adoptado"),
+    "NTC-EM (México)":           (26, 20, 10, 12, 0.5200, "NTC-EM 2.2.1 / 5.1.1"),
+    "COVENIN 1753-2006 (Venezuela)": (28, 21, 10, 12, 0.5525, "COVENIN 1753 Art.15 / ACI adoptado"),
+    "NB 1225001-2020 (Bolivia)":  (28, 21, 10, 12, 0.5525, "NB 1225001 / ACI 318 adoptado"),
+    "CIRSOC 201-2025 (Argentina)": (28, 21, 10, 12, 0.5525, "CIRSOC 201-2025 / ACI adoptado"),
+}
+_nf = _NORM_FACTORS.get(norma_sel, _NORM_FACTORS["NSR-10 (Colombia)"])
+DIV_LOSA_MAC, DIV_LOSA_NERV, DIV_VIGA_SIMP, DIV_VIGA_CONT, COL_IDX, NORM_REF = _nf
+
 def predimensionar_losa(lmax, tipo="maciza"):
-    """Predimensiona losa según NSR-10 / ACI 318 (espesores mínimos)"""
-    if tipo == "maciza":
-        # L/28 para losa maciza (NSR-10 C.9.5.2.1)
-        h = lmax / 28.0
-    else:
-        # L/21 para losa nervada o aligerada (NSR-10 C.9.5.2.1)
-        h = lmax / 21.0
-    # Redondear a múltiplo de 5 cm
+    """Predimensiona losa según norma activa (divisor por norma)"""
+    divisor = DIV_LOSA_MAC if tipo == "maciza" else DIV_LOSA_NERV
+    h = lmax / float(divisor)
     h = math.ceil(h * 100 / 5) * 5 / 100
-    return max(h, 0.10)  # mínimo 10 cm
+    return max(h, 0.10)
 
 def predimensionar_viga(l_luz, posicion="simple"):
-    """Predimensiona viga: h = L/10 a L/12, b = h/2"""
-    # Para vigas continuas se puede usar L/12, para simplemente apoyadas L/10
-    if posicion == "continua":
-        h = l_luz / 12.0
-    else:
-        h = l_luz / 10.0
-    h = math.ceil(h * 100 / 5) * 5 / 100
+    """Predimensiona viga: h = L/divisor, b = h/2.  Divisor segun norma activa."""
+    div = float(DIV_VIGA_CONT) if posicion == "continua" else float(DIV_VIGA_SIMP)
+    h = math.ceil((l_luz / div) * 100 / 5) * 5 / 100
     b = math.ceil((h / 2.0) * 100 / 5) * 5 / 100
     return max(h, 0.30), max(b, 0.25)
 
 def predimensionar_columna(area_trib, q_tot, n_pisos, alpha, fc):
-    """Pu = q_tot * A_trib * n_pisos, Ac = Pu / (0.5525 * alpha * fc)"""
+    """Pu = q_tot * A_trib * n_pisos, Ac = Pu / (COL_IDX * alpha * fc). COL_IDX segun norma."""
     Pu_ton = q_tot * area_trib * n_pisos
-    Ac_cm2 = (Pu_ton * 1000.0) / (alpha * 0.5525 * fc)
+    denom = alpha * COL_IDX * fc
+    Ac_cm2 = (Pu_ton * 1000.0) / denom if denom > 0 else 400.0
     lado = math.ceil(math.sqrt(Ac_cm2) / 5.0) * 5.0
-    return Pu_ton, Ac_cm2, max(lado, 30.0)  # mínimo 30x30 cm
+    return Pu_ton, Ac_cm2, max(lado, 30.0)
 
 def predimensionar_muro_corte(luz_total, h_total, q_tot):
     """Predimensionamiento de muro de corte (espesor mínimo)"""
@@ -449,7 +482,35 @@ with tab_mem:
             r = t.add_row().cells
             r[0].text=t_n; r[1].text=f"{a:.2f}"; r[2].text=f"{pu:.1f}"; r[3].text=f"{lado:.0f}"
         
-        doc.add_heading("04. Muros de Corte", 1)
+        # --- VERIFICACIÓN MULTI-NORMA ---
+        doc.add_heading("04. Verificación por Norma Activa", 1)
+        doc.add_paragraph(f"Norma seleccionada: {norma_sel}")
+        doc.add_paragraph(f"Referencia de artículo: {NORM_REF}")
+        doc.add_paragraph(f"Divisor de losa maciza: L/{DIV_LOSA_MAC}  →  h = {h_mac*100:.0f} cm")
+        doc.add_paragraph(f"Divisor de losa nervada: L/{DIV_LOSA_NERV}  →  h = {h_ali*100:.0f} cm")
+        doc.add_paragraph(f"Divisor de peralte de vigas (continua): L/{DIV_VIGA_CONT}  →  h = {h_vx*100:.0f} cm")
+        doc.add_paragraph(f"Índice de resistencia de columna (φ factor): {COL_IDX:.4f}")
+        is_manual = st.session_state.get("usar_manual", False)
+        if is_manual:
+            doc.add_paragraph("⚠ NOTA: Las dimensiones en esta memoria incluyen ajuste MANUAL del usuario.")
+        # Tabla comparativa de dimensiones calculadas vs manuales
+        doc.add_heading("Tabla Resumen de Dimensiones", 2)
+        t2 = doc.add_table(rows=1, cols=3); t2.style = "Table Grid"
+        h2 = t2.rows[0].cells; h2[0].text = "Elemento"; h2[1].text = "Calculado"; h2[2].text = "Usado en Diseño"
+        data_dim = [
+            ("Losa Maciza", f"h = {predimensionar_losa(l_max,'maciza')*100:.0f} cm", f"h = {h_mac*100:.0f} cm"),
+            ("Losa Nervada", f"h = {predimensionar_losa(l_max,'aligerada')*100:.0f} cm", f"h = {h_ali*100:.0f} cm"),
+            ("Viga X", f"{predimensionar_viga(lx,'continua')[1]*100:.0f}×{predimensionar_viga(lx,'continua')[0]*100:.0f} cm", f"{b_vx*100:.0f}×{h_vx*100:.0f} cm"),
+            ("Viga Y", f"{predimensionar_viga(ly,'continua')[1]*100:.0f}×{predimensionar_viga(ly,'continua')[0]*100:.0f} cm", f"{b_vy*100:.0f}×{h_vy*100:.0f} cm"),
+            ("Col. Central", f"{predimensionar_columna(A_central,q_estimado,num_stories,alpha_seismic,fc_val)[2]:.0f}×{predimensionar_columna(A_central,q_estimado,num_stories,alpha_seismic,fc_val)[2]:.0f} cm", f"{lado_c:.0f}×{lado_c:.0f} cm"),
+            ("Col. Borde",   f"{predimensionar_columna(A_borde,q_estimado,num_stories,alpha_seismic,fc_val)[2]:.0f} cm", f"{lado_b:.0f} cm"),
+            ("Col. Esquina", f"{predimensionar_columna(A_esquina,q_estimado,num_stories,alpha_seismic,fc_val)[2]:.0f} cm", f"{lado_e:.0f} cm"),
+        ]
+        for nm, calc, used in data_dim:
+            r2 = t2.add_row().cells; r2[0].text = nm; r2[1].text = calc; r2[2].text = used
+
+        doc.add_heading("05. Muros de Corte", 1)
+
         doc.add_paragraph(muro_sugerido)
         if warning_deriva:
             doc.add_paragraph(f"Advertencia de deriva: {warning_deriva}")
