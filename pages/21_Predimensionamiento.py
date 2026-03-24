@@ -395,6 +395,26 @@ with st.sidebar.expander(_t("5️⃣ AJUSTE MANUAL DE DIMENSIONES", "5️⃣ MAN
     man_col_e = st.number_input("Columna Esquina – Lado (cm)", 20, 80, 30, 5, key="man_col_e")
     usar_manual = st.checkbox("Usar estas dimensiones en Modelo 3D y Memoria", value=False, key="usar_manual")
 
+with st.sidebar.expander(_t("6️⃣ FORMA DEL PREDIO (OPCIONAL)", "6️⃣ PLOT SHAPE (OPTIONAL)"), expanded=False):
+    st.caption(_t("Dibuja el perímetro real del lote sobre la cuadrícula.", "Draw the real plot perimeter over the grid."))
+    dibujar_predio = st.checkbox(_t("Activar límite de lote", "Enable plot boundary"), value=False, key="dib_predio")
+    if dibujar_predio:
+        coords_str = st.text_area(
+            _t("Coordenadas X,Y (ej: 0,0; 10,0; 12,8; 0,10)", "X,Y coords (ex: 0,0; 10,0; 12,8; 0,10)"),
+            value=f"0,0; {lx*nx_spans},0; {lx*nx_spans},{ly*ny_spans}; 0,{ly*ny_spans}"
+        )
+        try:
+            ptos_predio = []
+            for par in coords_str.split(";"):
+                if par.strip():
+                    px, py = map(float, par.split(","))
+                    ptos_predio.append((px, py))
+            if ptos_predio and ptos_predio[0] != ptos_predio[-1]:
+                ptos_predio.append(ptos_predio[0])  # Cerrar polígono
+        except:
+            st.error("Formato inválido. Use X,Y separados por punto y coma (;)")
+            ptos_predio = []
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("""<div style="text-align: center; color: gray; font-size: 11px;">© 2026 Ing. Msc. César Augusto Giraldo Chaparro</div>""", unsafe_allow_html=True)
 
@@ -495,7 +515,26 @@ with tab_res:
         "Sección Sugerida (cm)": [f"{lado_c:.0f} × {lado_c:.0f}", f"{lado_b:.0f} × {lado_b:.0f}", f"{lado_e:.0f} × {lado_e:.0f}"]
     })
     st.dataframe(df_cols, use_container_width=True, hide_index=True)
-    st.caption("Columnas dimensionadas con factor sísmico: central 1.0, borde 1.2, esquina 1.4.")
+    
+    st.markdown("### 🔗 Acero de Refuerzo Aproximado (ρ ≈ 1.2%)")
+    ca1, ca2 = st.columns(2)
+    # Cálculo para Columna Central (𝜌 = 1.2%)
+    area_acero_c = (lado_c * lado_c) * 0.012  # cm2
+    # Asumiendo varillas #5 (Ø15.9mm = 1.99 cm2) o #6 (Ø19.1mm = 2.84 cm2)
+    n_var_c5 = math.ceil(area_acero_c / 1.99)
+    n_var_c5 = max(n_var_c5 + (n_var_c5 % 2), 4) # par y mínimo 4
+    
+    # Estribos: Separación típica en zona de confinamiento (s = min(dimension/4, 10cm))
+    s_conf = min(lado_c/4, 10.0)
+    s_resto = min(lado_c/2, 20.0)
+    # Para 1 piso de altura h_story
+    l_conf = max(lado_c/100, h_story/6, 0.5)  # longitud confinada (m)
+    n_estribos = math.ceil((l_conf*2)/(s_conf/100)) + math.ceil((h_story - 2*l_conf)/(s_resto/100))
+    
+    ca1.metric("Col Central: Acero Longitudinal", f"{n_var_c5} varillas #5 (Ø 5/8')", f"Área: {area_acero_c:.1f} cm²")
+    ca2.metric("Col Central: Estribos por piso", f"{n_estribos} estribos #3 (Ø 3/8')", f"Separación: @{s_conf:.0f}/{s_resto:.0f} cm")
+    
+    st.caption("Cálculo estimado basado en cuantía volumétrica del 1.2%. El diseño final debe cumplir requisitos de flexocompresión NSR-10 C.10.")
 
 with tab_3d:
     st.subheader("Modelo 3D - Cuadrícula Típica (3×3 Ejes)")
@@ -531,6 +570,20 @@ with tab_2d:
         ax.plot([i*lx, i*lx], [0, ny*ly], color='#d9a05b', lw=b_vy*20, alpha=0.7, zorder=2)
     for j in range(ny+1):
         ax.plot([0, nx*lx], [j*ly, j*ly], color='#d9a05b', lw=b_vx*20, alpha=0.7, zorder=2)
+    # Dibujar predio si está activo
+    if st.session_state.get("dib_predio", False) and 'ptos_predio' in locals() and ptos_predio:
+        predio_x = [p[0] for p in ptos_predio]
+        predio_y = [p[1] for p in ptos_predio]
+        ax.plot(predio_x, predio_y, color='#00ffcc', linewidth=3, linestyle='-', zorder=5)
+        ax.fill(predio_x, predio_y, color='#00ffcc', alpha=0.05, zorder=1)
+        # Etiqueta de longitud en cada segmento
+        for idx in range(len(ptos_predio)-1):
+            x0, y0 = ptos_predio[idx]
+            x1, y1 = ptos_predio[idx+1]
+            dist = math.hypot(x1-x0, y1-y0)
+            ax.text((x0+x1)/2, (y0+y1)/2, f"{dist:.2f}m", color='#00ffcc', fontsize=8, 
+                    ha='center', va='center', bbox=dict(boxstyle='round', fc='#1a1a2e', ec='none', alpha=0.7))
+
     ax.set_aspect('equal')
     ax.axis('off')
     st.pyplot(fig2d)
@@ -664,38 +717,50 @@ with _sub_mem:
         try:
             buf_2d.seek(0); doc.add_heading("Esquema de Planta", 1); doc.add_picture(buf_2d, width=Inches(6.0))
         except: pass
-        # Figurado de columna típica
-        doc.add_heading("06. Esquemas de Figurado", 1)
-        hook_len = 12 * 12
-        straight_len = h_story * 100 - 2 * hook_len
-        fig_col, ax_col = plt.subplots(figsize=(6,2))
-        ax_col.plot([0, straight_len], [0,0], 'k-', linewidth=2)
-        ax_col.plot([0,0], [0, hook_len], 'k-')
-        ax_col.plot([straight_len, straight_len], [0, -hook_len], 'k-')
-        ax_col.annotate(f"{straight_len:.0f} cm", xy=(straight_len/2, 0.3), ha='center')
-        ax_col.annotate(f"Gancho 12db", xy=(0, hook_len/2), ha='right')
-        ax_col.axis('off')
-        ax_col.set_title(f"Varilla columna - Ø12mm")
-        buf_col = io.BytesIO()
-        fig_col.savefig(buf_col, format='png', dpi=150, bbox_inches='tight')
-        buf_col.seek(0)
-        doc.add_picture(buf_col, width=Inches(4.5))
-        plt.close(fig_col)
-        # Estribo
-        inside_b = lado_c - 2*4
+        # Figurado Detallado de Acero (Columna Típica)
+        doc.add_heading("06. Esquemas de Figurado y Detalle de Acero", 1)
+        
+        # Cuantía 1.2%
+        area_acero = (lado_c**2) * 0.012
+        n_var = max(math.ceil(area_acero / 1.99), 4)
+        n_var += (n_var % 2) # par
+        doc.add_paragraph(f"Cuantía transversal asumida: ρ = 1.2%")
+        doc.add_paragraph(f"Refuerzo longitudinal sugerido: {n_var} varillas #5 (Ø 5/8')")
+        
+        # Dibujo Varilla Mejorado
+        hook_len = max(15.0, 12 * 1.59) # gancho 12db o 15cm min
+        straight_len = h_story * 100 - 2*4 # menos recubrimientos
+        fig_col, ax_col = plt.subplots(figsize=(7,2.5))
+        ax_col.plot([0, straight_len], [0,0], '#1565C0', linewidth=4, solid_capstyle='round')
+        ax_col.plot([0,0], [0, hook_len], '#1565C0', linewidth=4, solid_capstyle='round')
+        ax_col.plot([straight_len, straight_len], [0, -hook_len], '#1565C0', linewidth=4, solid_capstyle='round')
+        # Cotas varilla
+        ax_col.annotate(f"L={straight_len:.0f} cm", xy=(straight_len/2, 2.0), ha='center', fontsize=10, fontweight='bold')
+        ax_col.annotate(f"Gancho={hook_len:.0f} cm", xy=(-2, hook_len/2), ha='right', va='center', fontsize=9)
+        ax_col.annotate(f"Gancho={hook_len:.0f} cm", xy=(straight_len+2, -hook_len/2), ha='left', va='center', fontsize=9)
+        ax_col.axis('equal'); ax_col.axis('off')
+        ax_col.set_title(f"Varilla Longitudinal Principal (#5)", pad=15)
+        buf_col = io.BytesIO(); fig_col.savefig(buf_col, format='png', dpi=200, bbox_inches='tight'); buf_col.seek(0)
+        doc.add_picture(buf_col, width=Inches(5.0)); plt.close(fig_col)
+
+        # Dibujo Estribo Mejorado
+        inside_b = lado_c - 2*4 # recubrimiento 4cm
         inside_h = lado_c - 2*4
-        fig_est, ax_est = plt.subplots(figsize=(5,4))
-        ax_est.add_patch(patches.Rectangle((0,0), inside_b, inside_h, fill=False, edgecolor='black'))
-        # gancho 135° simplificado
-        ax_est.plot([0, -2], [inside_h, inside_h+2], 'k-')
-        ax_est.annotate("Gancho 135°", xy=(-2, inside_h+1), fontsize=7)
+        fig_est, ax_est = plt.subplots(figsize=(4,4))
+        # path del estribo con bordes redondeados
+        rect = patches.FancyBboxPatch((0,0), inside_b, inside_h, boxstyle="round,pad=1.5,rounding_size=2", fill=False, edgecolor='#E65100', linewidth=3)
+        ax_est.add_patch(rect)
+        # ganchos 135° reales
+        ax_est.plot([0, -5], [inside_h, inside_h+5], '#E65100', linewidth=3)
+        ax_est.plot([2, -3], [inside_h+2, inside_h+7], '#E65100', linewidth=3)
+        ax_est.annotate("Ganchos 135°\nL=7.5 cm", xy=(-4, inside_h+8), fontsize=8, color='#E65100')
+        ax_est.annotate(f"{inside_b:.0f} cm", xy=(inside_b/2, -5), ha='center', fontsize=10, fontweight='bold')
+        ax_est.annotate(f"{inside_h:.0f} cm", xy=(inside_b+3, inside_h/2), va='center', fontsize=10, fontweight='bold')
         ax_est.axis('equal'); ax_est.axis('off')
-        ax_est.set_title("Estribo Ø6mm")
-        buf_est = io.BytesIO()
-        fig_est.savefig(buf_est, format='png', dpi=150, bbox_inches='tight')
-        buf_est.seek(0)
-        doc.add_picture(buf_est, width=Inches(3.5))
-        plt.close(fig_est)
+        long_estribo = 2*inside_b + 2*inside_h + 15
+        ax_est.set_title(f"Estribo de Confinamiento (#3)\nLong. Total = {long_estribo:.0f} cm", pad=15)
+        buf_est = io.BytesIO(); fig_est.savefig(buf_est, format='png', dpi=200, bbox_inches='tight'); buf_est.seek(0)
+        doc.add_picture(buf_est, width=Inches(3.5)); plt.close(fig_est)
         doc_mem = io.BytesIO()
         doc.save(doc_mem); doc_mem.seek(0)
         st.download_button("📥 Descargar DOCX", data=doc_mem, file_name="Memoria_Predim.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
