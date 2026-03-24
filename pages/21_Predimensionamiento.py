@@ -102,23 +102,19 @@ with st.sidebar.expander(_t("4️⃣ APU – PRECIOS", "4️⃣ APU – PRICES")
 
 with st.sidebar.expander(_t("5️⃣ AJUSTE MANUAL DE DIMENSIONES", "5️⃣ MANUAL DIMENSION OVERRIDE"), expanded=False):
     st.caption(_t("Modifique las dimensiones calculadas para realizar verificación manual.", "Override calculated dimensions for manual verification."))
-    man_h_mac = st.number_input(_t("Espesor Losa Maciza (cm)", "Solid Slab h (cm)"), 10, 50, int(h_mac*100), 1, key="man_h_mac") / 100.0
-    man_h_ali = st.number_input(_t("Espesor Losa Nervada (cm)", "Ribbed Slab h (cm)"), 10, 50, int(h_ali*100), 1, key="man_h_ali") / 100.0
-    man_bvx = st.number_input(_t("Viga X – Ancho b (cm)", "Beam X Width b (cm)"), 20, 80, int(b_vx*100), 5, key="man_bvx") / 100.0
-    man_hvx = st.number_input(_t("Viga X – Peralte h (cm)", "Beam X Depth h (cm)"), 30, 120, int(h_vx*100), 5, key="man_hvx") / 100.0
-    man_bvy = st.number_input(_t("Viga Y – Ancho b (cm)", "Beam Y Width b (cm)"), 20, 80, int(b_vy*100), 5, key="man_bvy") / 100.0
-    man_hvy = st.number_input(_t("Viga Y – Peralte h (cm)", "Beam Y Depth h (cm)"), 30, 120, int(h_vy*100), 5, key="man_hvy") / 100.0
-    man_col_c = st.number_input(_t("Columna Central – Lado (cm)", "Central Column Side (cm)"), 20, 120, int(lado_c), 5, key="man_col_c")
-    man_col_b = st.number_input(_t("Columna Borde – Lado (cm)", "Edge Column Side (cm)"), 20, 100, int(lado_b), 5, key="man_col_b")
-    man_col_e = st.number_input(_t("Columna Esquina – Lado (cm)", "Corner Column Side (cm)"), 20, 80, int(lado_e), 5, key="man_col_e")
+    # Se usan valores guardados en session_state; el módulo los actualiza tras calcular
+    man_h_mac = st.number_input(_t("Espesor Losa Maciza (cm)", "Solid Slab h (cm)"), 10, 50, st.session_state.get("_calc_h_mac", 25), 1, key="man_h_mac") / 100.0
+    man_h_ali = st.number_input(_t("Espesor Losa Nervada (cm)", "Ribbed Slab h (cm)"), 10, 50, st.session_state.get("_calc_h_ali", 30), 1, key="man_h_ali") / 100.0
+    man_bvx   = st.number_input(_t("Viga X – Ancho b (cm)", "Beam X Width b (cm)"), 20, 80, st.session_state.get("_calc_bvx", 25), 5, key="man_bvx") / 100.0
+    man_hvx   = st.number_input(_t("Viga X – Peralte h (cm)", "Beam X Depth h (cm)"), 30, 120, st.session_state.get("_calc_hvx", 50), 5, key="man_hvx") / 100.0
+    man_bvy   = st.number_input(_t("Viga Y – Ancho b (cm)", "Beam Y Width b (cm)"), 20, 80, st.session_state.get("_calc_bvy", 25), 5, key="man_bvy") / 100.0
+    man_hvy   = st.number_input(_t("Viga Y – Peralte h (cm)", "Beam Y Depth h (cm)"), 30, 120, st.session_state.get("_calc_hvy", 45), 5, key="man_hvy") / 100.0
+    man_col_c = st.number_input(_t("Columna Central – Lado (cm)", "Central Column Side (cm)"), 20, 120, st.session_state.get("_calc_col_c", 40), 5, key="man_col_c")
+    man_col_b = st.number_input(_t("Columna Borde – Lado (cm)", "Edge Column Side (cm)"), 20, 100, st.session_state.get("_calc_col_b", 35), 5, key="man_col_b")
+    man_col_e = st.number_input(_t("Columna Esquina – Lado (cm)", "Corner Column Side (cm)"), 20, 80, st.session_state.get("_calc_col_e", 30), 5, key="man_col_e")
     usar_manual = st.checkbox(_t("Usar estas dimensiones en Modelo 3D y Memoria", "Use these in 3D model and Report"), value=False, key="usar_manual")
 
-# Aplicar override si el checkbox está activo
-if st.session_state.get("usar_manual", False):
-    h_mac, h_ali = man_h_mac, man_h_ali
-    b_vx, h_vx   = man_bvx, man_hvx
-    b_vy, h_vy   = man_bvy, man_hvy
-    lado_c, lado_b, lado_e = man_col_c, man_col_b, man_col_e
+# Aplicar override si el checkbox está activo (DESPUÉS de los cálculos, se aplica abajo)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""<div style="text-align: center; color: gray; font-size: 11px;">
@@ -221,8 +217,30 @@ if deriva_estimada > 0.01:
 else:
     warning_deriva = None
 
-# ─────────────────────────────────────────────
-# FUNCIONES DE DIBUJO PARA FIGURADO
+# Guardar valores calculados para que el expander manual los use como defaults
+st.session_state["_calc_h_mac"] = int(h_mac * 100)
+st.session_state["_calc_h_ali"] = int(h_ali * 100)
+st.session_state["_calc_bvx"]   = int(b_vx * 100)
+st.session_state["_calc_hvx"]   = int(h_vx * 100)
+st.session_state["_calc_bvy"]   = int(b_vy * 100)
+st.session_state["_calc_hvy"]   = int(h_vy * 100)
+st.session_state["_calc_col_c"] = int(lado_c)
+st.session_state["_calc_col_b"] = int(lado_b)
+st.session_state["_calc_col_e"] = int(lado_e)
+
+# Aplicar override manual si el usuario lo activó
+if st.session_state.get("usar_manual", False):
+    h_mac  = st.session_state.get("man_h_mac", h_mac)
+    h_ali  = st.session_state.get("man_h_ali", h_ali)
+    b_vx   = st.session_state.get("man_bvx", b_vx)
+    h_vx   = st.session_state.get("man_hvx", h_vx)
+    b_vy   = st.session_state.get("man_bvy", b_vy)
+    h_vy   = st.session_state.get("man_hvy", h_vy)
+    lado_c = st.session_state.get("man_col_c", lado_c)
+    lado_b = st.session_state.get("man_col_b", lado_b)
+    lado_e = st.session_state.get("man_col_e", lado_e)
+
+
 # ─────────────────────────────────────────────
 def draw_longitudinal_bar(total_len_cm, straight_len_cm, hook_len_cm, bar_diam_mm, bar_name=None):
     fig, ax = plt.subplots(figsize=(max(6, total_len_cm/20), 2))
