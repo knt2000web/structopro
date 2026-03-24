@@ -472,16 +472,16 @@ st.session_state["_calc_col_c"] = int(lado_c)
 st.session_state["_calc_col_b"] = int(lado_b)
 st.session_state["_calc_col_e"] = int(lado_e)
 
-if st.session_state.get("usar_manual", False):
-    h_mac  = st.session_state.get("man_h_mac", h_mac)
-    h_ali  = st.session_state.get("man_h_ali", h_ali)
-    b_vx   = st.session_state.get("man_bvx", b_vx)
-    h_vx   = st.session_state.get("man_hvx", h_vx)
-    b_vy   = st.session_state.get("man_bvy", b_vy)
-    h_vy   = st.session_state.get("man_hvy", h_vy)
-    lado_c = st.session_state.get("man_col_c", lado_c)
-    lado_b = st.session_state.get("man_col_b", lado_b)
-    lado_e = st.session_state.get("man_col_e", lado_e)
+if usar_manual:
+    h_mac  = man_h_mac
+    h_ali  = man_h_ali
+    b_vx   = man_bvx
+    h_vx   = man_hvx
+    b_vy   = man_bvy
+    h_vy   = man_hvy
+    lado_c = man_col_c
+    lado_b = man_col_b
+    lado_e = man_col_e
 
 # Generar malla para visualización
 alturas_list = [h_story] * num_stories
