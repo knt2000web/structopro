@@ -477,22 +477,41 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
     ax_tb.add_patch(patches.Rectangle((-b_col_cp/2, 0), b_col_cp, -Df_cp + Hz_cp*0.1,
                                       fc="#78909c", ec="white", lw=1, zorder=4))
 
-    # Bulbo de presiones Boussinesq (vectorizado)
-    _xg = np.linspace(-B_cp*3, B_cp*3, 120)
-    _zg = np.linspace(zap_bot, zap_bot - B_cp*2.5, 80)
+    # Bulbo de presiones Boussinesq (Teoría elástica 2D - Suma de Cuadrantes)
+    _xg = np.linspace(-B_cp*3.5, B_cp*3.5, 200)
+    _zg = np.linspace(zap_bot, zap_bot - B_cp*3.5, 150)
     Xg, Zg = np.meshgrid(_xg, _zg)
     q0_bulbo = q_ult
     dz = np.abs(Zg - zap_bot)
     dz = np.where(dz < 0.05, 0.05, dz)  # evitar división por cero
-    m_arr = (half_B) / dz
-    n_arr = (L_cp/2) / dz
-    # Limitar valores extremos para evitar overflow
-    m_arr = np.clip(m_arr, 1e-6, 1e6)
-    n_arr = np.clip(n_arr, 1e-6, 1e6)
-    sigma_arr = 4 * q0_bulbo * I_z_bous_vec(m_arr, n_arr)
-    cs = ax_tb.contourf(Xg, Zg, sigma_arr, levels=[q0_bulbo*0.1, q0_bulbo*0.2, q0_bulbo*0.4,
-                         q0_bulbo*0.6, q0_bulbo*0.8], cmap="YlOrRd", alpha=0.5, zorder=1)
-    fig_tb.colorbar(cs, ax=ax_tb, label="Δσz [kPa]", shrink=0.7)
+    
+    def I_corner(X, Y, Z_arr):
+        m = np.abs(X) / Z_arr
+        n = np.abs(Y) / Z_arr
+        m = np.clip(m, 1e-6, 1e6)
+        n = np.clip(n, 1e-6, 1e6)
+        return I_z_bous_vec(m, n) * np.sign(X) * np.sign(Y)
+
+    # Suma algebraica para (x, y=0)
+    x1 = half_B - Xg
+    x2 = -half_B - Xg
+    y1 = L_cp / 2.0
+    y2 = -L_cp / 2.0
+
+    I1 = I_corner(x1, y1, dz)
+    I2 = I_corner(x2, y1, dz)
+    I3 = I_corner(x1, y2, dz)
+    I4 = I_corner(x2, y2, dz)
+    
+    sigma_arr = q0_bulbo * np.abs(I1 - I2 - I3 + I4)
+
+    # Renderizado suave y profesional
+    levels = np.linspace(q0_bulbo*0.02, q0_bulbo*0.95, 15)
+    cs = ax_tb.contourf(Xg, Zg, sigma_arr, levels=levels, cmap="turbo", alpha=0.6, zorder=1)
+    ax_tb.contour(Xg, Zg, sigma_arr, levels=levels, colors='white', linewidths=0.3, zorder=1, alpha=0.3)
+    cbar = fig_tb.colorbar(cs, ax=ax_tb, label="Δσz [kPa]", shrink=0.7)
+    cbar.ax.yaxis.set_tick_params(color="white")
+    plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'), color="white")
 
     # Línea de exploración (si existe en sesión)
     if "z_exploracion" in st.session_state:
