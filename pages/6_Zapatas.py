@@ -211,18 +211,18 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
                                    0.0, 50.0, st.session_state.get("z_phi", 30.0), 1.0, key="z_phi")
         coh_unit = st.selectbox(_t("Unidad cohesión:","Cohesion Unit:"),
                                 ["kPa", "kg/cm²", "ton/m²"], key="coh_u")
-        coh_val  = st.number_input(f"c [{coh_unit}]", 0.0, 200.0,
+        coh_val  = st.number_input(f"Cohesión c [{coh_unit}]", 0.0, 200.0,
                                    st.session_state.get("coh_val", 5.0 if coh_unit=="kPa" else 0.05),
                                    0.5 if coh_unit=="kPa" else 0.01, key="coh_val")
         coh_c    = coh_val if coh_unit=="kPa" else (coh_val*98.0665 if coh_unit=="kg/cm²" else coh_val*9.80665)
         gam_unit = st.selectbox(_t("Unidad γ húmedo:","γ moist Unit:"),
                                 ["kN/m³", "ton/m³", "kg/m³"], key="gam_u")
-        gam_val  = st.number_input(f"γ [{gam_unit}]", 10.0,
+        gam_val  = st.number_input(f"Peso esp. húmedo γ [{gam_unit}]", 10.0,
                                    25.0 if gam_unit != "kg/m³" else 2500.0,
                                    st.session_state.get("gam_val", 18.0 if gam_unit != "kg/m³" else 1800.0),
                                    0.5, key="gam_val")
         gamma_s  = gam_val if gam_unit=="kN/m³" else (gam_val*9.80665 if gam_unit=="ton/m³" else gam_val*0.00980665)
-        gamma_sat_t = st.number_input("γ saturado [kN/m³]", 16.0, 25.0, 20.0, 0.5, key="z_gsat")
+        gamma_sat_t = st.number_input("Peso esp. saturado γ_sat [kN/m³]", 16.0, 25.0, 20.0, 0.5, key="z_gsat")
         gamma_w  = 9.81
     with c2:
         st.markdown("##### 🏗️ Geometría y Carga")
