@@ -445,29 +445,53 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
     half_B = B_cp / 2.0
     zap_bot = -(Df_cp + Hz_cp)
 
-    # Suelo de relleno encima del desplante (sombreado suave)
-    ax_tb.add_patch(patches.Rectangle((-B_cp*5, 0), B_cp*10, -Df_cp,
-                                      fc="#2e7d32", alpha=0.18, ec="none"))
-    # Zona I — Triángulo activo (bajo la zapata)
-    ang_I = math.pi/4 + phi_rad/2
-    tri_pts = [(-half_B, zap_bot), (half_B, zap_bot),
-               (0, zap_bot - half_B*math.tan(ang_I))]
-    ax_tb.add_patch(plt.Polygon(tri_pts, fc="#e8c4a0", ec="#c9956e", lw=0.8,
-                                alpha=0.85, label="Zona I — Activa"))
+    # === MECANISMO DE FALLA DE TERZAGHI (Prandtl) ===
+    # Ángulos de cuña
+    alpha = math.pi/4 + phi_rad/2
+    H_tri = half_B * math.tan(alpha)
+    pole_x = half_B
+    pole_y = zap_bot
+    theta_0 = math.atan2(-H_tri, -half_B)
+    sweep = math.pi/2
+    theta_end = theta_0 + sweep
 
-    # Zona II — Arco logarítmico (Prandtl)
-    if phi_rad > 0:
-        r0 = half_B * 1.4  # Aproximación
-        theta_arr = np.linspace(math.pi/2, math.pi, 40)
-        r_arr = r0 * np.exp(theta_arr * math.tan(phi_rad))
-        xs = half_B + r_arr * np.cos(theta_arr)
-        ys = zap_bot + r_arr * np.sin(theta_arr)
-        xs2 = -half_B - r_arr * np.cos(theta_arr)
-        ys2 = zap_bot + r_arr * np.sin(theta_arr)
-        ax_tb.fill(np.append(xs, xs[::-1]), np.append(ys, ys[::-1]),
-                   fc="#f4a261", alpha=0.55, label="Zona II — Radial", ec="none")
-        ax_tb.fill(np.append(xs2, xs2[::-1]), np.append(ys2, ys2[::-1]),
-                   fc="#f4a261", alpha=0.55, ec="none")
+    # Zona I — Triángulo activo central (Rosa oscuro)
+    tri_pts = [(-half_B, zap_bot), (half_B, zap_bot), (0, zap_bot - H_tri)]
+    ax_tb.add_patch(plt.Polygon(tri_pts, fc="#e57373", ec="black", lw=1.2, alpha=0.9, zorder=5, label="Zona I (Activa)"))
+
+    if phi_rad >= 0.0:
+        # Geometría del espiral (Arco)
+        theta_arr = np.linspace(theta_0, theta_end, 40)
+        r_arr = (half_B / math.cos(alpha)) * np.exp((theta_arr - theta_0) * math.tan(phi_rad))
+        x_spiral = pole_x + r_arr * np.cos(theta_arr)
+        y_spiral = pole_y + r_arr * np.sin(theta_arr)
+        end_x = x_spiral[-1]
+        end_y = y_spiral[-1]
+
+        beta_passive = math.pi/4 - phi_rad/2
+        # Prevenir error si beta_passive se hace 0 (para arcilla phi=0, beta_passive=45 deg, siempre >0)
+        dist_x = abs(end_y - pole_y) / math.tan(beta_passive)
+        x_top = end_x + dist_x
+
+        # Zona II (Radial - Amarillo) - Derecha
+        poly_Z2_R = [(pole_x, pole_y)] + list(zip(x_spiral, y_spiral))
+        ax_tb.add_patch(plt.Polygon(poly_Z2_R, fc="#ffe082", ec="black", lw=1.2, alpha=0.85, zorder=4, label="Zona II (Radial)"))
+        # Zona III (Pasiva - Naranja claro) - Derecha
+        poly_Z3_R = [(pole_x, pole_y), (end_x, end_y), (x_top, pole_y)]
+        ax_tb.add_patch(plt.Polygon(poly_Z3_R, fc="#ffb74d", ec="black", lw=1.2, alpha=0.85, zorder=3, label="Zona III (Pasiva)"))
+
+        # Zonas II y III - Izquierda (Espejo simétrico)
+        poly_Z2_L = [(-x, y) for (x, y) in poly_Z2_R]
+        ax_tb.add_patch(plt.Polygon(poly_Z2_L, fc="#ffe082", ec="black", lw=1.2, alpha=0.85, zorder=4))
+        poly_Z3_L = [(-x, y) for (x, y) in poly_Z3_R]
+        ax_tb.add_patch(plt.Polygon(poly_Z3_L, fc="#ffb74d", ec="black", lw=1.2, alpha=0.85, zorder=3))
+
+        # Sobrecarga de fosa (Suelo arriba de Df - Relleno pasivo)
+        if zap_bot < 0:
+            ax_tb.add_patch(patches.Rectangle((-x_top, zap_bot), 2*x_top, -zap_bot,
+                                              fc="#ffebee", ec="black", lw=1, alpha=0.6, zorder=2, label="Sobrecarga"))
+            # Extender limits del eje X para que abarque hasta la cuna pasiva
+            ax_tb.set_xlim(-x_top * 1.2, x_top * 1.2)
 
     # Zapata
     ax_tb.add_patch(patches.Rectangle((-half_B, zap_bot), B_cp, Hz_cp,

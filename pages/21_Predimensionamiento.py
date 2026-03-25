@@ -226,24 +226,40 @@ def _box_mesh(xc, yc, zc, bx, by, bz, color, opac, name, show_leg):
         y=[yc-by, yc-by, yc+by, yc+by, yc-by, yc-by, yc+by, yc+by],
         z=[zc,    zc,    zc,    zc,    zc+bz, zc+bz, zc+bz, zc+bz],
         i=[0,0,4,4,1,5,2,6,3,7,0,4], j=[1,2,5,6,5,6,6,7,7,4,4,7], k=[2,3,6,7,6,7,7,4,4,5,1,3],
-        color=color, opacity=opac, name=name, showlegend=show_leg, flatshading=True)
+        color=color, opacity=opac, name=name, showlegend=show_leg, flatshading=True,
+        lighting=dict(ambient=0.4, diffuse=0.8, fresnel=0.1, specular=0.1, roughness=0.5)
+    )
+
+def _box_edges(xc, yc, zc, bx, by, bz):
+    """Retorna coordenadas de las 12 aristas de un cubo separadas por None."""
+    xmin, xmax = xc-bx, xc+bx
+    ymin, ymax = yc-by, yc+by
+    zmin, zmax = zc, zc+bz
+    x = [xmin, xmax, xmax, xmin, xmin, None, xmin, xmax, xmax, xmin, xmin, None, xmin, xmin, None, xmax, xmax, None, xmax, xmax, None, xmin, xmin, None]
+    y = [ymin, ymin, ymax, ymax, ymin, None, ymin, ymin, ymax, ymax, ymin, None, ymin, ymin, None, ymin, ymin, None, ymax, ymax, None, ymax, ymax, None]
+    z = [zmin, zmin, zmin, zmin, zmin, None, zmax, zmax, zmax, zmax, zmax, None, zmin, zmax, None, zmin, zmax, None, zmin, zmax, None, zmin, zmax, None]
+    return x, y, z
 
 def plot_edificio(nudos, cols, vigas_x, vigas_z, zaps, zap_dim_dict=None):
-    """Modelo 3D sólido: columnas rectangular Mesh3d, vigas Mesh3d, losas semitransparentes, zapatas."""
+    """Modelo 3D sólido con bordes delineados (Estilo Arquitectónico Realista)"""
     fig = go.Figure()
     col_added = False; beam_added = False; slab_added = False; zap_added = False
+    
+    ex, ey, ez = [], [], [] # Contenedor acumulativo de aristas
 
-    # COLUMNAS — sólidos rectangulares
+    # COLUMNAS — sólidos rectangulares (gris concreto)
     for _, c in cols.iterrows():
         n1 = nudos[nudos["ID"]==c["N1"]].iloc[0]
         n2 = nudos[nudos["ID"]==c["N2"]].iloc[0]
         cb = float(c["b (m)"]); ch = float(c["h (m)"])
         xc = float(n1["X"]); yc = float(n1["Z"]); zc = float(n1["Y"])
         h_col = float(n2["Y"]) - float(n1["Y"])
-        fig.add_trace(_box_mesh(xc, yc, zc, cb/2, ch/2, h_col, "#1565C0", 0.85, "Columna", not col_added))
+        fig.add_trace(_box_mesh(xc, yc, zc, cb/2, ch/2, h_col, "#90A4AE", 1.0, "Columna", not col_added))
+        tx, ty, tz = _box_edges(xc, yc, zc, cb/2, ch/2, h_col)
+        ex.extend(tx); ey.extend(ty); ez.extend(tz)
         col_added = True
 
-    # VIGAS — trazas sólidas rectangulares
+    # VIGAS — trazas sólidas rectangulares (gris cálido)
     for _, v in pd.concat([vigas_x, vigas_z]).iterrows():
         n1 = nudos[nudos["ID"]==v["N1"]].iloc[0]; n2 = nudos[nudos["ID"]==v["N2"]].iloc[0]
         vb = float(v["b (m)"]); vh = float(v["h (m)"])
@@ -251,53 +267,67 @@ def plot_edificio(nudos, cols, vigas_x, vigas_z, zaps, zap_dim_dict=None):
         if not np.isclose(n1["X"], n2["X"]):  # viga en X
             x0 = min(float(n1["X"]), float(n2["X"])); x1 = max(float(n1["X"]), float(n2["X"]))
             xc = (x0+x1)/2; yc = float(n1["Z"]); zc = y_piso - vh
-            fig.add_trace(_box_mesh(xc, yc, zc, (x1-x0)/2, vb/2, vh, "#E65100", 0.85, "Viga X", not beam_added))
+            fig.add_trace(_box_mesh(xc, yc, zc, (x1-x0)/2, vb/2, vh, "#a8a8a8", 1.0, "Viga X", not beam_added))
+            tx, ty, tz = _box_edges(xc, yc, zc, (x1-x0)/2, vb/2, vh)
         else:  # viga en Y
             z0 = min(float(n1["Z"]), float(n2["Z"])); z1 = max(float(n1["Z"]), float(n2["Z"]))
             xc = float(n1["X"]); yc = (z0+z1)/2; zc = y_piso - vh
-            fig.add_trace(_box_mesh(xc, yc, zc, vb/2, (z1-z0)/2, vh, "#E65100", 0.85, "Viga Y", False))
+            fig.add_trace(_box_mesh(xc, yc, zc, vb/2, (z1-z0)/2, vh, "#a8a8a8", 1.0, "Viga Y", False))
+            tx, ty, tz = _box_edges(xc, yc, zc, vb/2, (z1-z0)/2, vh)
+        ex.extend(tx); ey.extend(ty); ez.extend(tz)
         beam_added = True
 
-    # LOSAS — placas semitransparentes
+    # ZAPATAS — bloques base (marrón oscuro)
+    if zap_dim_dict is not None:
+        for _, zap in zaps.iterrows():
+            tipo = zap["Tipo"]; B, H = zap_dim_dict.get(tipo, (1.2, 0.4))
+            xc=float(zap["X"]); yc=float(zap["Z"])
+            fig.add_trace(_box_mesh(xc, yc, -H, B/2, B/2, H, "#5D4037", 0.95, "Zapata", not zap_added))
+            tx, ty, tz = _box_edges(xc, yc, -H, B/2, B/2, H)
+            ex.extend(tx); ey.extend(ty); ez.extend(tz)
+            zap_added = True
+
+    # LOSAS — placas semitransparentes (cián suave)
     y_pisos = sorted(nudos["Y"].unique())
     for y in y_pisos[1:]:
         sub = nudos[nudos["Y"]==y]
         xmin,xmax = float(sub["X"].min()), float(sub["X"].max())
         zmin,zmax = float(sub["Z"].min()), float(sub["Z"].max())
         h_losa = 0.20
+        # Malla de la losa
         fig.add_trace(go.Mesh3d(
             x=[xmin,xmax,xmax,xmin,xmin,xmax,xmax,xmin],
             y=[zmin,zmin,zmax,zmax,zmin,zmin,zmax,zmax],
-            z=[float(y),float(y),float(y),float(y),float(y)+h_losa,float(y)+h_losa,float(y)+h_losa,float(y)+h_losa],
+            z=[float(y)-h_losa,float(y)-h_losa,float(y)-h_losa,float(y)-h_losa,float(y),float(y),float(y),float(y)],
             i=[0,0,4,4,1,5,2,6,3,7,0,4], j=[1,2,5,6,5,6,6,7,7,4,4,7], k=[2,3,6,7,6,7,7,4,4,5,1,3],
-            color="#B0BEC5", opacity=0.20, name="Losa", showlegend=not slab_added, flatshading=True))
+            color="#4DD0E1", opacity=0.35, name="Losa", showlegend=not slab_added, flatshading=True,
+            lighting=dict(ambient=0.5, diffuse=0.6)
+        ))
         slab_added = True
 
-    # ZAPATAS — bloques naranja bajo la cota ±0
-    if zap_dim_dict is not None:
-        for _, zap in zaps.iterrows():
-            tipo = zap["Tipo"]; B, H = zap_dim_dict.get(tipo, (1.2, 0.4))
-            xc=float(zap["X"]); yc=float(zap["Z"])
-            fig.add_trace(_box_mesh(xc, yc, -H, B/2, B/2, H, "#BF360C", 0.90, "Zapata", not zap_added))
-            zap_added = True
+    # Traza única de aristas (mejora rendimiento vs dibujarlas 1 a 1)
+    if ex:
+        fig.add_trace(go.Scatter3d(x=ex, y=ey, z=ez, mode="lines",
+                                   line=dict(color="black", width=2),
+                                   hoverinfo="skip", showlegend=False))
 
     # Leyenda compacta
-    for color, name in [("#1565C0","Columna"),("#E65100","Viga"),("#B0BEC5","Losa"),("#BF360C","Zapata")]:
+    for color, name in [("#90A4AE","Columna"),("#a8a8a8","Viga"),("#4DD0E1","Losa"),("#5D4037","Zapata")]:
         fig.add_trace(go.Scatter3d(x=[None],y=[None],z=[None],mode="markers",
             marker=dict(size=8,color=color), name=name))
 
     fig.update_layout(
         scene=dict(
-            xaxis=dict(title="X (m)", showgrid=True, gridcolor="rgba(255,255,255,0.1)"),
-            yaxis=dict(title="Y (m)", showgrid=True, gridcolor="rgba(255,255,255,0.1)"),
-            zaxis=dict(title="Z (m)", showgrid=True, gridcolor="rgba(255,255,255,0.1)"),
-            bgcolor="#0d1117", aspectmode="data",
-            camera=dict(eye=dict(x=1.5, y=-1.5, z=1.3))
+            xaxis=dict(title="X (m)", showgrid=True, gridcolor="rgba(255,255,255,0.15)"),
+            yaxis=dict(title="Y (m)", showgrid=True, gridcolor="rgba(255,255,255,0.15)"),
+            zaxis=dict(title="Z (m)", showgrid=True, gridcolor="rgba(255,255,255,0.15)"),
+            bgcolor="#121212", aspectmode="data",
+            camera=dict(eye=dict(x=1.6, y=-1.6, z=1.4))
         ),
-        paper_bgcolor="#161b22", font=dict(color="white"), height=700,
+        paper_bgcolor="#161b22", font=dict(color="white"), height=750,
         margin=dict(l=0, r=0, b=0, t=40),
         legend=dict(x=1.02, y=0.5, bgcolor="rgba(0,0,0,0.5)", bordercolor="white", borderwidth=1),
-        title=dict(text="Modelo Estructural 3D", font=dict(color="white", size=16))
+        title=dict(text="Modelo Estructural 3D – Rendering Arquitectónico", font=dict(color="white", size=18))
     )
     return fig
 
