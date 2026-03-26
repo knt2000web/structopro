@@ -735,14 +735,8 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         else: # kg/cm²
             q_adm_z = q_val_input * 98.0665
 
-        # Mostrar equivalencias en cards compactas
-        eq_c1, eq_c2, eq_c3 = st.columns(3)
-        eq_c1.metric("kPa", f"{q_adm_z:.1f}")
-        eq_c2.metric("ton/m²", f"{q_adm_z/9.80665:.2f}")
-        eq_c3.metric("MPa / kg/cm²", f"{q_adm_z/1000:.4f} / {q_adm_z/98.0665:.3f}")
-
-        st.caption(_t(f"🔄 **Equivalencia:** {q_adm_z:.1f} kPa | {q_adm_z/9.80665:.3f} ton/m² | {q_adm_z/98.0665:.4f} kg/cm² | {q_adm_z/6.89476:.2f} psi",
-                      f"🔄 **Equivalence:** {q_adm_z:.1f} kPa | {q_adm_z/9.80665:.3f} ton/m² | {q_adm_z/98.0665:.4f} kg/cm² | {q_adm_z/6.89476:.2f} psi"))
+        # Mostrar equivalencias en formato adaptable (evita que se corte la métrica en pantallas reducidas)
+        st.info(f"🔄 **Equivalencia:** `{q_adm_z:.1f} kPa` | `{q_adm_z/9.80665:.2f} ton/m²` | `{q_adm_z/98.0665:.3f} kg/cm²` | `{q_adm_z/1000:.4f} MPa`")
 
         c1_col = st.number_input(_t("Dim. Columna c1 (dir. B) [cm]", "Column dim. c1 (B dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
         c2_col = st.number_input(_t("Dim. Columna c2 (dir. L) [cm]", "Column dim. c2 (L dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
