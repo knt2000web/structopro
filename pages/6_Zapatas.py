@@ -139,7 +139,34 @@ with st.expander(_t("🌍 1. Esfuerzos en masa de suelo debajo de zapata", "🌍
     st.info(_t("📺 **Modo de uso:** Ingresa las dimensiones de la zapata y la carga aplicada. El programa usa la solución de Boussinesq (integración de carga rectangular) para encontrar el incremento de esfuerzo vertical a cierta profundidad Z debajo del centro de la zapata.", "📺 **How to use:** Enter footing dimensions and load. Uses Boussinesq method to find vertical stress increment at depth Z."))
     c1, c2 = st.columns(2)
     with c1:
-        P_bous = st.number_input("Carga en Zapata P [kN]", 10.0, 10000.0, st.session_state.get("z_bous_P", 1000.0), 100.0, key="z_bous_P")
+        # ── Selector de Unidades para la Carga ──────────────────────────
+        _P_unidades = {
+            "kN":     1.0,
+            "kgf":    0.00980665,
+            "tf (ton-fuerza)": 9.80665,
+            "kip":    4.44822,
+            "lb (lbf)": 0.00444822,
+        }
+        _P_unit = st.selectbox("Unidad de carga P", list(_P_unidades.keys()), key="z_bous_Punit")
+        _factor = _P_unidades[_P_unit]
+        # Límites dinámicos según unidad
+        _P_max = {
+            "kN": 10000.0, "kgf": 1_000_000.0, "tf (ton-fuerza)": 1000.0,
+            "kip": 2248.0, "lb (lbf)": 2_248_000.0,
+        }
+        _P_def = {
+            "kN": 1000.0, "kgf": 100_000.0, "tf (ton-fuerza)": 100.0,
+            "kip": 224.8, "lb (lbf)": 224_800.0,
+        }
+        P_bous_raw = st.number_input(
+            f"Carga en Zapata P [{_P_unit}]",
+            min_value=0.1, max_value=_P_max[_P_unit],
+            value=_P_def[_P_unit], step=_P_max[_P_unit]/100,
+            key="z_bous_P"
+        )
+        P_bous = P_bous_raw * _factor   # siempre en kN para los cálculos
+        if _P_unit != "kN":
+            st.caption(f"≡ **{P_bous:,.2f} kN** | {P_bous/9.80665:.2f} tf | {P_bous*224.809:.0f} lb")
         B_bous = st.number_input("Ancho B [m]", 0.5, 10.0, st.session_state.get("z_bous_B", 2.0), 0.1, key="z_bous_B")
         L_bous = st.number_input("Largo L [m]", 0.5, 10.0, st.session_state.get("z_bous_L", 2.0), 0.1, key="z_bous_L")
     with c2:
