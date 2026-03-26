@@ -334,29 +334,46 @@ with tab_dxf:
         escala_y = st.number_input(_t("Escala vertical (m/g)", "Vertical scale (m/g)"), 0.5, 10.0, 2.0, 0.5, key="dxf_scale_y")
     with col_dxf2:
         if st.button(_t("Generar DXF", "Generate DXF")):
+            try:
+                from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                         dxf_rotulo, dxf_rotulo_campos)
+                _USE_H_s = True
+            except ImportError:
+                _USE_H_s = False
             doc_dxf = ezdxf.new('R2010')
             doc_dxf.units = ezdxf.units.M
+            if _USE_H_s:
+                dxf_setup(doc_dxf, 50)
+                dxf_add_layers(doc_dxf)
             msp = doc_dxf.modelspace()
-            # Capas
             for lay, col in [('EJE_X',7), ('EJE_Y',7), ('ESPECTRO',1), ('TEXTO',3)]:
                 if lay not in doc_dxf.layers:
                     doc_dxf.layers.add(lay, color=col)
             # Ejes
             msp.add_lwpolyline([(0,0), (escala_x,0)], dxfattribs={'layer':'EJE_X'})
             msp.add_lwpolyline([(0,0), (0,escala_y)], dxfattribs={'layer':'EJE_Y'})
-            # Curva
+            # Curva espectral
             points = []
             for t, sa in zip(T_domain, Sa_vals):
                 x = t * escala_x / max(T_domain)
                 y = sa * escala_y / max(Sa_vals) if max(Sa_vals)>0 else 0
                 points.append((x, y))
             msp.add_lwpolyline(points, dxfattribs={'layer':'ESPECTRO', 'color':1})
-            # Texto con parámetros
-            texto = "\n".join(params_texto[:5])
-            msp.add_text(texto, dxfattribs={'layer':'TEXTO','height':0.1,'insert':(0.1, escala_y-0.2)})
+            # Textos parámetros
+            for i, pt in enumerate(params_texto[:5]):
+                msp.add_text(pt, dxfattribs={'layer':'TEXTO','height':0.12,
+                             'insert':(0.1, escala_y - 0.2 - i*0.15)})
+            if _USE_H_s:
+                TH = 0.025 * 50
+                dxf_text(msp, escala_x/2, escala_y+0.3, "ESPECTRO DE RESPUESTA DE DISENO", "EJES", h=TH*1.2, ha="center")
+                dxf_text(msp, escala_x/2, -0.25, "Periodo T (s)", "TEXTO", h=TH*0.8, ha="center")
+                dxf_text(msp, -0.3, escala_y/2, "Sa (g)", "TEXTO", h=TH*0.8, ha="center")
+                _cam = dxf_rotulo_campos(f"Espectro Sismico {norma_sel[:20]}", norma_sel, "001")
+                dxf_rotulo(msp, _cam, 0, -4.5, rot_w=9, rot_h=3, escala=50)
             _out_dxf = io.StringIO()
             doc_dxf.write(_out_dxf)
-            st.download_button(_t("📥 Descargar Espectro.dxf", "📥 Download Spectrum.dxf"), data=_out_dxf.getvalue().encode("utf-8"),
+            st.download_button(_t("📥 Descargar Espectro.dxf", "📥 Download Spectrum.dxf"),
+                               data=_out_dxf.getvalue().encode("utf-8"),
                                file_name=f"Espectro_{norma_sel[:5]}.dxf", mime="application/dxf")
 
 with tab_doc:

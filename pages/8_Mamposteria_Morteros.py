@@ -410,39 +410,59 @@ with tab_3d:
 
 with tab_dxf:
     st.markdown(_t("#### 💾 Exportar plano AutoCAD (DXF)", "#### 💾 Export AutoCAD drawing (DXF)"))
+    try:
+        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                 dxf_dim_horiz, dxf_dim_vert, dxf_rotulo,
+                                 dxf_leyenda, dxf_rotulo_campos)
+        _USE_H = True
+    except ImportError:
+        _USE_H = False
     doc_dxf = ezdxf.new('R2010')
     doc_dxf.units = ezdxf.units.M
+    if _USE_H:
+        dxf_setup(doc_dxf, 50)
+        dxf_add_layers(doc_dxf)
     msp = doc_dxf.modelspace()
-    # Capas
     for lay, col in [('CONCRETO',7), ('MURO',4), ('ACERO',1), ('TEXTO',3), ('COTAS',2)]:
         if lay not in doc_dxf.layers:
             doc_dxf.layers.add(lay, color=col)
-    # Planta: rectángulo del muro
-    msp.add_lwpolyline([(0,0), (L_muro,0), (L_muro, espesor_muro/100), (0, espesor_muro/100), (0,0)], 
+    # Planta
+    msp.add_lwpolyline([(0,0), (L_muro,0), (L_muro, espesor_muro/100), (0, espesor_muro/100), (0,0)],
                        close=True, dxfattribs={'layer':'MURO'})
-    # Elevación: rectángulo del muro desplazado
+    # Elevacion desplazada
     off_x = L_muro + 2
-    msp.add_lwpolyline([(off_x,0), (off_x+L_muro,0), (off_x+L_muro, H_muro), (off_x, H_muro), (off_x,0)], 
+    msp.add_lwpolyline([(off_x,0), (off_x+L_muro,0), (off_x+L_muro, H_muro), (off_x, H_muro), (off_x,0)],
                        close=True, dxfattribs={'layer':'MURO'})
-    # Dibujar juntas en elevación (líneas verticales y horizontales)
-    # Verticales
+    # Juntas verticales
     n_vert = int(L_muro / (ladrillo_frente_L/100 + junta_v/100)) + 1
     for i in range(1, n_vert):
         x = off_x + i * (ladrillo_frente_L/100 + junta_v/100)
         if x <= off_x+L_muro:
             msp.add_line((x, 0), (x, H_muro), dxfattribs={'layer':'ACERO'})
-    # Horizontales
+    # Juntas horizontales
     n_hor = int(H_muro / (ladrillo_frente_H/100 + junta_h/100)) + 1
     for j in range(1, n_hor):
         z = j * (ladrillo_frente_H/100 + junta_h/100)
         if z <= H_muro:
             msp.add_line((off_x, z), (off_x+L_muro, z), dxfattribs={'layer':'ACERO'})
-    # Cotas
-    msp.add_text(f"L = {L_muro:.2f} m", dxfattribs={'layer':'TEXTO','height':0.1,'insert':(off_x+L_muro/2, -0.2)})
-    msp.add_text(f"H = {H_muro:.2f} m", dxfattribs={'layer':'TEXTO','height':0.1,'insert':(off_x-0.5, H_muro/2)})
+    if _USE_H:
+        TH = 0.025 * 50
+        dxf_dim_horiz(msp, off_x, off_x+L_muro, -0.4, f"L = {L_muro:.2f} m", 50)
+        dxf_dim_vert(msp, off_x-0.5, 0, H_muro, f"H = {H_muro:.2f} m", 50)
+        dxf_text(msp, L_muro/2, espesor_muro/100+0.2, "PLANTA", "EJES", h=TH, ha="center")
+        dxf_text(msp, off_x+L_muro/2, H_muro+0.4, "ELEVACION", "EJES", h=TH, ha="center")
+        dxf_leyenda(msp, off_x+L_muro+0.3, H_muro-0.3, [
+            ("MURO", f"Muro {ladrillo_sel[:20]}"),
+            ("ACERO", f"Juntas h={junta_h}cm v={junta_v}cm"),
+        ], 50)
+        _cam = dxf_rotulo_campos(f"Muro Mamposteria {L_muro:.1f}x{H_muro:.1f}m", norma_sel, "001")
+        dxf_rotulo(msp, _cam, 0, -4.5, rot_w=9, rot_h=3, escala=50)
+    else:
+        msp.add_text(f"L = {L_muro:.2f} m", dxfattribs={'layer':'TEXTO','height':0.1,'insert':(off_x+L_muro/2, -0.2)})
+        msp.add_text(f"H = {H_muro:.2f} m", dxfattribs={'layer':'TEXTO','height':0.1,'insert':(off_x-0.5, H_muro/2)})
     _out = io.StringIO()
     doc_dxf.write(_out)
-    st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=_out.getvalue().encode('utf-8'), 
+    st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=_out.getvalue().encode('utf-8'),
                        file_name=f"Muro_{L_muro}x{H_muro}.dxf", mime="application/dxf")
 
 with tab_mem:

@@ -392,31 +392,42 @@ with tab_centroide:
                                        file_name="Seccion_Propiedades.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             with col_exp3:
                 if st.button(_t("📐 Exportar DXF", "📐 Export DXF")):
+                    try:
+                        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                                 dxf_rotulo, dxf_rotulo_campos)
+                        _USE_H12 = True
+                    except ImportError:
+                        _USE_H12 = False
                     doc_dxf = ezdxf.new('R2010')
                     doc_dxf.units = ezdxf.units.CM
+                    if _USE_H12:
+                        dxf_setup(doc_dxf, 20); dxf_add_layers(doc_dxf)
                     msp = doc_dxf.modelspace()
-                    # Dibujar cada figura
                     for s in st.session_state.shapes_list:
                         if s["tipo"] == "Rect":
-                            x0, y0 = s["x"], s["y"]
+                            x0r, y0r = s["x"], s["y"]
                             w, h = s["b"], s["h"]
-                            # Si w o h negativos, invertir orientación (tratamos como área positiva pero dibujamos igual)
                             w_abs = abs(w); h_abs = abs(h)
-                            x0_ = x0 if w >= 0 else x0 + w
-                            y0_ = y0 if h >= 0 else y0 + h
-                            msp.add_lwpolyline([(x0_, y0_), (x0_+w_abs, y0_), (x0_+w_abs, y0_+h_abs), (x0_, y0_+h_abs), (x0_, y0_)], close=True, dxfattribs={'layer': 'SECTION', 'color': 7})
+                            x0_ = x0r if w >= 0 else x0r + w
+                            y0_ = y0r if h >= 0 else y0r + h
+                            msp.add_lwpolyline([(x0_, y0_), (x0_+w_abs, y0_), (x0_+w_abs, y0_+h_abs), (x0_, y0_+h_abs), (x0_, y0_)], close=True, dxfattribs={'layer':'CONCRETO'})
                         elif s["tipo"] == "Circ":
                             cx, cy = s["x"], s["y"]
                             r_abs = abs(s["r"])
-                            # DXF no tiene círculo sólido? Usamos círculo normal
-                            msp.add_circle((cx, cy), r_abs, dxfattribs={'layer': 'SECTION', 'color': 7})
+                            msp.add_circle((cx, cy), r_abs, dxfattribs={'layer':'CONCRETO'})
                         elif s["tipo"] == "Triang":
                             pts = [(s["x"], s["y"]), (s["x"]+s["b"], s["y"]), (s["x"], s["y"]+s["h"])]
-                            msp.add_lwpolyline(pts, close=True, dxfattribs={'layer': 'SECTION', 'color': 7})
-                    # Dibujar centroide
-                    msp.add_point((x_bar, y_bar), dxfattribs={'layer': 'CENTROID', 'color': 1})
-                    # Agregar texto con coordenadas
-                    msp.add_text(f"Centroid: ({x_bar:.2f}, {y_bar:.2f})", dxfattribs={'layer': 'TEXT', 'height': 1, 'insert': (x_bar+2, y_bar+2)})
+                            msp.add_lwpolyline(pts, close=True, dxfattribs={'layer':'CONCRETO'})
+                    msp.add_point((x_bar, y_bar), dxfattribs={'layer':'EJES'})
+                    if _USE_H12:
+                        TH12 = 0.025*20
+                        dxf_text(msp, x_bar+2, y_bar+2, f"Centroide: ({x_bar:.2f}, {y_bar:.2f})", "TEXTO", h=TH12)
+                        dxf_text(msp, x_bar, y_bar-5, f"Ixx={Ix_total:.2f}  Iyy={Iy_total:.2f}", "TEXTO", h=TH12*0.8)
+                        norma_res = st.session_state.get("norma_sel", "NSR-10")
+                        _cam12 = dxf_rotulo_campos(f"Seccion Compuesta – Inercias", norma_res, "001")
+                        dxf_rotulo(msp, _cam12, 0, y_bar-30, rot_w=max(sum_A**0.5*3,20), rot_h=12, escala=20)
+                    else:
+                        msp.add_text(f"Centroid: ({x_bar:.2f}, {y_bar:.2f})", dxfattribs={'layer':'TEXTO', 'height':1, 'insert':(x_bar+2, y_bar+2)})
                     out_dxf = io.BytesIO()
                     doc_dxf.write(out_dxf)
                     st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=out_dxf.getvalue(),

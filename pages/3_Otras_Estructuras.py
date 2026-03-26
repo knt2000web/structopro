@@ -320,21 +320,33 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
         buf.seek(0)
         st.download_button("Descargar Memoria DOCX", data=buf, file_name="Cortante_X.docx")
     with tab_dxf:
+        try:
+            from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                     dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
+            _USE_H3 = True
+        except ImportError:
+            _USE_H3 = False
         doc_dxf = ezdxf.new('R2010')
         doc_dxf.units = ezdxf.units.CM
+        if _USE_H3:
+            dxf_setup(doc_dxf, 20); dxf_add_layers(doc_dxf)
         msp = doc_dxf.modelspace()
-        # Dibujar sección transversal
         x0, y0 = 0, 0
-        msp.add_lwpolyline([(x0,y0),(x0+bw_cx,y0),(x0+bw_cx,y0+d_cx),(x0,y0+d_cx),(x0,y0)], close=True)
-        # Estribo
-        rec = 4  # recubrimiento (cm)
-        msp.add_lwpolyline([(x0+rec,y0+rec),(x0+bw_cx-rec,y0+rec),(x0+bw_cx-rec,y0+d_cx-rec),(x0+rec,y0+d_cx-rec),(x0+rec,y0+rec)], close=True)
-        # Texto
-        msp.add_text(f"Estribo {st_bar_cx} @ {s_diseno_cm:.1f} cm", dxfattribs={'height':2, 'insert':(x0+bw_cx/2, y0+d_cx+3)})
+        msp.add_lwpolyline([(x0,y0),(x0+bw_cx,y0),(x0+bw_cx,y0+d_cx),(x0,y0+d_cx),(x0,y0)], close=True, dxfattribs={'layer':'CONCRETO'})
+        rec = 4
+        msp.add_lwpolyline([(x0+rec,y0+rec),(x0+bw_cx-rec,y0+rec),(x0+bw_cx-rec,y0+d_cx-rec),(x0+rec,y0+d_cx-rec),(x0+rec,y0+rec)], close=True, dxfattribs={'layer':'ACERO'})
+        if _USE_H3:
+            TH3 = 0.025*20
+            dxf_dim_horiz(msp, x0, x0+bw_cx, y0-8, f"b = {bw_cx:.0f} cm", 20)
+            dxf_dim_vert(msp, x0+bw_cx+5, y0, y0+d_cx, f"d = {d_cx:.0f} cm", 20)
+            dxf_text(msp, x0+bw_cx/2, y0+d_cx+5, f"Estribo {st_bar_cx} @ {s_diseno_cm:.1f} cm", "TEXTO", h=TH3*1.1, ha="center")
+            _cam3 = dxf_rotulo_campos(f"Secc. Viga {bw_cx:.0f}x{d_cx:.0f}cm – Cortante", norma_sel, "001")
+            dxf_rotulo(msp, _cam3, x0, y0-50, rot_w=max(bw_cx*2,20), rot_h=15, escala=20)
+        else:
+            msp.add_text(f"Estribo {st_bar_cx} @ {s_diseno_cm:.1f} cm", dxfattribs={'height':2, 'insert':(x0+bw_cx/2, y0+d_cx+3)})
         out_str = io.StringIO()
         doc_dxf.write(out_str)
-        out = out_str.getvalue().encode('utf-8')
-        st.download_button("Descargar DXF", data=out, file_name="Seccion_Cortante.dxf")
+        st.download_button("Descargar DXF", data=out_str.getvalue().encode('utf-8'), file_name="Seccion_Cortante.dxf")
 
 # =============================================================================
 # 2. MÉNSULAS (CORBELS) – ACI 318
@@ -490,17 +502,31 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
             buf.seek(0)
             st.download_button("Descargar Memoria DOCX", data=buf, file_name="Corbel.docx")
         with tab_dxf:
+            try:
+                from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                         dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
+                _USE_H3b = True
+            except ImportError:
+                _USE_H3b = False
             doc_dxf = ezdxf.new('R2010')
             doc_dxf.units = ezdxf.units.CM
+            if _USE_H3b:
+                dxf_setup(doc_dxf, 20); dxf_add_layers(doc_dxf)
             msp = doc_dxf.modelspace()
-            # Perfil de la ménsula
             x0, y0 = 0, 0
-            msp.add_lwpolyline([(x0,y0),(x0+a_men,y0),(x0+a_men,y0+h_men),(x0,y0+h_men),(x0,y0)], close=True)
-            msp.add_text(f"As = {As_prov_men:.2f} cm²", dxfattribs={'height':2, 'insert':(a_men/2, y0+h_men+2)})
+            msp.add_lwpolyline([(x0,y0),(x0+a_men,y0),(x0+a_men,y0+h_men),(x0,y0+h_men),(x0,y0)], close=True, dxfattribs={'layer':'CONCRETO'})
+            if _USE_H3b:
+                TH3b = 0.025*20
+                dxf_dim_horiz(msp, x0, x0+a_men, y0-8, f"a = {a_men:.0f} cm", 20)
+                dxf_dim_vert(msp, x0+a_men+5, y0, y0+h_men, f"h = {h_men:.0f} cm", 20)
+                dxf_text(msp, a_men/2, y0+h_men+5, f"As = {As_prov_men:.2f} cm² ({n_bars}x{bar_men})", "TEXTO", h=TH3b*1.1, ha="center")
+                _cam3b = dxf_rotulo_campos(f"Mensula {a_men:.0f}x{h_men:.0f}cm – Corbel", norma_sel, "001")
+                dxf_rotulo(msp, _cam3b, x0, y0-50, rot_w=max(a_men*2,20), rot_h=15, escala=20)
+            else:
+                msp.add_text(f"As = {As_prov_men:.2f} cm²", dxfattribs={'height':2, 'insert':(a_men/2, y0+h_men+2)})
             out_str = io.StringIO()
             doc_dxf.write(out_str)
-            out = out_str.getvalue().encode('utf-8')
-            st.download_button("Descargar DXF", data=out, file_name="Corbel.dxf")
+            st.download_button("Descargar DXF", data=out_str.getvalue().encode('utf-8'), file_name="Corbel.dxf")
 
 # =============================================================================
 # 3. PREDIMENSIONAMIENTO DE COLUMNAS
@@ -577,15 +603,31 @@ with st.expander(_t("📐 Predimensionamiento de Columnas", "📐 Column Prelimi
         st.download_button("Descargar Memoria DOCX", data=buf, file_name="Predimensionamiento.docx")
 
         # DXF de la sección cuadrada
+        try:
+            from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                     dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
+            _USE_H3c = True
+        except ImportError:
+            _USE_H3c = False
         doc_dxf = ezdxf.new('R2010')
         doc_dxf.units = ezdxf.units.CM
+        if _USE_H3c:
+            dxf_setup(doc_dxf, 20); dxf_add_layers(doc_dxf)
         msp = doc_dxf.modelspace()
-        msp.add_lwpolyline([(0,0),(b_round,0),(b_round,b_round),(0,b_round),(0,0)], close=True)
-        msp.add_text(f"{b_round}x{b_round} cm", dxfattribs={'height':3, 'insert':(b_round/2, b_round/2)})
+        msp.add_lwpolyline([(0,0),(b_round,0),(b_round,b_round),(0,b_round),(0,0)], close=True, dxfattribs={'layer':'CONCRETO'})
+        if _USE_H3c:
+            TH3c = 0.025*20
+            dxf_dim_horiz(msp, 0, b_round, -8, f"b = {b_round} cm", 20)
+            dxf_dim_vert(msp, b_round+5, 0, b_round, f"h = {b_round} cm", 20)
+            dxf_text(msp, b_round/2, b_round+5, f"SECCION COLUMNA {b_round}x{b_round}cm", "EJES", h=TH3c*1.1, ha="center")
+            dxf_text(msp, b_round/2, b_round/2, f"kg={Pu_fact:.0f}kN", "TEXTO", h=TH3c*0.9, ha="center")
+            _cam3c = dxf_rotulo_campos(f"Columna Predim {b_round}x{b_round}cm – {pisos}P", norma_sel, "001")
+            dxf_rotulo(msp, _cam3c, 0, -50, rot_w=max(b_round*2,20), rot_h=15, escala=20)
+        else:
+            msp.add_text(f"{b_round}x{b_round} cm", dxfattribs={'height':3, 'insert':(b_round/2, b_round/2)})
         out_str = io.StringIO()
         doc_dxf.write(out_str)
-        out = out_str.getvalue().encode('utf-8')
-        st.download_button("Descargar DXF", data=out, file_name="Columna_Predim.dxf")
+        st.download_button("Descargar DXF", data=out_str.getvalue().encode('utf-8'), file_name="Columna_Predim.dxf")
 
 # =============================================================================
 # 4. CAPACIDAD AXIAL COLUMNAS CORTAS

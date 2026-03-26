@@ -594,52 +594,78 @@ with tab2:
     st.pyplot(fig)
     
     st.markdown("#### 💾 Exportar DXF (Planta + Elevación)")
+    try:
+        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                 dxf_dim_horiz, dxf_dim_vert, dxf_rotulo,
+                                 dxf_leyenda, dxf_rotulo_campos)
+        _USE_H = True
+    except ImportError:
+        _USE_H = False
     doc_dxf = ezdxf.new('R2010')
     doc_dxf.units = ezdxf.units.M
+    if _USE_H:
+        dxf_setup(doc_dxf, 50)      # escala 1:50 para muros
+        dxf_add_layers(doc_dxf)
     msp = doc_dxf.modelspace()
-    # Capas
     for lay, col in [('CONCRETO',7), ('ACERO',1), ('TEXTO',3), ('SUELO',2)]:
         if lay not in doc_dxf.layers:
             doc_dxf.layers.add(lay, color=col)
     # Planta (vista superior de la base)
-    # Base
     msp.add_lwpolyline([(0,0), (B_base,0), (B_base,1), (0,1), (0,0)], close=True, dxfattribs={'layer':'CONCRETO'})
-    # Ubicación de la pantalla en planta (línea central)
     msp.add_line((pie_muro,0), (pie_muro,1), dxfattribs={'layer':'ACERO'})
     msp.add_line((pie_muro+base_pantalla,0), (pie_muro+base_pantalla,1), dxfattribs={'layer':'ACERO'})
-    # Acero base (barras longitudinales)
     for i in range(int(B_base*10)+1):
         x = i/10
         msp.add_line((x,0.4), (x,0.6), dxfattribs={'layer':'ACERO'})
-    # Acero base transversal (simplificado)
     for j in range(0,11):
         y = j/10
         msp.add_line((0.2,y), (B_base-0.2,y), dxfattribs={'layer':'ACERO'})
-    
-    # Elevación (desplazada a la derecha)
+    # Elevación
     off_x = B_base + 2
-    # Base
     msp.add_lwpolyline([(off_x,0), (off_x+B_base,0), (off_x+B_base,espesor_base), (off_x,espesor_base), (off_x,0)], close=True, dxfattribs={'layer':'CONCRETO'})
-    # Pantalla
     pts_elev = [(off_x+pie_muro, espesor_base), (off_x+pie_muro+base_pantalla, espesor_base),
                 (off_x+pie_muro+base_pantalla, H_muro), (off_x+pie_muro+base_pantalla-corona, H_muro)]
     msp.add_lwpolyline(pts_elev, close=True, dxfattribs={'layer':'CONCRETO'})
-    # Acero vertical en pantalla (líneas)
+    # Acero vertical
     for i in range(int(100/s_vert)+1):
         x = off_x + pie_muro + i * s_vert/100
         if x <= off_x+pie_muro+base_pantalla:
             msp.add_line((x, espesor_base), (x, H_muro), dxfattribs={'layer':'ACERO'})
     # Estribos horizontales
     if s_est > 0:
-        n_est = int(H_muro / (s_est/100)) + 1
-        for i in range(n_est):
+        n_est_elev = int(H_muro / (s_est/100)) + 1
+        for i in range(n_est_elev):
             z = espesor_base + i * s_est/100
             if z <= H_muro:
                 msp.add_line((off_x+pie_muro, z), (off_x+pie_muro+base_pantalla, z), dxfattribs={'layer':'ACERO'})
-    # Detalle de empalme
-    splice_zone = H_muro/3
-    msp.add_text(f"Empalme Clase B\nLap={splice_length_mm/10:.0f} cm", dxfattribs={'layer':'TEXTO','height':0.2,'insert':(off_x+pie_muro+base_pantalla+0.2, splice_zone)})
-    
+    # Suelo inclinado
+    msp.add_line((off_x+pie_muro+base_pantalla, H_muro), (off_x+B_base, H_prima), dxfattribs={'layer':'SUELO'})
+    msp.add_text(f"Empalme Clase B  Lap={splice_length_mm/10:.0f} cm",
+                 dxfattribs={'layer':'TEXTO','height':0.18,'insert':(off_x+pie_muro+base_pantalla+0.15, H_muro/3)})
+    if _USE_H:
+        TH = 0.025 * 50
+        # Cotas elevación
+        dxf_dim_horiz(msp, off_x, off_x+B_base, -0.6, f"B = {B_base:.2f} m", 50)
+        dxf_dim_vert(msp, off_x-0.6, 0, H_muro, f"H = {H_muro:.2f} m", 50)
+        dxf_dim_vert(msp, off_x-1.0, 0, espesor_base, f"eb = {espesor_base:.2f} m", 50)
+        # Títulos
+        dxf_text(msp, B_base/2, 1.3, "PLANTA", "EJES", h=TH*1.2, ha="center")
+        dxf_text(msp, off_x+B_base/2, H_muro+0.4, "ELEVACION", "EJES", h=TH*1.2, ha="center")
+        dxf_text(msp, off_x+B_base/2, H_muro+0.7,
+                 f"Muro H={H_muro:.1f}m  B={B_base:.1f}m  |  fc={fc:.0f}MPa  fy={fy:.0f}MPa",
+                 "TEXTO", h=TH, ha="center")
+        # Leyenda
+        dxf_leyenda(msp, off_x+B_base+0.3, H_muro-0.5, [
+            ("CONCRETO", "Concreto"),
+            ("ACERO",    f"Acero {rebar_vert} @ {s_vert:.0f}cm"),
+            ("SUELO",    "Superficie suelo"),
+        ], 50)
+        # Rótulo
+        _cam = dxf_rotulo_campos(f"Muro Contencion H={H_muro:.1f}m  B={B_base:.1f}m", norma_sel, "001")
+        dxf_rotulo(msp, _cam, off_x, -4.5, rot_w=9, rot_h=3, escala=50)
+    else:
+        msp.add_text(f"Empalme Clase B\nLap={splice_length_mm/10:.0f} cm",
+                     dxfattribs={'layer':'TEXTO','height':0.18,'insert':(off_x+pie_muro+base_pantalla+0.2, H_muro/3)})
     _out = io.StringIO()
     doc_dxf.write(_out)
     st.download_button("Descargar DXF", data=_out.getvalue().encode('utf-8'), file_name=f"Muro_{H_muro:.1f}m.dxf", mime="application/dxf")

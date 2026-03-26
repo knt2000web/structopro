@@ -626,8 +626,18 @@ with tab2:
     # DXF mejorado con empalmes y ganchos
     st.markdown("---")
     st.markdown(_t("#### 💾 Exportar Plano (AutoCAD DXF)", "#### 💾 Export Drawing (AutoCAD DXF)"))
+    try:
+        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                 dxf_dim_horiz, dxf_dim_vert, dxf_rotulo,
+                                 dxf_leyenda, dxf_rotulo_campos)
+        _USE_H = True
+    except ImportError:
+        _USE_H = False
     doc_dxf = ezdxf.new('R2010')
     doc_dxf.units = ezdxf.units.CM
+    if _USE_H:
+        dxf_setup(doc_dxf, 20)
+        dxf_add_layers(doc_dxf)
     msp = doc_dxf.modelspace()
     # Capas
     for lay, col in [('CONCRETO',7), ('ESTRIBOS',4), ('VARILLAS',1), ('TEXTO',3), ('COTAS',2), ('EMPALME',6)]:
@@ -645,76 +655,63 @@ with tab2:
     
     # Vista en elevación (lado derecho)
     off_x = D_col + 20
-    # Concreto (rectángulo)
     msp.add_lwpolyline([(off_x, 0), (off_x+D_col, 0), (off_x+D_col, L_col), (off_x, L_col), (off_x, 0)], 
                        close=True, dxfattribs={'layer': 'CONCRETO'})
-    # Varillas longitudinales (líneas verticales) con ganchos en los extremos
-    hook_len = 12 * rebar_diam / 10  # cm, gancho a 90° de longitud 12db
+    # Varillas longitudinales con ganchos
+    hook_len = 12 * rebar_diam / 10
     for (x_mm, y_mm) in bar_coords:
         x_cm = x_mm / 10
         x_pos = off_x + x_cm + D_col/2
-        # Varilla principal
         msp.add_line((x_pos, 0), (x_pos, L_col), dxfattribs={'layer': 'VARILLAS'})
-        # Gancho inferior (90°)
         msp.add_line((x_pos, 0), (x_pos + hook_len, 0), dxfattribs={'layer': 'VARILLAS'})
         msp.add_line((x_pos, 0), (x_pos - hook_len, 0), dxfattribs={'layer': 'VARILLAS'})
-        # Gancho superior (90°)
         msp.add_line((x_pos, L_col), (x_pos + hook_len, L_col), dxfattribs={'layer': 'VARILLAS'})
         msp.add_line((x_pos, L_col), (x_pos - hook_len, L_col), dxfattribs={'layer': 'VARILLAS'})
     
-    # Estribos en elevación (líneas horizontales con ganchos)
-    z_positions = []
-    if zona_especial:
-        z = s_conf / 2
-        while z <= Lo_conf:
-            z_positions.append(z)
-            z += s_conf
-        z = Lo_conf + s_basico
-        while z < L_col - Lo_conf:
-            z_positions.append(z)
-            z += s_basico
-        z = L_col - Lo_conf + s_conf / 2
-        while z <= L_col:
-            z_positions.append(z)
-            z += s_conf
-    else:
-        n_est_elev = int(L_col / s_estribo_cm) + 1
-        z_positions = [i * s_estribo_cm for i in range(n_est_elev)]
-
+    # Estribos en elevación
     for z in z_positions:
         if z <= L_col:
-            # Línea horizontal del estribo
             msp.add_line((off_x, z), (off_x + D_col, z), dxfattribs={'layer': 'ESTRIBOS'})
-            # Ganchos a 135° (simplificados como pequeñas líneas inclinadas)
-            hook_ang = 45  # grados
-            hook_len_cm = 6 * stirrup_diam / 10  # cm
-            dx = hook_len_cm * math.cos(math.radians(hook_ang))
-            dy = hook_len_cm * math.sin(math.radians(hook_ang))
-            # Extremo izquierdo
-            x_left = off_x
-            msp.add_line((x_left, z), (x_left - dx, z + dy), dxfattribs={'layer': 'ESTRIBOS'})
-            msp.add_line((x_left, z), (x_left - dx, z - dy), dxfattribs={'layer': 'ESTRIBOS'})
-            # Extremo derecho
-            x_right = off_x + D_col
-            msp.add_line((x_right, z), (x_right + dx, z + dy), dxfattribs={'layer': 'ESTRIBOS'})
-            msp.add_line((x_right, z), (x_right + dx, z - dy), dxfattribs={'layer': 'ESTRIBOS'})
     
-    # Zona de empalme (sombreado)
+    # Zona de empalme
     if splice_zone_height > 0:
-        # Relleno de la zona de empalme con líneas diagonales
-        rect = msp.add_lwpolyline([(off_x, splice_start), (off_x+D_col, splice_start), (off_x+D_col, splice_end), (off_x, splice_end), (off_x, splice_start)],
-                                   close=True, dxfattribs={'layer': 'EMPALME'})
-        # Hatch (no es trivial en ezdxf, pero podemos agregar un texto)
-        msp.add_text(_t(f"EMPALME Clase B\nLap = {lap_length_mm/10:.1f} cm", f"SPLICE Class B\nLap = {lap_length_mm/10:.1f} cm"),
+        msp.add_lwpolyline([(off_x, splice_start), (off_x+D_col, splice_start), (off_x+D_col, splice_end), (off_x, splice_end), (off_x, splice_start)],
+                           close=True, dxfattribs={'layer': 'EMPALME'})
+        msp.add_text(_t(f"EMPALME Clase B  Lap = {lap_length_mm/10:.1f} cm", f"SPLICE Class B  Lap = {lap_length_mm/10:.1f} cm"),
                      dxfattribs={'layer': 'TEXTO', 'height': 2, 'insert': (off_x + D_col/2, (splice_start + splice_end)/2)})
-    
-    # Tabla de armado
-    table_text = (f"ARMADO LONGITUDINAL:\n{n_barras_total} {rebar_type}\nAs = {Ast:.2f} cm²\n"
-                  f"Lap = {lap_length_mm/10:.1f} cm (Clase B)\n\n"
-                  f"ESTRIBOS:\n{stirrup_type} @ {s_estribo_cm:.1f} cm\n"
-                  f"Long total = {long_estribos_m:.2f} m\nPeso = {peso_acero_estribos_kg:.1f} kg\n\n"
-                  f"GANCHOS: 90° en longitudinales (12db)\n135° en estribos (6db)")
-    msp.add_text(table_text, dxfattribs={'layer': 'TEXTO', 'height': 2, 'insert': (off_x + D_col + 10, L_col - 20)})
+
+    if _USE_H:
+        # Cotas planta
+        dxf_dim_horiz(msp, -D_col/2, D_col/2, -D_col/2-10, f"D = {D_col:.0f} cm", 20)
+        # Cotas elevación
+        dxf_dim_horiz(msp, off_x, off_x+D_col, -10, f"D = {D_col:.0f} cm", 20)
+        dxf_dim_vert(msp, off_x-12, 0, L_col, f"L = {L_col:.0f} cm", 20)
+        # Títulos de vista
+        dxf_text(msp, 0, D_col/2+10, "PLANTA", "EJES", h=1.6, ha="center")
+        dxf_text(msp, off_x+D_col/2, L_col+5, "ELEVACION", "EJES", h=1.6, ha="center")
+        dxf_text(msp, off_x+D_col/2, L_col+9,
+                 f"Col. Circ. D={D_col:.0f}cm  {n_barras_total} var {rebar_type}  Estr {stirrup_type}", 
+                 "TEXTO", h=1.2, ha="center")
+        # Leyenda
+        _lx = off_x + D_col + 12
+        _ly = L_col - 10
+        dxf_leyenda(msp, _lx, _ly, [
+            ("CONCRETO", "Concreto"),
+            ("VARILLAS",  f"Var. Long. {rebar_type}"),
+            ("ESTRIBOS",  f"Estribo {stirrup_type}" if "Estrib" in col_type else f"Espiral {stirrup_type}"),
+            ("EMPALME",   "Zona empalme"),
+        ], 20)
+        # Rótulo
+        _cam = dxf_rotulo_campos(f"Columna Circular D={D_col:.0f}cm  L={L_col:.0f}cm", norma_sel, "001")
+        dxf_rotulo(msp, _cam, off_x, -80, rot_w=180, rot_h=60, escala=20)
+    else:
+        msp.add_text(
+            (f"ARMADO LONGITUDINAL:\n{n_barras_total} {rebar_type}\nAs = {Ast:.2f} cm²\n"
+             f"Lap = {lap_length_mm/10:.1f} cm (Clase B)\n\n"
+             f"ESTRIBOS:\n{stirrup_type} @ {s_estribo_cm:.1f} cm\n"
+             f"Long total = {long_estribos_m:.2f} m\nPeso = {peso_acero_estribos_kg:.1f} kg\n\n"
+             f"GANCHOS: 90 en longitudinales (12db)\n135 en estribos (6db)"),
+            dxfattribs={'layer': 'TEXTO', 'height': 2, 'insert': (off_x + D_col + 10, L_col - 20)})
     
     out_sio = io.StringIO()
     doc_dxf.write(out_sio)

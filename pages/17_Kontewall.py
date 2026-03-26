@@ -1711,9 +1711,17 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
             if st.button("🗂️ Generar DXF", key="btn_dxf"):
                 try:
                     import ezdxf
+                    try:
+                        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                                 dxf_rotulo, dxf_rotulo_campos)
+                        _USE_HKW = True
+                    except ImportError:
+                        _USE_HKW = False
                     doc = ezdxf.new('R2010')
                     doc.header['$INSUNITS'] = 6
                     doc.header['$MEASUREMENT'] = 1
+                    if _USE_HKW:
+                        dxf_setup(doc, 20); dxf_add_layers(doc)
                     msp = doc.modelspace()
 
                     layers = {

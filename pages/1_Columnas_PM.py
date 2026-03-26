@@ -1069,8 +1069,18 @@ with tab2:
         st.markdown(f"**Total de crossties en columna:** {total_crossties_por_estribo * n_estribos_total} unidades")
         st.caption("📄 Ref: NSR-10 Cap. C.7, C.10, C.21 | ACI 318-19 Cap. 18, 20, 25")
         st.markdown("#### 💾 Exportar Plano (AutoCAD)")
+        try:
+            from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                     dxf_dim_horiz, dxf_dim_vert, dxf_rotulo,
+                                     dxf_leyenda, dxf_rotulo_campos)
+            _USE_HELPER = True
+        except ImportError:
+            _USE_HELPER = False
         doc_dxf = ezdxf.new('R2010')
         doc_dxf.units = ezdxf.units.CM
+        if _USE_HELPER:
+            dxf_setup(doc_dxf, 20)
+            dxf_add_layers(doc_dxf)
         msp = doc_dxf.modelspace()
         for lay, col in [('CONCRETO',7), ('ESTRIBOS',4), ('VARILLAS',1), ('TEXTO',3), ('EMPALME',6)]:
             if lay not in doc_dxf.layers:
@@ -1135,9 +1145,34 @@ with tab2:
             y2 = splice_end
             msp.add_lwpolyline([(off_x, y1), (off_x+b, y1), (off_x+b, y2), (off_x, y2), (off_x, y1)], dxfattribs={'layer':'EMPALME'})
             msp.add_text(f"Empalme Clase B\nLap={splice_length_mm/10:.1f} cm", dxfattribs={'layer':'TEXTO','height':2,'insert':(off_x+b/2, (y1+y2)/2)})
-        # Textos de cotas
-        msp.add_text(f"L = {L_col:.0f} cm", dxfattribs={'layer':'TEXTO','height':2,'insert':(off_x+b/2, L_col+3)})
-        msp.add_text(f"b = {b:.0f} cm", dxfattribs={'layer':'TEXTO','height':2,'insert':(off_x-3, L_col/2)})
+        # Cotas y leyenda mejorada
+        if _USE_HELPER:
+            # -- Sección: cotas b y h
+            dxf_dim_horiz(msp, 0, b, -8, f"b = {b:.0f} cm", 20)
+            dxf_dim_vert(msp, -8, 0, h, f"h = {h:.0f} cm", 20)
+            # -- Elevación: cotas b y L
+            dxf_dim_horiz(msp, off_x, off_x+b, -8, f"b = {b:.0f} cm", 20)
+            dxf_dim_vert(msp, off_x-10, 0, L_col, f"L = {L_col:.0f} cm", 20)
+            # -- Título sección
+            dxf_text(msp, b/2, h+5, "SECCION A-A", "EJES", h=1.6, ha="center")
+            dxf_text(msp, off_x+b/2, L_col+5, "ELEVACION", "EJES", h=1.6, ha="center")
+            dxf_text(msp, off_x+b/2, L_col+8, f"Columna {b:.0f}x{h:.0f}cm  |  {n_barras_total} var {rebar_type}  |  Estr {stirrup_type}", "TEXTO", h=1.2, ha="center")
+            # -- Leyenda
+            _ley_x = off_x + b + 15
+            _ley_y = L_col - 10
+            dxf_leyenda(msp, _ley_x, _ley_y, [
+                ("CONCRETO", "Concreto"),
+                ("VARILLAS",  f"Var. Long. {rebar_type}"),
+                ("ESTRIBOS",  f"Estribo {stirrup_type}"),
+                ("EMPALME",   "Zona de empalme"),
+            ])
+            # -- Rotulo
+            _cam = dxf_rotulo_campos(
+                f"Columna {b:.0f}x{h:.0f}cm  L={L_col:.0f}cm", norma_sel, "001")
+            dxf_rotulo(msp, _cam, off_x, -80, rot_w=180, rot_h=60, escala=20)
+        else:
+            msp.add_text(f"L = {L_col:.0f} cm", dxfattribs={'layer':'TEXTO','height':2,'insert':(off_x+b/2, L_col+3)})
+            msp.add_text(f"b = {b:.0f} cm", dxfattribs={'layer':'TEXTO','height':2,'insert':(off_x-3, L_col/2)})
         _out_dxf = io.StringIO()
         doc_dxf.write(_out_dxf)
         st.download_button("Descargar DXF (Sección + Elevación con ganchos)", data=_out_dxf.getvalue().encode('utf-8'), file_name=f"Columna_{b:.0f}x{h:.0f}.dxf", mime="application/dxf")

@@ -625,27 +625,42 @@ if st.session_state.resultados3d is not None:
     # DXF (planos 2D)
     with col_e2:
         if st.button(_t("📐 Exportar a DXF", "📐 Export to DXF")):
+            try:
+                from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                         dxf_rotulo, dxf_rotulo_campos)
+                _USE_H15 = True
+            except ImportError:
+                _USE_H15 = False
             doc_dxf = ezdxf.new('R2010')
             doc_dxf.units = ezdxf.units.M
+            if _USE_H15:
+                dxf_setup(doc_dxf, 50); dxf_add_layers(doc_dxf)
             msp = doc_dxf.modelspace()
-            # Capas
-            for lay, col in [('ESTRUCTURA', 3), ('COTAS', 2), ('TEXTO', 1)]:
-                if lay not in doc_dxf.layers:
-                    doc_dxf.layers.add(lay, color=col)
+            for lay, col15 in [('ESTRUCTURA',3),('COTAS',2),('TEXTO',1)]:
+                if lay not in doc_dxf.layers: doc_dxf.layers.add(lay, color=col15)
             # Planta (vista en XZ)
+            x_vals15, z_vals15 = [], []
             for e in elements:
                 ni = nodes[nodes['ID']==e["N I"]].iloc[0]
                 nj = nodes[nodes['ID']==e["N J"]].iloc[0]
-                msp.add_line((ni['X'], ni['Z']), (nj['X'], nj['Z']), dxfattribs={'layer': 'ESTRUCTURA'})
-            # Alzado (vista XY o YZ, elegimos XY)
-            off_x = 10  # desplazamiento para no superponer
+                msp.add_line((ni['X'], ni['Z']), (nj['X'], nj['Z']), dxfattribs={'layer':'ESTRUCTURA'})
+                x_vals15 += [ni['X'], nj['X']]; z_vals15 += [ni['Z'], nj['Z']]
+            # Alzado (vista XY)
+            off_x = (max(x_vals15) - min(x_vals15) + 2) if x_vals15 else 10
             for e in elements:
                 ni = nodes[nodes['ID']==e["N I"]].iloc[0]
                 nj = nodes[nodes['ID']==e["N J"]].iloc[0]
-                msp.add_line((ni['X'] + off_x, ni['Y']), (nj['X'] + off_x, nj['Y']), dxfattribs={'layer': 'ESTRUCTURA'})
+                msp.add_line((ni['X']+off_x, ni['Y']), (nj['X']+off_x, nj['Y']), dxfattribs={'layer':'ESTRUCTURA'})
+            if _USE_H15:
+                _x0_15 = min(x_vals15) if x_vals15 else 0
+                _z015 = min(z_vals15) if z_vals15 else 0
+                _xw_15 = max(x_vals15)-_x0_15 if x_vals15 else 10
+                dxf_text(msp, _x0_15, (max(z_vals15)+0.5 if z_vals15 else 1), f"StructMaster 3D – {norma_sel}", "EJES", h=0.025*50, ha="left")
+                _cam15 = dxf_rotulo_campos("Analisis Estructural 3D", norma_sel, "001")
+                dxf_rotulo(msp, _cam15, _x0_15, _z015-4, rot_w=max(_xw_15,10), rot_h=3, escala=50)
             out_dxf = io.StringIO()
             doc_dxf.write(out_dxf)
-            st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_3d.dxf", mime="application/dxf")
+            st.download_button(_t("📥 Descargar DXF","📥 Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_3d.dxf", mime="application/dxf")
 
     # Memoria DOCX
     with col_e3:

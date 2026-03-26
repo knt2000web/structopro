@@ -755,7 +755,17 @@ with tab_3d:
 
 with tab_dxf:
     st.subheader("📏 Plano DXF — Planta, Elevación y Sección")
+    try:
+        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                 dxf_dim_horiz, dxf_dim_vert, dxf_rotulo,
+                                 dxf_leyenda, dxf_rotulo_campos)
+        _USE_H = True
+    except ImportError:
+        _USE_H = False
     doc_dxf = ezdxf.new('R2010'); msp = doc_dxf.modelspace()
+    if _USE_H:
+        dxf_setup(doc_dxf, 50)
+        dxf_add_layers(doc_dxf)
     for lay, col_num in [('MURO',5),('COLUMNAS',4),('ACERO',1),('SOLERA',3),('TEXTO',2),('COTAS',6)]:
         if lay not in doc_dxf.layers: doc_dxf.layers.add(lay, color=col_num)
     Lw_d=L_m_in; Hw_d=h_m_in; tw_d=t_m_in
@@ -764,7 +774,7 @@ with tab_dxf:
     for xc_d in [0, Lw_d-bc_d]:
         msp.add_lwpolyline([(xc_d,0),(xc_d+bc_d,0),(xc_d+bc_d,Hw_d-hv_d),(xc_d,Hw_d-hv_d),(xc_d,0)],
                            close=True,dxfattribs={'layer':'COLUMNAS'})
-        msp.add_text(f"{n_bars_f}Ø{db_col:.0f}mm",dxfattribs={'layer':'TEXTO','height':0.06,'insert':(xc_d+bc_d/2,Hw_d/2)})
+        msp.add_text(f"{n_bars_f}O{db_col:.0f}mm",dxfattribs={'layer':'TEXTO','height':0.06,'insert':(xc_d+bc_d/2,Hw_d/2)})
         Zd=Z_col/100
         msp.add_lwpolyline([(xc_d,0),(xc_d+bc_d,0),(xc_d+bc_d,Zd),(xc_d,Zd),(xc_d,0)],
                            close=True,dxfattribs={'layer':'COTAS'})
@@ -779,36 +789,45 @@ with tab_dxf:
             if yh_d<Hw_d-hv_d: msp.add_line((bc_d,yh_d),(Lw_d-bc_d,yh_d),dxfattribs={'layer':'ACERO'})
     msp.add_lwpolyline([(0,Hw_d-hv_d),(Lw_d,Hw_d-hv_d),(Lw_d,Hw_d),(0,Hw_d),(0,Hw_d-hv_d)],
                        close=True,dxfattribs={'layer':'SOLERA'})
-    msp.add_text(f"Solera {vs_b_in:.0f}×{vs_h_in:.0f}|{n_sol}Ø{db_col:.0f}mm",
+    msp.add_text(f"Solera {vs_b_in:.0f}x{vs_h_in:.0f}|{n_sol}O{db_col:.0f}mm",
                  dxfattribs={'layer':'TEXTO','height':0.05,'insert':(Lw_d/2,Hw_d-hv_d/2)})
-    msp.add_line((-0.2,0),(-0.2,Hw_d),dxfattribs={'layer':'COTAS'})
-    msp.add_text(f"h={h_m_in}m",dxfattribs={'layer':'TEXTO','height':0.07,'insert':(-0.5,Hw_d/2)})
-    msp.add_line((0,-0.15),(Lw_d,-0.15),dxfattribs={'layer':'COTAS'})
-    msp.add_text(f"L={L_m_in}m",dxfattribs={'layer':'TEXTO','height':0.07,'insert':(Lw_d/2,-0.35)})
-    msp.add_text(norma_ac+f" | {nombre_muro}",dxfattribs={'layer':'TEXTO','height':0.09,'insert':(0,Hw_d+0.1)})
     # Planta
     msp.add_lwpolyline([(0,off_y),(Lw_d,off_y),(Lw_d,off_y+tw_d),(0,off_y+tw_d),(0,off_y)],
                        close=True,dxfattribs={'layer':'MURO'})
     for xc_d in [0,Lw_d-bc_d]:
         msp.add_lwpolyline([(xc_d,off_y),(xc_d+bc_d,off_y),(xc_d+bc_d,off_y+tw_d),(xc_d,off_y+tw_d),(xc_d,off_y)],
                            close=True,dxfattribs={'layer':'COLUMNAS'})
-    msp.add_text("PLANTA",dxfattribs={'layer':'TEXTO','height':0.10,'insert':(Lw_d/2,off_y+tw_d+0.1)})
-    msp.add_text(f"t={t_m_in}m",dxfattribs={'layer':'TEXTO','height':0.06,'insert':(-0.5,off_y+tw_d/2)})
     # Sección columna
     ox2=Lw_d+0.6
     msp.add_lwpolyline([(ox2,0),(ox2+bc_d,0),(ox2+bc_d,dc_d),(ox2,dc_d),(ox2,0)],
                        close=True,dxfattribs={'layer':'COLUMNAS'})
-    msp.add_text(f"Secc. Col {col_b_min:.0f}×{col_d_use:.0f}cm",dxfattribs={'layer':'TEXTO','height':0.05,'insert':(ox2,dc_d+0.04)})
+    msp.add_text(f"Secc. Col {col_b_min:.0f}x{col_d_use:.0f}cm",dxfattribs={'layer':'TEXTO','height':0.05,'insert':(ox2,dc_d+0.04)})
     n2x=2; n2y=max(2,n_bars_f//2)
     for xi in range(n2x):
         for yi in range(n2y):
             xb2=ox2+recub_col/100+xi*(bc_d-2*recub_col/100)/max(n2x-1,1)
             yb2=recub_col/100+yi*(dc_d-2*recub_col/100)/max(n2y-1,1)
             msp.add_circle((xb2,yb2),db_col/2000,dxfattribs={'layer':'ACERO'})
+    # Cotas y rótulo profesional
+    if _USE_H:
+        TH = 0.025 * 50
+        dxf_dim_horiz(msp, 0, Lw_d, -0.5, f"L = {L_m_in:.2f} m", 50)
+        dxf_dim_vert(msp, -0.5, 0, Hw_d, f"h = {h_m_in:.2f} m", 50)
+        dxf_text(msp, Lw_d/2, Hw_d+0.3, "ELEVACION", "EJES", h=TH*1.2, ha="center")
+        dxf_text(msp, Lw_d/2, off_y+tw_d+0.15, "PLANTA", "EJES", h=TH*1.2, ha="center")
+        dxf_text(msp, ox2+bc_d/2, dc_d+0.25, "SECCION COLUMNA", "EJES", h=TH*0.9, ha="center")
+        dxf_leyenda(msp, Lw_d+1.5, Hw_d-0.3, [
+            ("MURO",      "Muro mamposteria"),
+            ("COLUMNAS",  f"Columna {col_b_min:.0f}x{col_d_use:.0f}cm"),
+            ("ACERO",     f"Acero {db_col:.0f}mm/Estribo {db_est:.0f}mm"),
+            ("SOLERA",    f"Solera {vs_b_in:.0f}x{vs_h_in:.0f}cm"),
+        ], 50)
+        _cam = dxf_rotulo_campos(f"Albanileria Confinada {nombre_muro} L={L_m_in:.1f}m h={h_m_in:.1f}m", norma_ac, "001")
+        dxf_rotulo(msp, _cam, 0, -4.5, rot_w=9, rot_h=3, escala=50)
     _out=io.StringIO(); doc_dxf.write(_out)
     st.download_button("📥 Descargar DXF",data=_out.getvalue().encode('utf-8'),
                        file_name=f"AlbConfinada_{nombre_muro}.dxf",mime="application/dxf")
-    st.info("Plano incluye: Elevación con acero, Planta y Sección columna.")
+    st.info("Plano incluye: Elevacion con acero, Planta y Seccion columna.")
 
 with tab_mem:
     st.subheader("📄 Memoria de Cálculo DOCX")

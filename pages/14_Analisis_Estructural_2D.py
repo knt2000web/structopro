@@ -619,34 +619,45 @@ with tab_dis:
         # 2. DXF
         with col_ex2:
             if st.button(_t("📐 Exportar a DXF", "📐 Export to DXF")):
+                try:
+                    from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                             dxf_rotulo, dxf_rotulo_campos)
+                    _USE_H14 = True
+                except ImportError:
+                    _USE_H14 = False
                 doc_dxf = ezdxf.new('R2010')
                 doc_dxf.units = ezdxf.units.M
+                if _USE_H14:
+                    dxf_setup(doc_dxf, 50); dxf_add_layers(doc_dxf)
                 msp = doc_dxf.modelspace()
-                # Capas
-                for lay, col in [('ESTRUCTURA', 3), ('ZAPATAS', 4), ('COTAS', 2), ('TEXTO', 1)]:
-                    if lay not in doc_dxf.layers:
-                        doc_dxf.layers.add(lay, color=col)
-                # Dibujar estructura
+                for lay, col14 in [('ESTRUCTURA',3),('ZAPATAS',4),('COTAS',2),('TEXTO',1)]:
+                    if lay not in doc_dxf.layers: doc_dxf.layers.add(lay, color=col14)
+                x_vals, y_vals = [], []
                 for e in elements:
                     xi = nodes.loc[nodes['ID']==e["Nudo I"], 'X (m)'].values[0]
                     yi = nodes.loc[nodes['ID']==e["Nudo I"], 'Y (m)'].values[0]
                     xj = nodes.loc[nodes['ID']==e["Nudo J"], 'X (m)'].values[0]
                     yj = nodes.loc[nodes['ID']==e["Nudo J"], 'Y (m)'].values[0]
-                    msp.add_line((xi, yi), (xj, yj), dxfattribs={'layer': 'ESTRUCTURA'})
-                # Dibujar zapatas
+                    msp.add_line((xi, yi), (xj, yj), dxfattribs={'layer':'ESTRUCTURA'})
+                    x_vals += [xi, xj]; y_vals += [yi, yj]
                 for zap in design_data["zapatas"]:
                     nid = zap["Nudo"]
                     x = nodes.loc[nodes['ID']==nid, 'X (m)'].values[0]
                     y = nodes.loc[nodes['ID']==nid, 'Y (m)'].values[0]
-                    B = zap["B (m)"]
-                    half = B/2
-                    msp.add_lwpolyline([(x-half, y-half), (x+half, y-half), (x+half, y+half), (x-half, y+half), (x-half, y-half)],
-                                       close=True, dxfattribs={'layer': 'ZAPATAS'})
-                # Texto con cotas mínimas
-                msp.add_text(_t("Estructura 2D", "2D Structure"), dxfattribs={'layer': 'TEXTO', 'height': 0.2, 'insert': (0, 0)})
+                    B = zap["B (m)"]; half = B/2
+                    msp.add_lwpolyline([(x-half,y-half),(x+half,y-half),(x+half,y+half),(x-half,y+half),(x-half,y-half)], close=True, dxfattribs={'layer':'ZAPATAS'})
+                if _USE_H14:
+                    _x0 = min(x_vals) if x_vals else 0
+                    _y0 = min(y_vals) if y_vals else 0
+                    _xw = max(x_vals)-_x0 if x_vals else 10
+                    dxf_text(msp, _x0, (max(y_vals) if y_vals else 0)+0.5, f"StructMaster 2D – {norma_sel}", "EJES", h=0.025*50, ha="left")
+                    _cam14 = dxf_rotulo_campos("Analisis Estructural 2D", norma_sel, "001")
+                    dxf_rotulo(msp, _cam14, _x0, _y0-4, rot_w=max(_xw,10), rot_h=3, escala=50)
+                else:
+                    msp.add_text(_t("Estructura 2D","2D Structure"), dxfattribs={'layer':'TEXTO','height':0.2,'insert':(0,0)})
                 out_dxf = io.StringIO()
                 doc_dxf.write(out_dxf)
-                st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_2d.dxf", mime="application/dxf")
+                st.download_button(_t("📥 Descargar DXF","📥 Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_2d.dxf", mime="application/dxf")
 
         # 3. DOCX Memoria
         with col_ex3:

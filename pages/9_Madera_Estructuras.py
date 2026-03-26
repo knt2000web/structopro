@@ -346,36 +346,62 @@ with tab_3d:
         st.plotly_chart(fig3d_c, use_container_width=True)
 
 with tab_dxf:
+    try:
+        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                 dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
+        _USE_H_mad = True
+    except ImportError:
+        _USE_H_mad = False
     col_dxf1, col_dxf2 = st.columns(2)
-    
-    # Viga DXF (elevación)
+
+    # ── Viga DXF (elevación) ──
     doc_v = ezdxf.new('R2010'); doc_v.units = ezdxf.units.M
+    if _USE_H_mad:
+        dxf_setup(doc_v, 50); dxf_add_layers(doc_v)
     msp_v = doc_v.modelspace()
-    # Capas
-    for lay, col in [('MADERA',3), ('COTAS',2), ('TEXTO',1)]:
-        if lay not in doc_v.layers:
-            doc_v.layers.add(lay, color=col)
-    # Sección transversal (vista lateral)
-    msp_v.add_lwpolyline([(0,0), (span_L,0), (span_L, h_beam/1000), (0, h_beam/1000), (0,0)], close=True, dxfattribs={'layer':'MADERA'})
-    # Cota de longitud
-    msp_v.add_text(f"L = {span_L:.2f} m", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(span_L/2, -0.1)})
-    msp_v.add_text(f"h = {h_beam:.0f} mm", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(span_L+0.1, h_beam/2000)})
+    for lay, col_c in [('MADERA',3), ('COTAS',2), ('TEXTO',1)]:
+        if lay not in doc_v.layers: doc_v.layers.add(lay, color=col_c)
+    msp_v.add_lwpolyline([(0,0), (span_L,0), (span_L, h_beam/1000), (0, h_beam/1000), (0,0)],
+                         close=True, dxfattribs={'layer':'MADERA'})
+    if _USE_H_mad:
+        TH = 0.025*50
+        dxf_dim_horiz(msp_v, 0, span_L, -0.2, f"L = {span_L:.2f} m", 50)
+        dxf_dim_vert(msp_v, span_L+0.15, 0, h_beam/1000, f"h = {h_beam:.0f} mm", 50)
+        dxf_text(msp_v, span_L/2, h_beam/1000+0.15, "ELEVACION VIGA MADERA", "EJES", h=TH*1.1, ha="center")
+        _cam_v = dxf_rotulo_campos(f"Viga Madera {b_beam:.0f}x{h_beam:.0f}mm L={span_L:.1f}m", norma_sel, "001")
+        dxf_rotulo(msp_v, _cam_v, 0, -4.5, rot_w=9, rot_h=3, escala=50)
+    else:
+        msp_v.add_text(f"L = {span_L:.2f} m", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(span_L/2, -0.1)})
+        msp_v.add_text(f"h = {h_beam:.0f} mm", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(span_L+0.1, h_beam/2000)})
     _out_v = io.StringIO()
     doc_v.write(_out_v)
-    col_dxf1.download_button(_t("📥 DXF Viga", "📥 Beam DXF"), data=_out_v.getvalue().encode("utf-8"), file_name=f"Viga_Madera_{b_beam}x{h_beam}.dxf", mime="application/dxf")
+    col_dxf1.download_button(_t("📥 DXF Viga", "📥 Beam DXF"),
+                             data=_out_v.getvalue().encode("utf-8"),
+                             file_name=f"Viga_Madera_{b_beam:.0f}x{h_beam:.0f}.dxf", mime="application/dxf")
 
-    # Columna DXF (elevación)
+    # ── Columna DXF (elevación) ──
     doc_c = ezdxf.new('R2010'); doc_c.units = ezdxf.units.M
+    if _USE_H_mad:
+        dxf_setup(doc_c, 50); dxf_add_layers(doc_c)
     msp_c = doc_c.modelspace()
-    for lay, col in [('MADERA',4), ('COTAS',2), ('TEXTO',1)]:
-        if lay not in doc_c.layers:
-            doc_c.layers.add(lay, color=col)
-    msp_c.add_lwpolyline([(0,0), (b_col/1000,0), (b_col/1000, KL_col), (0, KL_col), (0,0)], close=True, dxfattribs={'layer':'MADERA'})
-    msp_c.add_text(f"H = {KL_col:.2f} m", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(b_col/2000, KL_col+0.1)})
-    msp_c.add_text(f"b = {b_col:.0f} mm", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(b_col/1000+0.05, KL_col/2)})
+    for lay, col_c in [('MADERA',4), ('COTAS',2), ('TEXTO',1)]:
+        if lay not in doc_c.layers: doc_c.layers.add(lay, color=col_c)
+    msp_c.add_lwpolyline([(0,0), (b_col/1000,0), (b_col/1000, KL_col), (0, KL_col), (0,0)],
+                         close=True, dxfattribs={'layer':'MADERA'})
+    if _USE_H_mad:
+        dxf_dim_vert(msp_c, b_col/1000+0.15, 0, KL_col, f"H = {KL_col:.2f} m", 50)
+        dxf_dim_horiz(msp_c, 0, b_col/1000, -0.2, f"b = {b_col:.0f} mm", 50)
+        dxf_text(msp_c, b_col/2000, KL_col+0.2, "ELEVACION COLUMNA MADERA", "EJES", h=TH*1.1, ha="center")
+        _cam_c = dxf_rotulo_campos(f"Columna Madera {b_col:.0f}x{h_col:.0f}mm H={KL_col:.1f}m", norma_sel, "001")
+        dxf_rotulo(msp_c, _cam_c, 0, -4.5, rot_w=9, rot_h=3, escala=50)
+    else:
+        msp_c.add_text(f"H = {KL_col:.2f} m", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(b_col/2000, KL_col+0.1)})
+        msp_c.add_text(f"b = {b_col:.0f} mm", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(b_col/1000+0.05, KL_col/2)})
     _out_c = io.StringIO()
     doc_c.write(_out_c)
-    col_dxf2.download_button(_t("📥 DXF Columna", "📥 Column DXF"), data=_out_c.getvalue().encode("utf-8"), file_name=f"Columna_Madera_{b_col}x{h_col}.dxf", mime="application/dxf")
+    col_dxf2.download_button(_t("📥 DXF Columna", "📥 Column DXF"),
+                             data=_out_c.getvalue().encode("utf-8"),
+                             file_name=f"Columna_Madera_{b_col:.0f}x{h_col:.0f}.dxf", mime="application/dxf")
 
 with tab_doc:
     if st.button(_t("Generar Memoria DOCX", "Generate DOCX Report")):

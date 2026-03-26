@@ -378,9 +378,14 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
     with c2:
         L_vr = st.number_input("Longitud viga [m]", 1.0, 30.0, st.session_state.get("vr_L", 5.0), 0.5, key="vr_L")
         varillas_vr = list(rebar_dict.keys())
-        bar_vr = st.selectbox("Varilla:", varillas_vr, 
-                              index=varillas_vr.index(st.session_state.vr_bar) if "vr_bar" in st.session_state and st.session_state.vr_bar in varillas_vr else 0,
-                              key="vr_bar")
+        # Mínimo práctico: #4 (12.7mm) en US  |  12mm en SI  — el #3/8mm se reserva para estribos
+        _def_vr = "#4 (Ø12.7mm)" if "Pulgadas" in bar_sys else "12mm"
+        _def_idx_vr = varillas_vr.index(_def_vr) if _def_vr in varillas_vr else 1
+        bar_vr = st.selectbox(
+            "Varilla longitudinal (mín. recomendado #4 / 12mm — el #3 se usa solo para estribos):",
+            varillas_vr,
+            index=varillas_vr.index(st.session_state.vr_bar) if "vr_bar" in st.session_state and st.session_state.vr_bar in varillas_vr else _def_idx_vr,
+            key="vr_bar")
         Ab_vr = rebar_dict[bar_vr]; db_vr = diam_dict[bar_vr]
 
     d_vr = h_vr - dp_vr
@@ -412,31 +417,35 @@ with st.expander(_t("📐 Diseño a Flexión — Viga Rectangular", "📐 Flexur
 
             tab_r, tab_s, tab_3d, tab_q = st.tabs(["📊 Resultados","🔲 Sección 2D","🧊 Visualización 3D","📦 Cantidades"])
             with tab_r:
-                st.markdown(f"**φ = {phi_f}** | Norma: `{code['ref']}`")
-                st.markdown(r"**Verificación Normativa:** $\phi M_n \ge M_u$")
-                st.latex(r"\phi M_n = \phi A_s f_y \left(d - \frac{a}{2}\right)")
+                st.markdown(f"**Factor de reducción φ = {phi_f}** (flexión) | Norma: `{code['ref']}`")
+                st.markdown("""**Verificación fundamental:** La resistencia a flexión provista **φMn** debe ser mayor o igual al momento último demandado **Mu**.
+> φMn ≥ Mu  ✔ (la viga resiste sin colapsar)""")
+                st.latex(r"\phi M_n = \phi \cdot A_s \cdot f_y \left(d - \frac{a}{2}\right)")
                 rows = [
-                    ("b × h", f"{b_vr:.0f} × {h_vr:.0f} cm"),
-                    ("d (peralte efectivo)", f"{d_vr:.1f} cm"),
-                    ("Rn (resistencia requerida)", f"{Rn:.3f} MPa"),
-                    ("ρ calculado", f"{rho_calc*100:.4f}%"),
-                    ("ρ mínimo (norma)", f"{rho_min*100:.4f}%"),
-                    ("ρ máximo (norma)", f"{rho_max*100:.4f}%"),
-                    ("As requerido", f"{As_req_cm2:.3f} cm²"),
-                    (f"N° varillas ({bar_vr})", f"{n_bars} barras → As prov = {As_prov:.3f} cm²"),
-                    ("a (bloque de compresión)", f"{a_mm:.1f} mm"),
-                    (f"φMn provisto [{unidad_mom}]", f"{phi_Mn_kNm*factor_fuerza:.2f}"),
-                    (f"Mu solicitado [{unidad_mom}]", f"{Mu_vr:.2f}"),
-                    ("✅ Flexión" if ok_flex else "❌ Flexión", "CUMPLE" if ok_flex else f"DEFICIENTE (φMn={phi_Mn_kNm:.2f} < Mu={Mu_vr_kN:.2f})"),
-                    ("✅ ρ min" if ok_rho_min else "❌ ρ min", "CUMPLE" if ok_rho_min else "NO CUMPLE"),
-                    ("✅ ρ max" if ok_rho_max else "❌ ρ max", "CUMPLE" if ok_rho_max else "EXCEDE MÁXIMO"),
+                    ("📐 b × h — Base y altura de la viga", f"{b_vr:.0f} × {h_vr:.0f} cm"),
+                    ("📏 d — Peralte efectivo (altura hasta centroide del acero)", f"{d_vr:.1f} cm"),
+                    ("🔢 Rn — Resistencia unitaria requerida (Mu / φ·b·d²)", f"{Rn:.3f} MPa"),
+                    ("📊 ρ calculado — Cuantía de acero que necesita la sección", f"{rho_calc*100:.4f}%"),
+                    ("⬇ ρ mínimo — Cuantía mínima exigida por la norma (evita falla frágil)", f"{rho_min*100:.4f}%"),
+                    ("⬆ ρ máximo — Cuantía máxima (garantiza falla dúctil con aviso)", f"{rho_max*100:.4f}%"),
+                    ("🔩 As requerido — Área de acero necesaria para resistir Mu", f"{As_req_cm2:.3f} cm²"),
+                    (f"🔩 Varillas seleccionadas ({bar_vr}) — Cantidad y área provista", f"{n_bars} barras → As provisto = {As_prov:.3f} cm²"),
+                    ("📦 a — Profundidad del bloque de compresión equivalente (Whitney)", f"{a_mm:.1f} mm"),
+                    (f"✅ φMn — Momento resistente provisto [{unidad_mom}]", f"{phi_Mn_kNm*factor_fuerza:.2f}"),
+                    (f"🎯 Mu — Momento último demandado (carga de diseño) [{unidad_mom}]", f"{Mu_vr:.2f}"),
+                    ("📋 Verificación Flexión (φMn ≥ Mu)" if ok_flex else "❌ Verificación Flexión (φMn < Mu)",
+                     "✅ CUMPLE — La viga resiste el momento de diseño" if ok_flex else f"❌ DEFICIENTE — φMn={phi_Mn_kNm:.2f} < Mu={Mu_vr_kN:.2f} → Aumente sección o acero"),
+                    ("📋 Cuantía mínima (ρ ≥ ρ_min)" if ok_rho_min else "❌ Cuantía mínima (ρ < ρ_min)",
+                     "✅ CUMPLE" if ok_rho_min else "❌ NO CUMPLE — Aumente el área de acero"),
+                    ("📋 Cuantía máxima (ρ ≤ ρ_max)" if ok_rho_max else "❌ Cuantía máxima (ρ > ρ_max)",
+                     "✅ CUMPLE" if ok_rho_max else "❌ EXCEDE MÁXIMO — Sección sobrearmada, amplíe la sección"),
                 ]
                 qty_table(rows)
                 if ok_flex and ok_rho_min and ok_rho_max:
-                    st.success(f"✅ Aprobado Flexión: $\\phi M_n = {phi_Mn_kNm*factor_fuerza:.2f}$ {unidad_mom} $\\ge M_u = {Mu_vr:.2f}$ {unidad_mom}")
+                    st.success(f"✅ Diseño Aprobado: φMn = {phi_Mn_kNm*factor_fuerza:.2f} {unidad_mom}  ≥  Mu = {Mu_vr:.2f} {unidad_mom}")
                 else:
-                    st.error("❌ No Aprobado por Flexión o excede límites de cuantía $\\rightarrow$ **Revisar sección o acero**")
-                st.info("💡 **¿Acero Inferior o Superior?** El diseño asume que el momento ingresado (Mu) define la zona en tensión. Para momento positivo (centro de luz), el cálculo corresponde al **acero inferior**, y para momento negativo (en apoyos), corresponde al **acero superior**.")
+                    st.error("❌ Diseño No Aprobado — φMn < Mu o cuantía fuera de rango → Revisar sección o aumentar acero")
+                st.info("💡 **¿El acero calculado es inferior o superior?** Si el Mu ingresado viene de una combinación con **momento positivo** (vano central), el acero corresponde al **refuerzo inferior** (zona en tensión debajo). Si Mu viene de un **momento negativo** (apoyo o empotramiento), el acero es el **refuerzo superior**.")
 
             with tab_s:
                 fig, ax = sec_dark_fig(b_vr, h_vr, f"Sección {b_vr:.0f}×{h_vr:.0f} cm")
@@ -617,8 +626,11 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
         Mu_vt = st.number_input(f"Mu [{unidad_mom}]", 0.1, 15000.0, st.session_state.get("vt_mu", 200.0), 10.0, key="vt_mu")
         L_vt  = st.number_input("Longitud [m]", 1.0, 30.0, st.session_state.get("vt_L", 6.0), 0.5, key="vt_L")
         varillas_vt = list(rebar_dict.keys())
+        # Índice por defecto: #4 (12.7mm) en US, 12mm en SI
+        _def_vt = "#4 (Ø12.7mm)" if "Pulgadas" in bar_sys else "12mm"
+        _def_idx_vt = varillas_vt.index(_def_vt) if _def_vt in varillas_vt else 1
         bar_vt = st.selectbox("Varilla:", varillas_vt, 
-                              index=varillas_vt.index(st.session_state.vt_bar) if "vt_bar" in st.session_state and st.session_state.vt_bar in varillas_vt else 0,
+                              index=varillas_vt.index(st.session_state.vt_bar) if "vt_bar" in st.session_state and st.session_state.vt_bar in varillas_vt else _def_idx_vt,
                               key="vt_bar")
         Ab_vt = rebar_dict[bar_vt]; db_vt = diam_dict[bar_vt]
 
@@ -714,15 +726,22 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
             y_f = [ht_vt-hf_vt, ht_vt-hf_vt, ht_vt, ht_vt, ht_vt-hf_vt, ht_vt-hf_vt, ht_vt, ht_vt]
             z_f = [0, 0, 0, 0, L_mm_3d, L_mm_3d, L_mm_3d, L_mm_3d]
             fig3d.add_trace(go.Mesh3d(x=x_f, y=y_f, z=z_f, alphahull=0, opacity=0.15, color='gray', name='Concreto (Ala)'))
-            # Varillas
+            # ── Varillas INFERIORES (tensión) ──
             diam_reb_cm = db_vt / 10.0
             line_width = max(4, diam_reb_cm * 3)
             xs_v = np.linspace(-bw_vt/2 + dp_vt, bw_vt/2 - dp_vt, max(n_bt, 2)) if n_bt > 1 else [0]
             for idx, x_pos in enumerate(xs_v[:n_bt]):
                 fig3d.add_trace(go.Scatter3d(x=[x_pos, x_pos], y=[dp_vt, dp_vt], z=[0, L_mm_3d],
                                             mode='lines', line=dict(color='darkred', width=line_width),
-                                            name=f'Varilla {bar_vt}', showlegend=(idx==0)))
-            # Estribos (alma)
+                                            name=f'Varilla inf. {bar_vt}', showlegend=(idx==0)))
+            # ── Varillas SUPERIORES (compresión / montaje: 2 barras en esquinas del alma) ──
+            y_sup = ht_vt - dp_vt  # y en el alma, cerca del ala
+            xs_sup = [-bw_vt/2 + dp_vt, bw_vt/2 - dp_vt]
+            for idx, x_pos in enumerate(xs_sup):
+                fig3d.add_trace(go.Scatter3d(x=[x_pos, x_pos], y=[y_sup, y_sup], z=[0, L_mm_3d],
+                                            mode='lines', line=dict(color='orange', width=max(3, diam_reb_cm*2)),
+                                            name='Varilla sup. (compresión)', showlegend=(idx==0)))
+            # ── Estribos (alma) ──
             tie_color = 'cornflowerblue'
             tie_width = max(2, (9.5/10.0) * 3)
             sep_ties = st.slider("Separación Estribos (cm) ", 5, 50, int(st.session_state.get('cv_s_diseno', 15)), 1, key="vt_sep_tie")
@@ -736,8 +755,11 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
                 tz_all.extend([zt]*5 + [None])
             fig3d.add_trace(go.Scatter3d(x=tx_all, y=ty_all, z=tz_all, mode='lines', 
                                          line=dict(color=tie_color, width=tie_width), name='Estribos Alma', showlegend=True))
-            fig3d.update_layout(scene=dict(aspectmode='data', xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)'),
-                                margin=dict(l=0, r=0, b=0, t=0), height=450, dragmode='turntable')
+            fig3d.update_layout(
+                scene=dict(aspectmode='data', xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)'),
+                legend=dict(bgcolor='rgba(0,0,0,0.5)', font=dict(color='white'), x=0.01, y=0.99),
+                margin=dict(l=0, r=0, b=0, t=0), height=450, dragmode='turntable'
+            )
             st.plotly_chart(fig3d, use_container_width=True)
 
         with tab_q:

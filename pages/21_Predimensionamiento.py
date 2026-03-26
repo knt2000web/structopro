@@ -682,7 +682,16 @@ with tab_exp:
 
 with _sub_dxf:
     st.subheader("Descargar Plano Estructural DXF")
+    try:
+        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                 dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
+        _USE_H_pr = True
+    except ImportError:
+        _USE_H_pr = False
     doc_dxf = ezdxf.new('R2010'); msp = doc_dxf.modelspace()
+    if _USE_H_pr:
+        dxf_setup(doc_dxf, 100)
+        dxf_add_layers(doc_dxf)
     for lay, c in [('EJES',1), ('VIGAS',2), ('COLUMNAS',4), ('COTAS',3), ('ZAPATAS',5), ('TEXTO',7)]:
         if lay not in doc_dxf.layers: doc_dxf.layers.add(lay, color=c)
     nx, ny = 2, 2
@@ -707,6 +716,14 @@ with _sub_dxf:
     for j in range(ny+1):
         msp.add_line((0, j*ly-b_vx/2), (nx*lx, j*ly-b_vx/2), dxfattribs={'layer':'VIGAS'})
         msp.add_line((0, j*ly+b_vx/2), (nx*lx, j*ly+b_vx/2), dxfattribs={'layer':'VIGAS'})
+    if _USE_H_pr:
+        TH_pr = 0.025 * 100
+        dxf_dim_horiz(msp, 0, nx*lx, -1.5, f"L_total_X = {nx*lx:.1f} m", 100)
+        dxf_dim_vert(msp, -1.5, 0, ny*ly, f"L_total_Y = {ny*ly:.1f} m", 100)
+        dxf_text(msp, nx*lx/2, ny*ly+1.8, f"PLANTA ESTRUCTURAL — {num_stories} PISOS", "EJES", h=TH_pr*1.2, ha="center")
+        dxf_text(msp, nx*lx/2, ny*ly+1.2, f"Viga X: {b_vx*100:.0f}x{h_vx*100:.0f}cm | Col: {lado_c:.0f}cm | Losa: {h_mac*100:.0f}cm", "TEXTO", h=TH_pr*0.8, ha="center")
+        _cam_pr = dxf_rotulo_campos(f"Predimensionamiento {num_stories}P {norma_sel[:15]}", norma_sel, "001")
+        dxf_rotulo(msp, _cam_pr, 0, -6, rot_w=nx*lx, rot_h=4, escala=100)
     _out_dxf = io.StringIO(); doc_dxf.write(_out_dxf)
     st.download_button("📥 Descargar DXF Planta", data=_out_dxf.getvalue().encode('utf-8'), file_name=f"Predimensionamiento_{lx}x{ly}.dxf", mime="application/dxf")
 

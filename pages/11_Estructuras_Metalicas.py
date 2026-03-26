@@ -664,22 +664,48 @@ with tab_E:
     st.subheader(_t("📐 DXF de Sección", "📐 Section DXF"))
     st.write(_t("Genera un archivo DXF con la sección transversal del último perfil W definido en la pestaña de propiedades.", "Generates a DXF file with the cross-section of the last W-shape defined in the properties tab."))
     try:
+        from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
+                                 dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
+        _USE_H_m = True
+    except ImportError:
+        _USE_H_m = False
+    try:
         doc_dxf = ezdxf.new('R2010')
-        msp = doc_dxf.modelspace()
-        # Usar las dimensiones de la pestaña de propiedades (si existen)
+        doc_dxf.units = ezdxf.units.M
+        if _USE_H_m:
+            dxf_setup(doc_dxf, 20)
+            dxf_add_layers(doc_dxf)
+        msp_st = doc_dxf.modelspace()
+        for lay, col in [('PERFIL_W',5), ('TEXTO',3), ('COTAS',2)]:
+            if lay not in doc_dxf.layers:
+                doc_dxf.layers.add(lay, color=col)
+        # Usar dimensiones del perfil en mm → convertir a m para el DXF en metros
         if 'dw' in locals() and 'bfw' in locals():
-            p1 = (-bfw/2, dw/2)
-            points = [
-                (-bfw/2, dw/2), (bfw/2, dw/2), (bfw/2, dw/2 - tfw),
-                (tww/2, dw/2 - tfw), (tww/2, -dw/2 + tfw), (bfw/2, -dw/2 + tfw),
-                (bfw/2, -dw/2), (-bfw/2, -dw/2), (-bfw/2, -dw/2 + tfw),
-                (-tww/2, -dw/2 + tfw), (-tww/2, dw/2 - tfw), (-bfw/2, dw/2 - tfw), (-bfw/2, dw/2)
+            sc = 1/1000  # mm → m
+            pts_w = [
+                (-bfw/2*sc, dw/2*sc), (bfw/2*sc, dw/2*sc),
+                (bfw/2*sc, (dw/2-tfw)*sc), (tww/2*sc, (dw/2-tfw)*sc),
+                (tww/2*sc, -(dw/2-tfw)*sc), (bfw/2*sc, -(dw/2-tfw)*sc),
+                (bfw/2*sc, -dw/2*sc), (-bfw/2*sc, -dw/2*sc),
+                (-bfw/2*sc, -(dw/2-tfw)*sc), (-tww/2*sc, -(dw/2-tfw)*sc),
+                (-tww/2*sc, (dw/2-tfw)*sc), (-bfw/2*sc, (dw/2-tfw)*sc),
+                (-bfw/2*sc, dw/2*sc)
             ]
-            msp.add_lwpolyline(points, dxfattribs={'layer': 'PERFIL_W', 'color': 5, 'closed': True})
+            msp_st.add_lwpolyline(pts_w, dxfattribs={'layer':'PERFIL_W', 'color':5, 'closed':True})
+            if _USE_H_m:
+                TH = 0.025 * 20
+                dxf_dim_horiz(msp_st, -bfw/2*sc, bfw/2*sc, -dw/2*sc - 0.05,
+                              f"bf = {show_mm(bfw):.1f} mm", 20)
+                dxf_dim_vert(msp_st, bfw/2*sc + 0.05, -dw/2*sc, dw/2*sc,
+                             f"d = {show_mm(dw):.1f} mm", 20)
+                dxf_text(msp_st, 0, dw/2*sc + 0.04, "SECCION PERFIL W", "EJES", h=TH*1.2, ha="center")
+                _cam_m = dxf_rotulo_campos(f"Perfil W {show_mm(dw):.0f}x{show_mm(bfw):.0f}mm", norma_sel, "001")
+                dxf_rotulo(msp_st, _cam_m, -bfw/2*sc, -dw/2*sc - 0.25, rot_w=max(bfw*sc*2, 0.2), rot_h=0.15, escala=20)
             out_dxf = io.StringIO()
             doc_dxf.write(out_dxf)
-            st.download_button(_t("📥 Descargar Perfil_W.dxf", "📥 Download Perfil_W.dxf"), data=out_dxf.getvalue().encode('utf-8'),
-                               file_name=f"Perfil_W_{dw}x{bfw}.dxf", mime="application/dxf")
+            st.download_button(_t("📥 Descargar Perfil_W.dxf", "📥 Download Perfil_W.dxf"),
+                               data=out_dxf.getvalue().encode('utf-8'),
+                               file_name=f"Perfil_W_{show_mm(dw):.0f}x{show_mm(bfw):.0f}.dxf", mime="application/dxf")
         else:
             st.warning(_t("Primero defina un perfil W en la pestaña de propiedades.", "First define a W-shape in the properties tab."))
     except Exception as e:
