@@ -638,29 +638,57 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
 # ─────────────────────────────────────────────
 # T4: PROFUNDIDAD MÍNIMA EXPLORACIÓN
 # ─────────────────────────────────────────────
-with st.expander(_t("🔬 4. Profundidad Mínima de Exploración de Subsuelo", "🔬 4. Minimum Subsurface Exploration Depth")):
-    st.info(_t("📺 **Modo de uso:** La norma indica que se debe explorar el suelo (perforaciones) hasta que el incremento de esfuerzo de la estructura (Δσ_z) sea menor al 10% del esfuerzo aplicado q_0. Ingresa B, L y P para hallar esta profundidad D_exploración.", "📺 **How to use:** Enter B, L, and P to find exploration depth where vertical stress increment Δσ_z drops below 10% of q_0."))
-    c1, c2 = st.columns(2)
-    with c1:
-        P_ex = st.number_input("Carga total P [kN]", 10.0, 50000.0, 1500.0, 100.0, key="ex1")
-        B_ex = st.number_input("Ancho B [m]", 0.5, 20.0, 2.0, 0.5, key="ex2")
-    with c2:
-        L_ex = st.number_input("Largo L [m]", 0.5, 20.0, 3.0, 0.5, key="ex3")
-        
-    q0_ex = P_ex / (B_ex * L_ex)
+with st.expander(_t("🔬 4. Profundidad Mínima de Exploración de Subsuelo (NSR-10)", "🔬 4. Minimum Subsurface Exploration Depth")):
+    st.info(_t(
+        "📺 **Modo de uso:** Sincronizado automáticamente con las dimensiones (B, L) y carga (Q_actuante) ingresadas en el panel principal. "
+        "Según la norma **NSR-10 (Título H.3.2.3)**, las perforaciones deben alcanzar una profundidad donde el incremento de "
+        "esfuerzo vertical (Δσ_z) sea menor o igual al **10% del esfuerzo de contacto (q_0)** transmitido por la estructura.",
+        "📺 **How to use:** Automatically synced with main B, L and Q inputs. NSR-10 requires exploring "
+        "until the stress increment drops below 10% of the contact stress (q_0)."
+    ))
+    
+    q0_ex = Q_act / (B_cp * L_cp)
+    st.markdown(f"**Dimensiones Base:** $B={B_cp}$ m, $L={L_cp}$ m | **Carga Transferida:** $Q={Q_act}$ kN | **Esfuerzo de Contacto:** $q_0 = {q0_ex:.2f}$ kPa")
+    
     # Biseccion para encontrar Z donde delta_sigma_z / q0_ex = 0.10
     z_low = 0.1
     z_high = 50.0
     for _ in range(30):
         z_mid = (z_low + z_high)/2
-        m_ex = (B_ex/2.0) / z_mid
-        n_ex = (L_ex/2.0) / z_mid
+        m_ex = (B_cp/2.0) / z_mid
+        n_ex = (L_cp/2.0) / z_mid
         rat = 4 * I_z_bous(m_ex, n_ex)
         if rat > 0.10:
             z_low = z_mid
         else:
             z_high = z_mid
-    st.success(f"✅ La profundidad mínima sugerida de exploración (donde Δσ_z = 10% de q0) es: **Z = {z_mid:.2f} metros** debajo del nivel de fundación.")
+            
+    st.success(f"✅ La profundidad mínima normativa de exploración (donde Δσ_z = 10% de q0) es: **Z_exploración = {z_mid:.2f} m** bajo el nivel de fundación.")
+    
+    # Gráfica ilustrativa del descenso del esfuerzo
+    fig_ex, ax_ex = plt.subplots(figsize=(8, 3.5))
+    fig_ex.patch.set_facecolor("#0f1117")
+    ax_ex.set_facecolor("#161b22")
+    
+    z_plot = np.linspace(0.1, z_mid * 1.5, 100)
+    sig_plot = [4 * q0_ex * I_z_bous((B_cp/2.0)/z, (L_cp/2.0)/z) for z in z_plot]
+    
+    ax_ex.plot(sig_plot, z_plot, color="#69f0ae", lw=2.5, label="Δσ_z bajo el centro")
+    ax_ex.axvline(q0_ex * 0.10, color="magenta", linestyle="--", lw=1.5, label=f"10% q₀ ({q0_ex*0.1:.1f} kPa)")
+    ax_ex.axhline(z_mid, color="#ff9500", linestyle=":", lw=1.5, label=f"Z_exploración = {z_mid:.1f} m")
+    
+    ax_ex.invert_yaxis()
+    ax_ex.set_xlabel("Incremento de Esfuerzo Δσ_z [kPa]", color="white", fontsize=10)
+    ax_ex.set_ylabel("Profundidad Z [m]", color="white", fontsize=10)
+    ax_ex.set_title("Atenuación Analítica del Esfuerzo (Criterio 10% NSR-10)", color="white", fontsize=11)
+    ax_ex.set_xlim(0, max(sig_plot) * 1.1)
+    ax_ex.tick_params(colors="white", labelsize=9)
+    ax_ex.grid(True, linestyle=":", alpha=0.3, color="white")
+    ax_ex.legend(loc="lower right", facecolor="#161b22", labelcolor="white", edgecolor="none")
+    
+    fig_ex.tight_layout()
+    st.pyplot(fig_ex)
+    
     # Guardar en sesión para usarlo en gráficos
     st.session_state.z_exploracion = z_mid
 
