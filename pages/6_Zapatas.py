@@ -1343,64 +1343,285 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         ax_z.axis('off')
         st.pyplot(fig_z)
         
-        st.markdown("#### 💾 Exportar AutoCAD (.dxf)")
+        st.markdown("#### 💾 Exportar AutoCAD (.dxf) — Plano Ejecutable")
+        
+        import datetime as _dt_dxf
         doc_dxf = ezdxf.new('R2010')
         doc_dxf.units = ezdxf.units.CM
+        
+        # ── ESCALA y TEXTO ─────────────────────────────────────────────────
+        ESCALA   = 20    # 1:20
+        doc_dxf.header['$DIMSCALE']  = ESCALA
+        doc_dxf.header['$LTSCALE']   = 0.02
+        doc_dxf.header['$TEXTSIZE']  = 0.08 * ESCALA       # 1.6 cm → legible
+        doc_dxf.header['$DIMTXT']    = 0.06 * ESCALA
+        TH       = 0.06 * ESCALA     # altura texto estándar (cm)
+        TH_TITLE = 0.1  * ESCALA     # texto títulos
+        
         msp = doc_dxf.modelspace()
-
-        for _lay, _col in [('CONCRETO',7),('ACERO',1),('TEXTO',3),('EJES',8)]:
-            if _lay not in doc_dxf.layers:
-                doc_dxf.layers.add(_lay, color=_col)
-
-        ex = 0; ey = 0
-        # Elevación
-        msp.add_lwpolyline([(ex,ey),(ex+B_use*100,ey),(ex+B_use*100,ey+H_zap),(ex,ey+H_zap),(ex,ey)],
-                           close=True, dxfattribs={'layer':'CONCRETO'})
-        msp.add_lwpolyline([(ex+pos_x_col,ey+H_zap),(ex+pos_x_col,ey+H_zap+50),
-                            (ex+pos_x_col+c1_col,ey+H_zap+50),(ex+pos_x_col+c1_col,ey+H_zap)],
-                           close=True, dxfattribs={'layer':'CONCRETO'})
         
-        # El acero transversal que se ve como puntos en elevación frontal (B) es Dir.L (paralelo a L, distribuido en B)
-        for i in range(n_barras_L):
-            xi = ex + recub_z + i * sep_L
-            msp.add_line((xi, ey+recub_z), (xi, ey+recub_z), dxfattribs={'layer':'ACERO'})
-            msp.add_circle((xi, ey+recub_z), db_bar_z/10, dxfattribs={'layer':'ACERO'})
-        # El acero principal en la cara B es Dir.B (paralelo a B)
-        msp.add_line((ex+recub_z, ey+recub_z), (ex+B_use*100-recub_z, ey+recub_z), dxfattribs={'layer':'ACERO'})
-        msp.add_mtext(f"{n_barras_L}#{bar_z}@{sep_L:.0f}cm Dir.L (Transversal)",
-                      dxfattribs={'layer':'TEXTO','char_height':4,'insert':(ex+B_use*50, ey-8)})
-
-        # Planta
-        px = ex + B_use*100 + 30; py = ey
-        msp.add_lwpolyline([(px,py),(px+B_use*100,py),(px+B_use*100,py+L_use*100),(px,py+L_use*100),(px,py)],
-                           close=True, dxfattribs={'layer':'CONCRETO'})
-        msp.add_lwpolyline([(px+pos_x_col,py+(L_use*100-c2_col)/2),
-                            (px+pos_x_col+c1_col,py+(L_use*100-c2_col)/2),
-                            (px+pos_x_col+c1_col,py+(L_use*100+c2_col)/2),
-                            (px+pos_x_col,py+(L_use*100+c2_col)/2)],
-                           close=True, dxfattribs={'layer':'CONCRETO'})
+        # ── LAYERS ─────────────────────────────────────────────────────────
+        _layers = [
+            ('CONCRETO', 7), ('ACERO_B', 1), ('ACERO_L', 3),
+            ('TEXTO', 2), ('EJES', 8), ('COTAS', 4),
+            ('ROTULO', 6), ('HATCH', 254),
+        ]
+        for _ln, _lc in _layers:
+            if _ln not in doc_dxf.layers:
+                doc_dxf.layers.add(_ln, color=_lc)
         
-        # Acero Dir. B (Distribuido a lo largo de L, líneas horizontales de longitud B)
-        for i in range(n_barras_B):
-            yi = py + recub_z + i * sep_B
-            msp.add_line((px+recub_z, yi), (px+B_use*100-recub_z, yi), dxfattribs={'layer':'ACERO'})
-        # Acero Dir. L (Distribuido a lo largo de B, líneas verticales de longitud L)
+        # ── VARIABLES GEOMÉTRICAS ──────────────────────────────────────────
+        B_cm      = B_use   * 100      # ancho en cm
+        L_cm      = L_use   * 100      # largo en cm
+        Hc        = H_zap              # altura cm
+        rec       = recub_z            # recubrimiento cm
+        db_cm     = db_bar_z / 10.0   # diámetro varilla en cm
+        radio_dob = D_doblez_cm / 2.0  # radio de doblez real = D/2
+        L_ext     = L_ext_gancho_cm    # extensión del gancho
+        c1c       = c1_col             # ancho columna cm
+        c2c       = c2_col             # largo columna cm
+        
+        # ── HELPERS DXF ────────────────────────────────────────────────────
+        def _rect(ox, oy, w, h, lay):
+            msp.add_lwpolyline(
+                [(ox,oy),(ox+w,oy),(ox+w,oy+h),(ox,oy+h)],
+                close=True, dxfattribs={'layer': lay})
+        
+        def _text(x, y, txt, lay, h=None, ha='left'):
+            _h = h or TH
+            msp.add_text(txt, dxfattribs={
+                'layer': lay, 'height': _h,
+                'halign': {'left':0,'center':4,'right':2}[ha],
+                'insert': (x, y),
+            })
+        
+        def _dim_horiz(x1, x2, y_dim, txt, lay='COTAS'):
+            """Cota horizontal manual."""
+            arrow = TH * 0.5
+            msp.add_line((x1, y_dim), (x2, y_dim), dxfattribs={'layer': lay})
+            msp.add_line((x1, y_dim - arrow), (x1, y_dim + arrow), dxfattribs={'layer': lay})
+            msp.add_line((x2, y_dim - arrow), (x2, y_dim + arrow), dxfattribs={'layer': lay})
+            msp.add_line((x1, y_dim), (x1, y_dim - TH*2), dxfattribs={'layer': lay, 'color': 8})
+            msp.add_line((x2, y_dim), (x2, y_dim - TH*2), dxfattribs={'layer': lay, 'color': 8})
+            _text((x1+x2)/2, y_dim + TH*0.5, txt, lay, ha='center')
+        
+        def _dim_vert(x_dim, y1, y2, txt, lay='COTAS'):
+            """Cota vertical manual."""
+            arrow = TH * 0.5
+            msp.add_line((x_dim, y1), (x_dim, y2), dxfattribs={'layer': lay})
+            msp.add_line((x_dim - arrow, y1), (x_dim + arrow, y1), dxfattribs={'layer': lay})
+            msp.add_line((x_dim - arrow, y2), (x_dim + arrow, y2), dxfattribs={'layer': lay})
+            msp.add_line((x_dim, y1), (x_dim + TH*2, y1), dxfattribs={'layer': lay, 'color': 8})
+            msp.add_line((x_dim, y2), (x_dim + TH*2, y2), dxfattribs={'layer': lay, 'color': 8})
+            _text(x_dim - TH*0.5, (y1+y2)/2, txt, lay, ha='right')
+        
+        def _hook_arc(ox, oy, side, lay):
+            """
+            Dibuja un gancho 90° como ARC real + extensión recta.
+            side: 'left' (gancho va a la izquierda) o 'right'
+            El arco viene de horizontal hacia arriba.
+            """
+            r = radio_dob
+            if side == 'left':
+                # Centro del arco: el punto donde termina la barra es (ox, oy)
+                # El arco va de 180° → 270° (extremo izq, sube)
+                cx, cy = ox + r, oy + r
+                msp.add_arc((cx, cy), r,
+                            start_angle=180, end_angle=270,
+                            dxfattribs={'layer': lay})
+                # extensión recta hacia arriba desde el centro-arriba del arco
+                msp.add_line((ox, oy + r), (ox, oy + r + L_ext),
+                             dxfattribs={'layer': lay})
+            else:  # right
+                cx, cy = ox - r, oy + r
+                msp.add_arc((cx, cy), r,
+                            start_angle=270, end_angle=0,
+                            dxfattribs={'layer': lay})
+                msp.add_line((ox, oy + r), (ox, oy + r + L_ext),
+                             dxfattribs={'layer': lay})
+        
+        # ═══════════════════════════════════════════════════════════════════
+        #  HOJA: disposición en el plano
+        #  Elevación Dir.L (corte A-A): origen (0, 0)
+        #  Elevación Dir.B (corte B-B): origen (B_cm+50, 0)
+        #  Planta:                      origen (0, Hc+80)
+        #  Rótulo:                      esquina inf. derecha  (lado der)
+        # ═══════════════════════════════════════════════════════════════════
+        
+        # ─────────────────────────────────────────────────────────────────
+        # ELEVACIÓN A-A — CORTE DIR.L  (muestra varillas Dir.L como barras)
+        # ─────────────────────────────────────────────────────────────────
+        ex_A = 0; ey_A = 0
+        _rect(ex_A, ey_A, B_cm, Hc, 'CONCRETO')
+        # Columna arriba
+        col_ox = ex_A + (B_cm - c1c) / 2
+        _rect(col_ox, ey_A + Hc, c1c, 50, 'CONCRETO')
+        
+        # Barras Dir.L (recorren en dir. L a través del corte, se ven como lineas horizontales de longitud B)
+        y_bar_A = ey_A + rec + db_cm/2
         for j in range(n_barras_L):
-            xj = px + recub_z + j * sep_L
-            msp.add_line((xj, py+recub_z), (xj, py+L_use*100-recub_z), dxfattribs={'layer':'ACERO'})
-            
-        msp.add_mtext(f"{n_barras_B}#{bar_z}@{sep_B:.0f}cm Dir.B | {n_barras_L}#{bar_z}@{sep_L:.0f}cm Dir.L",
-                      dxfattribs={'layer':'TEXTO','char_height':4,'insert':(px+B_use*50, py+L_use*100+8)})
-
-        # ezdxf.write() requiere un stream de texto (StringIO), no BytesIO
-        # Luego se codifica a bytes para el botón de Streamlit
+            xj = ex_A + rec + j * sep_L
+            # Punto en elevación: una barra con gancho en extremos inferior/superior
+            # En elevación A-A, Dir.L son las que se distribuyen a lo largo de B → se ven como puntos
+            msp.add_circle((xj, y_bar_A), db_cm/2, dxfattribs={'layer':'ACERO_L'})
+        
+        # Barra Dir.B principal (larga, se ve como línea entera con ganchos)
+        x_start_A = ex_A + rec
+        x_end_A   = ex_A + B_cm - rec
+        msp.add_line((x_start_A + radio_dob, y_bar_A), (x_end_A - radio_dob, y_bar_A),
+                     dxfattribs={'layer':'ACERO_B'})
+        _hook_arc(x_start_A, y_bar_A, 'left',  'ACERO_B')
+        _hook_arc(x_end_A,   y_bar_A, 'right', 'ACERO_B')
+        
+        # Marcas de sección A-A en planta (se añadirán después)
+        # Título de corte
+        _text(ex_A + B_cm/2, ey_A - TH_TITLE*2, "CORTE A-A  —  Dir.L (Transversal)", 'TEXTO', TH_TITLE, 'center')
+        _text(ex_A + B_cm/2, ey_A - TH_TITLE*4, f"ESC 1:{ESCALA}", 'TEXTO', TH, 'center')
+        
+        # Notas de acero
+        _text(ex_A + B_cm + TH,  y_bar_A, f"{n_barras_L} {bar_z} c/{sep_L:.0f}cm Dir.L (puntos)", 'TEXTO', TH)
+        _text(ex_A + B_cm + TH,  y_bar_A - TH*2, f"1 {bar_z} Dir.B c/gancho 90°", 'TEXTO', TH)
+        
+        # Cotas elevación A-A
+        _dim_horiz(ex_A, ex_A + B_cm, ey_A - TH*6,   f"B={B_cm:.0f}cm")
+        _dim_vert(ex_A - TH*6, ey_A, ey_A + Hc,       f"H={Hc:.0f}cm")
+        _dim_horiz(ex_A, ex_A + rec, ey_A + Hc + TH*3, f"rec={rec:.0f}cm")
+        _dim_horiz(ex_A + rec, ex_A + rec + sep_L, ey_A + Hc + TH*3, f"sep={sep_L:.1f}cm")
+        
+        # ─────────────────────────────────────────────────────────────────
+        # ELEVACIÓN B-B — CORTE DIR.B  (muestra varillas Dir.B como barras)
+        # ─────────────────────────────────────────────────────────────────
+        ex_B = B_cm + 60; ey_B = 0
+        _rect(ex_B, ey_B, L_cm, Hc, 'CONCRETO')
+        col_ox_B = ex_B + (L_cm - c2c) / 2
+        _rect(col_ox_B, ey_B + Hc, c2c, 50, 'CONCRETO')
+        
+        # Barras Dir.B (puntos en este corte — distribuidas en Dir.L)
+        y_bar_B = ey_B + rec + db_cm/2
+        for i in range(n_barras_B):
+            xi = ex_B + rec + i * sep_B
+            msp.add_circle((xi, y_bar_B), db_cm/2, dxfattribs={'layer':'ACERO_B'})
+        
+        # Barra Dir.L principal con ganchos
+        x_start_B = ex_B + rec
+        x_end_B   = ex_B + L_cm - rec
+        y_bar_L   = y_bar_B + db_cm   # ligeramente superior
+        msp.add_line((x_start_B + radio_dob, y_bar_L), (x_end_B - radio_dob, y_bar_L),
+                     dxfattribs={'layer':'ACERO_L'})
+        _hook_arc(x_start_B, y_bar_L, 'left',  'ACERO_L')
+        _hook_arc(x_end_B,   y_bar_L, 'right', 'ACERO_L')
+        
+        _text(ex_B + L_cm/2, ey_B - TH_TITLE*2, "CORTE B-B  —  Dir.B (Longitudinal)", 'TEXTO', TH_TITLE, 'center')
+        _text(ex_B + L_cm/2, ey_B - TH_TITLE*4, f"ESC 1:{ESCALA}", 'TEXTO', TH, 'center')
+        _text(ex_B + L_cm + TH, y_bar_B, f"{n_barras_B} {bar_z} c/{sep_B:.0f}cm Dir.B (puntos)", 'TEXTO', TH)
+        _text(ex_B + L_cm + TH, y_bar_L - TH*2, f"1 {bar_z} Dir.L c/gancho 90°", 'TEXTO', TH)
+        
+        _dim_horiz(ex_B, ex_B + L_cm, ey_B - TH*6,   f"L={L_cm:.0f}cm")
+        _dim_vert(ex_B - TH*6, ey_B, ey_B + Hc,       f"H={Hc:.0f}cm")
+        _dim_horiz(ex_B, ex_B + rec, ey_B + Hc + TH*3, f"rec={rec:.0f}cm")
+        _dim_horiz(ex_B + rec, ex_B + rec + sep_B, ey_B + Hc + TH*3, f"sep={sep_B:.1f}cm")
+        
+        # ─────────────────────────────────────────────────────────────────
+        # PLANTA
+        # ─────────────────────────────────────────────────────────────────
+        px = 0; py = Hc + 80
+        _rect(px, py, B_cm, L_cm, 'CONCRETO')
+        # Columna en planta (centrada)
+        col_px = px + (B_cm - c1c)/2
+        col_py = py + (L_cm - c2c)/2
+        _rect(col_px, col_py, c1c, c2c, 'CONCRETO')
+        
+        # Acero Dir. B (líneas horizontales paralelas a B, distribuidas en L)
+        for i in range(n_barras_B):
+            yi = py + rec + i * sep_B
+            msp.add_line((px + rec, yi), (px + B_cm - rec, yi), dxfattribs={'layer':'ACERO_B'})
+        # Acero Dir. L (líneas verticales paralelas a L, distribuidas en B)
+        for j in range(n_barras_L):
+            xj = px + rec + j * sep_L
+            msp.add_line((xj, py + rec), (xj, py + L_cm - rec), dxfattribs={'layer':'ACERO_L'})
+        
+        # Marcas de corte A-A en planta (flecha a la derecha del elemento)
+        _ay = py + L_cm / 2
+        msp.add_line((px - TH*8, _ay), (px - TH*2, _ay), dxfattribs={'layer':'EJES'})
+        _text(px - TH*10, _ay + TH*0.5, "A", 'EJES', TH_TITLE)
+        _text(px + B_cm + TH*2, _ay, "A", 'EJES', TH_TITLE)
+        msp.add_line((px + B_cm + TH*2, _ay), (px + B_cm + TH*8, _ay), dxfattribs={'layer':'EJES'})
+        
+        # Marcas de corte B-B
+        _bx = px + B_cm / 2
+        msp.add_line((_bx, py - TH*8), (_bx, py - TH*2), dxfattribs={'layer':'EJES'})
+        _text(_bx - TH, py - TH*10, "B", 'EJES', TH_TITLE)
+        _text(_bx - TH, py + L_cm + TH*2, "B", 'EJES', TH_TITLE)
+        msp.add_line((_bx, py + L_cm + TH*2), (_bx, py + L_cm + TH*8), dxfattribs={'layer':'EJES'})
+        
+        # Cotas de planta
+        _dim_horiz(px, px + B_cm, py - TH*6,          f"B={B_cm:.0f}cm")
+        _dim_vert(px - TH*8, py, py + L_cm,            f"L={L_cm:.0f}cm")
+        _dim_horiz(px, px + rec, py + L_cm + TH*3,     f"rec={rec:.0f}cm")
+        _dim_horiz(px + rec, px + rec + sep_B, py + L_cm + TH*3, f"sep_B={sep_B:.1f}cm")
+        
+        _text(px + B_cm/2, py + L_cm + TH_TITLE*2, "PLANTA — ARMADURA INFERIOR", 'TEXTO', TH_TITLE, 'center')
+        _text(px + B_cm/2, py + L_cm + TH_TITLE*4, f"ESC 1:{ESCALA}", 'TEXTO', TH, 'center')
+        _text(px + B_cm/2, py - TH_TITLE*6, f"→ ACERO_B (rojo): {n_barras_B} {bar_z} c/{sep_B:.0f}cm   |   ACERO_L (verde): {n_barras_L} {bar_z} c/{sep_L:.0f}cm", 'TEXTO', TH, 'center')
+        
+        # ─────────────────────────────────────────────────────────────────
+        # RÓTULO  (esquina inferior derecha)
+        # ─────────────────────────────────────────────────────────────────
+        _fecha_dxf = _dt_dxf.date.today().strftime('%d/%m/%Y')
+        rot_w  = 180   # ancho del rótulo cm
+        rot_h  = 60    # alto total cm
+        row_h  = rot_h / 8
+        rot_x  = max(B_cm + 60 + L_cm, B_cm) + 60
+        rot_y  = -rot_h - 20
+        
+        _rect(rot_x, rot_y, rot_w, rot_h, 'ROTULO')
+        # Línea vertical que separa etiquetas de valores
+        msp.add_line((rot_x + 55, rot_y), (rot_x + 55, rot_y + rot_h), dxfattribs={'layer':'ROTULO'})
+        
+        _rotulo_filas = [
+            ("PROYECTO",   f"Zapata Aislada {B_use:.2f}×{L_use:.2f}m — H={H_zap:.0f}cm"),
+            ("EMPRESA",    "Konte Ingeniería"),
+            ("DISEÑÓ",     "StructuroPro"),
+            ("NORMA",      "NSR-10 / ACI 318-19"),
+            ("ESCALA",     f"1:{ESCALA}"),
+            ("FECHA",      _fecha_dxf),
+            ("PLANO N°",   "ZAP-001"),
+            ("REVISIÓN",   "R0"),
+        ]
+        for i, (campo, valor) in enumerate(_rotulo_filas):
+            yrow = rot_y + rot_h - (i + 1) * row_h
+            # Línea horizontal
+            if i > 0:
+                msp.add_line((rot_x, yrow + row_h), (rot_x + rot_w, yrow + row_h), dxfattribs={'layer':'ROTULO'})
+            _text(rot_x + 2, yrow + row_h*0.3, campo, 'ROTULO', TH * 0.7)
+            _text(rot_x + 57, yrow + row_h * 0.3, valor, 'ROTULO', TH)
+        
+        # Doble borde exterior del rótulo
+        _rect(rot_x - 2, rot_y - 2, rot_w + 4, rot_h + 4, 'ROTULO')
+        
+        # ─────────────────────────────────────────────────────────────────
+        # LEYENDA DE LAYERS
+        # ─────────────────────────────────────────────────────────────────
+        ley_x = rot_x; ley_y = rot_y + rot_h + 10
+        _text(ley_x, ley_y + TH*3, "LEYENDA:", 'TEXTO', TH_TITLE)
+        msp.add_line((ley_x, ley_y + TH*1), (ley_x + 10, ley_y + TH), dxfattribs={'layer':'ACERO_B'})
+        _text(ley_x + 12, ley_y + TH*0.5, f"ACERO Dir.B  ({n_barras_B} {bar_z} c/{sep_B:.0f}cm)", 'TEXTO', TH)
+        msp.add_line((ley_x, ley_y - TH), (ley_x + 10, ley_y - TH), dxfattribs={'layer':'ACERO_L'})
+        _text(ley_x + 12, ley_y - TH*1.5, f"ACERO Dir.L  ({n_barras_L} {bar_z} c/{sep_L:.0f}cm)", 'TEXTO', TH)
+        
+        # ─────────────────────────────────────────────────────────────────
+        # EXPORTAR
+        # ─────────────────────────────────────────────────────────────────
         _dxf_text = io.StringIO()
         doc_dxf.write(_dxf_text)
         _dxf_bytes = _dxf_text.getvalue().encode("utf-8")
-        st.download_button(label="📐 Descargar Plano DXF (Elev. + Planta con Acero)",
-                           data=_dxf_bytes,
-                           file_name=f"Zapata_{B_use:.1f}x{L_use:.1f}m_Armado.dxf",
-                           mime="application/dxf")
+        st.download_button(
+            label="📐 Descargar Plano DXF — Ejecutable (ESC 1:20, layers, cotas, rótulo)",
+            data=_dxf_bytes,
+            file_name=f"Zapata_{B_use:.1f}x{L_use:.1f}m_Ejecutable.dxf",
+            mime="application/dxf"
+        )
+
 
     with tab_apu:
         # ─── Cantidades base ────────────────────────────────────────────────
