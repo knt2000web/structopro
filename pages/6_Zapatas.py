@@ -1114,6 +1114,36 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         doc_zap.add_paragraph(f"  Concreto   = {_vol_conc:.2f} m³")
         doc_zap.add_paragraph(f"  Acero Dir.B = {_pe_B:.1f} kg  |  Acero Dir.L = {_pe_L:.1f} kg  |  Total = {_pe_tot:.1f} kg")
         doc_zap.add_paragraph(f"  Cuantía = {(_pe_tot/_vol_conc) if _vol_conc>0 else 0:.1f} kg/m³")
+
+        # Integrar Costos APU al Reporte
+        _apu_doc = st.session_state.get("apu_config", {})
+        _mon_d = _apu_doc.get("moneda", "COP")
+        _p_cem_d = _apu_doc.get("cemento", 32000.0)
+        _p_ace_d = _apu_doc.get("acero",   4500.0)
+        _p_are_d = _apu_doc.get("arena",   85000.0)
+        _p_gra_d = _apu_doc.get("grava",   95000.0)
+        _p_exc_d = _apu_doc.get("costo_excav_m3", 25000.0)
+        
+        _bultos_d = _vol_conc * 350 / 50.0
+        _vol_are_d = _vol_conc * 0.55
+        _vol_gra_d = _vol_conc * 0.80
+        
+        _c_exc_d = _vol_exc * _p_exc_d
+        _c_cem_d = _bultos_d * _p_cem_d
+        _c_are_d = _vol_are_d * _p_are_d
+        _c_gra_d = _vol_gra_d * _p_gra_d
+        _c_ace_d = _pe_tot * _p_ace_d
+        _c_tot_doc = _c_exc_d + _c_cem_d + _c_are_d + _c_gra_d + _c_ace_d
+        
+        doc_zap.add_heading("8. PRESUPUESTO ESTIMADO DE MATERIALES (APU)", level=1)
+        doc_zap.add_paragraph(f"  Moneda Base: {_mon_d}\n")
+        doc_zap.add_paragraph(f"  - Excavación:      {_vol_exc:.2f} m³       @ {_p_exc_d:,.0f} = {_c_exc_d:,.0f}")
+        doc_zap.add_paragraph(f"  - Cemento:         {_bultos_d:.1f} bultos   @ {_p_cem_d:,.0f} = {_c_cem_d:,.0f}")
+        doc_zap.add_paragraph(f"  - Arena:           {_vol_are_d:.2f} m³       @ {_p_are_d:,.0f} = {_c_are_d:,.0f}")
+        doc_zap.add_paragraph(f"  - Gravilla:        {_vol_gra_d:.2f} m³       @ {_p_gra_d:,.0f} = {_c_gra_d:,.0f}")
+        doc_zap.add_paragraph(f"  - Acero Refuerzo:  {_pe_tot:.1f} kg       @ {_p_ace_d:,.0f} = {_c_ace_d:,.0f}")
+        doc_zap.add_paragraph(f"  -------------------------------------------------------------")
+        doc_zap.add_paragraph(f"  SUBTOTAL DIRECTO MATERIALES = {_c_tot_doc:,.0f} {_mon_d}")
         # Si hay asentamiento guardado, agregarlo
         if "asentamiento" in st.session_state:
             doc_zap.add_heading("8. ASENTAMIENTO ELÁSTICO ESTIMADO", level=1)
@@ -1370,15 +1400,15 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
             {"Material": "💧 Agua",            "Cantidad": f"{litros_agua:.0f}",   "Unidad": "litros"},
             {"Material": "🏋️ Acero refuerzo",  "Cantidad": f"{peso_total_acero_zap:.1f}", "Unidad": "kg"},
         ])
-        # Integrar precios en tiempo real si están disponibles
-        _has_prices = "apu_config" in st.session_state
+        # Integrar precios guardados en base global o usar defaults directos si no se ha visitado el APU Mercado
         _apu = st.session_state.get("apu_config", {})
-        _mon = _apu.get("moneda", "")
-        _p_cem = _apu.get("cemento", 0.0)
-        _p_ace = _apu.get("acero",   0.0)
-        _p_are = _apu.get("arena",   0.0)
-        _p_gra = _apu.get("grava",   0.0)
-        c_excav_u = _apu.get("costo_excav_m3", 25000.0)   # fallback COP
+        _mon = _apu.get("moneda", "COP")
+        _p_cem = _apu.get("cemento", 32000.0)
+        _p_ace = _apu.get("acero",   4500.0)
+        _p_are = _apu.get("arena",   85000.0)
+        _p_gra = _apu.get("grava",   95000.0)
+        c_excav_u = _apu.get("costo_excav_m3", 25000.0)
+        _has_prices = True  # Siempre mostrar precios con los valores por defecto si no hay base
 
         _c_cem  = bultos_zap * _p_cem
         _c_ace  = peso_total_acero_zap * _p_ace
