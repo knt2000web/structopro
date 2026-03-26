@@ -307,15 +307,8 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
         st.caption("ℹ️ N60 clasifica perfil (Vesic)")
         metodo_cap = st.radio("Método de Capacidad", ["Terzaghi", "Meyerhof"], horizontal=True)
 
-    # Parámetros para asentamiento elástico (opcional)
-    with st.expander("📏 Asentamiento elástico inmediato", expanded=True):
-        usar_asent = st.checkbox("Calcular asentamiento inmediato", value=False)
-        if usar_asent:
-            c_e1, c_e2 = st.columns(2)
-            E_suelo = c_e1.number_input("Módulo elasticidad E [MPa]", 1.0, 500.0, 20.0, 1.0)
-            nu_suelo = c_e2.number_input("Relación de Poisson ν", 0.1, 0.5, 0.35, 0.01)
-        else:
-            E_suelo = None
+    # Parámetros para asentamiento elástico movidos abajo para unificar IO
+    pass
 
     # ── CÁLCULO GEOTÉCNICO ──────────────────────────────────────────────────
     phi_rad = math.radians(phi_ang)
@@ -337,6 +330,7 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
             sc, sq, sgamma = 1.3, 1.0, 0.6
         else:
             sc, sq, sgamma = 1.0, 1.0, 1.0
+        dc, dq, dgamma = 1.0, 1.0, 1.0
             
     else:
         # Factores de Capacidad — Meyerhof (1963)
@@ -344,15 +338,21 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
             Nc, Nq, Ngamma = 5.14, 1.0, 0.0
             sc = 1 + 0.2 * (B_cp/L_cp)
             sq, sgamma = 1.0, 1.0
+            dc = 1 + 0.2 * (Df_cp/B_cp)
+            dq, dgamma = 1.0, 1.0
         else:
             Nq = math.exp(math.pi * math.tan(phi_rad)) * (math.tan(math.pi/4 + phi_rad/2)**2)
             Nc = (Nq - 1) / math.tan(phi_rad)
             Ngamma = (Nq - 1) * math.tan(1.4 * phi_rad)
-            # Factores de Forma Meyerhof
+            # Factores de Forma y Profundidad Meyerhof
             Kp = math.tan(math.pi/4 + phi_rad/2)**2
             sc = 1 + 0.2 * Kp * (B_cp / L_cp)
             sq = 1 + 0.1 * Kp * (B_cp / L_cp) if phi_ang >= 10 else 1.0
             sgamma = sq
+            
+            dc = 1 + 0.2 * math.sqrt(Kp) * (Df_cp / B_cp)
+            dq = 1 + 0.1 * math.sqrt(Kp) * (Df_cp / B_cp) if phi_ang >= 10 else 1.0
+            dgamma = dq
 
     # Corrección por nivel freático (Casos I / II / III)
     gamma_prime = gamma_sat_t - gamma_w
@@ -370,7 +370,7 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
         gamma_eff = gamma_s
         caso_nf  = "III"
 
-    q_ult  = sc*coh_c*Nc + sq*q_sob*Nq + sgamma*0.5*gamma_eff*B_cp*Ngamma
+    q_ult  = sc*dc*coh_c*Nc + sq*dq*q_sob*Nq + sgamma*dgamma*0.5*gamma_eff*B_cp*Ngamma
     q_adm  = q_ult / FS_terz
     
     Q_ult  = q_ult * B_cp * L_cp
@@ -398,6 +398,7 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
             {"Parámetro": "Método",              "Valor": metodo_cap},
             {"Parámetro": "Nc / Nq / Nγ",        "Valor": f"{Nc:.2f} / {Nq:.2f} / {Ngamma:.2f}"},
             {"Parámetro": "sc / sq / sγ",         "Valor": f"{sc:.2f} / {sq:.2f} / {sgamma:.2f}"},
+            {"Parámetro": "dc / dq / dγ",         "Valor": f"{dc:.2f} / {dq:.2f} / {dgamma:.2f}"},
             {"Parámetro": f"Caso NF",             "Valor": f"Caso {caso_nf} | NF={NF_prof}m"},
             {"Parámetro": "q sobrecarga",         "Valor": f"{q_sob:.2f} kPa"},
             {"Parámetro": "γ' efectivo",          "Valor": f"{gamma_eff:.2f} kN/m³"},
@@ -409,74 +410,32 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
         m2.metric("ton/m²", f"{q_adm/9.80665:.2f}")
         m3.metric("kg/cm²", f"{q_adm/98.0665:.3f}")
 
-    # ── ASENTAMIENTO ELÁSTICO (si se solicitó) ─────────────────────────────
-    if usar_asent and E_suelo is not None:
-        st.divider()
-        st.markdown("#### 📏 Asentamiento Elástico Inmediato")
-        # Conversión a kPa
-        E_kPa = E_suelo * 1000
-        # Cálculo del asentamiento en el centro de una zapata flexible (Steinbrenner)
-        # Factor de influencia I: para zapata rectangular flexible, centro
-        # I = f(m,n) según Steinbrenner (solución de Boussinesq)
-        # Usamos la fórmula de la tabla de Fadum (para el centro de un rectángulo)
-        # Asentamiento = q * B * (1-ν²)/E * I_f
-        # I_f = 0.5 * [ (m n sqrt(m²+n²+1) / (m²+n²+1) + ...] pero simplificado
-        # Para una primera aproximación usamos el factor de influencia de la solución de Boussinesq
-        # integrada sobre el área.
-        # Usaremos la fórmula de Bowles (1996) para asentamiento inmediato:
-        # δ = q * B * (1-ν²) / E * I_f, con I_f = factor de influencia
-        # Para zapata rectangular, I_f = 0.5 * ln((1+sqrt(m²+1))/sqrt(m²+n²+1)) ... etc.
-        # Por simplicidad, aquí se implementa el factor para el centro según Steinbrenner.
-        # m = L/B, n = z/B (z=0 para superficie)
-        # En asentamiento superficial z=0, el factor se simplifica a I_f = 0.5 * ln((1+sqrt(m²+1))/...)
-        # Pero es más práctico usar la fórmula de la solución elástica para el centro:
-        # I_f = 0.5 * [ (m n sqrt(m²+n²+1) / (m²+n²+1) ) + ...] pero con z=0 es indeterminado.
-        # En su lugar usamos la expresión para el asentamiento en la superficie (z=0):
-        # Para una carga uniforme sobre un rectángulo, el asentamiento en el centro es:
-        # δ = (q * B / E) * (1 - ν²) * I_center
-        # donde I_center se puede calcular como:
-        # I_center = (1/π) * ln( (1+√(m²+1)) / (√(m²+1) - 1) ) * (1+ν) + ...
-        # Utilizaremos la fórmula aproximada de la literatura (Bowles):
-        # δ = q * B * (1-ν²) / E * I_f, I_f = 0.5 * [ (L/B) * ( ... ) ]? mejor usar la de la teoría de la elasticidad.
-        # Simplificamos con la fórmula de la solución elástica para el centro:
-        # I_f = (1/π) * [ (m ln((1+√(m²+1))/√(m²+1)) + ln((m+√(m²+1))/(m-√(m²+1)) ) ] ... es complejo.
-        # Implementaremos una versión simplificada que usa un factor empírico I_f = 0.8 para L/B=1, 0.9 para L/B=2, etc.
-        # Para una estimación rápida, se puede usar la tabla de Fadum (Boussinesq integrada) para el centro a profundidad cero.
-        # Alternativamente, usamos el factor I = 0.8 (para zapata cuadrada) y I=1.0 (para continua). 
-        # Se puede mejorar más adelante.
-        # Aquí usaremos una fórmula sencilla de la literatura (Das):
-        # δ = (q * B * (1-ν²) / E) * I_s, donde I_s = 0.5 * [ (L/B) * ( ... )] pero es complejo.
-        # Para no complicar, utilizaremos un factor I_f obtenido de la tabla de Steinbrenner (Bowles 1996, Tabla 5.1)
-        # m = L/B, n = H/B, H es la profundidad del estrato compressible (suponemos 10 m)
-        H_estrato = st.number_input("Profundidad del estrato compressible H [m]", 1.0, 50.0, 10.0, 1.0, key="h_estrato")
-        m = L_cp / B_cp
-        n = H_estrato / B_cp
-        # Cálculo de factor de influencia I_center (Bowles, Eq. 5-7)
-        # I_f = (1/π) * [ (m ln((1+√(m²+1))/√(m²+1)) + ln((m+√(m²+1))/(m-√(m²+1)) ) ] ... pero con n también.
-        # Para un estrato finito, se usa la solución de Steinbrenner. Usaremos la expresión de la referencia.
-        # Implementación simplificada: usamos la fórmula de la Tabla 5.1 (Bowles) mediante interpolación.
-        # Por simplicidad, usaremos la función de la siguiente manera:
-        def I_f_center(m, n):
-            # m = L/B, n = H/B
-            # Calcula factor de influencia para el centro de una zapata rectangular flexible.
-            # Fórmula de Steinbrenner (Bowles, 1996, Eq. 5-8)
-            # I_f = (1/π) * [ m ln((1+√(m²+1))/√(m²+1)) + ln((m+√(m²+1))/(m-√(m²+1))) ] * F(n) + ... No.
-            # Usamos una expresión de la solución de Boussinesq integrada sobre el rectángulo con profundidad finita:
-            # I = (1/π) * [ m * ( ... ) + ... ]
-            # Optamos por una función más directa: la solución de Newmark para el centro de un rectángulo.
-            # La fórmula completa es larga, por lo que para este ejemplo utilizamos una aproximación:
-            # I_f = 0.5 * (1 - ν²) * [ (m) / (1+m²) + ...] no.
-            # Finalmente, para mantener la sencillez, usaremos un factor empírico basado en la tabla de Das (2004).
-            # Para m entre 1 y 10, I_f varía entre 0.8 y 1.2. Tomamos I_f = 0.8 + 0.05*(m-1) con tope en 1.2.
-            # Esto es solo una estimación, no para diseño riguroso.
-            I = min(1.2, 0.8 + 0.05 * (m - 1))
-            return I
-        I_center = I_f_center(m, n)
-        asentamiento = q_adm * B_cp * (1 - nu_suelo**2) / E_kPa * I_center * 1000  # en mm
-        st.metric("Asentamiento inmediato estimado", f"{asentamiento:.1f} mm")
-        st.caption("⚠️ Cálculo aproximado usando factor de influencia empírico. Para diseño detallado, usar métodos más refinados (e.g., Steinbrenner completo).")
-        # Guardar asentamiento para uso en memoria
-        st.session_state['asentamiento'] = asentamiento
+    # ── ASENTAMIENTO ELÁSTICO (opcional) ─────────────────────────────
+    with st.expander("📏 Asentamiento elástico inmediato", expanded=True):
+        usar_asent = st.checkbox("Calcular asentamiento inmediato", value=False)
+        if usar_asent:
+            c_e1, c_e2 = st.columns(2)
+            E_suelo = c_e1.number_input("Módulo elasticidad E [MPa]", 1.0, 500.0, 20.0, 1.0)
+            nu_suelo = c_e2.number_input("Relación de Poisson ν", 0.1, 0.5, 0.35, 0.01)
+            H_estrato = st.number_input("Profundidad del estrato compressible H [m]", 1.0, 50.0, 10.0, 1.0, key="h_estrato")
+            
+            st.divider()
+            st.markdown("#### 📏 Resultado Asentamiento Elástico")
+            E_kPa = E_suelo * 1000
+            m = L_cp / B_cp
+            n = H_estrato / B_cp
+            
+            def I_f_center(m, n):
+                return min(1.2, 0.8 + 0.05 * (m - 1))
+                
+            I_center = I_f_center(m, n)
+            asentamiento = q_adm * B_cp * (1 - nu_suelo**2) / E_kPa * I_center * 1000  # en mm
+            st.metric("Asentamiento inmediato estimado", f"{asentamiento:.1f} mm")
+            st.caption("⚠️ Cálculo aproximado usando factor de influencia empírico. Para diseño detallado, usar métodos más refinados (e.g., Steinbrenner completo).")
+            # Guardar asentamiento para uso en memoria
+            st.session_state['asentamiento'] = asentamiento
+        else:
+            st.session_state['asentamiento'] = 0.0
 
     # ── GRÁFICA: TIPO DE FALLA (Vesic 1973 / SPT) ──────────────────────────
     st.divider()
@@ -939,7 +898,7 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
     rho_use_B = max(rho_B, 0.0018)
     As_req_B = rho_use_B * (L_use*100) * d_z  # cm2 para ancho L
     n_barras_B = math.ceil(As_req_B / REBAR_DICT[bar_z]["area"])
-    sep_B = (B_use*100 - 2*recub_z) / max(1, n_barras_B - 1)
+    sep_B = (L_use*100 - 2*recub_z) / max(1, n_barras_B - 1)  # Acero Dir.B se distribuye a lo largo de L
 
     # Diseño a flexión para dirección L
     try:
@@ -952,7 +911,7 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
     rho_use_L = max(rho_L, 0.0018)
     As_req_L = rho_use_L * (B_use*100) * d_z  # cm2 para ancho B
     n_barras_L = math.ceil(As_req_L / REBAR_DICT[bar_z]["area"])
-    sep_L = (L_use*100 - 2*recub_z) / max(1, n_barras_L - 1)
+    sep_L = (B_use*100 - 2*recub_z) / max(1, n_barras_L - 1)  # Acero Dir.L se distribuye a lo largo de B
 
     # Para compatibilidad con el resto del código
     Mu_flex = Mu_flex_B
@@ -1028,12 +987,23 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         st.markdown("---")
         
         estado_tension = "✅ Compresión Total (e ≤ B/6)" if qu_min >= 0 else "⚠️ Levantamiento"
+        
+        # Cálculo de longitud de desarrollo l_dh (NSR-10 C.12.5) para gancho 90°
+        # l_dh = (0.24 * fy / sqrt(f'c)) * db_mm  [resultado en mm]
+        ldh_req_mm = (0.24 * fy_basico / math.sqrt(fc_basico)) * db_bar_z
+        ldh_req_cm = max(15.0, 8 * (db_bar_z/10.0), ldh_req_mm / 10.0)
+        # Longitud disponible en la zapata desde la cara de la columna (en la dirección más crítica)
+        L_disp_B_cm = ((B_use - c1_col/100.0) / 2.0) * 100.0 - recub_z
+        L_disp_L_cm = ((L_use - c2_col/100.0) / 2.0) * 100.0 - recub_z
+        L_disp_min_cm = min(L_disp_B_cm, L_disp_L_cm)
+        ok_ldh = L_disp_min_cm >= ldh_req_cm
+
         data_res = [
             {"Revisión": "Geometría Propuesta", "Solicitado": f"Area Req = {Area_req:.2f} m²", "Capacidad/Provisto": f"Area Prov. = {A_use:.2f} m²", "Estado": "✅ OK" if A_use>=Area_req else "⚠️ Subdimensionado"},
             {"Revisión": "Pres. Contacto qu", "Solicitado": f"Max: {qu_max:.2f} kPa", "Capacidad/Provisto": f"Min: {qu_min:.2f} kPa", "Estado": estado_tension},
             {"Revisión": "Flexión Dir. B", "Solicitado": f"Mu_B = {Mu_flex_B:.1f} kN-m", "Capacidad/Provisto": f"As_B = {As_req_B:.1f} cm² → {n_barras_B} {bar_z} c/{sep_B:.1f}cm", "Estado": "✅ OK" if disc_B>0 else "❌ Rompe en compresión"},
             {"Revisión": "Flexión Dir. L", "Solicitado": f"Mu_L = {Mu_flex_L:.1f} kN-m", "Capacidad/Provisto": f"As_L = {As_req_L:.1f} cm² → {n_barras_L} {bar_z} c/{sep_L:.1f}cm", "Estado": "✅ OK" if disc_L>0 else "❌ Rompe en compresión"},
-            {"Revisión": "Gancho Estándar 90°", "Solicitado": f"D_min doblez: {D_doblez_cm:.1f} cm", "Capacidad/Provisto": f"Extensión recta: {L_ext_gancho_cm:.1f} cm", "Estado": "ℹ️ Info"},
+            {"Revisión": "Anclaje Gancho 90° (C.12)", "Solicitado": f"ldh req: {ldh_req_cm:.1f} cm", "Capacidad/Provisto": f"L_disp zapata: {L_disp_min_cm:.1f} cm", "Estado": "✅ OK" if ok_ldh else "❌ Aumentar B o L"},
         ]
         st.table(pd.DataFrame(data_res))
         
@@ -1135,19 +1105,55 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         _c_ace_d = _pe_tot * _p_ace_d
         _c_tot_doc = _c_exc_d + _c_cem_d + _c_are_d + _c_gra_d + _c_ace_d
         
-        doc_zap.add_heading("8. PRESUPUESTO ESTIMADO DE MATERIALES (APU)", level=1)
+        doc_zap.add_heading("8. PRESUPUESTO ESTIMADO (APU) — DESGLOSE COMPLETO", level=1)
         doc_zap.add_paragraph(f"  Moneda Base: {_mon_d}\n")
-        doc_zap.add_paragraph(f"  - Excavación:      {_vol_exc:.2f} m³       @ {_p_exc_d:,.0f} = {_c_exc_d:,.0f}")
-        doc_zap.add_paragraph(f"  - Cemento:         {_bultos_d:.1f} bultos   @ {_p_cem_d:,.0f} = {_c_cem_d:,.0f}")
-        doc_zap.add_paragraph(f"  - Arena:           {_vol_are_d:.2f} m³       @ {_p_are_d:,.0f} = {_c_are_d:,.0f}")
-        doc_zap.add_paragraph(f"  - Gravilla:        {_vol_gra_d:.2f} m³       @ {_p_gra_d:,.0f} = {_c_gra_d:,.0f}")
-        doc_zap.add_paragraph(f"  - Acero Refuerzo:  {_pe_tot:.1f} kg       @ {_p_ace_d:,.0f} = {_c_ace_d:,.0f}")
-        doc_zap.add_paragraph(f"  -------------------------------------------------------------")
-        doc_zap.add_paragraph(f"  SUBTOTAL DIRECTO MATERIALES = {_c_tot_doc:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"  A. MATERIALES DIRECTOS:")
+        doc_zap.add_paragraph(f"     - Excavación:      {_vol_exc:.2f} m³   × {_p_exc_d:,.0f}/m³  = {_c_exc_d:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"     - Cemento:         {_bultos_d:.1f} blt  × {_p_cem_d:,.0f}/blt = {_c_cem_d:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"     - Arena:           {_vol_are_d:.2f} m³   × {_p_are_d:,.0f}/m³  = {_c_are_d:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"     - Gravilla:        {_vol_gra_d:.2f} m³   × {_p_gra_d:,.0f}/m³  = {_c_gra_d:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"     - Acero Refuerzo:  {_pe_tot:.1f} kg   × {_p_ace_d:,.0f}/kg  = {_c_ace_d:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"  ─────────────────────────────────────────────────")
+        doc_zap.add_paragraph(f"  SUBTOTAL MATERIALES DIRECTOS = {_c_tot_doc:,.0f} {_mon_d}")
+
+        # Calcular Mano de Obra y demás con valores del APU si están disponibles
+        _apu_doc_cfg = st.session_state.get("apu_config", {})
+        _pct_he_doc  = _apu_doc_cfg.get("pct_herramienta", 0.05)
+        _pct_aiu_doc = _apu_doc_cfg.get("pct_aui", 0.30)
+        _pct_uti_doc = _apu_doc_cfg.get("pct_util", 0.05)
+        _pct_iva_doc = _apu_doc_cfg.get("iva", 0.19)
+        _dia_mo_doc  = _apu_doc_cfg.get("costo_dia_mo", 69333.33)
+        _vol_conc_doc = B_use * L_use * (H_zap / 100.0)
+        _vol_exc_doc2 = (B_use + 0.5) * (L_use + 0.5) * Df_z
+        _dias_mo_doc = (_pe_tot * 0.04) + (_vol_conc_doc * 0.4) + (_vol_exc_doc2 * 0.3)
+        _c_mo_doc    = _dias_mo_doc * _dia_mo_doc
+        _cd_doc      = _c_tot_doc + _c_mo_doc
+        _herr_doc    = _c_mo_doc * _pct_he_doc
+        _aiu_doc_val = _cd_doc * _pct_aiu_doc
+        _util_doc    = _cd_doc * _pct_uti_doc
+        _iva_doc_val = _util_doc * _pct_iva_doc
+        _gran_total_doc = _cd_doc + _herr_doc + _aiu_doc_val + _iva_doc_val
+
+        doc_zap.add_paragraph(f"")
+        doc_zap.add_paragraph(f"  B. MANO DE OBRA:")
+        doc_zap.add_paragraph(f"     {_dias_mo_doc:.2f} días-obra × {_dia_mo_doc:,.0f} {_mon_d}/día = {_c_mo_doc:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"  ─────────────────────────────────────────────────")
+        doc_zap.add_paragraph(f"  COSTO DIRECTO (CD) = Mat. + MO = {_cd_doc:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"")
+        doc_zap.add_paragraph(f"  C. CARGAS INDIRECTAS:")
+        doc_zap.add_paragraph(f"     - Herramienta Menor ({_pct_he_doc*100:.1f}% MO): {_herr_doc:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"     - A.I.U. ({_pct_aiu_doc*100:.0f}% CD):         {_aiu_doc_val:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"     - IVA s/ Utilidad ({_pct_iva_doc*100:.0f}% × Util.): {_iva_doc_val:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"  ═════════════════════════════════════════════════")
+        doc_zap.add_paragraph(f"  GRAN TOTAL DEL PROYECTO = {_gran_total_doc:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"  (Diferencia Gran Total vs Materiales = {_gran_total_doc - _c_tot_doc:,.0f} {_mon_d}")
+        doc_zap.add_paragraph(f"   = MO + Herramienta + AIU + IVA)")
+
         # Si hay asentamiento guardado, agregarlo
         if "asentamiento" in st.session_state:
-            doc_zap.add_heading("8. ASENTAMIENTO ELÁSTICO ESTIMADO", level=1)
+            doc_zap.add_heading("8b. ASENTAMIENTO ELÁSTICO ESTIMADO", level=1)
             doc_zap.add_paragraph(f"  Asentamiento inmediato (estimado) = {st.session_state.asentamiento:.1f} mm")
+
             
         doc_zap.add_heading("9. ANEXO GRÁFICO (ESQUEMAS GENERADOS)", level=1)
         # Función auxiliar para incrustar figuras
@@ -1209,53 +1215,53 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         _ext_m = L_ext_gancho_cm / 100.0         # extensión recta en metros
         _hook_h = (math.pi * _r_m / 2) + _ext_m  # altura total del gancho (arco + recta)
 
-        # Varillas Dir. B (barras corren en Y=dirección L)
-        _xs_barB = np.linspace(-B_use/2 + rec_m, B_use/2 - rec_m, n_barras_B)
+        # Varillas Dir. B (barras corren en X=dirección B, se distribuyen en Y=dirección L)
+        _ys_barB = np.linspace(-L_use/2 + rec_m, L_use/2 - rec_m, n_barras_B)
         _show_B = True
         _show_Bh = True
-        for xi in _xs_barB:
+        for yi in _ys_barB:
             # Tramo recto horizontal
             fig3d.add_trace(go.Scatter3d(
-                x=[xi, xi], y=[-L_use/2 + rec_m, L_use/2 - rec_m], z=[z_bar, z_bar],
+                x=[-B_use/2 + rec_m, B_use/2 - rec_m], y=[yi, yi], z=[z_bar, z_bar],
                 mode='lines', line=dict(color='#ff6b35', width=5),
                 name='Acero Dir.B' if _show_B else None, showlegend=_show_B, legendgroup='aB'))
             _show_B = False
-            # Gancho extremo -Y (sube verticalmente)
+            # Gancho extremo -X (sube verticalmente)
             fig3d.add_trace(go.Scatter3d(
-                x=[xi, xi], y=[-L_use/2 + rec_m, -L_use/2 + rec_m],
+                x=[-B_use/2 + rec_m, -B_use/2 + rec_m], y=[yi, yi],
                 z=[z_bar, z_bar + _hook_h],
                 mode='lines', line=dict(color='#ff9a6c', width=3, dash='dot'),
                 name='Ganchos Dir.B' if _show_Bh else None, showlegend=_show_Bh, legendgroup='aBh'))
-            # Gancho extremo +Y
+            # Gancho extremo +X
             fig3d.add_trace(go.Scatter3d(
-                x=[xi, xi], y=[L_use/2 - rec_m, L_use/2 - rec_m],
+                x=[B_use/2 - rec_m, B_use/2 - rec_m], y=[yi, yi],
                 z=[z_bar, z_bar + _hook_h],
                 mode='lines', line=dict(color='#ff9a6c', width=3, dash='dot'),
                 name=None, showlegend=False, legendgroup='aBh'))
             _show_Bh = False
 
-        # Varillas Dir. L (barras corren en X=dirección B)
-        _ys_barL = np.linspace(-L_use/2 + rec_m, L_use/2 - rec_m, n_barras_L)
+        # Varillas Dir. L (barras corren en Y=dirección L, se distribuyen en X=dirección B)
+        _xs_barL = np.linspace(-B_use/2 + rec_m, B_use/2 - rec_m, n_barras_L)
         _z_barL  = z_bar + db_m
         _hook_h_L = _hook_h + db_m   # ligeramente más alto porque van encima
         _show_L = True
         _show_Lh = True
-        for yi in _ys_barL:
+        for xi in _xs_barL:
             # Tramo recto horizontal
             fig3d.add_trace(go.Scatter3d(
-                x=[-B_use/2 + rec_m, B_use/2 - rec_m], y=[yi, yi], z=[_z_barL, _z_barL],
+                x=[xi, xi], y=[-L_use/2 + rec_m, L_use/2 - rec_m], z=[_z_barL, _z_barL],
                 mode='lines', line=dict(color='#ffd54f', width=5),
                 name='Acero Dir.L' if _show_L else None, showlegend=_show_L, legendgroup='aL'))
             _show_L = False
-            # Gancho extremo -X (sube verticalmente)
+            # Gancho extremo -Y (sube verticalmente)
             fig3d.add_trace(go.Scatter3d(
-                x=[-B_use/2 + rec_m, -B_use/2 + rec_m], y=[yi, yi],
+                x=[xi, xi], y=[-L_use/2 + rec_m, -L_use/2 + rec_m],
                 z=[_z_barL, _z_barL + _hook_h_L],
                 mode='lines', line=dict(color='#ffe57f', width=3, dash='dot'),
                 name='Ganchos Dir.L' if _show_Lh else None, showlegend=_show_Lh, legendgroup='aLh'))
-            # Gancho extremo +X
+            # Gancho extremo +Y
             fig3d.add_trace(go.Scatter3d(
-                x=[B_use/2 - rec_m, B_use/2 - rec_m], y=[yi, yi],
+                x=[xi, xi], y=[L_use/2 - rec_m, L_use/2 - rec_m],
                 z=[_z_barL, _z_barL + _hook_h_L],
                 mode='lines', line=dict(color='#ffe57f', width=3, dash='dot'),
                 name=None, showlegend=False, legendgroup='aLh'))
@@ -1326,12 +1332,15 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         msp.add_lwpolyline([(ex+pos_x_col,ey+H_zap),(ex+pos_x_col,ey+H_zap+50),
                             (ex+pos_x_col+c1_col,ey+H_zap+50),(ex+pos_x_col+c1_col,ey+H_zap)],
                            close=True, dxfattribs={'layer':'CONCRETO'})
-        for i in range(n_barras_B):
-            xi = ex + recub_z + i * sep_B
+        
+        # El acero transversal que se ve como puntos en elevación frontal (B) es Dir.L (paralelo a L, distribuido en B)
+        for i in range(n_barras_L):
+            xi = ex + recub_z + i * sep_L
             msp.add_line((xi, ey+recub_z), (xi, ey+recub_z), dxfattribs={'layer':'ACERO'})
             msp.add_circle((xi, ey+recub_z), db_bar_z/10, dxfattribs={'layer':'ACERO'})
+        # El acero principal en la cara B es Dir.B (paralelo a B)
         msp.add_line((ex+recub_z, ey+recub_z), (ex+B_use*100-recub_z, ey+recub_z), dxfattribs={'layer':'ACERO'})
-        msp.add_mtext(f"{n_barras_B}#{bar_z}@{sep_B:.0f}cm Dir.B",
+        msp.add_mtext(f"{n_barras_L}#{bar_z}@{sep_L:.0f}cm Dir.L (Transversal)",
                       dxfattribs={'layer':'TEXTO','char_height':4,'insert':(ex+B_use*50, ey-8)})
 
         # Planta
@@ -1343,13 +1352,17 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
                             (px+pos_x_col+c1_col,py+(L_use*100+c2_col)/2),
                             (px+pos_x_col,py+(L_use*100+c2_col)/2)],
                            close=True, dxfattribs={'layer':'CONCRETO'})
+        
+        # Acero Dir. B (Distribuido a lo largo de L, líneas horizontales de longitud B)
         for i in range(n_barras_B):
-            xi = px + recub_z + i * sep_B
-            msp.add_line((xi, py+recub_z), (xi, py+L_use*100-recub_z), dxfattribs={'layer':'ACERO'})
+            yi = py + recub_z + i * sep_B
+            msp.add_line((px+recub_z, yi), (px+B_use*100-recub_z, yi), dxfattribs={'layer':'ACERO'})
+        # Acero Dir. L (Distribuido a lo largo de B, líneas verticales de longitud L)
         for j in range(n_barras_L):
-            yj = py + recub_z + j * sep_L
-            msp.add_line((px+recub_z, yj), (px+B_use*100-recub_z, yj), dxfattribs={'layer':'ACERO'})
-        msp.add_mtext(f"{n_barras_L}#{bar_z}@{sep_L:.0f}cm Dir.L",
+            xj = px + recub_z + j * sep_L
+            msp.add_line((xj, py+recub_z), (xj, py+L_use*100-recub_z), dxfattribs={'layer':'ACERO'})
+            
+        msp.add_mtext(f"{n_barras_B}#{bar_z}@{sep_B:.0f}cm Dir.B | {n_barras_L}#{bar_z}@{sep_L:.0f}cm Dir.L",
                       dxfattribs={'layer':'TEXTO','char_height':4,'insert':(px+B_use*50, py+L_use*100+8)})
 
         # ezdxf.write() requiere un stream de texto (StringIO), no BytesIO
@@ -1433,8 +1446,27 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
             col_msg, col_metric = st.columns([2, 1])
             col_msg.success(f"💱 Precios actualizados del scraping — {_mon}")
             col_metric.metric(f"💎 Gran Total Proyecto [{_mon}]", f"{_gran_total:,.0f}")
+            
+            # ─── DESGLOSE TRANSPARENTE DEL GRAN TOTAL ───────────────────────
+            st.markdown("#### 📋 Desglose del Presupuesto")
+            _pct_he  = _apu.get('pct_herramienta', 0.05)*100
+            _pct_aiu = _apu.get('pct_aui', 0.30)*100
+            _pct_uti = _apu.get('pct_util', 0.05)*100
+            _pct_iva = _apu.get('iva', 0.19)*100
+            _desglose = [
+                {"Concepto": "① Materiales Directos",  "Base de cálculo": "Excavación + Concreto + Acero", "Importe": f"{_total_mat:,.0f} {_mon}"},
+                {"Concepto": "② Mano de Obra",         "Base de cálculo": f"{total_dias_mo:.2f} días × {_apu.get('costo_dia_mo',69333.33):,.0f}/día", "Importe": f"{costo_mo:,.0f} {_mon}"},
+                {"Concepto": "━ COSTO DIRECTO (CD)",   "Base de cálculo": "① + ②",                         "Importe": f"{costo_directo:,.0f} {_mon}"},
+                {"Concepto": f"③ Herramienta Menor",   "Base de cálculo": f"{_pct_he:.1f}% × MO",          "Importe": f"{herramienta:,.0f} {_mon}"},
+                {"Concepto": f"④ A.I.U. ({_pct_aiu:.0f}%)", "Base de cálculo": f"{_pct_aiu:.1f}% × CD",   "Importe": f"{aiu:,.0f} {_mon}"},
+                {"Concepto": f"⑤ IVA s/ Utilidad",    "Base de cálculo": f"{_pct_iva:.1f}% × Utilidad ({_pct_uti:.1f}% CD)", "Importe": f"{iva:,.0f} {_mon}"},
+                {"Concepto": "━ GRAN TOTAL",           "Base de cálculo": "CD + ③ + ④ + ⑤",                "Importe": f"**{_gran_total:,.0f} {_mon}**"},
+            ]
+            st.dataframe(pd.DataFrame(_desglose), use_container_width=True, hide_index=True)
         else:
             st.info("ℹ️ Ve a **APU Mercado** para descargar los costos en tiempo real aquí mismo.")
+
+
 
         # TABLA: Materiales con costos
         _mat_rows = [
@@ -1561,15 +1593,44 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
             total_proyecto = costo_directo + herramienta + aiu + iva
             
             data_zap_apu = {
-                "Item": ["Excavación (m³)", "Cemento (bultos)", "Acero (kg)", "Arena (m³)", "Grava (m³)", 
-                         "Mano de Obra (días)", "Herramienta Menor", "A.I.U.", "IVA s/Utilidad", "TOTAL PRESUPUESTO"],
-                "Cantidad": [f"{vol_excavacion:.2f}", f"{bultos_zap:.1f}", f"{peso_total_acero_zap:.1f}", f"{vol_arena_z:.2f}", f"{vol_grava_z:.2f}", 
-                             f"{total_dias_mo:.2f}", f"{apu.get('pct_herramienta', 0.05)*100:.1f}% MO", 
-                             f"{apu.get('pct_aui', 0.3)*100:.1f}% CD", f"{apu.get('iva', 0.19)*100:.1f}% Util", ""],
-                f"Subtotal [{mon}]": [f"{c_excav:,.2f}", f"{c_cem:,.2f}", f"{c_ace:,.2f}", f"{c_are:,.2f}", f"{c_gra:,.2f}", 
-                                      f"{costo_mo:,.2f}", f"{herramienta:,.2f}", f"{aiu:,.2f}", f"{iva:,.2f}", f"**{total_proyecto:,.2f}**"]
+                "Concepto": [
+                    "① Excavación", "② Cemento", "③ Acero Refuerzo", "④ Arena", "⑤ Grava",
+                    "━━ SUBTOTAL MATERIALES DIRECTOS",
+                    "⑥ Mano de Obra",
+                    "━━ COSTO DIRECTO (CD)",
+                    f"⑦ Herramienta Menor ({apu.get('pct_herramienta', 0.05)*100:.1f}%)",
+                    f"⑧ A.I.U. ({apu.get('pct_aui', 0.30)*100:.0f}%)",
+                    f"⑨ IVA s/ Utilidad ({apu.get('iva', 0.19)*100:.0f}%)",
+                    "━━ GRAN TOTAL DEL PROYECTO",
+                ],
+                "Base de cálculo": [
+                    f"{vol_excavacion:.2f} m³ × 25,000/m³",
+                    f"{bultos_zap:.1f} blt × {apu['cemento']:,.0f}/blt",
+                    f"{peso_total_acero_zap:.1f} kg × {apu['acero']:,.0f}/kg",
+                    f"{vol_arena_z:.2f} m³ × {apu['arena']:,.0f}/m³",
+                    f"{vol_grava_z:.2f} m³ × {apu['grava']:,.0f}/m³",
+                    "① + ② + ③ + ④ + ⑤",
+                    f"{total_dias_mo:.2f} días × {apu.get('costo_dia_mo', 69333.33):,.0f}/día",
+                    "Mat. + MO",
+                    f"{apu.get('pct_herramienta', 0.05)*100:.1f}% × Mano de Obra",
+                    f"{apu.get('pct_aui', 0.30)*100:.0f}% × Costo Directo",
+                    f"{apu.get('iva', 0.19)*100:.0f}% × Utilidad ({apu.get('pct_util', 0.05)*100:.0f}% CD)",
+                    "CD + ⑦ + ⑧ + ⑨",
+                ],
+                f"Importe [{mon}]": [
+                    f"{c_excav:,.0f}", f"{c_cem:,.0f}", f"{c_ace:,.0f}", f"{c_are:,.0f}", f"{c_gra:,.0f}",
+                    f"{total_mat:,.0f}",
+                    f"{costo_mo:,.0f}",
+                    f"{costo_directo:,.0f}",
+                    f"{herramienta:,.0f}",
+                    f"{aiu:,.0f}",
+                    f"{iva:,.0f}",
+                    f"{total_proyecto:,.0f}",
+                ]
             }
             st.dataframe(pd.DataFrame(data_zap_apu), use_container_width=True, hide_index=True)
+            st.info(f"💡 **Diferencia Gran Total vs Materiales:** {total_proyecto - total_mat:,.0f} {mon} = Mano de Obra ({costo_mo:,.0f}) + Herramienta ({herramienta:,.0f}) + AIU ({aiu:,.0f}) + IVA ({iva:,.0f})")
+
             
             # Excel APU Export
             output_excel = io.BytesIO()
