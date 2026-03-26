@@ -297,44 +297,60 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
         Df_cp = st.number_input(_t("Profundidad Df [m]","Depth Df [m]"), 0.0, 10.0,
                                 st.session_state.get("cp_df", 1.5), 0.1, key="cp_df")
         b_col_cp = st.number_input(_t("Lado columna b [m]","Column side b [m]"), 0.1, 2.0, 0.4, 0.05, key="z_bcol_cp")
-        Q_act  = st.number_input("Carga vertical actuante Q [kN]", 10.0, 50000.0, 3000.0, 100.0, key="z_Qact")
+        Q_act  = st.number_input("Carga vertical actuante Q [kN]", 10.0, 50000.0, 800.0, 100.0, key="z_Qact")
     with c3:
         st.markdown("##### 💧 Nivel Freático y FS")
         NF_prof = st.number_input("NF — Profundidad nivel freático [m]", 0.0, 20.0, 1.0, 0.5, key="z_nf")
         FS_terz = st.number_input(_t("Factor de Seguridad (FS)","Safety Factor (FS)"),
                                   1.0, 5.0, st.session_state.get("z_fs", 3.0), 0.1, key="z_fs")
-        N_spt   = st.number_input("N60 campo (SPT)", 0, 100, 14, 1, key="z_spt")
-        st.caption("ℹ️ N60 se usa para clasificar tipo de falla (Vesic 1973)")
+        metodo_cap = st.radio("Método de Capacidad", ["Terzaghi", "Meyerhof"], horizontal=True)
 
     # Parámetros para asentamiento elástico (opcional)
-    with st.expander("📏 Asentamiento elástico (opcional)", expanded=False):
+    with st.expander("📏 Asentamiento elástico inmediato", expanded=True):
         usar_asent = st.checkbox("Calcular asentamiento inmediato", value=False)
         if usar_asent:
-            E_suelo = st.number_input("Módulo de elasticidad del suelo E [MPa]", 1.0, 500.0, 20.0, 1.0)
-            nu_suelo = st.number_input("Relación de Poisson ν", 0.1, 0.5, 0.35, 0.01)
-            metodo_asent = st.selectbox("Método", ["Steinbrenner (zapata flexible)", "Elástico uniforme"])
+            c_e1, c_e2 = st.columns(2)
+            E_suelo = c_e1.number_input("Módulo elasticidad E [MPa]", 1.0, 500.0, 20.0, 1.0)
+            nu_suelo = c_e2.number_input("Relación de Poisson ν", 0.1, 0.5, 0.35, 0.01)
         else:
             E_suelo = None
 
     # ── CÁLCULO GEOTÉCNICO ──────────────────────────────────────────────────
     phi_rad = math.radians(phi_ang)
 
-    # Factores capacidad — Terzaghi
-    if phi_ang == 0:
-        Nc, Nq, Ngamma = 5.7, 1.0, 0.0
-    else:
-        a_t    = math.exp((0.75*math.pi - phi_rad/2)*math.tan(phi_rad))
-        Nq     = (a_t**2) / (2*math.cos(math.radians(45) + phi_rad/2)**2)
-        Nc     = (Nq - 1) / math.tan(phi_rad)
-        Ngamma = 2*(Nq+1)*math.tan(phi_rad) / (1 + 0.4*math.sin(4*phi_rad))
+    if metodo_cap == "Terzaghi":
+        # Factores capacidad — Terzaghi
+        if phi_ang == 0:
+            Nc, Nq, Ngamma = 5.7, 1.0, 0.0
+        else:
+            a_t    = math.exp((0.75*math.pi - phi_rad/2)*math.tan(phi_rad))
+            Nq     = (a_t**2) / (2*math.cos(math.radians(45) + phi_rad/2)**2)
+            Nc     = (Nq - 1) / math.tan(phi_rad)
+            Ngamma = 2*(Nq+1)*math.tan(phi_rad) / (1 + 0.4*math.sin(4*phi_rad))
 
-    # Factores de forma
-    if forma_zap in ["Cuadrada", "Square"]:
-        sc, sq, sgamma = 1.3, 1.0, 0.8
-    elif forma_zap in ["Circular"]:
-        sc, sq, sgamma = 1.3, 1.0, 0.6
+        # Factores de forma (Terzaghi simplificado)
+        if forma_zap in ["Cuadrada", "Square"]:
+            sc, sq, sgamma = 1.3, 1.0, 0.8
+        elif forma_zap in ["Circular"]:
+            sc, sq, sgamma = 1.3, 1.0, 0.6
+        else:
+            sc, sq, sgamma = 1.0, 1.0, 1.0
+            
     else:
-        sc, sq, sgamma = 1.0, 1.0, 1.0
+        # Factores de Capacidad — Meyerhof (1963)
+        if phi_ang == 0:
+            Nc, Nq, Ngamma = 5.14, 1.0, 0.0
+            sc = 1 + 0.2 * (B_cp/L_cp)
+            sq, sgamma = 1.0, 1.0
+        else:
+            Nq = math.exp(math.pi * math.tan(phi_rad)) * (math.tan(math.pi/4 + phi_rad/2)**2)
+            Nc = (Nq - 1) / math.tan(phi_rad)
+            Ngamma = (Nq - 1) * math.tan(1.4 * phi_rad)
+            # Factores de Forma Meyerhof
+            Kp = math.tan(math.pi/4 + phi_rad/2)**2
+            sc = 1 + 0.2 * Kp * (B_cp / L_cp)
+            sq = 1 + 0.1 * Kp * (B_cp / L_cp) if phi_ang >= 10 else 1.0
+            sgamma = sq
 
     # Corrección por nivel freático (Casos I / II / III)
     gamma_prime = gamma_sat_t - gamma_w
@@ -354,40 +370,42 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
 
     q_ult  = sc*coh_c*Nc + sq*q_sob*Nq + sgamma*0.5*gamma_eff*B_cp*Ngamma
     q_adm  = q_ult / FS_terz
+    
     Q_ult  = q_ult * B_cp * L_cp
-    FS_calc = Q_ult / Q_act if Q_act > 0 else 999.0
-    cumplio = FS_calc >= FS_terz
+    q_act  = Q_act / (B_cp * L_cp)
+    
+    FS_calc = q_ult / q_act if q_act > 0 else 999.0
+    cumplio = q_act <= q_adm
 
     # ── RESULTADOS ──────────────────────────────────────────────────────────
     st.divider()
-    st.markdown("#### 📊 Resultados de Capacidad Portante")
+    st.markdown(f"#### 📊 Resultados de Capacidad Portante ({metodo_cap})")
+    col_c1, col_c2, col_c3 = st.columns(3)
+    col_c1.metric("Esfuerzo Admisible (q_adm)", f"{q_adm:.2f} kPa")
+    col_c2.metric("Esfuerzo Actuante (q_act)", f"{q_act:.2f} kPa", delta=f"{q_adm - q_act:.2f} kPa (Margen)", delta_color="normal")
+    col_c3.metric("FS Calculado (q_ult / q_act)", f"{FS_calc:.2f}", delta=f"Requerido: {FS_terz:.2f}", delta_color="off")
+    
+    if cumplio:
+        st.success(f"✅ **Verificación Exitosa:** El esfuerzo actuante ({q_act:.2f} kPa) es MENOR o IGUAL al esfuerzo admisible ({q_adm:.2f} kPa).")
+    else:
+        st.error(f"❌ **Falla por Capacidad:** El esfuerzo actuante ({q_act:.2f} kPa) es MAYOR al esfuerzo admisible ({q_adm:.2f} kPa). Aumenta la sección de la zapata o reduce la carga.")
+
     col_r1, col_r2 = st.columns(2)
     with col_r1:
         st.dataframe(pd.DataFrame([
-            {"Parámetro": "Nc",                  "Valor": f"{Nc:.3f}"},
-            {"Parámetro": "Nq",                  "Valor": f"{Nq:.3f}"},
-            {"Parámetro": "Nγ",                  "Valor": f"{Ngamma:.3f}"},
-            {"Parámetro": "sc / sq / sγ",         "Valor": f"{sc} / {sq} / {sgamma}"},
+            {"Parámetro": "Método",              "Valor": metodo_cap},
+            {"Parámetro": "Nc / Nq / Nγ",        "Valor": f"{Nc:.2f} / {Nq:.2f} / {Ngamma:.2f}"},
+            {"Parámetro": "sc / sq / sγ",         "Valor": f"{sc:.2f} / {sq:.2f} / {sgamma:.2f}"},
             {"Parámetro": f"Caso NF",             "Valor": f"Caso {caso_nf} | NF={NF_prof}m"},
             {"Parámetro": "q sobrecarga",         "Valor": f"{q_sob:.2f} kPa"},
             {"Parámetro": "γ' efectivo",          "Valor": f"{gamma_eff:.2f} kN/m³"},
-            {"Parámetro": "q_ult",                "Valor": f"{q_ult:.2f} kPa"},
-            {"Parámetro": "Q_ult = q_ult·B·L",   "Valor": f"{Q_ult:.1f} kN"},
-            {"Parámetro": "FS calculado",         "Valor": f"{FS_calc:.3f}"},
         ]), use_container_width=True, hide_index=True)
     with col_r2:
-        st.markdown("**q_adm en todas las unidades:**")
+        st.markdown("**Conversión Admisible:**")
         m1,m2,m3 = st.columns(3)
-        m1.metric("kPa",    f"{q_adm:.1f}")
+        m1.metric("kPa (kN/m²)",    f"{q_adm:.1f}")
         m2.metric("ton/m²", f"{q_adm/9.80665:.2f}")
-        m3.metric("kg/cm²", f"{q_adm/98.0665:.4f}")
-        m4,m5 = st.columns(2)
-        m4.metric("MPa",    f"{q_adm/1000:.5f}")
-        m5.metric("psi",    f"{q_adm/6.89476:.2f}")
-        if cumplio:
-            st.success(f"✅ q_adm = **{q_adm:.2f} kPa** | FS = {FS_calc:.2f} ≥ {FS_terz}")
-        else:
-            st.error(f"❌ q_adm = {q_adm:.2f} kPa | FS = {FS_calc:.2f} < {FS_terz} → Revisar dimensiones")
+        m3.metric("kg/cm²", f"{q_adm/98.0665:.3f}")
 
     # ── ASENTAMIENTO ELÁSTICO (si se solicitó) ─────────────────────────────
     if usar_asent and E_suelo is not None:
