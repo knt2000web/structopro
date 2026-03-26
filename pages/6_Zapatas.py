@@ -155,16 +155,75 @@ with st.expander(_t("🌍 1. Esfuerzos en masa de suelo debajo de zapata", "🌍
     
     st.success(f"📈 Incremento de esfuerzo vertical bajo el centro a Z={Z_bous}m: **Δσ_z = {delta_sigma_z:.2f} kPa**")
     
-    # Grafica rapida de bulbo central
-    fig_b, ax_b = plt.subplots(figsize=(6,3))
-    zs = np.linspace(0.1, max(B_bous*3, 10), 50)
-    sigmas = [4 * q_0 * I_z_bous((B_bous/2.0)/z, (L_bous/2.0)/z) for z in zs]
-    ax_b.plot(sigmas, zs, color="magenta", lw=2)
-    ax_b.invert_yaxis()
-    ax_b.set_xlabel("Incremento de Esfuerzo Δσ_z [kPa]")
-    ax_b.set_ylabel("Profundidad Z [m]")
-    ax_b.set_title(f"Distribución de Esfuerzos bajo el centro (P={P_bous} kN)")
-    ax_b.grid(True, linestyle="--", alpha=0.5)
+    # --- Gráficos Analíticos Boussinesq ---
+    fig_b, (ax_v, ax_h) = plt.subplots(1, 2, figsize=(12, 4.5))
+    fig_b.patch.set_facecolor("#0f1117")
+    ax_v.set_facecolor("#161b22")
+    ax_h.set_facecolor("#161b22")
+
+    # 1. Perfil Vertical bajo el centro
+    z_max = max(B_bous*4.0, 10.0)
+    zs = np.linspace(0.1, z_max, 100)
+    sigmas_v = [4 * q_0 * I_z_bous((B_bous/2.0)/z, (L_bous/2.0)/z) for z in zs]
+    
+    q_10 = q_0 * 0.10
+    # Encontrar Z_influencia donde delta_sigma <= 10% q_0
+    z_inf = next((z for z, sig in zip(zs, sigmas_v) if sig <= q_10), None)
+
+    ax_v.plot(sigmas_v, zs, color="#00ffcc", lw=2.5, label="Δσ_z bajo el centro")
+    ax_v.axvline(q_10, color="magenta", linestyle="--", lw=1.5, label="10% q₀ (Influencia)")
+    if z_inf:
+        ax_v.axhline(z_inf, color="#ff9500", linestyle=":", lw=1.5, label=f"Z inf ≈ {z_inf:.1f} m")
+
+    ax_v.invert_yaxis()
+    ax_v.set_xlabel("Incremento de Esfuerzo Δσ_z [kPa]", color="white")
+    ax_v.set_ylabel("Profundidad Z [m]", color="white")
+    ax_v.set_title("Distribución Vertical", color="white", fontsize=11)
+    
+    # Ajuste dinámico del rango X: un poco más del maximo de los valores relevantes
+    # O ignorar el valor exacto en z=0.1 si es igual a q_0, enfocar en el tramo util.
+    max_sigma_plot = max(sigmas_v)
+    ax_v.set_xlim(0, max_sigma_plot * 1.1)
+    
+    ax_v.tick_params(colors="white")
+    ax_v.grid(True, linestyle=":", alpha=0.3, color="white")
+    ax_v.legend(loc="lower right", facecolor="#161b22", labelcolor="white", edgecolor="none")
+
+    # 2. Perfiles Horizontales (Transversales al eje Y)
+    def sigma_x(x_arr, z_val):
+        # Esfuerzo usando Superposición Múltiple de rectángulos (Fadum corner formula)
+        sigmas_h = []
+        y1, y2 = L_bous/2.0, -L_bous/2.0
+        for x in x_arr:
+            x1, x2 = B_bous/2.0 - x, -B_bous/2.0 - x
+            I1 = I_z_bous_vec(abs(x1)/z_val, abs(y1)/z_val) * np.sign(x1) * np.sign(y1)
+            I2 = I_z_bous_vec(abs(x2)/z_val, abs(y1)/z_val) * np.sign(x2) * np.sign(y1)
+            I3 = I_z_bous_vec(abs(x1)/z_val, abs(y2)/z_val) * np.sign(x1) * np.sign(y2)
+            I4 = I_z_bous_vec(abs(x2)/z_val, abs(y2)/z_val) * np.sign(x2) * np.sign(y2)
+            sigmas_h.append(q_0 * abs(I1 - I2 - I3 + I4))
+        return sigmas_h
+
+    xs = np.linspace(-B_bous*2, B_bous*2, 100)
+    profundidades_plot = [B_bous, B_bous*2, B_bous*3]
+    colores = ["#ff5252", "#ffd740", "#69f0ae"]
+    
+    for zd, col in zip(profundidades_plot, colores):
+        sig_x = sigma_x(xs, zd)
+        ax_h.plot(xs, sig_x, color=col, lw=2, label=f"Z = {zd:.1f} m")
+
+    # Dibujar contorno de la zapata en Z=0
+    ax_h.plot([-B_bous/2, B_bous/2], [q_0, q_0], color="white", lw=2.5, linestyle="-", label="Base Zapata")
+
+    ax_h.set_xlabel("Distancia X [m]", color="white")
+    ax_h.set_ylabel("Δσ_z [kPa]", color="white")
+    ax_h.set_title("Perfiles Horizontales Transversales", color="white", fontsize=11)
+    ax_h.set_xlim(-B_bous*2, B_bous*2)
+    ax_h.set_ylim(0, q_0 * 1.1)
+    ax_h.tick_params(colors="white")
+    ax_h.grid(True, linestyle=":", alpha=0.3, color="white")
+    ax_h.legend(loc="upper right", facecolor="#161b22", labelcolor="white", edgecolor="none")
+
+    fig_b.tight_layout()
     st.pyplot(fig_b)
 
 # ─────────────────────────────────────────────
