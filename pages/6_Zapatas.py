@@ -693,9 +693,9 @@ with st.expander(_t("🔬 4. Profundidad Mínima de Exploración de Subsuelo (NS
     st.session_state.z_exploracion = z_mid
 
 # ─────────────────────────────────────────────
-# T3 & T5: DISEÑO ESTRUCTURAL DE ZAPATA + DIBUJADOR 3000 (con biaxialidad)
+# T3: DISEÑO ESTRUCTURAL DE ZAPATA + DIBUJADOR 3000 (con biaxialidad)
 # ─────────────────────────────────────────────
-with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibujador 3000", "🏗️ 3 & 5. Footing Structural Design & DXF Drafter"), expanded=True):
+with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibujador 3000", "🏗️ 3. Footing Structural Design & DXF Drafter"), expanded=True):
     st.info(_t("📺 **Modo de uso:** Ingresa las Cargas de Servicio (para dimensionar BxL) y Últimas (para diseñar espesor y acero). El módulo calculará Cortante, Punzonamiento y Flexión, generará tu geometría a AutoCAD y calculará Presupuestos APU.", "📺 **How to use:** Enter Service Loads (for sizing BxL) and Ultimate Loads (for thickness and steel). Calculates Shear, Punching, Flexure, DXF and APU budgets."))
     st.markdown(f"**Norma Estructural activa:** `{norma_sel}`")
     
@@ -807,38 +807,43 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
     d_z_m = d_z / 100.0
 
     # ─── CORTANTE UNIDIRECCIONAL (Viga) con integración exacta de presión ───
-    # Se integra la presión lineal a lo largo del voladizo en dirección B
     lv_b = (B_use - c1_col/100.0) / 2.0
     lv_l = (L_use - c2_col/100.0) / 2.0
 
-    # Función para calcular presión en un punto (x,y) (coordenadas locales con centro en zapata)
     def q_at(x, y):
         return P_ult/A_use + (M_ult_L * x / Iy) + (M_ult_B * y / Ix)
 
-    # Cortante en dirección B (a una distancia d del borde de la columna)
-    x_corte = lv_b - d_z_m
-    if x_corte > 0:
-        # Integrar presión sobre el área de ancho L_use desde x_corte hasta lv_b
-        # La presión varía linealmente con y (si hay momento en B) y con x (si hay momento en L)
-        # Para el cortante total, integramos sobre y en toda la longitud L_use, y sobre x en [x_corte, lv_b]
-        # Usamos una aproximación numérica simple con 20 puntos
+    # Cortante en dirección B
+    x_corte_b = lv_b - d_z_m
+    Vu_1way_B = 0.0
+    if x_corte_b > 0:
         y_vals = np.linspace(-L_use/2, L_use/2, 20)
-        x_vals = np.linspace(x_corte, lv_b, 20)
-        # La fuerza cortante es la integral doble de q(x,y) dx dy
-        dx = (lv_b - x_corte) / 20
+        x_vals = np.linspace(x_corte_b, lv_b, 20)
+        dx = (lv_b - x_corte_b) / 20
         dy = L_use / 20
-        Vu_1way = 0.0
         for xi in x_vals:
             for yi in y_vals:
                 q_xy = q_at(xi, yi)
-                if q_xy > 0:
-                    Vu_1way += q_xy * dx * dy
-        # También se puede simplificar con promedio de q en el voladizo, pero la integración es más precisa.
-    else:
-        Vu_1way = 0.0
+                if q_xy > 0: Vu_1way_B += q_xy * dx * dy
 
-    phi_Vc_1way = phi_v * 0.17 * 1.0 * math.sqrt(fc_basico) * (L_use * 1000) * (d_z * 10) / 1000.0  # kN
-    ok_1way = phi_Vc_1way >= Vu_1way
+    phi_Vc_1way_B = phi_v * 0.17 * 1.0 * math.sqrt(fc_basico) * (L_use * 1000) * (d_z * 10) / 1000.0  # kN
+    ok_1way_B = phi_Vc_1way_B >= Vu_1way_B
+
+    # Cortante en dirección L
+    y_corte_l = lv_l - d_z_m
+    Vu_1way_L = 0.0
+    if y_corte_l > 0:
+        x_vals = np.linspace(-B_use/2, B_use/2, 20)
+        y_vals = np.linspace(y_corte_l, lv_l, 20)
+        dx = B_use / 20
+        dy = (lv_l - y_corte_l) / 20
+        for xi in x_vals:
+            for yi in y_vals:
+                q_xy = q_at(xi, yi)
+                if q_xy > 0: Vu_1way_L += q_xy * dx * dy
+
+    phi_Vc_1way_L = phi_v * 0.17 * 1.0 * math.sqrt(fc_basico) * (B_use * 1000) * (d_z * 10) / 1000.0  # kN
+    ok_1way_L = phi_Vc_1way_L >= Vu_1way_L
 
     # ─── PUNZONAMIENTO (bidireccional) con presión promedio ─────────────────
     bo_1 = c1_col/100.0 + d_z_m
@@ -993,29 +998,70 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
     with tab_res:
         st.markdown(f"**Revisión Estructural: f'c = {fc_basico} MPa | fy = {fy_basico} MPa**")
         
-        st.markdown(r"**1. Cortante Unidireccional (Tipo Viga):** $\phi V_c \ge V_u$")
-        st.latex(r"\phi V_c = \phi \cdot 0.17 \lambda \sqrt{f'_c} b_w d")
-        if ok_1way:
-            st.success(f"✅ Aprobado Cortante 1D: $\\phi V_c = {phi_Vc_1way:.1f}$ kN $\\ge V_u = {Vu_1way:.1f}$ kN")
-        else:
-            st.error(f"❌ No Aprobado Cortante 1D: $\\phi V_c = {phi_Vc_1way:.1f}$ kN $< V_u = {Vu_1way:.1f}$ kN $\\rightarrow$ **Aumentar Espesor H**")
+        # ─── RECOMENDACIÓN DE ACERO Y ALERTA ───
+        sep_max = min(3 * H_zap, 45.0)
+        warning_bar = []
+        if sep_B > sep_max or sep_L > sep_max:
+            warning_bar.append(f"⚠️ La separación ({max(sep_B, sep_L):.1f} cm) excede la máxima permitida normativa ({sep_max} cm). ¡Usa una varilla más pequeña (ej. #4 o #5)!")
+        if sep_B < 10.0 or sep_L < 10.0:
+            warning_bar.append(f"⚠️ La separación ({min(sep_B, sep_L):.1f} cm) es muy estrecha para fundir bien (< 10 cm). Considera usar una varilla de mayor diámetro.")
+        if warning_bar:
+            st.error("\n\n".join(warning_bar))
+            
+        c2d1, c2d2 = st.columns([1, 1])
+        with c2d1:
+            st.markdown(r"**1. Cortante 1D Dir. B:** $\phi V_c \ge V_u$")
+            if ok_1way_B:
+                st.success(f"✅ OK Dir B: $\\phi V_c = {phi_Vc_1way_B:.1f}$ $\\ge {Vu_1way_B:.1f}$ kN")
+            else:
+                st.error(f"❌ FALLA Dir B: $\\phi V_c = {phi_Vc_1way_B:.1f}$ $< {Vu_1way_B:.1f}$ kN")
+                
+            st.markdown(r"**1b. Cortante 1D Dir. L:** $\phi V_c \ge V_u$")
+            if ok_1way_L:
+                st.success(f"✅ OK Dir L: $\\phi V_c = {phi_Vc_1way_L:.1f}$ $\\ge {Vu_1way_L:.1f}$ kN")
+            else:
+                st.error(f"❌ FALLA Dir L: $\\phi V_c = {phi_Vc_1way_L:.1f}$ $< {Vu_1way_L:.1f}$ kN $\\rightarrow$ **Aumentar H**")
 
-        st.markdown(r"**2. Cortante Bidireccional (Punzonamiento):** $\phi V_c \ge V_{up}$")
-        st.latex(r"\phi V_c = \phi \cdot \min\left(0.33, 0.17(1+\frac{2}{\beta}), 0.083(2+\frac{\alpha_s d}{b_o})\right) \sqrt{f'_c} b_o d")
-        if ok_punz:
-            st.success(f"✅ Aprobado Punzonamiento: $\\phi V_c = {phi_Vc_punz:.1f}$ kN $\\ge V_{{up}} = {Vu_punz:.1f}$ kN")
-        else:
-            st.error(f"❌ No Aprobado Punzonamiento: $\\phi V_c = {phi_Vc_punz:.1f}$ kN $< V_{{up}} = {Vu_punz:.1f}$ kN $\\rightarrow$ **Aumentar Espesor H o sección de Columna**")
+        with c2d2:
+            st.markdown(r"**2. Punzonamiento:** $\phi V_c \ge V_{up}$")
+            if ok_punz:
+                st.success(f"✅ OK Punzonamiento: $\\phi V_c = {phi_Vc_punz:.1f}$ $\\ge {Vu_punz:.1f}$ kN")
+            else:
+                st.error(f"❌ FALLA Punzonamiento: $\\phi V_c = {phi_Vc_punz:.1f}$ $< {Vu_punz:.1f}$ kN $\\rightarrow$ **Aumentar H o Columna**")
         
         st.markdown("---")
+        
+        estado_tension = "✅ Compresión Total (e ≤ B/6)" if qu_min >= 0 else "⚠️ Levantamiento"
         data_res = [
             {"Revisión": "Geometría Propuesta", "Solicitado": f"Area Req = {Area_req:.2f} m²", "Capacidad/Provisto": f"Area Prov. = {A_use:.2f} m²", "Estado": "✅ OK" if A_use>=Area_req else "⚠️ Subdimensionado"},
-            {"Revisión": "Presión de Contacto qu_max", "Solicitado": f"{qu_max:.2f} kPa", "Capacidad/Provisto": f"qu_min = {qu_min:.2f} kPa", "Estado": "✅ Sin tensión" if qu_min >= 0 else "⚠️ Tensión en suelo"},
-            {"Revisión": "Flexión Dir. B — cara col.", "Solicitado": f"Mu_B = {Mu_flex_B:.1f} kN-m", "Capacidad/Provisto": f"As_B = {As_req_B:.1f} cm² → {n_barras_B} {bar_z} c/{sep_B:.1f}cm", "Estado": "✅ OK" if disc_B>0 else "❌ Rompe en compresión"},
-            {"Revisión": "Flexión Dir. L — cara col.", "Solicitado": f"Mu_L = {Mu_flex_L:.1f} kN-m", "Capacidad/Provisto": f"As_L = {As_req_L:.1f} cm² → {n_barras_L} {bar_z} c/{sep_L:.1f}cm", "Estado": "✅ OK" if disc_L>0 else "❌ Rompe en compresión"},
+            {"Revisión": "Pres. Contacto qu", "Solicitado": f"Max: {qu_max:.2f} kPa", "Capacidad/Provisto": f"Min: {qu_min:.2f} kPa", "Estado": estado_tension},
+            {"Revisión": "Flexión Dir. B", "Solicitado": f"Mu_B = {Mu_flex_B:.1f} kN-m", "Capacidad/Provisto": f"As_B = {As_req_B:.1f} cm² → {n_barras_B} {bar_z} c/{sep_B:.1f}cm", "Estado": "✅ OK" if disc_B>0 else "❌ Rompe en compresión"},
+            {"Revisión": "Flexión Dir. L", "Solicitado": f"Mu_L = {Mu_flex_L:.1f} kN-m", "Capacidad/Provisto": f"As_L = {As_req_L:.1f} cm² → {n_barras_L} {bar_z} c/{sep_L:.1f}cm", "Estado": "✅ OK" if disc_L>0 else "❌ Rompe en compresión"},
             {"Revisión": "Gancho Estándar 90°", "Solicitado": f"D_min doblez: {D_doblez_cm:.1f} cm", "Capacidad/Provisto": f"Extensión recta: {L_ext_gancho_cm:.1f} cm", "Estado": "ℹ️ Info"},
         ]
         st.table(pd.DataFrame(data_res))
+        
+        # Grafico 2D esquemático
+        with st.expander("👁️ Ver Esquema de Armado 2D", expanded=False):
+            fig_2d, ax_2d = plt.subplots(figsize=(5,5))
+            fig_2d.patch.set_facecolor("#0f1117"); ax_2d.set_facecolor("#161b22")
+            zap_rect = plt.Rectangle((-B_use/2, -L_use/2), B_use, L_use, fill=True, color="#2c3e50", ec="#3498db", lw=2)
+            ax_2d.add_patch(zap_rect)
+            col_rect = plt.Rectangle((-c1_col/200, -c2_col/200), c1_col/100, c2_col/100, fill=True, color="#7f8c8d", ec="white")
+            ax_2d.add_patch(col_rect)
+            # Acero dir B (paralelo a L)
+            for r_b in np.linspace(-B_use/2 + recub_z/100, B_use/2 - recub_z/100, int(n_barras_B)):
+                ax_2d.plot([r_b, r_b], [-L_use/2+0.05, L_use/2-0.05], color="#e74c3c", alpha=0.5, lw=1)
+            # Acero dir L (paralelo a B)
+            for r_l in np.linspace(-L_use/2 + recub_z/100, L_use/2 - recub_z/100, int(n_barras_L)):
+                ax_2d.plot([-B_use/2+0.05, B_use/2-0.05], [r_l, r_l], color="#f1c40f", alpha=0.5, lw=1)
+                
+            ax_2d.set_xlim(-B_use/2 - 0.5, B_use/2 + 0.5)
+            ax_2d.set_ylim(-L_use/2 - 0.5, L_use/2 + 0.5)
+            ax_2d.set_aspect('equal')
+            ax_2d.axis('off')
+            ax_2d.set_title(f"Armadura Inferior\n{int(n_barras_B)} {bar_z} (B) / {int(n_barras_L)} {bar_z} (L)", color="white", fontsize=10)
+            st.pyplot(fig_2d)
         
         # ── MEMORIA DE CÁLCULO COMPLETA ────────────────────────────────────
         doc_zap = Document()
@@ -1039,8 +1085,10 @@ with st.expander(_t("🏗️ 3 & 5. Diseño de Acero Zapata Prismática y Dibuja
         doc_zap.add_paragraph(f"  Espesor H = {H_zap:.0f} cm  |  Recubrimiento = {recub_z:.1f} cm")
         doc_zap.add_paragraph(f"  Peralte efectivo d = H - recub - db/10 = {d_z:.1f} cm")
         doc_zap.add_heading("5. REVISIÓN DE CORTANTE", level=1)
-        doc_zap.add_paragraph(f"  CORTANTE UNIDIRECCIONAL (Viga):")
-        doc_zap.add_paragraph(f"    φVc = {phi_Vc_1way:.1f} kN  {'≥' if ok_1way else '<'}  Vu = {Vu_1way:.1f} kN  → {'✅ OK' if ok_1way else '❌ Aumentar H'}")
+        doc_zap.add_paragraph(f"  CORTANTE UNIDIRECCIONAL (Viga) — Dir B:")
+        doc_zap.add_paragraph(f"    φVc = {phi_Vc_1way_B:.1f} kN  {'≥' if ok_1way_B else '<'}  Vu = {Vu_1way_B:.1f} kN  → {'✅ OK' if ok_1way_B else '❌ Aumentar H'}")
+        doc_zap.add_paragraph(f"  CORTANTE UNIDIRECCIONAL (Viga) — Dir L:")
+        doc_zap.add_paragraph(f"    φVc = {phi_Vc_1way_L:.1f} kN  {'≥' if ok_1way_L else '<'}  Vu = {Vu_1way_L:.1f} kN  → {'✅ OK' if ok_1way_L else '❌ Aumentar H'}")
         doc_zap.add_paragraph(f"  PUNZONAMIENTO (Bidireccional):")
         doc_zap.add_paragraph(f"    bo = {bo_perim:.3f} m  |  φVc = {phi_Vc_punz:.1f} kN  {'≥' if ok_punz else '<'}  Vup = {Vu_punz:.1f} kN  → {'✅ OK' if ok_punz else '❌ Aumentar H'}")
         doc_zap.add_heading("6. DISEÑO A FLEXIÓN — ACERO DE REFUERZO", level=1)
