@@ -303,6 +303,8 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
         NF_prof = st.number_input("NF — Profundidad nivel freático [m]", 0.0, 20.0, 1.0, 0.5, key="z_nf")
         FS_terz = st.number_input(_t("Factor de Seguridad (FS)","Safety Factor (FS)"),
                                   1.0, 5.0, st.session_state.get("z_fs", 3.0), 0.1, key="z_fs")
+        N_spt   = st.number_input("N60 campo (SPT)", 0, 100, 14, 1, key="z_spt")
+        st.caption("ℹ️ N60 clasifica perfil (Vesic)")
         metodo_cap = st.radio("Método de Capacidad", ["Terzaghi", "Meyerhof"], horizontal=True)
 
     # Parámetros para asentamiento elástico (opcional)
@@ -1122,6 +1124,31 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         if "asentamiento" in st.session_state:
             doc_zap.add_heading("8. ASENTAMIENTO ELÁSTICO ESTIMADO", level=1)
             doc_zap.add_paragraph(f"  Asentamiento inmediato (estimado) = {st.session_state.asentamiento:.1f} mm")
+            
+        doc_zap.add_heading("9. ANEXO GRÁFICO (ESQUEMAS GENERADOS)", level=1)
+        # Función auxiliar para incrustar figuras
+        def _add_plt_to_doc(fig_obj, width_in=6.0):
+            img_io = io.BytesIO()
+            fig_obj.savefig(img_io, format='png', bbox_inches='tight', facecolor=fig_obj.get_facecolor())
+            img_io.seek(0)
+            doc_zap.add_picture(img_io, width=Inches(width_in))
+            
+        doc_zap.add_paragraph("Anexo A. Distribución Boussinesq (Perfil Vertical y Perfiles Horizontales):")
+        try: _add_plt_to_doc(fig_b)
+        except NameError: pass
+        
+        doc_zap.add_paragraph("\nAnexo B. Mecanismo de Falla (Terzaghi/Meyerhof) y Bulbo de Presiones:")
+        try: _add_plt_to_doc(fig_tb)
+        except NameError: pass
+        
+        doc_zap.add_paragraph("\nAnexo C. Profundidad de Exploración Normativa (NSR-10, criterio 10% q_0):")
+        try: _add_plt_to_doc(fig_ex)
+        except NameError: pass
+        
+        doc_zap.add_paragraph("\nAnexo D. Esquema 2D de Acero de Refuerzo en Planta:")
+        try: _add_plt_to_doc(fig_2d, width_in=4.5)
+        except NameError: pass
+
         f_zap_io = io.BytesIO()
         doc_zap.save(f_zap_io)
         f_zap_io.seek(0)
