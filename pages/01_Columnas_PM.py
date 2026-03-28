@@ -22,7 +22,9 @@ def _t(es, en):
 
 st.set_page_config(page_title=_t("Diagramas de Interacción", "Interaction Diagrams"), layout="wide")
 
-st.image(r"assets/columnas_pm_header_1773261175144.png", use_container_width=False, width=700)
+import os
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+st.image(os.path.join(BASE_DIR, "assets", "columnas_pm_header_1773261175144.png"), use_container_width=False, width=700)
 st.title(_t("🏗️ Diagrama de Interacción P–M y Diseño de Estribos", "🏗️ P-M Interaction Diagram & Tie Design"))
 st.markdown(_t(
     "Generador interactivo de capacidad a flexocompresión biaxial y cortante para **Columnas Cuadradas y Rectangulares**.",

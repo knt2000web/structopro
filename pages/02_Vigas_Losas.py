@@ -695,7 +695,8 @@ with st.expander(_t("📐 Diseño a Flexión — Viga T", "📐 Flexural Design 
                 ("Estado", "✅ CUMPLE" if ok_vt else "❌ DEFICIENTE"),
             ]
             qty_table(rows_vt)
-            (st.success if ok_vt else st.error)(f"φMn = {phi_Mn_vt*factor_fuerza:.2f} {unidad_mom} {'≥' if ok_vt else '<'} Mu = {Mu_vt:.2f} {unidad_mom}")
+            if ok_vt: st.success(f"φMn = {phi_Mn_vt*factor_fuerza:.2f} {unidad_mom} ≥ Mu = {Mu_vt:.2f} {unidad_mom}")
+            else: st.error(f"φMn = {phi_Mn_vt*factor_fuerza:.2f} {unidad_mom} < Mu = {Mu_vt:.2f} {unidad_mom}")
             st.info("💡 **¿Acero Inferior o Superior?** Si ingresa un Momento **Positivo** (Mu), el área calculada corresponde al refuerzo en la zona traccionada (usualmente **acero inferior**). Para momento **Negativo** en un apoyo continuo, la tracción está arriba por lo que el resultado corresponde al **acero superior**.")
 
         with tab_s:
@@ -1070,7 +1071,8 @@ with st.expander(_t("⚡ Resistencia a Cortante por Punzonamiento — Losas", "�
             (f"Vu solicitado [{unidad_fuerza}]", f"{Vu_pz_input:.2f}"),
             ("Estado", "✅ CUMPLE" if ok_pz else f"❌ REFORZAR / Aumentar h a {h_min_req} cm mín."),
         ])
-        (st.success if ok_pz else st.error)(f"φVc = {phi_Vc_pz*factor_fuerza:.2f} {unidad_fuerza} {'≥' if ok_pz else '<'} Vu = {Vu_pz_input:.2f} {unidad_fuerza} — Ref: {code['ref']}")
+        if ok_pz: st.success(f"φVc = {phi_Vc_pz*factor_fuerza:.2f} {unidad_fuerza} ≥ Vu = {Vu_pz_input:.2f} {unidad_fuerza} — Ref: {code['ref']}")
+        else: st.error(f"φVc = {phi_Vc_pz*factor_fuerza:.2f} {unidad_fuerza} < Vu = {Vu_pz_input:.2f} {unidad_fuerza} — Ref: {code['ref']}")
         if not ok_pz:
             st.error(f"❌ **FALLA POR PUNZONAMIENTO:** El cortante solicitante Vu excede la resistencia del concreto φVc.\n\n"
                      f"**¿QUÉ AUMENTAR? Soluciones propuestas:**\n"
@@ -1269,7 +1271,8 @@ with st.expander(_t("🏗️ Diseño de Losa en Una Dirección", "🏗️ One-Wa
                 ("As temperatura/retracción", f"{As_temp:.3f} cm²/m"),
                 (f"Varilla temp {bar_ls}", f"@ {s_temp:.1f} cm"),
             ])
-            (st.success if ok_ls else st.error)(f"Losa {'OK' if ok_ls else 'DEFICIENTE'} — {bar_ls} @ {s_use_ls:.1f} cm (As principal)")
+            if ok_ls: st.success(f"Losa OK — {bar_ls} @ {s_use_ls:.1f} cm (As principal)")
+            else: st.error(f"Losa DEFICIENTE — {bar_ls} @ {s_use_ls:.1f} cm (As principal)")
             st.info("💡 **Acero Inferior vs. Superior:** Este diseño automático a partir de la luz libre (L) estima el máximo momento positivo de la franja. El resultado `As principal` mostrado es el **acero inferior**. Para el **acero superior** necesario en los nudos continuos, considere diseñar a flexión una viga de b=100m ingresando el Mu- de los apoyos.")
         
         with tab_s:

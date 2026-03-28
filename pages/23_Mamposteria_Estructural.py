@@ -18,14 +18,21 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
-st.set_page_config(page_title=_t("Albañilería Confinada", "Confined Masonry"), layout="wide")
-st.title("🧱 " + _t("Diseño de Muros de Albañilería Confinada", "Confined Masonry Wall Design"))
-st.markdown(_t(
-    "Diseño estructural completo de muros de albañilería confinada con columnas y vigas soleras. "
-    "Multi-norma: **E.070 (Perú)**, **NSR-10 D (Colombia)**, **NEC-SE-MP (Ecuador)**, **COVENIN 1753 (Venezuela)**.",
-    "Full structural design of confined masonry walls with confinement columns and solera beams. "
-    "Multi-code: **E.070 (Peru)**, **NSR-10 D (Colombia)**, **NEC-SE-MP (Ecuador)**, **COVENIN 1753 (Venezuela)**."
-))
+st.set_page_config(page_title=_t("Albañilería / Mamposteria Confinada", "Confined Masonry"), layout="wide")
+
+# Terminología dinámica por norma (antes de sidebar, se actualiza después)
+_norma_init = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+if "NSR-10" in _norma_init or "Colombia" in _norma_init:
+    _titulo_mod = "🧱 Diseño de Mampostera Confinada — NSR-10 Título D (Colombia)"
+    _desc_mod = "Diseño estructural completo de muros de **mampostera confinada** con columnas de confinamiento y **vigas de amarre**. Multi-norma: **E.070 (Perú)**, **NSR-10 D (Colombia)**, **NEC-SE-MP (Ecuador)**, **COVENIN 1753 (Venezuela)**."
+elif "E.070" in _norma_init or "Perú" in _norma_init:
+    _titulo_mod = "🧱 Diseño de Albañilería Confinada — E.070 (Perú)"
+    _desc_mod = "Diseño estructural completo de muros de **albañilería confinada** con columnas de confinamiento y vigas soleras. Multi-norma: **E.070 (Perú)**, **NSR-10 D (Colombia)**, **NEC-SE-MP (Ecuador)**, **COVENIN 1753 (Venezuela)**."
+else:
+    _titulo_mod = "🧱 Diseño de Albañilería / Mampostera Confinada"
+    _desc_mod = "Diseño estructural completo de muros de albañilería/mampostera confinada. Multi-norma: **E.070 (Perú)**, **NSR-10 D (Colombia)**, **NEC-SE-MP (Ecuador)**, **COVENIN 1753 (Venezuela)**."
+st.title(_titulo_mod)
+st.markdown(_desc_mod)
 
 # ─────────────────────────────────────────────
 # BASES DE DATOS POR NORMA
@@ -34,7 +41,7 @@ NORMAS_AC = {
     "E.070 (Perú)":        {"pais":"pe","phi_f":0.90,"phi_v":0.85,"phi_c":0.70,"bag_kg":42.5,
                             "fm_def":65.0,"vm_def":8.05,"E_def":32500.0,
                             "fy_def":4200,"fc_def":210,"unidad":"kg/cm²","fuerza":"ton"},
-    "NSR-10 D (Colombia)": {"pais":"co","phi_f":0.90,"phi_v":0.85,"phi_c":0.65,"bag_kg":50.0,
+    "NSR-10 (Colombia)":   {"pais":"co","phi_f":0.90,"phi_v":0.85,"phi_c":0.65,"bag_kg":50.0,
                             "fm_def":5.5,"vm_def":0.78,"E_def":6500.0,
                             "fy_def":420,"fc_def":21,"unidad":"MPa","fuerza":"kN"},
     "NEC-SE-MP (Ecuador)": {"pais":"ec","phi_f":0.90,"phi_v":0.85,"phi_c":0.65,"bag_kg":50.0,
@@ -52,7 +59,7 @@ LADRILLOS_AC = {
         "Pandereta (23×11×9)":                 {"L":23,"W":11,"H":9,"clase":"II"},
         "Sílico Calcáreo (24×13×9)":           {"L":24,"W":13,"H":9,"clase":"IV"},
     },
-    "NSR-10 D (Colombia)": {
+    "NSR-10 (Colombia)": {
         "Ladrillo Portante A (29×12×9)":       {"L":29,"W":12,"H":9,"clase":"A"},
         "Ladrillo Portante B (29×12×9)":       {"L":29,"W":12,"H":9,"clase":"B"},
         "Bloque de Arcilla N5 (30×12×20)":     {"L":30,"W":12,"H":20,"clase":"N5"},
@@ -129,14 +136,18 @@ def to_ton(v, u):
 # SIDEBAR — CONFIGURACIÓN GLOBAL
 # ─────────────────────────────────────────────
 st.sidebar.header(_t("⚙️ Norma y País","⚙️ Code & Country"))
-if "norma_sel" not in st.session_state:
-    st.session_state.norma_sel = "E.070 (Perú)"
+
+global_norma = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+if global_norma not in NORMAS_AC:
+    global_norma = "NSR-10 (Colombia)"
+
 norma_ac = st.sidebar.selectbox(
     _t("Norma de Diseño","Design Code"),
     list(NORMAS_AC.keys()),
-    index=list(NORMAS_AC.keys()).index(st.session_state.get("ac_norma","E.070 (Perú)")),
-    key="ac_norma"
+    index=list(NORMAS_AC.keys()).index(global_norma),
+    key="ac_norma_selector"
 )
+st.session_state.ac_norma = norma_ac
 nc = NORMAS_AC[norma_ac]
 _iso = nc["pais"]
 st.sidebar.markdown(
@@ -206,9 +217,9 @@ st.sidebar.header(_t("⚡ Cargas","⚡ Loads"))
 Pm_in = st.sidebar.number_input(f"Pm (D+L) [{nc['fuerza']}]",0.0,2000.0,st.session_state.get("ac_Pm",16.0),0.5,key="ac_Pm")
 Pg_in = st.sidebar.number_input(f"Pg (D+0.25L) [{nc['fuerza']}]",0.0,2000.0,st.session_state.get("ac_Pg",14.0),0.5,key="ac_Pg")
 Ve_in = st.sidebar.number_input(f"Ve (sismo mod.) [{nc['fuerza']}]",0.0,2000.0,st.session_state.get("ac_Ve",8.72),0.1,key="ac_Ve")
-Me_in = st.sidebar.number_input(f"Me (mom. mod.) [{nc['fuerza']}·m]",0.0,5000.0,st.session_state.get("ac_Me",42.98),0.5,key="ac_Me")
+Me_in = st.sidebar.number_input(f"Mo (momento mod.) [{nc['fuerza']}·m]",0.0,5000.0,st.session_state.get("ac_Me",42.98),0.5,key="ac_Me")
 Vu_in = st.sidebar.number_input(f"Vu (sismo sev.) [{nc['fuerza']}]",0.0,2000.0,st.session_state.get("ac_Vu",26.16),0.1,key="ac_Vu")
-Mu_in = st.sidebar.number_input(f"Mu (mom. sev.) [{nc['fuerza']}·m]",0.0,5000.0,st.session_state.get("ac_Mu",128.93),0.5,key="ac_Mu")
+Mu_in = st.sidebar.number_input(f"Mu (momento sev.) [{nc['fuerza']}·m]",0.0,5000.0,st.session_state.get("ac_Mu",128.93),0.5,key="ac_Mu")
 
 if nc["fuerza"] == "kN":
     Pm = Pm_in / 9.80665
@@ -221,7 +232,8 @@ else:
     Pm = Pm_in; Pg = Pg_in; Ve = Ve_in; Me = Me_in; Vu = Vu_in; Mu = Mu_in
 
 st.sidebar.header(_t("🔩 Varillas","🔩 Rebar"))
-bar_sys = st.sidebar.radio(_t("Sistema:","System:"),["Pulgadas (# US)","Milímetros (mm)"],horizontal=True,key="ac_bar_sys")
+default_sys = 0 if "Colombia" in norma_ac else 1
+bar_sys = st.sidebar.radio(_t("Sistema:","System:"),["Pulgadas (# US)","Milímetros (mm)"], index=default_sys, horizontal=True,key="ac_bar_sys")
 rebar_db  = REBAR_US if "Pulgadas" in bar_sys else REBAR_MM
 estrib_db = ESTRIBO_US if "Pulgadas" in bar_sys else ESTRIBO_MM
 def_rb  = list(rebar_db.keys())[1]
@@ -477,10 +489,35 @@ with tab_res:
     ms3.metric("Condición", cond_mur, delta="Refuerzo Hz" if necesita_Hz else "Sin refuerzo Hz",
                delta_color="inverse" if necesita_Hz else "normal")
     st.markdown("---")
+
+    if ok_sigma and ok_rho_h:
+        st.success(f"✅ **DISEÑO ESTRUCTURAL OK SEGÚN {norma_ac}** — El muro cumple con las comprobaciones normativas limitantes.")
+    else:
+        st.error(f"❌ **FALLO EN DISEÑO SEGÚN {norma_ac}** — Revise las verificaciones en rojo abajo.")
+
     r1, r2 = st.columns(2)
-    art_ref  = "7.1.1b E.070" if "Perú" in norma_ac else "D.5.4.1 NSR-10"
-    art_ref2 = "8.5.3 E.070" if "Perú" in norma_ac else "D.5.3 NSR-10"
-    art_ref3 = "8.5.2 E.070" if "Perú" in norma_ac else "D.5.2 NSR-10"
+    # Referencias normativas por país
+    _pais = nc["pais"]
+    if _pais == "pe":
+        art_ref  = "Art. 7.1.1b — E.070 (Perú)"
+        art_ref2 = "Art. 8.5.3 — E.070 (Perú)"
+        art_ref3 = "Art. 8.5.2 — E.070 (Perú)"
+        art_ref6 = "Art. 8.6.1 — E.070 (Perú)"
+    elif _pais == "co":
+        art_ref  = "D.5.4.1 — NSR-10 (Colombia)"
+        art_ref2 = "D.5.3 — NSR-10 (Colombia)"
+        art_ref3 = "D.5.2 — NSR-10 (Colombia)"
+        art_ref6 = "D.5.5.2 — NSR-10 (Colombia)"
+    elif _pais == "ec":
+        art_ref  = "§6.3 — NEC-SE-MP (Ecuador)"
+        art_ref2 = "§6.5 — NEC-SE-MP (Ecuador)"
+        art_ref3 = "§6.4 — NEC-SE-MP (Ecuador)"
+        art_ref6 = "§6.6 — NEC-SE-MP (Ecuador)"
+    else:  # ve
+        art_ref  = "§7.2 — COVENIN 1753 (Venezuela)"
+        art_ref2 = "§7.4 — COVENIN 1753 (Venezuela)"
+        art_ref3 = "§7.3 — COVENIN 1753 (Venezuela)"
+        art_ref6 = "§7.5 — COVENIN 1753 (Venezuela)"
     with r1:
         st.markdown("#### 01 — Características del Muro")
         st.info(f"f'm={fm_in}{nc['unidad']} | v'm={vm_in}{nc['unidad']} | E={E_in}{nc['unidad']}\n"
@@ -495,25 +532,45 @@ with tab_res:
             ("Mu (mom. sev.)", f"{Mu_in:.2f} {nc['fuerza']}·m"),
         ])
     with r2:
-        st.markdown(f"#### 03 — Esfuerzos Verticales ({art_ref})")
+        st.markdown(f"#### 03 — Esfuerzos Verticales `{art_ref}`")
         st.markdown(f"- σ_m = {sigma_m_kgcm2:.2f} kg/cm²\n"
                     f"- Fa = min({Fa_inner:.2f}, {Fa_lim:.2f}) = **{Fa:.2f} kg/cm²**")
-        if ok_sigma: st.success(f"✅ σ_m ({sigma_m_kgcm2:.2f}) ≤ Fa ({Fa:.2f})")
-        else: st.error(f"❌ σ_m ({sigma_m_kgcm2:.2f}) > Fa ({Fa:.2f}) — Aumentar L o t")
-        st.markdown(f"#### 04 — Cortante ({art_ref2})")
-        st.markdown(f"- α = {alpha:.3f} | **Vm = {Vm1:.2f} ton**\n"
-                    f"- Vui = {Vui_calc:.2f} ton | Mui = {Mui_calc:.2f} ton·m")
-        st.markdown(f"#### 05 — Fisuración ({art_ref3})")
-        if ok_fisura: st.success(f"✅ Ve ({Ve:.2f}) ≤ 0.55·Vm ({0.55*Vm1:.2f}) — No Agrietado")
-        else: st.error(f"❌ Ve ({Ve:.2f}) > 0.55·Vm ({0.55*Vm1:.2f}) — AGRIETADO")
-        st.markdown("#### 06 — Refuerzo Horizontal (Art. 8.6.1 E.070)")
-        if necesita_Hz:
-            st.warning(f"⚠️ 1Ø{db_hor:.0f}mm @ {s_hor:.0f}cm | ρh={rho_h_prov:.5f} {'✅' if ok_rho_h else '❌'}")
+        if ok_sigma:
+            st.success(f"✅ σ_m ({sigma_m_kgcm2:.2f}) ≤ Fa ({Fa:.2f}) **— CUMPLE**")
         else:
-            st.success("✅ No requiere refuerzo horizontal por norma")
+            st.error(f"❌ σ_m ({sigma_m_kgcm2:.2f}) > Fa ({Fa:.2f}) **— NO CUMPLE**")
+            st.warning("💡 **Sugerencia:** Aumentar la longitud del muro (`L`), el espesor (`t`), o escoger un Ladrillo de mayor resistencia a compresión (`f'm`).")
+        st.markdown(f"#### 04 — Cortante Base `{art_ref2}`")
+        st.markdown(f"- α = {alpha:.3f} (Ve·L/Me) ∈ [1/3, 1.0]\n"
+                    f"- **Vm = {Vm1:.2f} ton** | Vui = {Vui_calc:.2f} ton | Mui = {Mui_calc:.2f} ton·m")
+        if Vui_calc <= 2.0 * Vm1:
+            st.success(f"✅ Vui ({Vui_calc:.2f}) ≤ 2·Vm ({2*Vm1:.2f}) **— CUMPLE**")
+        else:
+            st.error(f"❌ Vui ({Vui_calc:.2f}) > 2·Vm ({2*Vm1:.2f}) **— SECCIÓN INSUFICIENTE**")
+        st.markdown(f"#### 05 — Fisuración `{art_ref3}`")
+        if ok_fisura:
+            st.success(f"✅ Ve ({Ve:.2f}) ≤ 0.55·Vm ({0.55*Vm1:.2f}) — No Agrietado **— CUMPLE**")
+        else:
+            st.error(f"❌ Ve ({Ve:.2f}) > 0.55·Vm ({0.55*Vm1:.2f}) — MURO AGRIETADO")
+            st.warning("💡 **Sugerencia:** Para evitar el agrietamiento, aumente el espesor del muro (`t`), o use un Ladrillo con mayor resistencia al corte (`v'm`).")
+        st.markdown(f"#### 06 — Refuerzo Horizontal `{art_ref6}`")
+        if necesita_Hz:
+            estado_hz = '✅ CUMPLE' if ok_rho_h else '❌ NO CUMPLE'
+            st.warning(f"⚠️ 1 {bar_hor_sel} @ {s_hor:.0f}cm | ρh={rho_h_prov:.5f} — {estado_hz}")
+            st.caption(f"ρh_min = {rho_h_min:.4f} | ρh_prov = {rho_h_prov:.5f}")
+        else:
+            st.success("✅ No requiere refuerzo horizontal según la norma aplicada")
 
 with tab_col:
-    st.subheader("🏛️ Columnas de Confinamiento (Art. 8.6.3 E.070 / D.5.5 NSR-10)")
+    if _pais == "pe":
+        art_col = "Art. 8.6.3 — E.070 (Perú)"
+    elif _pais == "co":
+        art_col = "D.5.5 — NSR-10 (Colombia)"
+    elif _pais == "ec":
+        art_col = "§6.7 — NEC-SE-MP (Ecuador)"
+    else:
+        art_col = "§7.6 — COVENIN 1753 (Venezuela)"
+    st.subheader(f"🏛️ Columnas de Confinamiento ({art_col})")
     cc1, cc2 = st.columns(2)
     with cc1:
         st.markdown("#### 07-08 — Fuerzas de Diseño")
@@ -541,7 +598,7 @@ with tab_col:
                 ("As req = T/(φ·fy)", f"{As_req:.2f} cm²"),
                 ("As mín (4Ø8mm)", f"{As_min_four_d8:.2f} cm²"),
             ])
-        st.success(f"✅ **{n_bars_f}Ø{db_col:.0f}mm** → As prov = {As_prov_f:.2f} cm²")
+        st.success(f"✅ **{n_bars_f} {bar_col_sel}** → As prov = {As_prov_f:.2f} cm²")
         st.markdown("#### 09b — Núcleo Concreto An")
         qty_table([("An compresión", f"{An_comp:.1f} cm²"), ("mín 15t", f"{15*t_m:.0f} cm²")])
         st.markdown("#### 09c — Corte-Fricción Acf")
@@ -560,14 +617,26 @@ with tab_col:
             ("s3 = d/4 ≥5", f"{s3_col:.1f} cm"), ("s4", "10.0 cm"),
             ("s diseño", f"{s_col:.1f} cm"),
         ])
-        st.info(f"Ø{db_est:.0f}mm @ **{s_col:.1f} cm**")
+        st.info(f"{est_sel} @ **{s_col:.1f} cm**")
     with ce2:
         st.markdown("#### 09f-g — Zona Confinada")
         st.markdown(f"Z = max(1.5·d, 45) = **{Z_col:.1f} cm**")
         st.success(f"1@5cm · 4@{s_col:.0f}cm · Rto@25cm")
 
 with tab_sol:
-    st.subheader("🔶 Viga Solera (Art. 8.6.3-b E.070)")
+    if _pais == "pe":
+        art_sol = "Art. 8.6.3-b — E.070 (Perú)"
+        _nombre_viga = "Viga Solera"
+    elif _pais == "co":
+        art_sol = "D.5.6 — NSR-10 D (Colombia)"
+        _nombre_viga = "Viga de Amarre"
+    elif _pais == "ec":
+        art_sol = "§6.8 — NEC-SE-MP (Ecuador)"
+        _nombre_viga = "Viga Solera"
+    else:
+        art_sol = "§7.7 — COVENIN 1753 (Venezuela)"
+        _nombre_viga = "Viga Corona"
+    st.subheader(f"🔶 {_nombre_viga} ({art_sol})")
     sv1, sv2 = st.columns(2)
     with sv1:
         qty_table([
@@ -576,20 +645,34 @@ with tab_sol:
             ("As mín", f"{As_sol_min:.2f} cm²"),
             ("As diseño", f"{As_sol:.2f} cm²"),
         ])
-        st.success(f"✅ {n_sol}Ø{db_col:.0f}mm → As={As_sol_prov:.2f} cm²")
+        st.success(f"✅ {n_sol} {bar_col_sel} → As={As_sol_prov:.2f} cm²")
     with sv2:
         qty_table([
             ("b × h", f"{vs_b_in:.0f} × {vs_h_in:.0f} cm"),
             ("Acs", f"{Acs_sol:.0f} cm²"),
         ])
-        st.info(f"Ø{db_est:.0f}mm: 1@5cm · 4@10cm · Rto@25cm")
+        st.info(f"{est_sel}: 1@5cm · 4@10cm · Rto@25cm")
 
 with tab_diag:
-    st.subheader("📐 Diagrama 2D del Muro")
-    fig2d, ax = plt.subplots(figsize=(12, 8))
-    ax.set_facecolor('#1a1a2e'); fig2d.patch.set_facecolor('#1a1a2e')
+    # Nombre de la viga según norma (también disponible fuera del tab)
+    _nombre_viga_local = "Viga de Amarre" if _pais == "co" else ("Viga Corona" if _pais == "ve" else "Viga Solera")
+    st.subheader(f"📐 Diagrama 2D del Muro y Sección Transversal ({_nombre_viga_local})")
+    # Figura con 4 columnas: [alzado, espacio, corte columna, corte viga]
+    fig2d = plt.figure(figsize=(16, 9))
+    fig2d.patch.set_facecolor('#1a1a2e')
+    gs = fig2d.add_gridspec(1, 4, width_ratios=[2.5, 0.1, 1, 1], wspace=0.05)
+    ax     = fig2d.add_subplot(gs[0, 0])   # Alzado
+    ax_sec = fig2d.add_subplot(gs[0, 2])   # Corte columna
+    ax_viga= fig2d.add_subplot(gs[0, 3])   # Corte viga
+    
+    ax.set_facecolor('#1a1a2e')
+    ax_sec.set_facecolor('#1a1a2e')
+    ax_viga.set_facecolor('#1a1a2e')
+    
     Lw = L_m_in*100; Hw = h_m_in*100
     bc = col_b_min; hv = vs_h_in
+
+    # ── MURO (ladrillos)
     ax.add_patch(patches.Rectangle((bc, 0), Lw-2*bc, Hw-hv, fc='#c8633b', ec='#8B4513', lw=0.8))
     hilada_h = (lad["H"]+junta)/10; lad_l = (lad["L"]+junta)/10
     n_hil = int((Hw-hv)/hilada_h)
@@ -601,35 +684,111 @@ with tab_diag:
         for ci in range(int((Lw-2*bc)/lad_l)+2):
             x = bc + ci*lad_l + off
             if bc <= x <= Lw-bc: ax.plot([x, x], [row*hilada_h, (row+1)*hilada_h], color='#8B4513', lw=0.4, alpha=0.7)
+
+    # ── COLUMNAS confinamiento + zonas confinadas
     for xc in [0, Lw-bc]:
-        ax.add_patch(patches.Rectangle((xc, 0), bc, Hw-hv, fc='#5a7bbf', ec='white', lw=1.5))
+        ax.add_patch(patches.Rectangle((xc, 0), bc, Hw-hv, fc='#b1b4bc', ec='white', lw=1.5))
         z_h = min(Z_col, Hw-hv)
         ax.add_patch(patches.Rectangle((xc, 0), bc, z_h, fc='none', ec='yellow', lw=1.5, ls='--'))
         ax.add_patch(patches.Rectangle((xc, Hw-hv-z_h), bc, z_h, fc='none', ec='yellow', lw=1.5, ls='--'))
-        ax.text(xc+bc/2, z_h/2, f"Z={Z_col:.0f}cm", color='yellow', ha='center', fontsize=7, rotation=90)
-    ax.add_patch(patches.Rectangle((0, Hw-hv), Lw, hv, fc='#4a90d9', ec='white', lw=2))
-    ax.text(Lw/2, Hw-hv/2, f"Solera {vs_b_in:.0f}×{vs_h_in:.0f}cm\n{n_sol}Ø{db_col:.0f}mm",
-            color='white', ha='center', va='center', fontsize=9, weight='bold')
+        ax.text(xc+bc/2, z_h/2, f"Z.C: {Z_col:.0f}cm", color='yellow', ha='center', fontsize=6, rotation=90)
+
+    # ── VIGA (nom. según país) en alzado + flejes esquemáticos
+    ax.add_patch(patches.Rectangle((0, Hw-hv), Lw, hv, fc='#b1b4bc', ec='white', lw=2))
+    # Varillas long. en viga (alzado)
+    _db_cm_v = db_col/10
+    for yb_v in [Hw-hv+recub_col/2, Hw-recub_col/2]:
+        ax.plot([recub_col, Lw-recub_col], [yb_v, yb_v], color='#cc2222', lw=1.5)
+    # Flejes en viga (alzado) cada ~15cm esquemático
+    _s_fleje_v = max(vs_b_in*0.5, 10.0)
+    _n_flejes = int(Lw / _s_fleje_v)
+    for _fi in range(1, _n_flejes):
+        _xf = _fi * _s_fleje_v
+        ax.plot([_xf, _xf], [Hw-hv+recub_col, Hw-recub_col], color='#ffd700', lw=1.0, alpha=0.8)
+    ax.text(Lw/2, Hw-hv/2, f"{_nombre_viga_local} {vs_b_in:.0f}×{vs_h_in:.0f}cm | {n_sol} {bar_col_sel}",
+            color='black', ha='center', va='center', fontsize=8, weight='bold')
     if necesita_Hz:
         n_hz = min(n_hiladas_hor, 8)
         for i in range(n_hz):
             yh2 = i*((Hw-hv)/max(n_hz,1)) + (Hw-hv)/max(n_hz*2,2)
-            ax.plot([bc, Lw-bc], [yh2, yh2], color='cyan', lw=1.5, alpha=0.8)
-        ax.text(Lw*0.5, (Hw-hv)*0.5, f"Hz: 1Ø{db_hor:.0f}mm@{s_hor:.0f}cm",
-                color='cyan', fontsize=8, ha='center',
-                bbox=dict(boxstyle='round', fc='#1a1a2e', ec='cyan', alpha=0.8))
-    xs_bars = np.linspace(recub_col+db_col/20, bc-recub_col-db_col/20, min(n_bars_f,4))
-    for xb in xs_bars:
-        for xbase in [0, Lw-bc]:
-            ax.add_patch(patches.Circle((xbase+xb, recub_col+1), db_col/20, fc='#ff6b35', ec='black', lw=0.5))
-    ax.annotate('', xy=(Lw+5,0), xytext=(Lw+5,Hw), arrowprops=dict(arrowstyle='<->', color='white'))
-    ax.text(Lw+9, Hw/2, f"h={h_m_in}m", color='white', va='center', fontsize=9)
-    ax.annotate('', xy=(0,-8), xytext=(Lw,-8), arrowprops=dict(arrowstyle='<->', color='white'))
-    ax.text(Lw/2, -14, f"L={L_m_in}m", color='white', ha='center', fontsize=9)
-    ax.text(bc/2, Hw/2, f"Col {col_b_min:.0f}×{col_d_use:.0f}", color='white', ha='center', fontsize=7, rotation=90)
-    ax.text(Lw-bc/2, Hw/2, f"Col {col_b_min:.0f}×{col_d_use:.0f}", color='white', ha='center', fontsize=7, rotation=90)
-    ax.set_xlim(-10, Lw+30); ax.set_ylim(-20, Hw+10)
-    ax.set_aspect('equal'); ax.axis('off')
+            ax.plot([bc, Lw-bc], [yh2, yh2], color='#4287f5', lw=2.5, alpha=0.9, ls='-')
+        ax.text(Lw*0.5, (Hw-hv)*0.4, f"Ref. Hz: 1 {bar_hor_sel} @ {s_hor:.0f}cm",
+                color='#ffffff', fontsize=8, ha='center', va='center', weight='bold',
+                bbox=dict(boxstyle='round', fc='#4287f5', ec='#225cb2', pad=0.4))
+    
+    # ── Varillas longitudinales en columnas (alzado)
+    db_cm = db_col/10
+    xs_bars = [recub_col, bc-recub_col-db_cm]
+    for xc_base in [0, Lw-bc]:
+        for xb in xs_bars:
+            ax.plot([xc_base+xb+db_cm/2, xc_base+xb+db_cm/2], [0, Hw-hv], color='#cc2222', lw=1.5)
+            
+    # ── Estribos en columnas (esquemáticos)
+    for xc_base in [0, Lw-bc]:
+        for y_est in np.linspace(5, Hw-hv-5, 20):
+            ax.plot([xc_base+recub_col, xc_base+bc-recub_col], [y_est, y_est], color='#ffd700', lw=0.8)
+            
+    ax.annotate('', xy=(Lw+10,0), xytext=(Lw+10,Hw), arrowprops=dict(arrowstyle='<->', color='white'))
+    ax.text(Lw+15, Hw/2, f"{h_m_in:.2f} m", color='white', va='center', fontsize=10)
+    ax.annotate('', xy=(0,-15), xytext=(Lw,-15), arrowprops=dict(arrowstyle='<->', color='white'))
+    ax.text(Lw/2, -22, f"L = {L_m_in} m", color='white', ha='center', fontsize=10)
+    ax.text(bc/2, Hw/2, "Col. Conf.", color='black', weight='bold', ha='center', fontsize=7, rotation=90)
+    ax.text(Lw-bc/2, Hw/2, "Col. Conf.", color='black', weight='bold', ha='center', fontsize=7, rotation=90)
+    
+    # ── CORTE TRANSVERSAL COLUMNA
+    Wc = col_b_min; Hc = col_d_use
+    ax_sec.add_patch(patches.Rectangle((0, 0), Wc, Hc, fc='#b1b4bc', ec='white', lw=2))
+    ax_sec.text(Wc/2, Hc + 3, f"{n_bars_f} {bar_col_sel}", color='white', ha='center', weight='bold', fontsize=8)
+    ax_sec.text(Wc/2, -5, f"{Wc:.0f}cm", color='white', ha='center', fontsize=8)
+    ax_sec.text(-5, Hc/2, f"{Hc:.0f}cm", color='white', va='center', ha='right', fontsize=8)
+    re = recub_col
+    ax_sec.add_patch(patches.Rectangle((re, re), Wc-2*re, Hc-2*re, fc='none', ec='#4287f5', lw=2))
+    x_pos = [re, Wc-re]; y_pos = [re, Hc-re]
+    if n_bars_f == 4:
+        for xb in x_pos:
+            for yb in y_pos:
+                ax_sec.add_patch(patches.Circle((xb, yb), db_cm/2*1.5, fc='#cc2222', ec='white', lw=0.5))
+    else:
+        for xb in x_pos:
+            for yb in np.linspace(re, Hc-re, max(2, n_bars_f//2)):
+                ax_sec.add_patch(patches.Circle((xb, yb), db_cm/2*1.5, fc='#cc2222', ec='white', lw=0.5))
+    ax_sec.set_aspect('equal')
+    ax_sec.set_xlim(-15, Wc+15); ax_sec.set_ylim(-15, Hc+15)
+    ax_sec.axis('off')
+    ax_sec.set_title("Corte Columna", color='white', fontsize=9, pad=4)
+
+    # ── CORTE TRANSVERSAL VIGA DE AMARRE / SOLERA
+    Wv = vs_b_in; Hv = vs_h_in
+    ax_viga.add_patch(patches.Rectangle((0, 0), Wv, Hv, fc='#9ab0c4', ec='white', lw=2))
+    re_v = recub_col
+    # Estribo de la viga
+    ax_viga.add_patch(patches.Rectangle((re_v, re_v), Wv-2*re_v, Hv-2*re_v, fc='none', ec='#ffd700', lw=2))
+    # Gancho 135° esquemático
+    _hk = re_v * 0.8
+    ax_viga.plot([re_v, re_v+_hk*0.7], [Hv-re_v, Hv-re_v+_hk*0.7], color='#ffd700', lw=2)
+    # Varillas longitudinales (n_sol barras, distribuída en 2 capas)
+    _n_sup = n_sol // 2; _n_inf = n_sol - _n_sup
+    _db_v_cm = db_col/10
+    _spacing_inf = (Wv - 2*re_v) / max(_n_inf-1, 1) if _n_inf > 1 else 0
+    _spacing_sup = (Wv - 2*re_v) / max(_n_sup-1, 1) if _n_sup > 1 else 0
+    for _i in range(_n_inf):
+        _xv = re_v + _i * _spacing_inf if _n_inf > 1 else Wv/2
+        ax_viga.add_patch(patches.Circle((_xv, re_v), _db_v_cm/2*1.5, fc='#cc2222', ec='white', lw=0.5))
+    for _i in range(_n_sup):
+        _xv = re_v + _i * _spacing_sup if _n_sup > 1 else Wv/2
+        ax_viga.add_patch(patches.Circle((_xv, Hv-re_v), _db_v_cm/2*1.5, fc='#cc2222', ec='white', lw=0.5))
+    ax_viga.text(Wv/2, Hv + 3, f"{n_sol} {bar_col_sel}", color='white', ha='center', weight='bold', fontsize=8)
+    ax_viga.text(Wv/2, -5, f"{Wv:.0f}cm", color='white', ha='center', fontsize=8)
+    ax_viga.text(-5, Hv/2, f"{Hv:.0f}cm", color='white', va='center', ha='right', fontsize=8)
+    ax_viga.text(Wv/2, Hv/2, f"{est_sel}", color='#ffd700', ha='center', va='center', fontsize=7,
+                 bbox=dict(boxstyle='round,pad=0.2', fc='#1a1a2e', ec='none', alpha=0.7))
+    ax_viga.set_aspect('equal')
+    ax_viga.set_xlim(-15, Wv+15); ax_viga.set_ylim(-15, Hv+15)
+    ax_viga.axis('off')
+    ax_viga.set_title(f"Corte {_nombre_viga_local}", color='white', fontsize=9, pad=4)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    ax.set_xlim(-10, Lw+30); ax.set_ylim(-30, Hw+15)
     st.pyplot(fig2d)
     buf_2d = io.BytesIO()
     fig2d.savefig(buf_2d, format='png', dpi=150, bbox_inches='tight', facecolor='#1a1a2e')
@@ -774,7 +933,7 @@ with tab_dxf:
     for xc_d in [0, Lw_d-bc_d]:
         msp.add_lwpolyline([(xc_d,0),(xc_d+bc_d,0),(xc_d+bc_d,Hw_d-hv_d),(xc_d,Hw_d-hv_d),(xc_d,0)],
                            close=True,dxfattribs={'layer':'COLUMNAS'})
-        msp.add_text(f"{n_bars_f}O{db_col:.0f}mm",dxfattribs={'layer':'TEXTO','height':0.06,'insert':(xc_d+bc_d/2,Hw_d/2)})
+        msp.add_text(f"{n_bars_f} {bar_col_sel}",dxfattribs={'layer':'TEXTO','height':0.06,'insert':(xc_d+bc_d/2,Hw_d/2)})
         Zd=Z_col/100
         msp.add_lwpolyline([(xc_d,0),(xc_d+bc_d,0),(xc_d+bc_d,Zd),(xc_d,Zd),(xc_d,0)],
                            close=True,dxfattribs={'layer':'COTAS'})
@@ -789,7 +948,7 @@ with tab_dxf:
             if yh_d<Hw_d-hv_d: msp.add_line((bc_d,yh_d),(Lw_d-bc_d,yh_d),dxfattribs={'layer':'ACERO'})
     msp.add_lwpolyline([(0,Hw_d-hv_d),(Lw_d,Hw_d-hv_d),(Lw_d,Hw_d),(0,Hw_d),(0,Hw_d-hv_d)],
                        close=True,dxfattribs={'layer':'SOLERA'})
-    msp.add_text(f"Solera {vs_b_in:.0f}x{vs_h_in:.0f}|{n_sol}O{db_col:.0f}mm",
+    msp.add_text(f"Solera {vs_b_in:.0f}x{vs_h_in:.0f}|{n_sol} {bar_col_sel}",
                  dxfattribs={'layer':'TEXTO','height':0.05,'insert':(Lw_d/2,Hw_d-hv_d/2)})
     # Planta
     msp.add_lwpolyline([(0,off_y),(Lw_d,off_y),(Lw_d,off_y+tw_d),(0,off_y+tw_d),(0,off_y)],

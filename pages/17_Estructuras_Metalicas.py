@@ -107,13 +107,14 @@ if "steel_despiece" not in st.session_state:
 if "steel_costo_total" not in st.session_state:
     st.session_state.steel_costo_total = 0.0
 
-def agregar_al_despiece(tipo, seccion, longitud_m, peso_kg, observacion):
+def agregar_al_despiece(tipo, seccion, longitud_m, peso_kg, observacion, memoria=""):
     st.session_state.steel_despiece.append({
         "Tipo": tipo,
         "Sección": seccion,
         "Longitud (m)": longitud_m,
         "Peso (kg)": peso_kg,
-        "Observación": observacion
+        "Observación": observacion,
+        "Memoria": memoria
     })
     st.session_state.steel_costo_total += peso_kg
 
@@ -125,16 +126,17 @@ def plot_W(d, bf, tw, tf):
     ax.add_patch(patches.Rectangle((-tw/2, -d/2 + tf), tw, d - 2*tf, facecolor='steelblue', edgecolor='black'))
     
     ax.annotate('', xy=(bf/2*1.2, d/2), xytext=(bf/2*1.2, -d/2), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(bf/2*1.25, 0, f"d={d}", color='red', va='center')
+    ax.text(bf/2*1.25, 0, f"d={d:.1f}", color='red', va='center')
     ax.annotate('', xy=(-bf/2, d/2*1.15), xytext=(bf/2, d/2*1.15), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(0, d/2*1.22, f"bf={bf}", color='red', ha='center')
+    ax.text(0, d/2*1.22, f"bf={bf:.1f}", color='red', ha='center')
     
     bbox_props = dict(boxstyle="round,pad=0.2", fc="#2b5b84", ec="none")
-    ax.text(0, 0, f"tw={tw}", color='white', ha='center', va='center', fontsize=9, rotation=90, bbox=bbox_props)
-    ax.text(0, d/2-tf/2, f"tf={tf}", color='white', ha='center', va='center', fontsize=9, bbox=bbox_props)
+    ax.text(0, 0, f"tw={tw:.1f}", color='white', ha='center', va='center', fontsize=9, rotation=90, bbox=bbox_props)
+    ax.text(0, d/2-tf/2, f"tf={tf:.1f}", color='white', ha='center', va='center', fontsize=9, bbox=bbox_props)
 
     lim_max = max(d, bf)
     ax.set_xlim(-lim_max*0.8, lim_max*0.8); ax.set_ylim(-lim_max*0.7, lim_max*0.7)
+    ax.set_aspect('equal')
     ax.axis('off'); return fig
 
 def plot_3d_W(d, bf, tw, tf, L_m):
@@ -158,16 +160,17 @@ def plot_T(d, bf, tw, tf):
     ax.add_patch(patches.Rectangle((-tw/2, 0), tw, d - tf, facecolor='steelblue', edgecolor='black'))
     
     ax.annotate('', xy=(bf/2*1.2, d), xytext=(bf/2*1.2, 0), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(bf/2*1.25, d/2, f"d={d}", color='red', va='center')
+    ax.text(bf/2*1.25, d/2, f"d={d:.1f}", color='red', va='center')
     ax.annotate('', xy=(-bf/2, d*1.15), xytext=(bf/2, d*1.15), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(0, d*1.22, f"bf={bf}", color='red', ha='center')
+    ax.text(0, d*1.22, f"bf={bf:.1f}", color='red', ha='center')
 
     bbox_props = dict(boxstyle="round,pad=0.2", fc="#2b5b84", ec="none")
-    ax.text(0, (d-tf)/2, f"tw={tw}", color='white', ha='center', va='center', fontsize=9, rotation=90, bbox=bbox_props)
-    ax.text(0, d-tf/2, f"tf={tf}", color='white', ha='center', va='center', fontsize=9, bbox=bbox_props)
+    ax.text(0, (d-tf)/2, f"tw={tw:.1f}", color='white', ha='center', va='center', fontsize=9, rotation=90, bbox=bbox_props)
+    ax.text(0, d-tf/2, f"tf={tf:.1f}", color='white', ha='center', va='center', fontsize=9, bbox=bbox_props)
 
     lim_max = max(d, bf)
     ax.set_xlim(-lim_max*0.8, lim_max*0.8); ax.set_ylim(-d*0.2, d*1.3)
+    ax.set_aspect('equal')
     ax.axis('off'); return fig
 
 def plot_L(h, b, t):
@@ -176,16 +179,17 @@ def plot_L(h, b, t):
     ax.add_patch(patches.Rectangle((t, 0), b-t, t, facecolor='steelblue', edgecolor='black'))
     
     ax.annotate('', xy=(-h*0.15, h), xytext=(-h*0.15, 0), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(-h*0.2, h/2, f"h={h}", color='red', ha='right', va='center')
+    ax.text(-h*0.2, h/2, f"h={h:.1f}", color='red', ha='right', va='center')
     ax.annotate('', xy=(0, -b*0.15), xytext=(b, -b*0.15), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(b/2, -b*0.25, f"b={b}", color='red', ha='center', va='top')
+    ax.text(b/2, -b*0.25, f"b={b:.1f}", color='red', ha='center', va='top')
 
     bbox_props = dict(boxstyle="round,pad=0.2", fc="#2b5b84", ec="none")
-    ax.text(t/2, h/2, f"t={t}", color='white', ha='center', va='center', fontsize=9, rotation=90, bbox=bbox_props)
-    ax.text(b/2, t/2, f"t={t}", color='white', ha='center', va='center', fontsize=9, bbox=bbox_props)
+    ax.text(t/2, h/2, f"t={t:.1f}", color='white', ha='center', va='center', fontsize=9, rotation=90, bbox=bbox_props)
+    ax.text(b/2, t/2, f"t={t:.1f}", color='white', ha='center', va='center', fontsize=9, bbox=bbox_props)
 
     lim_max = max(b, h)
     ax.set_xlim(-lim_max*0.4, lim_max*1.2); ax.set_ylim(-lim_max*0.4, lim_max*1.2)
+    ax.set_aspect('equal')
     ax.axis('off'); return fig
 
 def plot_C(h, b, d_lip, t):
@@ -198,14 +202,15 @@ def plot_C(h, b, d_lip, t):
         ax.add_patch(patches.Rectangle((b-t, 0), t, d_lip, facecolor='darkgray', edgecolor='black'))
         
     ax.annotate('', xy=(-h*0.15, h), xytext=(-h*0.15, 0), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(-h*0.2, h/2, f"h={h}", color='red', ha='right', va='center')
+    ax.text(-h*0.2, h/2, f"h={h:.1f}", color='red', ha='right', va='center')
     ax.annotate('', xy=(0, -b*0.2), xytext=(b, -b*0.2), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(b/2, -b*0.3, f"b={b}", color='red', ha='center', va='top')
+    ax.text(b/2, -b*0.3, f"b={b:.1f}", color='red', ha='center', va='top')
 
     bbox_props = dict(boxstyle="round,pad=0.2", fc="#5a5a5a", ec="none")
-    ax.text(t/2, h/2, f"t={t}", color='white', ha='center', va='center', fontsize=9, rotation=90, bbox=bbox_props)
+    ax.text(t/2, h/2, f"t={t:.1f}", color='white', ha='center', va='center', fontsize=9, rotation=90, bbox=bbox_props)
 
     ax.set_xlim(-b*0.5, b*1.5); ax.set_ylim(-h*0.4, h*1.4)
+    ax.set_aspect('equal')
     ax.axis('off'); return fig
 
 def plot_Tubo(h, b, t):
@@ -215,14 +220,15 @@ def plot_Tubo(h, b, t):
     ax.add_patch(patches.Rectangle((0, 0), b, h, facecolor='darkgray', alpha=0.5))
     
     ax.annotate('', xy=(-b*0.15, h), xytext=(-b*0.15, 0), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(-b*0.2, h/2, f"h={h}", color='red', ha='right', va='center')
+    ax.text(-b*0.2, h/2, f"h={h:.1f}", color='red', ha='right', va='center')
     ax.annotate('', xy=(0, -h*0.15), xytext=(b, -h*0.15), arrowprops=dict(arrowstyle='<->', color='red'))
-    ax.text(b/2, -h*0.25, f"b={b}", color='red', ha='center', va='top')
+    ax.text(b/2, -h*0.25, f"b={b:.1f}", color='red', ha='center', va='top')
 
     bbox_props = dict(boxstyle="round,pad=0.2", fc="#5a5a5a", ec="none")
-    ax.text(b/2, t/2, f"t={t}", color='white', ha='center', va='center', fontsize=9, bbox=bbox_props)
+    ax.text(b/2, t/2, f"t={t:.1f}", color='white', ha='center', va='center', fontsize=9, bbox=bbox_props)
 
     ax.set_xlim(-b*0.4, b*1.2); ax.set_ylim(-h*0.4, h*1.2)
+    ax.set_aspect('equal')
     ax.axis('off'); return fig
 
 # Pestañas principales
@@ -271,17 +277,19 @@ with tab_P:
 
         # Opción para agregar al despiece
         if st.button(_t("Agregar este perfil al despiece", "Add this profile to the list"), key="btn_add_prop_w"):
+            mem_text = f"Área (A): {show_mm2(A_w):.1f} {t_mm}²\nInercia (Ix, Iy): {show_mm4(Ix_w):.1f}, {show_mm4(Iy_w):.1f} {t_mm}⁴\nMódulo Plástico Fuerte (Zx): {show_mm3(Zx_w):.1f} {t_mm}³\nRadios de Giro (rx, ry): {show_mm(rx_w):.1f}, {show_mm(ry_w):.1f} {t_mm}\nPeso propio estimado: {show_kgm(peso_lin):.2f} {t_kg}/{t_m}\nPeso componente [{L_ref:.2f} m]: {peso_total:.2f} {t_kg}"
             agregar_al_despiece(
                 tipo=f"{term_W} (propiedades)",
                 seccion=f"{dw}x{bfw}x{tww}x{tfw} mm",
                 longitud_m=L_ref,
                 peso_kg=peso_total,
-                observacion=_t("Perfil W calculado", "W-shape calculated")
+                observacion=_t("Perfil W calculado", "W-shape calculated"),
+                memoria=mem_text
             )
             st.success(_t("Perfil agregado al despiece", "Profile added to list"))
 
     with p3:
-        st.pyplot(plot_W(dw, bfw, tww, tfw))
+        st.pyplot(plot_W(dw, bfw, tww, tfw), use_container_width=False)
         st.markdown("---")
         st.subheader(_t("Visualización 3D", "3D Visualization"))
         fig3d = plot_3d_W(dw, bfw, tww, tfw, L_ref)
@@ -352,17 +360,19 @@ with tab_C:
         else:
             st.error("❌ No Aprobado por Compresión Axial / Pandeo.")
             st.warning("💡 **Recomendación:** Aumente el área de la sección incrementando **bf**, **d**, o sus espesores (**tf**, **tw**). También puede reducir la longitud no arriostrada **Lc**.")
-        st.pyplot(fig_c)
+        st.pyplot(fig_c, use_container_width=False)
 
         # Agregar al despiece si se desea
         peso_total_c = peso_lin_c * L_c_m
         if st.button(_t("Agregar este elemento al despiece", "Add this element to the list")):
+            mem_text = f"Carga Axial Requerida (Pu): {P_u_i:.1f} {t_kN}\nLongitud No Arriostrada (Lc): {L_c_i:.2f} {t_m}\nRelación de Esbeltez Global (L/r_min): {esbeltez:.1f}\nEsfuerzo Crítico por Pandeo (Fcr): {show_MPa(Fcr):.1f} {t_MPa}\nÁrea Gruesa (Ag): {show_mm2(A_c):.1f} {t_mm}²\nResistencia Nominal (Pn): {show_kN(Pn):.1f} {t_kN}\nResistencia de Diseño (φPn): {show_kN(phi_Pn):.1f} {t_kN}\nEstado de Evaluación: {'CUMPLE' if P_u <= phi_Pn else 'FALLA'} (Factor de Seguridad LRFD = {phi_Pn/max(P_u, 0.001):.2f})"
             agregar_al_despiece(
                 tipo=f"{tipo_comp} (compresión)",
                 seccion=f"{d_c_i if 'd_c_i' in locals() else b_c_i}x{bf_c_i if 'bf_c_i' in locals() else t_c_i} [{t_mm}]",
                 longitud_m=L_c_m,
                 peso_kg=peso_total_c,
-                observacion=_t(f"Resistencia φPn={show_kN(phi_Pn):.1f} {t_kN} vs Pu={P_u_i:.1f} {t_kN}", f"Strength φPn={show_kN(phi_Pn):.1f} {t_kN} vs Pu={P_u_i:.1f} {t_kN}")
+                observacion=_t(f"Resistencia φPn={show_kN(phi_Pn):.1f} {t_kN} vs Pu={P_u_i:.1f} {t_kN}", f"Strength φPn={show_kN(phi_Pn):.1f} {t_kN} vs Pu={P_u_i:.1f} {t_kN}"),
+                memoria=mem_text
             )
             st.success(_t("Elemento agregado", "Element added"))
 
@@ -426,7 +436,7 @@ with tab_F:
             
         # Add pyplot W-Shape here to visualize real-time
         fig_f = plot_W(d_f, bf_f, tw_f, tf_f)
-        st.pyplot(fig_f)
+        st.pyplot(fig_f, use_container_width=False)
 
         # Peso y despiece
         A_f = 2 * (bf_f * tf_f) + (d_f - 2*tf_f)*tw_f
@@ -435,12 +445,14 @@ with tab_F:
         st.write(f"⚖️ **Peso estimado de la viga:** {show_kg(peso_total_f):.2f} {t_kg}")
 
         if st.button(_t("Agregar esta viga al despiece", "Add this beam to the list")):
+            mem_text = f"Momento Flector Solicitante (Mu): {Mu_i:.1f} {t_kNm}\nLongitud Total (L): {L_viga_i:.2f} {t_m}\nLongitud No Arriostrada (Lb): {show_m(Lb_m):.2f} {t_m}\nLímites LTB: Lp={show_m(Lp):.2f} {t_m}, Lr={show_m(Lr):.2f} {t_m}\nMomento Plástico (Mp): {show_kNm(Mp):.1f} {t_kNm}\nMódulo de Sección Elástico (Sx): {show_mm3(Sx_f):.1f} {t_mm}³\nZona de Comportamiento LTB: {estado}\nResistencia Nominal Equivalente (Mn): {show_kNm(Mn):.1f} {t_kNm}\nResistencia de Diseño a Flexión (φMn): {show_kNm(phi_Mn):.1f} {t_kNm}\nEstado de Evaluación: {'CUMPLE' if Mu <= phi_Mn else 'FALLA'} (Factor de Seguridad LRFD = {phi_Mn/max(Mu, 0.001):.2f})"
             agregar_al_despiece(
                 tipo=f"{term_W} (flexión)",
                 seccion=f"{d_f_i}x{bf_f_i}x{tw_f_i}x{tf_f_i} [{t_mm}]",
                 longitud_m=L_viga,
                 peso_kg=peso_total_f,
-                observacion=_t(f"φMn={show_kNm(phi_Mn):.1f} {t_kNm} vs Mu={Mu_i:.1f} {t_kNm}", f"φMn={show_kNm(phi_Mn):.1f} {t_kNm} vs Mu={Mu_i:.1f} {t_kNm}")
+                observacion=_t(f"φMn={show_kNm(phi_Mn):.1f} {t_kNm} vs Mu={Mu_i:.1f} {t_kNm}", f"φMn={show_kNm(phi_Mn):.1f} {t_kNm} vs Mu={Mu_i:.1f} {t_kNm}"),
+                memoria=mem_text
             )
             st.success(_t("Viga agregada al despiece", "Beam added to list"))
 
@@ -512,15 +524,17 @@ with tab_CF:
         else:
             st.error("❌ El perfil falla por compresión / pandeo global o local.")
             st.warning("💡 **Recomendación:** Aumente el espesor de la lámina **t**, agrande las dimensiones **h** o **b**, o incluya labios rigidizadores para mitigar el pandeo local.")
-        st.pyplot(fig_cf)
+        st.pyplot(fig_cf, use_container_width=False)
 
         if st.button(_t("Agregar este perfil al despiece", "Add this profile to the list"), key="btn_add_cf_section"):
+            mem_text = f"Carga Axial Solicitante (Pu): {Pu_cf_i:.1f} {t_kN}\nÁrea Bruta de Sección (Ag): {show_mm2(A_cf):.1f} {t_mm}²\nÁrea Efectiva Computada por Pandeo Local (Ae): {show_mm2(Ae):.1f} {t_mm}²\nRadio de Giro Pésimo Estimado (r): {show_mm(r_cf):.1f} {t_mm}\nEsbeltez Global (L/r): {esbeltez_cf:.1f}\nEsfuerzo Crítico Relacionado (Fcr): {show_MPa(Fcr_cf):.1f} {t_MPa}\nResistencia Nominal Base (Pn): {show_kN(Pn_cf):.1f} {t_kN}\nResistencia de Diseño Perfil de Lámina (φPn): {show_kN(phi_Pn_cf):.1f} {t_kN}\nEstado de Ejecución: {'CUMPLE' if Pu_cf <= phi_Pn_cf else 'FALLA'} (FS LRFD = {phi_Pn_cf/max(Pu_cf, 0.001):.2f})"
             agregar_al_despiece(
                 tipo=f"{tipo_cf} (conformado)",
                 seccion=f"{h_cf_i}x{b_cf_i}x{t_cf_i} [{t_mm}]",
                 longitud_m=L_cf,
                 peso_kg=peso_total_cf,
-                observacion=_t(f"φPn={show_kN(phi_Pn_cf):.1f} {t_kN} vs Pu={Pu_cf_i:.1f} {t_kN}", f"φPn={show_kN(phi_Pn_cf):.1f} {t_kN} vs Pu={Pu_cf_i:.1f} {t_kN}")
+                observacion=_t(f"φPn={show_kN(phi_Pn_cf):.1f} {t_kN} vs Pu={Pu_cf_i:.1f} {t_kN}", f"φPn={show_kN(phi_Pn_cf):.1f} {t_kN} vs Pu={Pu_cf_i:.1f} {t_kN}"),
+                memoria=mem_text
             )
             st.success(_t("Perfil agregado al despiece", "Profile added to list"))
 
@@ -544,6 +558,8 @@ with tab_E:
         ax_bars.set_xlabel(_t("Tipo de perfil", "Profile type"))
         ax_bars.set_ylabel(_t("Peso (kg)", "Weight (kg)"))
         ax_bars.set_title(_t("Distribución de pesos por tipo", "Weight distribution by type"))
+        plt.setp(ax_bars.get_xticklabels(), rotation=45, ha="right", fontsize=9)
+        fig_bars.subplots_adjust(bottom=0.35)
         ax_bars.grid(True, alpha=0.3)
         st.pyplot(fig_bars)
         bars_img = io.BytesIO()
@@ -566,14 +582,14 @@ with tab_E:
             table.style = 'Table Grid'
             hdr = table.rows[0].cells
             hdr[0].text = _t("Tipo", "Type")
-            hdr[1].text = _t("Sección (mm)", "Section (mm)")
+            hdr[1].text = _t("Sección", "Section")
             hdr[2].text = _t("Longitud (m)", "Length (m)")
             hdr[3].text = _t("Peso (kg)", "Weight (kg)")
             hdr[4].text = _t("Observación", "Observation")
             for i, row in enumerate(st.session_state.steel_despiece):
                 cells = table.rows[i+1].cells
                 cells[0].text = row["Tipo"]
-                cells[1].text = row["Sección (mm)"]
+                cells[1].text = row["Sección"]
                 cells[2].text = f"{row['Longitud (m)']:.2f}"
                 cells[3].text = f"{row['Peso (kg)']:.1f}"
                 cells[4].text = row["Observación"]
@@ -582,8 +598,15 @@ with tab_E:
             doc.add_picture(bars_img, width=Inches(5))
         else:
             doc.add_paragraph(_t("No se han agregado elementos.", "No elements added."))
-        doc.add_heading(_t("3. Notas de diseño", "3. Design notes"), level=1)
-        doc.add_paragraph(_t("Los cálculos se realizaron según los principios de resistencia LRFD (AISC 360).", "Calculations performed using LRFD principles (AISC 360)."))
+            
+        doc.add_heading(_t("3. Memoria Detallada por Componente", "3. Detailed Component Report"), level=1)
+        for i, row in enumerate(st.session_state.steel_despiece):
+            doc.add_heading(f"{_t('Elemento', 'Element')} {i+1}: {row['Tipo']} - {row['Sección']}", level=2)
+            for linea in str(row.get('Memoria', row['Observación'])).split('\n'):
+                doc.add_paragraph(linea)
+                
+        doc.add_heading(_t("4. Notas de diseño", "4. Design notes"), level=1)
+        doc.add_paragraph(_t("Los cálculos se realizaron según los principios de resistencia LRFD (AISC 360) aplicables.", "Calculations performed using applicable LRFD principles (AISC 360)."))
         doc_mem = io.BytesIO()
         doc.save(doc_mem)
         doc_mem.seek(0)

@@ -96,7 +96,7 @@ with st.expander(_t("📏 1. Calculadora de Pies² de Madera (Board Feet)", "�
     board_feet_per_piece = (thick_in * width_in * length_ft) / 12.0
     total_board_feet = qty_bf * board_feet_per_piece
     
-    mon = st.session_state.apu_config["moneda"] if "apu_config" in st.session_state else "US$"
+    mon = st.session_state.apu_config["moneda"] if "apu_config" in st.session_state else "COP$"
     precio_pt = st.number_input(f"{_t('Precio por Pie Tabular', 'Price per Board Foot')} [{mon}/pt]", value=st.session_state.get("m_price_pt", 2000.0 if mon=="COP$" else 2.50), key="m_price_pt")
     
     c_res, c_plot = st.columns([1,2])
@@ -143,9 +143,17 @@ with st.expander(_t("🪵 2. Diseño de Vigas de Madera (Flexión y Cortante)", 
     ok_flex = fb_act <= val_Fb; ok_shear = fv_act <= val_Fv; ok_def = Def_act <= Def_max_adm
     
     r1, r2, r3, r4 = st.columns([1,1,1,2])
-    r1.metric("f_b Actuante", f"{fb_act:.2f} MPa"); r1.success(f"✅ OK ({val_Fb})") if ok_flex else r1.error("❌ No Aprobado")
-    r2.metric("f_v Actuante", f"{fv_act:.2f} MPa"); r2.success(f"✅ OK ({val_Fv})") if ok_shear else r2.error("❌ No Aprobado")
-    r3.metric("Δ Actuante", f"{Def_act:.1f} mm"); r3.success(f"✅ OK ({Def_max_adm:.1f})") if ok_def else r3.error("❌ No Aprobado")
+    r1.metric("f_b Actuante", f"{fb_act:.2f} MPa")
+    if ok_flex: r1.success(f"✅ OK ({val_Fb})") 
+    else: r1.error("❌ No Aprobado")
+    
+    r2.metric("f_v Actuante", f"{fv_act:.2f} MPa")
+    if ok_shear: r2.success(f"✅ OK ({val_Fv})") 
+    else: r2.error("❌ No Aprobado")
+    
+    r3.metric("Δ Actuante", f"{Def_act:.1f} mm")
+    if ok_def: r3.success(f"✅ OK ({Def_max_adm:.1f})") 
+    else: r3.error("❌ No Aprobado")
     
     with r4:
         fig2, ax2 = plt.subplots(figsize=(6,2))
@@ -193,7 +201,8 @@ with st.expander(_t("🌲 3. Diseño de Columnas de Madera (Compresión)", "🌲
         tc1, tc2, tc3 = st.columns([1,1,2])
         tc1.metric("P Actuante", f"{P_ax:.1f} kN")
         tc2.metric("P Admisible", f"{P_admisible:.1f} kN")
-        tc2.success("✅ OK") if P_ax <= P_admisible else tc2.error("❌ No Aprobado")
+        if P_ax <= P_admisible: tc2.success("✅ OK") 
+        else: tc2.error("❌ No Aprobado")
         
         with tc3:
             fig3, ax3 = plt.subplots(figsize=(2,4))
