@@ -71,3 +71,46 @@ def sign_out_user():
 
 def get_current_user():
     return st.session_state.get("user", None)
+
+def save_project_to_db(user, nombre_proyecto, propietario, direccion, telefono, estado_json):
+    import json
+    user_id = getattr(user, 'id', None)
+    access_token = getattr(user, 'access_token', None)
+    if not user_id:
+        raise Exception("Usuario no autenticado")
+    url = f"{SUPABASE_URL}/rest/v1/proyectos"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {access_token or SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+    data = {
+        "user_id": user_id,
+        "nombre_proyecto": nombre_proyecto,
+        "propietario": propietario,
+        "direccion": direccion,
+        "telefono": telefono,
+        "estado_json": json.dumps(estado_json) if not isinstance(estado_json, str) else estado_json
+    }
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code not in (200, 201):
+        raise Exception(f"Error al guardar: {response.status_code} - {response.text}")
+    return response.json()
+
+
+def get_projects_from_db(user):
+    user_id = getattr(user, 'id', None)
+    access_token = getattr(user, 'access_token', None)
+    if not user_id:
+        raise Exception("Usuario no autenticado")
+    url = f"{SUPABASE_URL}/rest/v1/proyectos?user_id=eq.{user_id}&order=created_at.desc"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {access_token or SUPABASE_KEY}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"Error al obtener proyectos: {response.status_code} - {response.text}")
+    return response.json()
