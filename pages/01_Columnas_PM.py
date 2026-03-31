@@ -724,7 +724,6 @@ st.sidebar.markdown(f"**Total varillas:** {n_barras} | **Ast:** {Ast:.2f} cm² |
 
 if cuantia < rho_min or cuantia > rho_max:
     st.sidebar.error(f"❌ CUANTÍA FUERA DE LÍMITES: ρ = {cuantia:.2f}% (límites: {rho_min}% - {rho_max}%)")
-    st.stop()
 
 st.sidebar.header(_t("4. Refuerzo Transversal", "4. Transverse Reinforcement"))
 
