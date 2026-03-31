@@ -471,17 +471,20 @@ def generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo
         y_pos_list=np.linspace(0,Ly,n_profiles)
     else:
         y_pos_list=np.linspace(0,Lx,n_profiles)
-    dim_x=msp.add_linear_dim(base=(0,-0.2),end=(Lx,-0.2),offset=0.1,dimstyle='COTAS-50',layer='COTAS')
-    dim_x.render()
-    dim_y=msp.add_linear_dim(base=(-0.2,0),end=(-0.2,Ly),offset=0.1,dimstyle='COTAS-50',layer='COTAS')
-    dim_y.render()
-    if n_profiles>=2:
-        y1=y_pos_list[0]; y2=y_pos_list[1]
-        if orientacion=="Paralelo a X":
-            dim_sp=msp.add_linear_dim(base=(Lx+0.2,y1),end=(Lx+0.2,y2),offset=0.1,dimstyle='COTAS-50',layer='COTAS')
-        else:
-            dim_sp=msp.add_linear_dim(base=(y1,-0.4),end=(y2,-0.4),offset=0.1,dimstyle='COTAS-50',layer='COTAS')
-        dim_sp.render()
+    try:
+        dim_x=msp.add_linear_dim(base=(0,-0.2),p1=(0,0),p2=(Lx,0),angle=0,dimstyle='COTAS-50',dxfattribs={'layer':'COTAS'})
+        dim_x.render()
+        dim_y=msp.add_linear_dim(base=(-0.2,0),p1=(0,0),p2=(0,Ly),angle=90,dimstyle='COTAS-50',dxfattribs={'layer':'COTAS'})
+        dim_y.render()
+        if n_profiles>=2:
+            y1=y_pos_list[0]; y2=y_pos_list[1]
+            if orientacion=="Paralelo a X":
+                dim_sp=msp.add_linear_dim(base=(Lx+0.2,y1),p1=(Lx,y1),p2=(Lx,y2),angle=90,dimstyle='COTAS-50',dxfattribs={'layer':'COTAS'})
+            else:
+                dim_sp=msp.add_linear_dim(base=(y1,-0.4),p1=(y1,0),p2=(y2,0),angle=0,dimstyle='COTAS-50',dxfattribs={'layer':'COTAS'})
+            dim_sp.render()
+    except Exception:
+        pass  # Si la versión de ezdxf no soporta la API, se omiten las cotas
     off_x=Lx+1.5
     msp.add_lwpolyline([(off_x,0),(off_x+1.5,0),(off_x+1.5,espesor_torta),(off_x,espesor_torta),(off_x,0)],dxfattribs={'layer':'CONCRETO'})
     hatch_c=msp.add_hatch(color=colors.BLUE)
