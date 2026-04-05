@@ -197,6 +197,9 @@ def draw_longitudinal_bar(total_len_cm, straight_len_cm, hook_len_cm, bar_diam_m
     bar_diam_mm : diámetro de la barra (para escala)
     """
     fig, ax = plt.subplots(figsize=(max(6, total_len_cm/20), 2))
+    fig.patch.set_facecolor('#1e1e2e')
+    ax_arr = fig.get_axes()
+    for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     ax.set_aspect('equal')
     # Línea central
     ax.plot([0, straight_len_cm], [0, 0], 'k-', linewidth=2)
@@ -222,6 +225,9 @@ def draw_stirrup_beam(b_cm, h_cm, hook_len_cm, bar_diam_mm):
     bar_diam_mm : diámetro de la barra (para escala)
     """
     fig, ax = plt.subplots(figsize=(max(5, b_cm/15), max(5, h_cm/15)))
+    fig.patch.set_facecolor('#1e1e2e')
+    ax_arr = fig.get_axes()
+    for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     ax.set_aspect('equal')
     # Rectángulo exterior (interior real)
     x0, y0 = 0, 0
@@ -430,6 +436,9 @@ def mix_for_fc(fc):
 
 def sec_dark_fig(w, h, title=""):
     fig, ax = plt.subplots(figsize=(max(3,w/h*3), 3))
+    fig.patch.set_facecolor('#1e1e2e')
+    ax_arr = fig.get_axes()
+    for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     fig.patch.set_facecolor('#1a1a2e')
     ax.set_facecolor('#1a1a2e')
     ax.add_patch(patches.Rectangle((0,0),w,h,linewidth=2,edgecolor='white',facecolor='#4a4a6a'))
@@ -440,6 +449,9 @@ def sec_dark_fig(w, h, title=""):
 
 def sec_light_fig(w, h, title=""):
     fig, ax = plt.subplots(figsize=(max(3,w/h*3), 3))
+    fig.patch.set_facecolor('#1e1e2e')
+    ax_arr = fig.get_axes()
+    for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     fig.patch.set_facecolor('white')
     ax.set_facecolor('white')
     ax.add_patch(patches.Rectangle((0,0),w,h,linewidth=2,edgecolor='black',facecolor='#f0f0f0'))
@@ -450,6 +462,9 @@ def sec_light_fig(w, h, title=""):
 
 def sec_light_fig_t(bf, bw, hf, ht, title=""):
     fig, ax = plt.subplots(figsize=(5,4))
+    fig.patch.set_facecolor('#1e1e2e')
+    ax_arr = fig.get_axes()
+    for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     fig.patch.set_facecolor('white')
     ax.set_facecolor('white')
     ax.add_patch(patches.Rectangle(((bf-bw)/2, 0), bw, ht-hf, linewidth=1.5, edgecolor='black', facecolor='#e0e0e0'))
@@ -701,17 +716,76 @@ if modulo_sel == "🏗️ Diseño Completo de Viga (Flujo Guiado)":
     # ─────────────────────────────────────────────────────────────
     with vm_tabs[1]:
         st.subheader("⬇️ Solicitaciones de Diseño")
-        st.info("Ingrese los momentos últimos en los tres puntos críticos de la viga y el cortante máximo.")
-        c1p2, c2p2 = st.columns(2)
-        with c1p2:
-            vm_mu_izq  = st.number_input(f"Mu⁻ Apoyo Izquierdo [{unidad_mom}]",  0.0, 50000.0, st.session_state.get("vm_mu_izq",  80.0), 5.0, key="vm_mu_izq")
-            vm_mu_cen  = st.number_input(f"Mu⁺ Centro de Luz [{unidad_mom}]",     0.0, 50000.0, st.session_state.get("vm_mu_cen",  60.0), 5.0, key="vm_mu_cen")
-            vm_mu_der  = st.number_input(f"Mu⁻ Apoyo Derecho [{unidad_mom}]",     0.0, 50000.0, st.session_state.get("vm_mu_der",  80.0), 5.0, key="vm_mu_der")
-        with c2p2:
-            vm_vu_max  = st.number_input(f"Vu máximo (apoyo) [{unidad_fuerza}]",  0.1, 10000.0, st.session_state.get("vm_vu_max",  80.0), 5.0, key="vm_vu_max")
-            vm_wu      = st.number_input(f"Carga Factorizada Wu [kN/m]",          0.0, 2000.0,   st.session_state.get("vm_wu",      20.0), 2.0, key="vm_wu")
-            vm_wD      = st.number_input("Carga muerta wD [kN/m] (para deflexión)", 0.0, 500.0, st.session_state.get("vm_wD",       12.0), 1.0, key="vm_wD")
-            vm_wL_defl = st.number_input("Carga viva wL [kN/m] (para deflexión)",   0.0, 500.0, st.session_state.get("vm_wL_defl",  8.0), 1.0, key="vm_wL_defl")
+
+        modo_carga = st.radio(
+            "Modo de ingreso de cargas:",
+            ["⚙️ Automático (calcula Mu desde wD+wL)", "✏️ Manual (ingresar Mu directamente)"],
+            horizontal=True, key="vm_modo_carga"
+        )
+
+        if "Automático" in modo_carga:
+            st.markdown("##### Cargas distribuidas")
+            c_auto1, c_auto2 = st.columns(2)
+            with c_auto1:
+                vm_wD      = st.number_input("wD — Carga muerta [kN/m]", 0.0, 500.0, st.session_state.get("vm_wD", 12.0), 1.0, key="vm_wD")
+                vm_wL_defl = st.number_input("wL — Carga viva  [kN/m]", 0.0, 500.0, st.session_state.get("vm_wL_defl", 8.0), 1.0, key="vm_wL_defl")
+                vm_wS      = st.number_input("wS — Sismo equiv. [kN/m]", 0.0, 200.0, 0.0, 1.0, key="vm_wS")
+            with c_auto2:
+                combo_sel = st.selectbox(
+                    "Combinación de carga (C.9.2)",
+                    ["1.2D + 1.6L (governa flexión)", "1.4D", "1.2D + 1.0E + 1.0L (sísmica)", "0.9D + 1.0E"],
+                    key="vm_combo"
+                )
+                cond_apoyo = st.selectbox(
+                    "Condición de apoyos",
+                    ["Ambos extremos continuos", "Un extremo continuo / otro discontinuo", "Ambos extremos discontinuos (simplemente apoyada)"],
+                    key="vm_cond_apoyo"
+                )
+
+            if combo_sel == "1.4D":
+                vm_wu = 1.4 * vm_wD
+            elif combo_sel == "1.2D + 1.0E + 1.0L (sísmica)":
+                vm_wu = 1.2 * vm_wD + 1.0 * vm_wS + 1.0 * vm_wL_defl
+            elif combo_sel == "0.9D + 1.0E":
+                vm_wu = 0.9 * vm_wD + 1.0 * vm_wS
+            else:
+                vm_wu = 1.2 * vm_wD + 1.6 * vm_wL_defl
+
+            L2 = vm_L ** 2
+            if "Ambos extremos continuos" in cond_apoyo:
+                coef_izq, coef_cen, coef_der = 1/11, 1/16, 1/11
+            elif "Un extremo continuo" in cond_apoyo:
+                coef_izq, coef_cen, coef_der = 1/24, 1/14, 1/10
+            else:
+                coef_izq, coef_cen, coef_der = 0.0, 1/8, 0.0
+
+            vm_mu_izq = coef_izq * vm_wu * L2 * factor_fuerza
+            vm_mu_cen = coef_cen * vm_wu * L2 * factor_fuerza
+            vm_mu_der = coef_der * vm_wu * L2 * factor_fuerza
+            vm_vu_max = (vm_wu * vm_L / 2) * factor_fuerza
+
+            st.markdown("---")
+            st.markdown(f"**Wu calculado:** `{vm_wu:.2f} kN/m`")
+            mc1, mc2, mc3, mc4 = st.columns(4)
+            mc1.metric(f"Mu⁻ Izq [{unidad_mom}]", f"{vm_mu_izq:.1f}")
+            mc2.metric(f"Mu⁺ Centro [{unidad_mom}]", f"{vm_mu_cen:.1f}")
+            mc3.metric(f"Mu⁻ Der [{unidad_mom}]", f"{vm_mu_der:.1f}")
+            mc4.metric(f"Vu máx [{unidad_fuerza}]", f"{vm_vu_max:.1f}")
+            st.caption("📖 **NSR-10 C.8.3.3** — Coeficientes de momentos para vigas continuas.")
+
+        else:
+            vm_wD      = st.session_state.get("vm_wD", 12.0)
+            vm_wL_defl = st.session_state.get("vm_wL_defl", 8.0)
+            c1p2, c2p2 = st.columns(2)
+            with c1p2:
+                vm_mu_izq = st.number_input(f"Mu⁻ Apoyo Izquierdo [{unidad_mom}]", 0.0, 50000.0, st.session_state.get("vm_mu_izq", 80.0), 5.0, key="vm_mu_izq")
+                vm_mu_cen = st.number_input(f"Mu⁺ Centro de Luz [{unidad_mom}]",    0.0, 50000.0, st.session_state.get("vm_mu_cen", 60.0), 5.0, key="vm_mu_cen")
+                vm_mu_der = st.number_input(f"Mu⁻ Apoyo Derecho [{unidad_mom}]",    0.0, 50000.0, st.session_state.get("vm_mu_der", 80.0), 5.0, key="vm_mu_der")
+            with c2p2:
+                vm_vu_max  = st.number_input(f"Vu máximo (apoyo) [{unidad_fuerza}]", 0.1, 10000.0, st.session_state.get("vm_vu_max", 80.0), 5.0, key="vm_vu_max")
+                vm_wu      = st.number_input(f"Wu factorizada [kN/m]",              0.0, 2000.0, st.session_state.get("vm_wu", 20.0), 2.0, key="vm_wu")
+                vm_wL_defl = st.number_input("wL [kN/m] (deflexión)", 0.0, 500.0, st.session_state.get("vm_wL_defl", 8.0), 1.0, key="vm_wL_defl")
+                vm_wD      = st.number_input("wD [kN/m] (deflexión)", 0.0, 500.0, st.session_state.get("vm_wD", 12.0), 1.0, key="vm_wD")
 
         st.session_state["vr_mu"] = max(vm_mu_izq, vm_mu_cen, vm_mu_der)
         st.session_state["vt_mu"] = st.session_state["vr_mu"]
@@ -1208,6 +1282,9 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                     # --- Gráfico Mn vs As (matplotlib, no Plotly) ---
                     doc.add_heading("8. Diagrama Capacidad vs Demanda", level=1)
                     fig_mn, ax_mn = plt.subplots(figsize=(5, 3))
+                    fig_mn.patch.set_facecolor('#1e1e2e')
+                    ax_arr = fig_mn.get_axes()
+                    for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
                     fig_mn.patch.set_facecolor('white')
                     ax_mn.plot(_as_vals, _phi_mn_env, color='steelblue', lw=2, label='φMn (As)')
                     ax_mn.axhline(Mu_vr, color='red', linestyle='--', lw=1.5, label=f'Mu={Mu_vr:.2f} {unidad_mom}')
@@ -1411,6 +1488,9 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
 
         with tab_s:
             fig, ax = plt.subplots(figsize=(5,4))
+            fig.patch.set_facecolor('#1e1e2e')
+            ax_arr = fig.get_axes()
+            for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
             fig.patch.set_facecolor('#1a1a2e'); ax.set_facecolor('#1a1a2e')
             ax.add_patch(patches.Rectangle(((bf_vt-bw_vt)/2, 0), bw_vt, ht_vt-hf_vt, linewidth=1.5, edgecolor='white', facecolor='#4a4a6a'))
             ax.add_patch(patches.Rectangle((0, ht_vt-hf_vt), bf_vt, hf_vt, linewidth=1.5, edgecolor='white', facecolor='#3a3a5a'))
@@ -1607,6 +1687,9 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
                     _a_i = _as * 100 * fy / (0.85 * fc * bf_mm)
                     _phi_mn_env_t.append(phi_f * _as * 100 * fy * (d_mm_vt - _a_i / 2) / 1e6 * factor_fuerza)
                 fig_mn_t, ax_mn_t = plt.subplots(figsize=(5, 3))
+                fig_mn_t.patch.set_facecolor('#1e1e2e')
+                ax_arr = fig_mn_t.get_axes()
+                for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
                 fig_mn_t.patch.set_facecolor('white')
                 ax_mn_t.plot(_as_vals_t, _phi_mn_env_t, color='steelblue', lw=2, label='φMn (As)')
                 ax_mn_t.axhline(Mu_vt_kN * factor_fuerza, color='red', linestyle='--', lw=1.5, label=f'Mu={Mu_vt_kN * factor_fuerza:.2f} {unidad_mom}')
@@ -2017,6 +2100,9 @@ if modulo_sel == "⚡ Resistencia a Cortante por Punzonamiento — Losas":
         import io
         from docx.shared import Inches
         fig_bo, ax_bo = plt.subplots(figsize=(4, 4))
+        fig_bo.patch.set_facecolor('#1e1e2e')
+        ax_arr = fig_bo.get_axes()
+        for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
         ax_bo.set_aspect('equal')
         # Columna
         ax_bo.add_patch(patches.Rectangle((-c1p/2, -c2p/2), c1p, c2p, color='gray', alpha=0.5, label='Columna'))
@@ -2194,6 +2280,9 @@ if modulo_sel == "📉 Inercia Fisurada y Deflexiones en Vigas":
         _ma_pts = np.linspace(0.01, max(Ma_DL_kNm * 2, Mcr_kNm * 2), 60)
         _ie_pts = [Ie(m, Mcr_kNm, Ig_mm4, Icr_mm4) / 1e4 for m in _ma_pts]
         fig_br, ax_br = plt.subplots(figsize=(5, 3))
+        fig_br.patch.set_facecolor('#1e1e2e')
+        ax_arr = fig_br.get_axes()
+        for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
         ax_br.plot(_ma_pts, _ie_pts, color='steelblue', lw=2, label='Ie(Ma)')
         ax_br.axhline(Ig_mm4 / 1e4, color='gray', linestyle=':', lw=1, label=f'Ig = {Ig_mm4/1e4:.0f} cm?')
         ax_br.axhline(Icr_mm4 / 1e4, color='brown', linestyle=':', lw=1, label=f'Icr = {Icr_mm4/1e4:.0f} cm?')
@@ -2312,6 +2401,9 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
                 M_vals = -wu_ls * x_vals**2 / 2
             
             fig_mv, (ax_v, ax_m) = plt.subplots(2, 1, figsize=(6, 5), sharex=True)
+            fig_mv.patch.set_facecolor('#1e1e2e')
+            ax_arr = fig_mv.get_axes()
+            for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
             fig_mv.patch.set_facecolor('#1a1a2e')
             ax_v.set_facecolor('#1a1a2e'); ax_m.set_facecolor('#1a1a2e')
             
@@ -2415,6 +2507,9 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
                 # en un io.BytesIO ANTES de pasarlo a doc.add_picture()
                 import matplotlib.pyplot as plt
                 fig_mv_w, (ax_v_w, ax_m_w) = plt.subplots(2, 1, figsize=(6, 5), sharex=True)
+                fig_mv_w.patch.set_facecolor('#1e1e2e')
+                ax_arr = fig_mv_w.get_axes()
+                for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
                 fig_mv_w.patch.set_facecolor('white')
                 ax_v_w.set_facecolor('white'); ax_m_w.set_facecolor('white')
                 ax_v_w.plot(x_vals, V_vals, color='blue', lw=2)
@@ -2651,6 +2746,9 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
     st.caption("Distribución esquemática de momentos últimos a lo largo del vano")
 
     fig_env, ax_env = plt.subplots(figsize=(9, 3.2))
+    fig_env.patch.set_facecolor('#1e1e2e')
+    ax_arr = fig_env.get_axes()
+    for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     fig_env.patch.set_facecolor('#1a1a2e')
     ax_env.set_facecolor('#1a1a2e')
 

@@ -259,6 +259,8 @@ def _bar_label(diam_mm):
 def draw_longitudinal_bar(total_len_cm, straight_len_cm, hook_len_cm, bar_diam_mm, bar_name=None):
     label = bar_name if bar_name else _bar_label(bar_diam_mm)
     fig, ax = plt.subplots(figsize=(max(6, total_len_cm/20), 2))
+    fig.patch.set_facecolor('#1e1e2e')
+    for _ax in fig.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     ax.set_aspect('equal')
     ax.plot([0, straight_len_cm], [0, 0], 'k-', linewidth=2)
     ax.plot([0, 0], [0, hook_len_cm], 'k-', linewidth=2)
@@ -276,6 +278,8 @@ def draw_stirrup(b_cm, h_cm, hook_len_cm, bar_diam_mm, bar_name=None):
     import math as _math
     label = bar_name if bar_name else _bar_label(bar_diam_mm)
     fig, ax = plt.subplots(figsize=(max(5, b_cm/12), max(4, h_cm/12)))
+    fig.patch.set_facecolor('#1e1e2e')
+    for _ax in fig.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     ax.set_aspect('equal')
     x0, y0 = 0, 0
     ax.plot([x0, x0+b_cm], [y0, y0], 'k-', linewidth=2.5)
@@ -302,6 +306,8 @@ def draw_stirrup(b_cm, h_cm, hook_len_cm, bar_diam_mm, bar_name=None):
 def draw_crosstie(len_cm, hook_len_cm, bar_diam_mm, bar_name=None):
     label = bar_name if bar_name else _bar_label(bar_diam_mm)
     fig, ax = plt.subplots(figsize=(max(6, len_cm/15), 2))
+    fig.patch.set_facecolor('#1e1e2e')
+    for _ax in fig.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     ax.set_aspect('equal')
     ax.plot([0, len_cm], [0, 0], 'k-', linewidth=2)
     ax.plot([0, -hook_len_cm*0.7], [0, -hook_len_cm*0.7], 'k-', linewidth=2)
@@ -319,6 +325,8 @@ def draw_spiral(D_cm, paso_cm, bar_diam_mm, bar_name=None):
     """Dibujo esquemático de espiral para columnas circulares"""
     label = bar_name if bar_name else _bar_label(bar_diam_mm)
     fig, ax = plt.subplots(figsize=(6, 4))
+    fig.patch.set_facecolor('#1e1e2e')
+    for _ax in fig.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     ax.set_aspect('equal')
     circle = plt.Circle((0, 0), D_cm/2, fill=False, edgecolor='black', linewidth=2)
     ax.add_patch(circle)
@@ -1283,6 +1291,8 @@ def create_biaxial_3d_plot(cap_x, cap_y, Pu, Mux, Muy, phi_factor_eval):
 
 def create_pm_2d_plot(cap_x, Pu, Mu, unidad_mom, unidad_fuerza):
     fig, ax = plt.subplots(figsize=(8, 6))
+    fig.patch.set_facecolor('#1e1e2e')
+    for _ax in fig.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     ax.plot(cap_x['M_n'], cap_x['P_n'], 'b--', linewidth=1.5, label=r"Resistencia Nominal ($P_n, M_n$)")
     ax.plot(cap_x['phi_M_n'], cap_x['phi_P_n'], 'r-', linewidth=2.5, label=r"Resistencia de Diseño ($\phi P_n, \phi M_n$)")
     
@@ -1544,6 +1554,8 @@ with tab2:
     col_s1, col_s2 = st.columns(2)
     with col_s1:
         fig_sec, ax_s = plt.subplots(figsize=(5, 5))
+        fig_sec.patch.set_facecolor('#1e1e2e')
+        for _ax in fig_sec.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
         ax_s.set_aspect('equal')
         ax_s.set_facecolor('#1a1a2e')
         fig_sec.patch.set_facecolor('#1a1a2e')
@@ -2001,6 +2013,8 @@ with tab3:
                  use_container_width=True)
     
     fig_bars, ax_bars = plt.subplots(figsize=(6, 4))
+    fig_bars.patch.set_facecolor('#1e1e2e')
+    for _ax in fig_bars.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
     ax_bars.bar(df_despiece["Marca"], df_despiece["Peso (kg)"], color=['#ff6b35', '#4caf50'])
     ax_bars.set_xlabel(_t("Elemento", "Element"))
     ax_bars.set_ylabel(_t("Peso (kg)", "Weight (kg)"))
@@ -2140,6 +2154,8 @@ with tab4:
         doc.add_picture(pm_2d_img, width=Inches(5))
         
         fig_br, ax_br = plt.subplots(figsize=(5, 5))
+        fig_br.patch.set_facecolor('#1e1e2e')
+        for _ax in fig_br.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
         theta_vals = np.linspace(0, np.pi/2, 60)
         Mx_curve, My_curve = [], []
         for th in theta_vals:
