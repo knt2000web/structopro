@@ -2156,13 +2156,24 @@ with tab3:
 
             output_excel = io.BytesIO()
             with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
-                df_apu = pd.DataFrame({
-                    "Item": ["Cemento", "Acero", "Arena", "Grava", "Mano de Obra", "A.I.U.", "TOTAL"],
-                    "Cantidad": [bultos_col, peso_total_acero_kg, mix["arena"]*vol_concreto_m3/1500, 
-                                 mix["grava"]*vol_concreto_m3/1600, peso_total_acero_kg*0.04 + vol_concreto_m3*0.4, "", ""],
-                    "Unidad": [f"bultos ({bag_kg}kg)", "kg", "m³", "m³", "días", "%", ""],
-                    "Subtotal": [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, aiu, total]
-                })
+                if _usar_premix:
+                    df_apu = pd.DataFrame({
+                        "Item":     ["Concreto Premezclado", "Acero", "Mano de Obra", "A.I.U.", "TOTAL"],
+                        "Cantidad": [vol_concreto_m3, peso_total_acero_kg,
+                                     peso_total_acero_kg * 0.04 + vol_concreto_m3 * 0.4, "", ""],
+                        "Unidad":   ["m³", "kg", "días", f"{apu['pct_aui']*100:.0f}%", ""],
+                        "Subtotal": [costo_conc_premix, costo_acero, costo_mo, aiu, total]
+                    })
+                else:
+                    df_apu = pd.DataFrame({
+                        "Item":     ["Cemento", "Acero", "Arena", "Grava", "Mano de Obra", "A.I.U.", "TOTAL"],
+                        "Cantidad": [bultos_col, peso_total_acero_kg, mix["arena"]*vol_concreto_m3/1500,
+                                     mix["grava"]*vol_concreto_m3/1600,
+                                     peso_total_acero_kg*0.04 + vol_concreto_m3*0.4, "", ""],
+                        "Unidad":   [f"bultos ({bag_kg}kg)", "kg", "m³", "m³", "días",
+                                     f"{apu['pct_aui']*100:.0f}%", ""],
+                        "Subtotal": [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, aiu, total]
+                    })
                 df_apu.to_excel(writer, index=False, sheet_name='APU')
                 workbook = writer.book
                 worksheet = writer.sheets['APU']
