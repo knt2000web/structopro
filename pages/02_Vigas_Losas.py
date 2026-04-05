@@ -135,6 +135,8 @@ def capturar_estado_vigas():
         "ls_ln", "ls_h", "ls_cov", "ls_wD", "ls_wL", "ls_bar", "ls_apoyo",
         # Longitud desarrollo
         "ld_bar", "ld_psit", "ld_psie",
+        # Sismo y Punzonamiento (Punto 6)
+        "vc_bcol", "vc_wu", "vc_mu_izq", "vc_mu_der", "vc_mu_cen", "pz_c1", "pz_c2", "pz_h", "pz_cov", "pz_vu", "pz_tipo",
         # DXF
         "dxf_empresa", "dxf_proyecto", "dxf_plano", "dxf_elaboro", "dxf_reviso", "dxf_aprobo",
     ]
@@ -226,13 +228,11 @@ def draw_stirrup_beam(b_cm, h_cm, hook_len_cm, bar_diam_mm):
     ax.plot([x0+b_cm, x0+b_cm], [y0, y0+h_cm], 'k-', linewidth=2) # lado derecho
     ax.plot([x0+b_cm, x0], [y0+h_cm, y0+h_cm], 'k-', linewidth=2) # base superior
     ax.plot([x0, x0], [y0+h_cm, y0], 'k-', linewidth=2)          # lado izquierdo
-    # Gancho de 135° en esquina inferior izquierda (dos segmentos)
-    hook_x1 = x0 - hook_len_cm * 0.6
-    hook_y1 = y0 - hook_len_cm * 0.6
+    # Gancho de 135° hacia el núcleo confinado (Punto 5 Trigonometría)
+    import math
+    hook_x1 = x0 + hook_len_cm * math.cos(math.radians(45))
+    hook_y1 = y0 + hook_len_cm * math.sin(math.radians(45))
     ax.plot([x0, hook_x1], [y0, hook_y1], 'k-', linewidth=2)
-    hook_x2 = hook_x1 - hook_len_cm * 0.4
-    hook_y2 = hook_y1 - hook_len_cm * 0.2
-    ax.plot([hook_x1, hook_x2], [hook_y1, hook_y2], 'k-', linewidth=2)
     # Cotas
     ax.annotate(f"{b_cm:.0f} cm", xy=(b_cm/2, -0.5), ha='center', fontsize=8)
     ax.annotate(f"{h_cm:.0f} cm", xy=(-0.5, h_cm/2), ha='right', va='center', fontsize=8)
@@ -1239,6 +1239,14 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
         Mu_vt_kN = Mu_vt / factor_fuerza
     else:
         Mu_vt_kN = Mu_vt
+        
+    # Validar ancho de ala efectivo (Punto 7 NSR-10 C.8.10.2 aproximado - BLOQUEO)
+    L_cm = L_vt * 100
+    limite_bf = min(L_cm / 4, bw_vt + 16 * hf_vt)
+    if bf_vt > limite_bf:
+        st.warning(f"⚠️ **Atención Normativa (C.8.10.2):** El ancho de ala $b_f$ ({bf_vt} cm) excedía el límite normativo: min($L/4={L_cm/4:.0f}$, $b_w+16h_f={bw_vt+16*hf_vt:.0f}$) = {limite_bf:.0f} cm. Se calculó usando el límite estricto de {limite_bf:.0f} cm.")
+        bf_vt = limite_bf
+        
     bf_mm = bf_vt*10; bw_mm = bw_vt*10; hf_mm = hf_vt*10; d_mm_vt = d_vt*10
 
     Rn_t = Mu_vt_kN*1e6 / (phi_f * bf_mm * d_mm_vt**2)
