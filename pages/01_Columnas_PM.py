@@ -1160,6 +1160,10 @@ Muy_magnified = Muy_input * slenderness['delta_ns']
 # =============================================================================
 if not es_circular:
     recub_cm = max(d_prime - rebar_diam / 20.0, 2.5)
+    # NSR-10 C.7.7.1 — recubrimiento mínimo para columnas
+    _recub_min_nsr = 3.8  # cm — columnas expuestas o en ambiente normal
+    if recub_cm < _recub_min_nsr:
+        st.sidebar.warning(f"⚠️ NSR-10 C.7.7.1: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo recomendado de {_recub_min_nsr} cm para columnas. Verifique d'.")
     bc = b - 2 * recub_cm
     hc = h - 2 * recub_cm
     Ach = bc * hc
@@ -1223,6 +1227,9 @@ if not es_circular:
     perim_estribo += (num_flejes_x * long_fleje_x + num_flejes_y * long_fleje_y)
 else:
     recub_cm = max(d_prime - rebar_diam / 20.0, 2.5)
+    _recub_min_nsr = 3.8
+    if recub_cm < _recub_min_nsr:
+        st.sidebar.warning(f"⚠️ NSR-10 C.7.7.1: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo de {_recub_min_nsr} cm.")
     dc = D - 2 * recub_cm
     Ach = math.pi * (dc/2)**2
     Ag_circ = math.pi * (D/2)**2
@@ -2111,17 +2118,26 @@ with tab4:
     with col_d1:
         btn_docx_col = st.button(_t("📝 Generar Memoria DOCX", "📝 Generate DOCX Report"), type="primary")
     with col_d2:
-        if not es_circular:
-            try:
-                buf_ifc_col = ifc_export.ifc_columna(
-                    b, h, L_col / 100, fc, fy, n_barras, rebar_type, rebar_diam, stirrup_diam,
-                    Ast, recub_cm, Pu_input, max(abs(Mux_input), abs(Muy_input)), 
-                    cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0,
-                    norma_sel, "Proyecto NSR-10"
-                )
-                st.download_button("📦 Exportar IFC (BIM)", data=buf_ifc_col, file_name=f"Columna_{b:.0f}x{h:.0f}.ifc", mime="application/x-step", key="ifc_col")
-            except Exception as e:
-                st.error(f"Error IFC: {e}")
+        try:
+            # Para circular usar D×D como envolvente rectangular del sólido IFC
+            _ifc_b = D if es_circular else b
+            _ifc_h = D if es_circular else h
+            _ifc_fname = f"Columna_circ_D{D:.0f}.ifc" if es_circular else f"Columna_{b:.0f}x{h:.0f}.ifc"
+            buf_ifc_col = ifc_export.ifc_columna(
+                _ifc_b, _ifc_h, L_col / 100, fc, fy, n_barras, rebar_type, rebar_diam, stirrup_diam,
+                Ast, recub_cm, Pu_input, max(abs(Mux_input), abs(Muy_input)),
+                cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0,
+                norma_sel, "Proyecto NSR-10"
+            )
+            st.download_button("📦 Exportar IFC (BIM)", data=buf_ifc_col,
+                               file_name=_ifc_fname, mime="application/x-step", key="ifc_col")
+            if es_circular:
+                st.caption("ℹ️ El IFC de columna circular exporta la sección como sólido rectangular envolvente (D×D). El refuerzo longitudinal se incluye como geometría simplificada.")
+        except ImportError:
+            st.warning("⚠️ La librería `ifcopenshell` no está instalada. Ejecuta `pip install ifcopenshell` para habilitar la exportación IFC/BIM.")
+        except Exception as e:
+            st.error(f"Error generando IFC: {e}")
+            st.info("💡 Asegúrate de que `ifc_export.py` y `ifcopenshell` estén disponibles en el entorno de ejecución.")
 
     if btn_docx_col:
         doc = Document()
