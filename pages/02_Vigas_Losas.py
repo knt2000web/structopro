@@ -165,7 +165,8 @@ _modulos_disponibles = [
     "📉 Inercia Fisurada y Deflexiones en Vigas",
     "🔳 Diseño de Losa en Una Dirección",
     "🔗 Longitud de Desarrollo y Empalmes",
-    "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)"
+    "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)",
+    "📊 Cuadro de Mando General",
 ]
 
 _modulo_desde_url = st.query_params.get("modulo", None)
@@ -831,23 +832,42 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
             # Máx. barras en 1ª fila dentro del ancho disponible
             _ancho_disp_mm = b_vr*10 - 2*dp_vr*10 - 2*db_e_vr - db_vr
             n_max_f1_vr = max(1, int(_ancho_disp_mm / (db_vr + s_min_vr)) + 1)
+            
+            d_eff_mm = d_mm
+            dos_filas_vr = False
 
             if n_bars > n_max_f1_vr:
-                # 2 filas necesarias
-                n_f1_vr = n_max_f1_vr
-                n_f2_vr = n_bars - n_f1_vr
-                n_f2_vr = max(2, n_f2_vr)          # mínimo 2 barras simétricas
-                n_bars  = n_f1_vr + n_f2_vr        # total real (puede subir 1 barra)
-                # Centroide de cada fila (mm desde la fibra inferior)
-                y1_vr = dp_vr*10                                         # fila 1
-                y2_vr = dp_vr*10 + db_vr + sep_filas_mm_vr              # fila 2
-                y_cg_vr = (n_f1_vr*Ab_vr*y1_vr + n_f2_vr*Ab_vr*y2_vr) / (n_bars*Ab_vr)
-                d_eff_mm = h_vr*10 - y_cg_vr       # peralte efectivo real
+                for _iter in range(4):
+                    n_f1_vr = n_max_f1_vr
+                    n_f2_vr = n_bars - n_f1_vr
+                    
+                    y1_vr = dp_vr*10
+                    y2_vr = dp_vr*10 + db_vr + sep_filas_mm_vr
+                    y_cg_vr = (n_f1_vr*Ab_vr*y1_vr + n_f2_vr*Ab_vr*y2_vr) / (n_bars*Ab_vr)
+                    d_eff_mm_nuevo = h_vr*10 - y_cg_vr
+                    
+                    if abs(d_eff_mm_nuevo - d_eff_mm) < 1.0:
+                        d_eff_mm = d_eff_mm_nuevo
+                        break
+                        
+                    d_eff_mm = d_eff_mm_nuevo
+                    Rn_iter = Mu_Nmm / (phi_f * b_mm * d_eff_mm**2)
+                    disc_iter = 1 - 2*Rn_iter/(0.85*fc)
+                    if disc_iter < 0:
+                        break
+                    
+                    rho_calc_iter = (0.85*fc/fy)*(1 - math.sqrt(disc_iter))
+                    rho_use_iter = max(rho_calc_iter, rho_min)
+                    As_req_cm2_iter = rho_use_iter * b_vr * (d_eff_mm / 10)
+                    n_bars = math.ceil(As_req_cm2_iter / Ab_vr)
+                    if n_bars <= n_max_f1_vr:
+                        n_bars = n_max_f1_vr + 1
+                        
                 dos_filas_vr = True
             else:
                 n_f1_vr, n_f2_vr = n_bars, 0
                 y1_vr = dp_vr * 10
-                y2_vr = y1_vr          # seguro: mismo valor, no se usa en 1 fila
+                y2_vr = y1_vr
                 d_eff_mm = d_mm
                 dos_filas_vr = False
 
@@ -3517,3 +3537,94 @@ if lista_proy_v:
             st.sidebar.error(msg)
 else:
     st.sidebar.info("No hay proyectos de Vigas en la nube.")
+
+# ══════════════════════════════════════════════════════════
+# MÓDULO: CUADRO DE MANDO GENERAL (M3 — Historial Diseños)
+# ══════════════════════════════════════════════════════════
+if modulo_sel == "📊 Cuadro de Mando General":
+    st.subheader("📊 Cuadro de Mando General — Historial de Diseños")
+    historial = st.session_state.get("historial_disenos", [])
+
+    if not historial:
+        st.info("ℹ️ No hay diseños registrados aún. Usa el botón **📥 Enviar a Cuadro de Mando** en cada módulo para guardar resultados.")
+    else:
+        df_hist = pd.DataFrame(historial)
+
+        # Métricas resumen
+        total = len(df_hist)
+        aprobados  = len(df_hist[df_hist["Estado"].str.contains("APROBADO|✅", na=False)])
+        rechazados = total - aprobados
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("Total Diseños", total)
+        col_m2.metric("✅ Aprobados", aprobados, delta=f"{aprobados/total*100:.0f}%")
+        col_m3.metric("❌ No Cumplen", rechazados, delta=f"-{rechazados/total*100:.0f}%", delta_color="inverse")
+
+        st.markdown("---")
+
+        # Tabla principal con colores de estado
+        st.markdown("#### 📋 Registro de Diseños")
+        def _color_estado(val):
+            if "APROBADO" in str(val) or "✅" in str(val):
+                return "background-color:#1a4a2e; color:#4ade80"
+            elif "NO CUMPLE" in str(val) or "EXCEDE" in str(val):
+                return "background-color:#4a1a1a; color:#f87171"
+            return ""
+
+        st.dataframe(
+            df_hist.style.applymap(_color_estado, subset=["Estado"]),
+            use_container_width=True, hide_index=True
+        )
+
+        st.markdown("---")
+
+        # Gráfico Pie de distribución
+        col_g1, col_g2 = st.columns([1, 2])
+        with col_g1:
+            import plotly.graph_objects as go_cmd
+            fig_pie = go_cmd.Figure(go_cmd.Pie(
+                labels=["✅ Aprobados", "❌ No Cumplen"],
+                values=[aprobados, rechazados],
+                marker=dict(colors=["#22c55e", "#ef4444"]),
+                hole=0.4,
+                textinfo="label+percent",
+                hovertemplate="%{label}: %{value}<extra></extra>"
+            ))
+            fig_pie.update_layout(
+                height=280, margin=dict(l=10, r=10, t=20, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", font_color="white",
+                showlegend=False
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        with col_g2:
+            # Barra de módulos
+            modulos_count = df_hist.groupby("Módulo").size().reset_index(name="N")
+            modulos_count["Color"] = modulos_count["N"].apply(lambda x: "#60a5fa")
+            fig_bar = go_cmd.Figure(go_cmd.Bar(
+                x=modulos_count["N"], y=modulos_count["Módulo"],
+                orientation="h",
+                marker_color="#60a5fa",
+                text=modulos_count["N"], textposition="outside",
+                hovertemplate="%{y}: %{x} diseños<extra></extra>"
+            ))
+            fig_bar.update_layout(
+                height=280, margin=dict(l=10, r=10, t=20, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", font_color="white",
+                xaxis=dict(showgrid=False), yaxis=dict(showgrid=False),
+                title_text="Diseños por Módulo"
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        st.markdown("---")
+
+        # Export CSV y limpiar
+        col_exp1, col_exp2 = st.columns(2)
+        with col_exp1:
+            csv_hist = df_hist.to_csv(index=False).encode("utf-8")
+            st.download_button("📥 Exportar Historial CSV", data=csv_hist,
+                               file_name=f"historial_disenos_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                               mime="text/csv")
+        with col_exp2:
+            if st.button("🗑️ Limpiar Historial", type="secondary"):
+                st.session_state.historial_disenos = []
+                st.rerun()
