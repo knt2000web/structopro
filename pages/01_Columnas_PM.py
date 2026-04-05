@@ -2070,10 +2070,23 @@ with tab3:
                 
                 precio_mo = st.number_input(_t("Costo mano de obra (día)", "Labor cost per day"), value=st.session_state["apu_mo"], step=5000.0)
                 pct_aui = st.number_input(_t("% A.I.U.", "% A.I.U."), value=st.session_state["apu_aui"], step=5.0) / 100.0
+            st.markdown("---")
+            usar_premezclado = st.checkbox(
+                _t("Usar concreto premezclado (omite cemento/arena/grava)", "Use ready-mix concrete (skips cement/sand/gravel)"),
+                value=st.session_state.get("apu_premix", False), key="apu_premix"
+            )
+            precio_premix_m3 = 0.0
+            if usar_premezclado:
+                precio_premix_m3 = st.number_input(
+                    _t("Precio concreto premezclado / m³", "Ready-mix concrete price / m³"),
+                    value=st.session_state.get("apu_premix_precio", 420000.0),
+                    step=10000.0, key="apu_premix_precio"
+                )
             submitted = st.form_submit_button(_t("Calcular Presupuesto", "Calculate Budget"))
             if submitted:
                 st.session_state.apu_config = {"moneda": moneda, "cemento": precio_cemento, "acero": precio_acero,
-                    "arena": precio_arena, "grava": precio_grava, "costo_dia_mo": precio_mo, "pct_aui": pct_aui}
+                    "arena": precio_arena, "grava": precio_grava, "costo_dia_mo": precio_mo, "pct_aui": pct_aui,
+                    "premix": usar_premezclado, "precio_premix_m3": precio_premix_m3}
                 st.success(_t("Precios guardados.", "Prices saved."))
                 st.rerun()
         if "apu_config" in st.session_state:
@@ -2081,15 +2094,66 @@ with tab3:
             mix = get_mix_for_fc(fc)
             bag_kg = CEMENT_BAGS.get(norma_sel, CEMENT_BAGS["NSR-10 (Colombia)"])[0]["kg"]
             bultos_col = vol_concreto_m3 * mix["cem"] / bag_kg
-            costo_cemento = bultos_col * apu["cemento"]
+            _usar_premix = apu.get("premix", False)
+            _precio_premix_m3 = apu.get("precio_premix_m3", 0.0)
+            if _usar_premix:
+                costo_cemento = 0.0
+                costo_arena   = 0.0
+                costo_grava   = 0.0
+                costo_conc_premix = vol_concreto_m3 * _precio_premix_m3
+            else:
+                costo_cemento = bultos_col * apu["cemento"]
+                costo_arena   = (mix["arena"] * vol_concreto_m3 / 1500) * apu["arena"]
+                costo_grava   = (mix["grava"] * vol_concreto_m3 / 1600) * apu["grava"]
+                costo_conc_premix = 0.0
             costo_acero = peso_total_acero_kg * apu["acero"]
-            costo_arena = (mix["arena"] * vol_concreto_m3 / 1500) * apu["arena"]
-            costo_grava = (mix["grava"] * vol_concreto_m3 / 1600) * apu["grava"]
             costo_mo = (peso_total_acero_kg * 0.04 + vol_concreto_m3 * 0.4) * apu["costo_dia_mo"]
-            costo_directo = costo_cemento + costo_acero + costo_arena + costo_grava + costo_mo
+            costo_directo = costo_cemento + costo_acero + costo_arena + costo_grava + costo_conc_premix + costo_mo
             aiu = costo_directo * apu["pct_aui"]
             total = costo_directo + aiu
-            st.metric(_t("💰 Total Proyecto", "💰 Total Project"), f"{total:,.0f} {apu['moneda']}")
+            # ── Métricas cards ──────────────────────────────────────────────
+            _c1, _c2, _c3 = st.columns(3)
+            _c1.metric(_t("💰 Total Proyecto", "💰 Total Project"), f"{total:,.0f} {apu['moneda']}")
+            _c2.metric(_t("📦 Costo Directo", "Direct Cost"), f"{costo_directo:,.0f} {apu['moneda']}")
+            _c3.metric(_t("🔧 Mano de Obra", "Labor"), f"{costo_mo:,.0f} {apu['moneda']}")
+
+            # ── Gráfica Plotly — Desglose de costos ────────────────────────
+            import plotly.graph_objects as _go
+            _items_label = (
+                [_t("Concreto PM", "Ready-mix"), _t("Acero", "Steel"), _t("M.O.", "Labor"), "A.I.U."]
+                if _usar_premix else
+                [_t("Cemento", "Cement"), _t("Acero", "Steel"), _t("Arena", "Sand"),
+                 _t("Grava", "Gravel"), _t("M.O.", "Labor"), "A.I.U."]
+            )
+            _items_val = (
+                [costo_conc_premix, costo_acero, costo_mo, aiu]
+                if _usar_premix else
+                [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, aiu]
+            )
+            _colors = ["#3fb950", "#79c0ff", "#ffa657", "#d2a8ff", "#58a6ff", "#f0883e"][:len(_items_label)]
+            _fig_apu = _go.Figure(_go.Bar(
+                x=_items_label, y=_items_val,
+                marker_color=_colors,
+                text=[f"{v:,.0f}" for v in _items_val],
+                textposition='outside',
+                textfont=dict(size=11, color='white')
+            ))
+            _fig_apu.update_layout(
+                title=_t("Desglose de Costos — Columna", "Cost Breakdown — Column"),
+                paper_bgcolor='#161b22', plot_bgcolor='#0d1117',
+                font=dict(color='#cdd6f4'),
+                xaxis=dict(gridcolor='#30363d'),
+                yaxis=dict(gridcolor='#30363d', tickformat=',.0f'),
+                margin=dict(t=40, b=20, l=20, r=20),
+                height=320
+            )
+            st.plotly_chart(_fig_apu, use_container_width=True)
+            if _usar_premix:
+                st.info(_t(
+                    f"✅ Concreto premezclado: {vol_concreto_m3:.3f} m³ × {_precio_premix_m3:,.0f} {apu['moneda']}/m³ = {costo_conc_premix:,.0f} {apu['moneda']}",
+                    f"✅ Ready-mix concrete: {vol_concreto_m3:.3f} m³ × {_precio_premix_m3:,.0f} {apu['moneda']}/m³ = {costo_conc_premix:,.0f} {apu['moneda']}"
+                ))
+
             output_excel = io.BytesIO()
             with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
                 df_apu = pd.DataFrame({
