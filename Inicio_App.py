@@ -386,24 +386,24 @@ _norm_displayed = st.sidebar.selectbox(
 
 # Guardar la bandera (Imagen HD) en session_state para que la usen todas las páginas
 _NORMA_FLAG_URL = {
-    "NSR-10 (Colombia)":           "https://flagcdn.com/w80/co.png",
-    "ACI 318-25 (EE.UU.)":         "https://flagcdn.com/w80/us.png",
-    "ACI 318-19 (EE.UU.)":         "https://flagcdn.com/w80/us.png",
-    "ACI 318-14 (EE.UU.)":         "https://flagcdn.com/w80/us.png",
-    "NEC-SE-HM (Ecuador)":         "https://flagcdn.com/w80/ec.png",
-    "E.060 (Perú)":                "https://flagcdn.com/w80/pe.png",
-    "NTC-EM (México)":             "https://flagcdn.com/w80/mx.png",
-    "COVENIN 1753-2006 (Venezuela)": "https://flagcdn.com/w80/ve.png",
-    "NB 1225001-2020 (Bolivia)":   "https://flagcdn.com/w80/bo.png",
-    "CIRSOC 201-2025 (Argentina)": "https://flagcdn.com/w80/ar.png",
+    "NSR-10 (Colombia)":           "https://flagpedia.net/data/flags/mini/co.png",
+    "ACI 318-25 (EE.UU.)":         "https://flagpedia.net/data/flags/mini/us.png",
+    "ACI 318-19 (EE.UU.)":         "https://flagpedia.net/data/flags/mini/us.png",
+    "ACI 318-14 (EE.UU.)":         "https://flagpedia.net/data/flags/mini/us.png",
+    "NEC-SE-HM (Ecuador)":         "https://flagpedia.net/data/flags/mini/ec.png",
+    "E.060 (Perú)":                "https://flagpedia.net/data/flags/mini/pe.png",
+    "NTC-EM (México)":             "https://flagpedia.net/data/flags/mini/mx.png",
+    "COVENIN 1753-2006 (Venezuela)": "https://flagpedia.net/data/flags/mini/ve.png",
+    "NB 1225001-2020 (Bolivia)":   "https://flagpedia.net/data/flags/mini/bo.png",
+    "CIRSOC 201-2025 (Argentina)": "https://flagpedia.net/data/flags/mini/ar.png",
 }
 
-st.session_state.norma_flag_url = _NORMA_FLAG_URL.get(st.session_state.norma_sel, "https://flagcdn.com/w80/un.png")
+st.session_state.norma_flag_url = _NORMA_FLAG_URL.get(st.session_state.norma_sel, "https://flagpedia.net/data/flags/mini/un.png")
 
 # Mostrar cuadro de exito con imagen HTML
 html_flag = f"""
 <div style="display: flex; align-items: center; background-color: #1e1e1e; padding: 10px; border-radius: 5px; border-left: 5px solid #4CAF50;">
-    <img src="{st.session_state.norma_flag_url}" width="40" style="margin-right: 15px; border-radius: 3px;">
+    <img src="{st.session_state.norma_flag_url}" style="height:32px;width:auto;margin-right:15px;vertical-align:middle;border-radius:3px;">
     <div>
         <span style="font-size: 12px; color: gray;">Norma Activa:</span><br>
         <strong style="color: white; font-size: 16px;">{st.session_state.norma_sel}</strong>
