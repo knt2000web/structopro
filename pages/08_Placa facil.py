@@ -143,8 +143,9 @@ iva            = st.sidebar.number_input(_t("% IVA (sobre utilidad)","IVA on pro
 st.sidebar.header(_t("Datos del plano","Drawing data"))
 plano_numero = st.sidebar.text_input(_t("Número de plano","Drawing number"), "PL-01")
 escala_plano = st.sidebar.text_input(_t("Escala","Scale"), "1:50")
-revisado     = st.sidebar.text_input(_t("Revisado por","Reviewed by"), "J. Pérez")
-aprobado     = st.sidebar.text_input(_t("Aprobado por","Approved by"), "C. Giraldo")
+elaboro      = st.sidebar.text_input(_t("Elaborado por","Prepared by"), "")
+revisado     = st.sidebar.text_input(_t("Revisado por","Reviewed by"), "")
+aprobado     = st.sidebar.text_input(_t("Aprobado por","Approved by"), "")
 # ─────────────────────────────────────────────
 # CÁLCULOS DE CANTIDADES
 # ─────────────────────────────────────────────
@@ -404,7 +405,7 @@ def create_3d_model(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_la
 # ─────────────────────────────────────────────
 def generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo,
                  incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente,
-                 plano_numero, escala_plano, revisado, aprobado, ref_beam,
+                 plano_numero, escala_plano, elaboro, revisado, aprobado, ref_beam,
                  zona_sismica_param, sistema_estructural_param, s_beam_param, confinement_param):
     doc_dxf = ezdxf.new('R2010')
     doc_dxf.units = ezdxf.units.M
@@ -435,7 +436,7 @@ def generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo
     textos_rotulo=[
         ("PROYECTO:",proyecto_nombre,"PLANO Nº:",plano_numero,"ESCALA:",escala_plano,"FECHA:",datetime.now().strftime('%d/%m/%Y')),
         ("CLIENTE:",proyecto_cliente,"HOJA:","1/1","NORMA:",norma_sel,"REVISIÓN:","00"),
-        ("DIRECCIÓN:",proyecto_direccion,"ELABORÓ:","C. Giraldo","APROBÓ:",aprobado,"REVISÓ:",revisado),
+        ("DIRECCIÓN:",proyecto_direccion,"ELABORÓ:",elaboro,"APROBÓ:",aprobado,"REVISÓ:",revisado),
         ("","","","","","","",""),
         ("LOGO:","Placa Fácil","FIRMA:","_________________","","","","")
     ]
@@ -688,7 +689,7 @@ with tab_dxf:
     if st.button("Generar archivo DXF"):
         dxf_data = generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo,
                                 incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente,
-                                plano_numero, escala_plano, revisado, aprobado, ref_beam,
+                                plano_numero, escala_plano, elaboro, revisado, aprobado, ref_beam,
                                 zona_sismica, sistema_estructural, s_beam, confinement_zone_length)
         st.download_button("📥 Descargar DXF", data=dxf_data,
                           file_name=f"PlacaFacil_{proyecto_nombre}.dxf", mime="application/dxf")

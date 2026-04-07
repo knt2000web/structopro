@@ -277,43 +277,23 @@ def ifc_viga_t(
     rec = recub_cm * 10.
 
     # ─── Perfil T mediante IfcArbitraryClosedProfileDef ─────────────────────
-    # Coordenadas del polígono T (sentido antihorario, origen en centro del ala)
-    cx = bf / 2.; cy = h / 2.
-    # Alma empieza desde abajo (y=0) hasta hf del ala; ala ocupa la parte superior
-    bw_offset = (bf - bw) / 2.
-    pts_T = [
-        (0. - cx, 0. - cy),            # inf. izq. del ala
-        (bf - cx, 0. - cy),            # inf. der. del ala (solo si T ancha)
-        # Para perfil T correcto (ala arriba = compresión):
+    # Coordenadas del polígono T (sentido antihorario, origen en centro del alma base)
+    # El alma va de x = -bw/2 a +bw/2
+    # El ala va de y = h - hf a h, y de x = -bf/2 a +bf/2
+    pts_poligono_t = [
+        (-bw/2., 0.),               # 1. Base izq
+        (bw/2.,  0.),               # 2. Base der
+        (bw/2.,  h - hf),           # 3. Cuello der
+        (bf/2.,  h - hf),           # 4. Ala inf der
+        (bf/2.,  h),                # 5. Ala sup der
+        (-bf/2., h),                # 6. Ala sup izq
+        (-bf/2., h - hf),           # 7. Ala inf izq
+        (-bw/2., h - hf)            # 8. Cuello izq
     ]
-    # Perfil T con ala en la PARTE SUPERIOR
-    # Vértices (origen centrado en el centroide aproximado):
-    #  P1: (-bf/2, -h/2) borde inf-izq ala
-    #  P2: (+bf/2, -h/2) borde inf-der ala
-    # Simplificación: representamos el alma como perfil rectangular
-    # y el ala como un sólido adicional (2 solidos = IfcBooleanResult)
-    # Para mayor compatibilidad usamos I-shape profile
-    axis2d = ifc.createIfcAxis2Placement2D(
-        ifc.createIfcCartesianPoint((0., 0.)), None)
-
-    # IfcAsymmetricIShapeProfileDef — aproxima Viga T: alma + ala superior
-    try:
-        perfil_t = ifc.createIfcAsymmetricIShapeProfileDef(
-            "AREA", "SeccionVigaT", axis2d,
-            bw,      # BottomFlangeWidth
-            bw,      # OverallDepth  (alma total)
-            h - hf,  # WebThickness (ancho alma = bw ya que es rectangular)
-            bw,      # FilletRadius (0 para simplificar)
-            bf,      # TopFlangeWidth
-            hf,      # TopFlangeThickness
-            None,    # TopFlangeFilletRadius
-            None,    # BottomFlangeThickness
-            None,    # BottomFlangeFilletRadius
-            None,    # CentreOfGravityInY
-        )
-    except Exception:
-        # Fallback: perfil rectangular del alma si el perfil T falla
-        perfil_t = ifc.createIfcRectangleProfileDef("AREA", "SeccionVigaT", axis2d, bw, h)
+    pnts_ifc = [ifc.createIfcCartesianPoint(p) for p in pts_poligono_t]
+    # Cerrar el polígono iterando el primero al final
+    polyline = ifc.createIfcPolyline(pnts_ifc + [pnts_ifc[0]])
+    perfil_t = ifc.createIfcArbitraryClosedProfileDef("AREA", "SeccionVigaT", polyline)
 
     dir_extr = ifc.createIfcDirection((0., 0., 1.))
     solido = ifc.createIfcExtrudedAreaSolid(perfil_t, None, dir_extr, L)
@@ -681,4 +661,187 @@ def ifc_zapata(
             ifcopenshell.guid.new(), None, None, None, zapata, rebars)
 
     _contener_en_planta(ifc, planta, [zapata] + rebars)
+    return _guardar_a_bytesio(ifc)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 6. COLUMNA CIRCULAR
+# ══════════════════════════════════════════════════════════════════════════════
+
+def ifc_columna_circular(
+    D_cm: float, L_m: float,
+    fc: float, fy: float,
+    n_bars: int, bar_name: str, db_mm: float, db_est_mm: float,
+    As_total_cm2: float, recub_cm: float,
+    Pu_kN: float = 0., Mu_kNm: float = 0., phi_Pn_kN: float = 0.,
+    norma: str = "NSR-10",
+    nombre_proyecto: str = "Proyecto NSR-10",
+) -> io.BytesIO:
+    """Exporta una Columna Circular como IfcColumn con barras longitudinales distribuidas radialmente."""
+    if not IFC_DISPONIBLE:
+        raise ImportError("ifcopenshell no está instalado.")
+
+    ifc = ifcopenshell.file(schema="IFC4")
+    planta, ctx = _nueva_jerarquia(ifc, nombre_proyecto)
+
+    D = D_cm * 10.
+    L = L_m * 1000.
+    db = db_mm
+    rec = recub_cm * 10.
+
+    # ─── Cuerpo de la columna ─────────────────────────────────────────────────
+    axis2d = ifc.createIfcAxis2Placement2D(
+        ifc.createIfcCartesianPoint((0., 0.)), None)
+    # IMPORTANTE: IfcCircleProfileDef for true cylindrical shape!
+    perfil = ifc.createIfcCircleProfileDef("AREA", "SeccionColumnaCirc", axis2d, D / 2.)
+    dir_extr = ifc.createIfcDirection((0., 0., 1.))
+    solido = ifc.createIfcExtrudedAreaSolid(perfil, None, dir_extr, L)
+    rep = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solido])
+    prod_rep = ifc.createIfcProductDefinitionShape(None, None, [rep])
+    place_col = _placement_local(ifc, 0., 0., 0.)
+
+    col = ifc.createIfcColumn(
+        ifcopenshell.guid.new(), None,
+        f"Columna Circular Ø{D_cm:.0f} cm",
+        f"D={D_cm:.0f}cm L={L_m:.2f}m",
+        None, place_col, prod_rep, None
+    )
+    _material(ifc, col, f"Concreto f'c={fc:.0f}MPa")
+    rho = As_total_cm2 / (math.pi * (D_cm / 2.) ** 2) * 100.
+    _pset_diseno(ifc, col, {
+        "fc_MPa": fc, "fy_MPa": fy,
+        "D_cm": D_cm, "L_m": L_m,
+        "As_total_cm2": As_total_cm2,
+        "Cuantia_pct": round(rho, 3),
+        "Barras": f"{n_bars} barras {bar_name}",
+        "Pu_kN": Pu_kN, "Mu_kNm": Mu_kNm, "φPn_kN": phi_Pn_kN,
+        "Norma": norma,
+        "FechaDiseno": datetime.now().strftime("%Y-%m-%d"),
+    })
+
+    # ─── Barras longitudinales en arreglo radial ──────────────────────────────
+    rebars = []
+    # Radio hasta el centro de las barras
+    R_bar = D / 2. - rec - db_est_mm - db / 2.
+    
+    for i in range(n_bars):
+        angle = 2 * math.pi * i / n_bars
+        xb = R_bar * math.cos(angle)
+        yb = R_bar * math.sin(angle)
+        
+        ax2d_r = ifc.createIfcAxis2Placement2D(
+            ifc.createIfcCartesianPoint((0., 0.)), None)
+        perf_r = ifc.createIfcCircleProfileDef("AREA", None, ax2d_r, db / 2.)
+        origin_r = _punto(ifc, xb, yb, 0.)
+        ax3d_r = ifc.createIfcAxis2Placement3D(
+            origin_r, ifc.createIfcDirection((0., 0., 1.)),
+            ifc.createIfcDirection((1., 0., 0.)))
+        solid_r = ifc.createIfcExtrudedAreaSolid(
+            perf_r, ax3d_r, ifc.createIfcDirection((0., 0., 1.)), L)
+        rep_r = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid_r])
+        prod_r = ifc.createIfcProductDefinitionShape(None, None, [rep_r])
+        place_r = _placement_local(ifc, 0., 0., 0.)
+
+        rebar = ifc.createIfcReinforcingBar(
+            ifcopenshell.guid.new(), None, f"Bar_{i+1}",
+            f"Ø{db:.0f}mm | {bar_name}", None, place_r, prod_r, None,
+            db / 2., math.pi * (db / 2.) ** 2 / 100., L, "LONGITUDINAL", None)
+        _material(ifc, rebar, f"Acero fy={fy:.0f}MPa")
+        rebars.append(rebar)
+
+    if rebars:
+        ifc.createIfcRelAggregates(
+            ifcopenshell.guid.new(), None, None, None, col, rebars)
+
+    _contener_en_planta(ifc, planta, [col] + rebars)
+    return _guardar_a_bytesio(ifc)
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 7. GRUPO DE PILOTES Y ENCEPADO
+# ══════════════════════════════════════════════════════════════════════════════
+
+def ifc_grupo_pilotes(
+    B_dado_m: float, L_dado_m: float, H_dado_m: float,
+    tipo_seccion: str, D_pilote_m: float, L_pilote_m: float,
+    m_filas: int, n_cols: int, S_metros: float,
+    fc_dado: float, fc_pilote: float,
+    nombre_proyecto: str = "Cimentación Profunda"
+) -> io.BytesIO:
+    """Exporta un encepado con su grupo de pilotes inferior."""
+    if not IFC_DISPONIBLE:
+        raise ImportError("ifcopenshell no está instalado.")
+
+    ifc = ifcopenshell.file(schema="IFC4")
+    planta, ctx = _nueva_jerarquia(ifc, nombre_proyecto)
+
+    # Convertir a mm
+    Bd = B_dado_m * 1000.
+    Ld = L_dado_m * 1000.
+    Hd = H_dado_m * 1000.
+    
+    Dp = D_pilote_m * 1000.
+    Lp = L_pilote_m * 1000.
+    Sm = S_metros * 1000.
+
+    elementos_bim = []
+
+    # 1. Crear el Encepado (Dado) centríco en Z=0 (hacia abajo -Hd) o Z=+Hd
+    # Mejor que el dado empiece en Z=0 hacia abajo, y pilotes desde Z=-Hd hacia abajo
+    axis2d_dado = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+    perf_dado = ifc.createIfcRectangleProfileDef("AREA", "Dado", axis2d_dado, Bd, Ld)
+    dir_extr = ifc.createIfcDirection((0., 0., -1.))
+    sol_dado = ifc.createIfcExtrudedAreaSolid(perf_dado, None, dir_extr, Hd)
+    
+    rep_dado = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_dado])
+    prod_rep_d = ifc.createIfcProductDefinitionShape(None, None, [rep_dado])
+    place_dado = _placement_local(ifc, 0., 0., 0.)
+
+    dado = ifc.createIfcFooting(
+        ifcopenshell.guid.new(), None,
+        f"Encepado {B_dado_m}x{L_dado_m}x{H_dado_m}m",
+        "Dado de pilotes", None, place_dado, prod_rep_d, None, "PAD_FOOTING"
+    )
+    _material(ifc, dado, f"Concreto Encepado f'c={fc_dado:.0f}MPa")
+    elementos_bim.append(dado)
+
+    # 2. Crear los Pilotes
+    offset_x = (n_cols - 1) * Sm / 2.0
+    offset_y = (m_filas - 1) * Sm / 2.0
+
+    # Perfil del pilote
+    axis2d_p = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+    if tipo_seccion == "Circular":
+        perf_pilote = ifc.createIfcCircleProfileDef("AREA", "PiloteCirc", axis2d_p, Dp / 2.)
+    else:
+        perf_pilote = ifc.createIfcRectangleProfileDef("AREA", "PiloteCuad", axis2d_p, Dp, Dp)
+
+    for i in range(n_cols):
+        for j in range(m_filas):
+            cx = -offset_x + i * Sm
+            cy = -offset_y + j * Sm
+            # Extrusión hacia abajo desde la base del dado (Z = -Hd)
+            dir_extr_p = ifc.createIfcDirection((0., 0., -1.))
+            sol_p = ifc.createIfcExtrudedAreaSolid(perf_pilote, None, dir_extr_p, Lp)
+            
+            rep_p = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_p])
+            prod_rep_p = ifc.createIfcProductDefinitionShape(None, None, [rep_p])
+            place_p = _placement_local(ifc, cx, cy, -Hd)
+
+            # Usamos IfcPile directamente
+            pilote = ifc.createIfcPile(
+                ifcopenshell.guid.new(), None,
+                f"Pilote {i}-{j}",
+                f"Pilote {tipo_seccion} L={L_pilote_m}m", 
+                None, place_p, prod_rep_p, None, None, None
+            )
+            _material(ifc, pilote, f"Concreto Pilote f'c={fc_pilote:.0f}MPa")
+            elementos_bim.append(pilote)
+
+            # Agrupar pilote al dado para indicar que es un assembly
+            ifc.createIfcRelAggregates(
+                ifcopenshell.guid.new(), None, None, None, dado, [pilote])
+
+    _contener_en_planta(ifc, planta, elementos_bim)
     return _guardar_a_bytesio(ifc)

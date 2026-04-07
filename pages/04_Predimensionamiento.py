@@ -336,7 +336,7 @@ def plot_edificio(nudos, cols, vigas_x, vigas_z, zaps, zap_dim_dict=None):
 # ─────────────────────────────────────────────
 _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}
 _iso = _PAIS_ISO.get(norma_sel, "un")
-st.sidebar.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
+st.sidebar.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
 
 st.sidebar.header(_t("📊 Unidades de salida","📊 Output units"))
 unidades_salida = st.sidebar.radio("Unidades de fuerza/momento:", ["kiloNewtons (kN, kN·m)", "Toneladas fuerza (tonf, tonf·m)"], key="pred_units")
@@ -446,7 +446,7 @@ with st.sidebar.expander(_t("6️⃣ FORMA DEL PREDIO (OPCIONAL)", "6️⃣ PLOT
             ptos_predio = []
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("""<div style="text-align: center; color: gray; font-size: 11px;">© 2026 Ing. Msc. César Augusto Giraldo Chaparro</div>""", unsafe_allow_html=True)
+st.sidebar.markdown("""<div style="text-align: center; color: gray; font-size: 11px;">© 2026 </div>""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # CÁLCULOS ESTRUCTURALES

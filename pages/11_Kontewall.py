@@ -2,7 +2,7 @@
 # KonteWall — Diseño Estructural de Muros de Contención en Voladizo
 # Multinorma: NSR-10 · ACI 318-25/19 · E.060 · NEC-SE-HM · NTC-EM
 # COVENIN 1753 · NB 1225001 · CIRSOC 201
-# Autor: Ing. Msc. César Augusto Giraldo Chaparro — Konte v4.0 · 2026
+# Autor:  — Konte v4.0 · 2026
 # ═══════════════════════════════════════════════════════════════════
 import streamlit as st
 import numpy as np
@@ -71,7 +71,7 @@ with st.expander("📘 KonteWall — Solución Integral para el Análisis y Dise
         "Transforma parámetros geotécnicos y estructurales complejos en soluciones "
         "constructivas seguras, económicas y técnicamente rigurosas.\n\n"
         "Desarrollado por **Konte — Construcción, Consultoría y Tecnología**. "
-        "Autor: **Ing. Msc. César Augusto Giraldo Chaparro** — Duitama, Boyacá, Colombia.\n\n"
+        "Autor: **** — Duitama, Boyacá, Colombia.\n\n"
         "---\n"
         "## 🎯 Funcionalidades Clave\n\n"
         "| # | Funcionalidad | Descripción |\n"
@@ -95,7 +95,7 @@ with st.expander("📘 KonteWall — Solución Integral para el Análisis y Dise
         "| 🟠 Naranja | Acero punta (voladizo frontal) |\n"
         "| 🟣 Morado | Acero dentellón |\n"
     )
-    st.caption("KonteWall v4.0 · 2026 · Konte — Construcción, Consultoría y Tecnología · Ing. Msc. César Augusto Giraldo Chaparro · Duitama, Boyacá")
+    st.caption("KonteWall v4.0 · 2026 · Konte — Construcción, Consultoría y Tecnología ·  · Duitama, Boyacá")
 
 # ══════════════════════════════════════════════════════════════════
 # FUNCIONES AUXILIARES
@@ -428,7 +428,7 @@ st.sidebar.markdown(
     "🏛️ **KonteWall v4.0** © 2026  \n"
     "Todos los derechos reservados  \n"
     "**Konte** — Construcción, Consultoría y Tecnología  \n"
-    "*Ing. Msc. César Augusto Giraldo Chaparro*  \n"
+    "**  \n"
     "Duitama, Boyacá, Colombia"
 )
 
@@ -1906,7 +1906,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     doc.add_heading("MEMORIA TÉCNICA DE CÁLCULO", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
                     doc.add_heading("KonteWall — Diseño Estructural de Muro de Contención en Voladizo", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
                     par(f"Norma: {norma_sel}").alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    par("Autor: Ing. Msc. César Augusto Giraldo Chaparro").alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    par("Autor: ").alignment = WD_ALIGN_PARAGRAPH.CENTER
                     par("Konte — Construcción, Consultoría y Tecnología · Duitama, Boyacá, Colombia").alignment = WD_ALIGN_PARAGRAPH.CENTER
                     par("KonteWall v4.0 © 2026").alignment = WD_ALIGN_PARAGRAPH.CENTER
                     doc.add_page_break()
@@ -2016,7 +2016,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     section = doc.sections[0]
                     footer = section.footer
                     fp = footer.paragraphs[0]
-                    fp.text = "KonteWall v4.0 © 2026 · Konte — Construcción, Consultoría y Tecnología · Ing. Msc. César Augusto Giraldo Chaparro · Duitama, Boyacá, Colombia"
+                    fp.text = "KonteWall v4.0 © 2026 · Konte — Construcción, Consultoría y Tecnología ·  · Duitama, Boyacá, Colombia"
                     fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
                     fp.runs[0].font.size = Pt(8)
 
@@ -2081,7 +2081,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     ws['A1'].fill = hdr_fill
                     ws['A1'].alignment = Alignment(horizontal='center')
                     ws.merge_cells('A2:C2')
-                    ws['A2'] = f"Autor: Ing. Msc. César Augusto Giraldo Chaparro · Konte · {norma_sel}"
+                    ws['A2'] = f"Autor:  · Konte · {norma_sel}"
                     ws['A2'].alignment = Alignment(horizontal='center')
                     ws['A2'].font = Font(size=10, italic=True)
 
@@ -2173,7 +2173,7 @@ st.markdown(
     "<div style='text-align:center;font-size:12px;opacity:0.65;padding:8px;'>"
     "🏛️ <b>KonteWall v4.0</b> © 2026 · Todos los derechos reservados · "
     "<b>Konte</b> — Construcción, Consultoría y Tecnología · "
-    "Ing. Msc. César Augusto Giraldo Chaparro · Duitama, Boyacá, Colombia"
+    " · Duitama, Boyacá, Colombia"
     "</div>",
     unsafe_allow_html=True
 )

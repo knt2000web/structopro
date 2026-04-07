@@ -576,7 +576,7 @@ def plot_edificio(nudos, cols, vigas_x, vigas_z, zaps, zap_dim=None):
 # Barra lateral
 with st.sidebar:
     _iso = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}.get(norma_sel, "un")
-    st.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
     st.markdown("---")
 
     st.header(_t("📏 Geometría", "📏 Geometry"))
@@ -810,9 +810,13 @@ if st.session_state.get("g3d_ready", False):
                         dxf_text(msp, _x0_16, _z0_16-2, f"Edificio {n_pisos}P – {n_x}x{n_z} cols – {norma_sel}", "EJES", h=0.025*100, ha="left")
                         _cam16 = dxf_rotulo_campos(f"Generador Maestro 3D – {n_pisos} pisos", norma_sel, "001")
                         dxf_rotulo(msp, _cam16, _x0_16, _z0_16-8, rot_w=max(_xw_16,10), rot_h=4, escala=100)
-                    out16 = io.StringIO()
-                    dwg.write(out16)
-                    st.download_button("📥 Descargar DXF", data=out16.getvalue(), file_name="Edificio_3D.dxf", mime="application/dxf")
+                    import tempfile, os
+                    with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp_out16:
+                        tmp_path_out16 = tmp_out16.name
+                    dwg.saveas(tmp_path_out16)
+                    with open(tmp_path_out16, 'rb') as f_out16:
+                        bytes_out16 = f_out16.read()
+                    os.unlink(tmp_path_out16)                    st.download_button("📥 Descargar DXF", data=bytes_out16, file_name="Edificio_3D.dxf")
 
             # APU (presupuesto)
             if "apu_config" in st.session_state:

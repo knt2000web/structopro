@@ -29,7 +29,7 @@ st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
-    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <br><br>
     <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
@@ -151,7 +151,7 @@ _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE
 _iso = _PAIS_ISO.get(norma_sel, "un")
 st.sidebar.markdown(
     f'<div style="background:#1e3a1e;border-radius:6px;padding:8px 12px;margin-bottom:4px;">'
-    f'<img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
+    f'<img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
     f'<span style="color:#7ec87e;font-weight:600;font-size:13px;">{_t("Norma Activa:","Active Code:")} {norma_sel}</span>'
     f'</div>', unsafe_allow_html=True
 )
@@ -344,9 +344,13 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
             dxf_rotulo(msp, _cam3, x0, y0-50, rot_w=max(bw_cx*2,20), rot_h=15, escala=20)
         else:
             msp.add_text(f"Estribo {st_bar_cx} @ {s_diseno_cm:.1f} cm", dxfattribs={'height':2, 'insert':(x0+bw_cx/2, y0+d_cx+3)})
-        out_str = io.StringIO()
-        doc_dxf.write(out_str)
-        st.download_button("Descargar DXF", data=out_str.getvalue().encode('utf-8'), file_name="Seccion_Cortante.dxf")
+        import tempfile, os
+        with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp_out_str:
+            tmp_path_out_str = tmp_out_str.name
+        doc_dxf.saveas(tmp_path_out_str)
+        with open(tmp_path_out_str, 'rb') as f_out_str:
+            bytes_out_str = f_out_str.read()
+        os.unlink(tmp_path_out_str)        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Seccion_Cortante.dxf")
 
 # =============================================================================
 # 2. MÉNSULAS (CORBELS) – ACI 318
@@ -524,9 +528,13 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
                 dxf_rotulo(msp, _cam3b, x0, y0-50, rot_w=max(a_men*2,20), rot_h=15, escala=20)
             else:
                 msp.add_text(f"As = {As_prov_men:.2f} cm²", dxfattribs={'height':2, 'insert':(a_men/2, y0+h_men+2)})
-            out_str = io.StringIO()
-            doc_dxf.write(out_str)
-            st.download_button("Descargar DXF", data=out_str.getvalue().encode('utf-8'), file_name="Corbel.dxf")
+            import tempfile, os
+            with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp_out_str:
+                tmp_path_out_str = tmp_out_str.name
+            doc_dxf.saveas(tmp_path_out_str)
+            with open(tmp_path_out_str, 'rb') as f_out_str:
+                bytes_out_str = f_out_str.read()
+            os.unlink(tmp_path_out_str)            st.download_button("Descargar DXF", data=bytes_out_str, file_name="Corbel.dxf")
 
 # =============================================================================
 # 3. PREDIMENSIONAMIENTO DE COLUMNAS
@@ -625,9 +633,13 @@ with st.expander(_t("📐 Predimensionamiento de Columnas", "📐 Column Prelimi
             dxf_rotulo(msp, _cam3c, 0, -50, rot_w=max(b_round*2,20), rot_h=15, escala=20)
         else:
             msp.add_text(f"{b_round}x{b_round} cm", dxfattribs={'height':3, 'insert':(b_round/2, b_round/2)})
-        out_str = io.StringIO()
-        doc_dxf.write(out_str)
-        st.download_button("Descargar DXF", data=out_str.getvalue().encode('utf-8'), file_name="Columna_Predim.dxf")
+        import tempfile, os
+        with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp_out_str:
+            tmp_path_out_str = tmp_out_str.name
+        doc_dxf.saveas(tmp_path_out_str)
+        with open(tmp_path_out_str, 'rb') as f_out_str:
+            bytes_out_str = f_out_str.read()
+        os.unlink(tmp_path_out_str)        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Columna_Predim.dxf")
 
 # =============================================================================
 # 4. CAPACIDAD AXIAL COLUMNAS CORTAS

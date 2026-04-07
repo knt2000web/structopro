@@ -27,7 +27,7 @@ st.markdown(_t("Análisis dinámico simplificado (frecuencia natural 1 GDL) y Ge
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}
 _iso = _PAIS_ISO.get(norma_sel, "un")
-st.sidebar.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
+st.sidebar.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # PIE DE PÁGINA / DERECHOS RESERVADOS
@@ -37,7 +37,7 @@ st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
-    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <br><br>
     <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
@@ -399,7 +399,6 @@ with tab_doc:
         doc.add_paragraph(f"{_t('Cortante basal V:', 'Base shear V:')} {V_base:.1f} kN")
         doc.add_heading(_t("5. Curva Espectral", "5. Spectral Curve"), level=1)
         # Insertar la figura (usamos la misma que ya tenemos, pero la guardamos como imagen)
-        import io
         import plotly.io as pio
         img_bytes = pio.to_image(fig_spec, format='png', width=800, height=500)
         img_buffer = io.BytesIO(img_bytes)

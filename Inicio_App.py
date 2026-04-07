@@ -587,34 +587,34 @@ home      = st.Page(run_home, title="Inicio App", icon=":material/home:", defaul
 p_col     = st.Page("pages/01_Columnas_PM.py", title="Columnas PM", icon=":material/domain:")
 p_vig     = st.Page("pages/02_Vigas_Losas.py", title="Vigas Losas", icon=":material/horizontal_rule:")
 p_zap     = st.Page("pages/09_Zapatas.py", title="Zapatas", icon=":material/layers:")
-p_mcont   = st.Page("pages/11_Muros_Contencion.py", title="Muros Contención", icon=":material/view_stream:")
+p_mcont   = st.Page("pages/12_Muros_Contencion.py", title="Muros Contención", icon=":material/view_stream:")
 p_ccirc   = st.Page("pages/07_Columnas_Circulares.py", title="Columnas Circulares", icon=":material/lens:")
 p_pred    = st.Page("pages/04_Predimensionamiento.py", title="Predimensionamiento", icon=":material/straighten:")
 
 # Sismo & Viento
-p_sismo   = st.Page("pages/14_Diseño_Sismico.py", title="Diseño Sísmico", icon=":material/public:")
-p_viento  = st.Page("pages/15_viento simplificado.py", title="Viento Simplificado", icon=":material/air:")
-p_irreg   = st.Page("pages/16_Irregularidades.py", title="Irregularidades", icon=":material/architecture:")
+p_sismo   = st.Page("pages/15_Diseño_Sismico.py", title="Diseño Sísmico", icon=":material/public:")
+p_viento  = st.Page("pages/16_viento simplificado.py", title="Viento Simplificado", icon=":material/air:")
+p_irreg   = st.Page("pages/17_Irregularidades.py", title="Irregularidades", icon=":material/architecture:")
 
 # Mampostería y Alternativos
-p_mamp_e  = st.Page("pages/23_Mamposteria_Estructural.py", title="Mampostería Estructural", icon=":material/grid_on:")
-p_mamp_m  = st.Page("pages/12_Mamposteria_Morteros.py", title="Mampostería Morteros", icon=":material/apps:")
+p_mamp_e  = st.Page("pages/24_Mamposteria_Estructural.py", title="Mampostería Estructural", icon=":material/grid_on:")
+p_mamp_m  = st.Page("pages/13_Mamposteria_Morteros.py", title="Mampostería Morteros", icon=":material/apps:")
 p_placa   = st.Page("pages/08_Placa facil.py", title="Placa fácil", icon=":material/view_module:")
-p_konte   = st.Page("pages/10_Kontewall.py", title="Kontewall", icon=":material/view_compact:")
-p_mad     = st.Page("pages/13_Madera_Estructuras.py", title="Madera Estructuras", icon=":material/forest:")
-p_metal   = st.Page("pages/17_Estructuras_Metalicas.py", title="Estructuras Metálicas", icon=":material/build:")
+p_konte   = st.Page("pages/11_Kontewall.py", title="Kontewall", icon=":material/view_compact:")
+p_mad     = st.Page("pages/14_Madera_Estructuras.py", title="Madera Estructuras", icon=":material/forest:")
+p_metal   = st.Page("pages/18_Estructuras_Metalicas.py", title="Estructuras Metálicas", icon=":material/build:")
 
 # Presupuesto y Materiales
 p_calc    = st.Page("pages/06_Calculadora de Materiales.py", title="Calculadora Materiales", icon=":material/calculate:")
 p_apu     = st.Page("pages/05_APU_Mercado.py", title="APU Mercado", icon=":material/payments:")
 
 # Análisis y Utilidades
-p_a2d     = st.Page("pages/20_Analisis_Estructural_2D.py", title="Análisis Estructural 2D", icon=":material/polyline:")
-p_a3d     = st.Page("pages/21_Analisis_Estructural_3D.py", title="Análisis Estructural 3D", icon=":material/view_in_ar:")
-p_gen3d   = st.Page("pages/22_Generador_Maestro_3D.py", title="Generador Maestro 3D", icon=":material/polyline:")
+p_a2d     = st.Page("pages/21_Analisis_Estructural_2D.py", title="Análisis Estructural 2D", icon=":material/polyline:")
+p_a3d     = st.Page("pages/22_Analisis_Estructural_3D.py", title="Análisis Estructural 3D", icon=":material/view_in_ar:")
+p_gen3d   = st.Page("pages/23_Generador_Maestro_3D.py", title="Generador Maestro 3D", icon=":material/polyline:")
 p_otras   = st.Page("pages/03_Otras_Estructuras.py", title="Otras Estructuras", icon=":material/extension:")
-p_res     = st.Page("pages/18_Resistencia_Materiales.py", title="Resistencia Materiales", icon=":material/science:")
-p_util    = st.Page("pages/19_Utilidades_Comunes.py", title="Utilidades Comunes", icon=":material/widgets:")
+p_res     = st.Page("pages/19_Resistencia_Materiales.py", title="Resistencia Materiales", icon=":material/science:")
+p_util    = st.Page("pages/20_Utilidades_Comunes.py", title="Utilidades Comunes", icon=":material/widgets:")
 
 all_pages = [
     home, p_col, p_vig, p_zap, p_mcont, p_ccirc, p_pred,

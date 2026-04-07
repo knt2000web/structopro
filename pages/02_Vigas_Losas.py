@@ -136,7 +136,7 @@ def capturar_estado_vigas():
         # Longitud desarrollo
         "ld_bar", "ld_psit", "ld_psie",
         # Sismo y Punzonamiento (Punto 6)
-        "vc_bcol", "vc_wu", "vc_mu_izq", "vc_mu_der", "vc_mu_cen", "pz_c1", "pz_c2", "pz_h", "pz_cov", "pz_vu", "pz_tipo",
+        "vc_bcol", "vc_wu", "vcmuizq", "vcmuder", "vcmucen", "vc_mu_izq", "vc_mu_der", "vc_mu_cen", "cv_wu", "cv_mu_izq", "cv_mu_der", "cv_mu_cen", "cv_s_diseno", "pz_c1", "pz_c2", "pz_h", "pz_cov", "pz_vu", "pz_tipo",
         # DXF
         "dxf_empresa", "dxf_proyecto", "dxf_plano", "dxf_elaboro", "dxf_reviso", "dxf_aprobo",
     ]
@@ -237,9 +237,17 @@ def draw_stirrup_beam(b_cm, h_cm, hook_len_cm, bar_diam_mm):
     ax.plot([x0, x0], [y0+h_cm, y0], 'k-', linewidth=2)          # lado izquierdo
     # Gancho de 135° hacia el núcleo confinado (Punto 5 Trigonometría)
     import math
-    hook_x1 = x0 + hook_len_cm * math.cos(math.radians(45))
-    hook_y1 = y0 + hook_len_cm * math.sin(math.radians(45))
-    ax.plot([x0, hook_x1], [y0, hook_y1], 'k-', linewidth=2)
+    angle_rad = math.radians(45) # 135 grados hacia adentro es equivalente a 45 grados desde el eje X/Y hacia el centro rect
+    
+    # Gancho desde la esquina superior izquierda (x0, y0+h_cm) hacia adentro
+    vis_hook = min(hook_len_cm, b_cm/4.0, h_cm/4.0)
+    hx = vis_hook * math.cos(angle_rad)
+    hy = -vis_hook * math.sin(angle_rad)
+    ax.plot([x0, x0 + hx], [y0+h_cm, y0+h_cm + hy], 'k-', linewidth=2)
+    
+    # Gancho simulado desde la otra esquina o rama (usualmente se dibuja uno continuo o dos en la misma esquina, simularé la 2da vuelta del estribo)
+    ax.plot([x0+b_cm, x0+b_cm - hx], [y0+h_cm, y0+h_cm + hy], 'k--', linewidth=1.5, alpha=0.5)
+    
     # Cotas
     ax.annotate(f"{b_cm:.0f} cm", xy=(b_cm/2, -0.5), ha='center', fontsize=8)
     ax.annotate(f"{h_cm:.0f} cm", xy=(-0.5, h_cm/2), ha='right', va='center', fontsize=8)
@@ -565,7 +573,7 @@ _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE
 _iso = _PAIS_ISO.get(norma_sel, "un")
 st.sidebar.markdown(
     f'<div style="background:#1e3a1e;border-radius:6px;padding:8px 12px;margin-bottom:4px;">'
-    f'<img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
+    f'<img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
     f'<span style="color:#7ec87e;font-weight:600;font-size:13px;">{_t("Norma Activa:","Active Code:")} {norma_sel}</span>'
     f'</div>',
     unsafe_allow_html=True
@@ -671,6 +679,12 @@ if modulo_sel == "🏗️ Diseño Completo de Viga (Flujo Guiado)":
             if vm_tipo == "Viga T":
                 vm_bf = st.number_input("Ancho del ala bf [cm]", 20.0, 300.0, st.session_state.get("vm_bf", 80.0), 5.0, key="vm_bf")
                 vm_hf = st.number_input("Espesor del ala hf [cm]", 5.0, 40.0, st.session_state.get("vm_hf", 12.0), 1.0, key="vm_hf")
+                # Validaciones bf Viga T (NSR-10 CR.8.12)
+                limite_bf_vm = min((vm_L * 100) / 4, vm_b + 16 * vm_hf)
+                if vm_bf > limite_bf_vm:
+                    st.warning(f"?? El ancho del ala ingresado (bf = {vm_bf} cm) excede el máximo efectivo. "
+                               f"Se usará el límite bf_efectivo = {limite_bf_vm:.1f} cm (min[L/4, bw + 16hf]).")
+                    vm_bf = limite_bf_vm
             else:
                 vm_bf = vm_b
                 vm_hf = vm_h
@@ -935,7 +949,14 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                     As_req_cm2_iter = rho_use_iter * b_vr * (d_eff_mm / 10)
                     n_bars = math.ceil(As_req_cm2_iter / Ab_vr)
                     if n_bars <= n_max_f1_vr:
-                        n_bars = n_max_f1_vr + 1
+                        # El recalculo con d_eff redujo el requerimiento a 1 fila.
+                        # Advertimos al usuario y salimos — no forzar barra extra.
+                        dos_filas_vr = False
+                        n_f1_vr = n_bars
+                        n_f2_vr = 0
+                        d_eff_mm = d_mm  # volver al d original (1 fila)
+                        st.info("ℹ️ Tras iterar con d_efectivo, el acero requerido cabe en **1 fila** con el d' original.")
+                        break
                         
                 dos_filas_vr = True
             else:
@@ -960,15 +981,16 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
 > φMn ≥ Mu  ✔ (la viga resiste sin colapsar)""")
                 st.latex(r"\phi M_n = \phi \cdot A_s \cdot f_y \left(d - \frac{a}{2}\right)")
                 rows = [
-                    ("? b × h — Base y altura de la viga", f"{b_vr:.0f} × {h_vr:.0f} cm"),
-                    ("? d — Peralte efectivo real (centroide del acero)" + ("   2 filas" if dos_filas_vr else ""), f"{d_eff_mm/10:.2f} cm" + (f" (original: {d_vr:.1f} cm)" if dos_filas_vr else "")),
+                    ("📏 b × h — Base y altura de la viga", f"{b_vr:.0f} × {h_vr:.0f} cm"),
+                    ("📐 d — Peralte efectivo real (centroide del acero)" + ("   2 filas" if dos_filas_vr else ""), f"{d_eff_mm/10:.2f} cm" + (f" (original: {d_vr:.1f} cm)" if dos_filas_vr else "")),
                     ("🔢 Rn — Resistencia unitaria requerida (Mu / φ·b·d²)", f"{Rn:.3f} MPa"),
-                    ("📊 ? calculado — Cuantía de acero que necesita la sección", f"{rho_calc*100:.4f}%"),
-                    ("⬇ ? mínimo — Cuantía mínima exigida por la norma (evita falla frágil)", f"{rho_min*100:.4f}%"),
-                    ("⬆ ? máximo — Cuantía máxima (garantiza falla dúctil con aviso)", f"{rho_max*100:.4f}%"),
-                    ("🔩 As requerido — ?rea de acero necesaria para resistir Mu", f"{As_req_cm2:.3f} cm²"),
+                    ("📊 ρ calculado — Cuantía de acero que necesita la sección", f"{rho_calc*100:.4f}%"),
+                    ("⬇️ ρ mínimo — Cuantía mínima exigida por la norma (evita falla frágil)", f"{rho_min*100:.4f}%"),
+                    ("⬆️ ρ máximo — Cuantía máxima (garantiza falla dúctil con aviso)", f"{rho_max*100:.4f}%"),
+                    ("ρ provisto", f"{(As_prov/(b_vr*(d_eff_mm/10)))*100:.4f}%"),
+                    ("🔩 As requerido — Área de acero necesaria para resistir Mu", f"{As_req_cm2:.3f} cm²"),
                     (f"🔩 Varillas seleccionadas ({bar_vr}) — Cantidad y área provista", f"{n_bars} barras → As provisto = {As_prov:.3f} cm²"),
-                    ("📦 a — Profundidad del bloque de compresión equivalente (Whitney)", f"{a_mm:.1f} mm"),
+                    ("🧱 a — Profundidad del bloque de compresión equivalente (Whitney)", f"{a_mm:.1f} mm"),
                     (f"✅ φMn — Momento resistente provisto [{unidad_mom}]", f"{phi_Mn_kNm*factor_fuerza:.2f}"),
                     (f"🎯 Mu — Momento último demandado (carga de diseño) [{unidad_mom}]", f"{Mu_vr:.2f}"),
                     ("📋 Verificación Flexión (φMn ≥ Mu)" if ok_flex else "? Verificación Flexión (φMn < Mu)",
@@ -1143,8 +1165,8 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                     ("Concreto (b×h×L)", f"{vol_horm:.4f} m³"),
                     (f"Acero longitudinal ({n_bars} barras)", f"{peso_long:.2f} kg"),
                     (f"Cemento ({bag_kg:.0f} kg/bulto, f'c={fc:.1f} MPa)", f"{bags:.1f} bultos = {m[0]*vol_horm:.0f} kg"),
-                    ("Arena", f"{m[2]*vol_horm:.0f} kg"),
-                    ("Grava", f"{m[3]*vol_horm:.0f} kg"),
+                    ("Arena", f"{(m[2]*vol_horm)/1600:.2f} m³"),
+                    ("Grava", f"{(m[3]*vol_horm)/1600:.2f} m³"),
                     ("Agua", f"{m[1]*vol_horm:.0f} L"),
                     ("Referencia", code["ref"]),
                 ]
@@ -1254,7 +1276,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                     doc.add_paragraph(f"Volumen concreto: {vol_horm:.4f} m³")
                     doc.add_paragraph(f"Acero longitudinal: {peso_long:.2f} kg  ({n_bars} var. {bar_vr} × {L_vr:.2f} m)")
                     doc.add_paragraph(f"Cemento: {bags:.1f} bultos de {bag_kg:.0f} kg")
-                    doc.add_paragraph(f"Arena: {m[2]*vol_horm:.0f} kg  |  Grava: {m[3]*vol_horm:.0f} kg  |  Agua: {m[1]*vol_horm:.0f} L")
+                    doc.add_paragraph(f"Arena: {(m[2]*vol_horm)/1600:.2f} m³  |  Grava: {(m[3]*vol_horm)/1600:.2f} m³  |  Agua: {m[1]*vol_horm:.0f} L")
 
                     # --- Sección 2D ---
                     doc.add_heading("7. Detalle de Sección Transversal", level=1)
@@ -1382,7 +1404,8 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
 
         ok_vt = phi_Mn_vt >= Mu_vt_kN
         if not is_T:
-            rho_prov_vt = As_prov_vt / (bf_vt * d_vt)
+            # Bug Fix: para sección rectangular usar bw (ancho del alma), no bf
+            rho_prov_vt = As_prov_vt / (bw_vt * d_vt)
         else:
             # NSR-10: Para Viga T verdadera la ductilidad (p_max) se restringe
             # solo sobre el acero que obra en el alma (A_sw) sobre bw
@@ -1393,8 +1416,13 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
         # Validar ancho de ala efectivo (Punto 12 NSR-10 C.8.10.2 aproximado)
         L_cm = L_vt * 100
         limite_bf = min(L_cm / 4, bw_vt + 16 * hf_vt)
+        
         if bf_vt > limite_bf:
             st.warning(f"⚠️ **Atención Normativa (C.8.10.2):** El ancho de ala $b_f$ ({bf_vt} cm) es mayor que el límite normativo sin considerar separación entre vigas: min($L/4={L_cm/4:.0f}$, $b_w+16h_f={bw_vt+16*hf_vt:.0f}$) = {limite_bf:.0f} cm.")
+            # Aplicar límite al bus de datos y local
+            st.session_state['vt_bf'] = float(limite_bf)
+            # Reasignamos el bf usado en visualizaciones siguientes, pero el cálculo ya está hecho
+            bf_vt = limite_bf
 
         # ── ESPACIAMIENTO M?NIMO (ACI 318-25 §25.2.1) ──────────────────────────
         # sep_min = max(db, 25 mm) → en cm: max(db_vt_cm, 2.5)
@@ -2347,8 +2375,8 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
         a_ls_mm = As_prov_ls*100*fy/(0.85*fc*b_ls_mm)
         phi_Mn_ls = phi_f*As_prov_ls*100*fy*(d_ls_mm-a_ls_mm/2)/1e6
         # rho_temp depends on fy (NSR-10 C.7.12.2)
-    rho_temp_ls = 0.0020 if fy <= 280 else (0.0018 * 420/fy if fy > 420 else 0.0018)
-    As_temp = rho_temp_ls*b_ls*h_ls
+        rho_temp_ls = 0.0020 if fy <= 280 else (0.0018 * 420/fy if fy > 420 else 0.0018)
+        As_temp = rho_temp_ls*b_ls*h_ls
         s_temp = min(Ab_ls/As_temp*100, 5*h_ls, 45)
 
         ok_ls = phi_Mn_ls >= Mu_ls_kNm
@@ -2889,7 +2917,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
     # Ve = Wu*L/2 +- (Mpr_izq + Mpr_der)/L
     # Por normatividad sísmica, consideramos el caso más crítico.
     V_grav_isostatico = Wu_vc * L_vc / 2
-    V_plastico = (Mpr_izq + Mpr_der) / L_vc
+    V_plastico = ((Mpr_izq + Mpr_der) * factor_fuerza) / L_vc
     Ve_cortante_diseno = V_grav_isostatico + V_plastico
 
     # 5. Geometría

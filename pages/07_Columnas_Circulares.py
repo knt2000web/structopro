@@ -158,7 +158,15 @@ def capturar_estado_actual():
         "circ_pm_col_type", "circ_pm_stirrup_type", "circ_pm_paso",
         "circ_pm_mux", "circ_pm_muy", "circ_pm_pu",
         "circ_pm_output_units", "circ_pm_k",
-        "apu_moneda", "apu_cemento", "apu_acero", "apu_arena", "apu_grava", "apu_mo", "apu_aui"
+        # Factor k de esbeltez
+        "circ_pm_k1",
+        # APU concreto premezclado
+        "apu_premix", "apu_premix_precio",
+        "apu_moneda", "apu_cemento", "apu_acero", "apu_arena", "apu_grava", "apu_mo", "apu_aui",
+        # Rótulo ICONTEC para DXF
+        "dxf_empresa", "dxf_proyecto", "dxf_plano", "dxf_elaboro", "dxf_reviso", "dxf_aprobo",
+        # QR del plano
+        "qr_url",
     ]
     return {k: st.session_state[k] for k in claves if k in st.session_state}
 
@@ -170,16 +178,16 @@ try:
 except NameError:
     BASE_DIR = Path(os.getcwd())
 
-header_img_path = BASE_DIR / "assets" / "columnas_pm_header_1773261175144.png"
+header_img_path = BASE_DIR / "assets" / "columnas_circulares_header.png"
 if header_img_path.exists():
     st.image(str(header_img_path), use_container_width=False, width=700)
 else:
     st.image("https://via.placeholder.com/700x100?text=Columnas+PM+Biaxial", width=700)
 
-st.title(_t("🏗️ Diagrama P-M Columnas Circulares (Biaxial)", "🏗️ P-M Circular Columns Diagram (Biaxial)"))
+st.title(_t("🏗️ Diagrama de Interacción P–M (Biaxial) y Diseño de Estribos", "🏗️ P-M (Biaxial) Interaction Diagram & Tie Design"))
 st.markdown(_t(
-    "Generador interactivo de capacidad a flexocompresión **biaxial** para **Columnas Circulares**.",
-    "Interactive **biaxial** flexure-compression capacity generator for **Circular Columns**."
+    "Generador interactivo de capacidad a flexocompresión **biaxial** para **Columnas Cuadradas, Rectangulares y Circulares**.",
+    "Interactive **biaxial** flexure-compression capacity generator for **Square, Rectangular and Circular Columns**."
 ))
 
 with st.expander("📺 ¿Cómo usar esta herramienta?"):
@@ -575,7 +583,12 @@ def compute_uniaxial_capacity_circular(D, d_prime, layers, fc, fy, Es, phi_c_max
     Ast = sum([layer['As'] for layer in layers])
     Po_kN = (0.85 * fc * (Ag * 100 - Ast * 100) + fy * Ast * 100) / 1000.0
     
-    c_vals = np.concatenate([np.linspace(1e-5, D, 120), np.linspace(D, D * 12, 60)])
+    c_vals = np.concatenate([
+        np.linspace(1e-5, D * 0.1, 40),
+        np.linspace(D * 0.1, D * 0.5, 80),
+        np.linspace(D * 0.5, D, 60),
+        np.linspace(D, D * 12, 40)
+    ])
     P_n_list = []; M_n_list = []; phi_P_n_list = []; phi_M_n_list = []
     eps_t_vals = []
     
@@ -590,13 +603,16 @@ def compute_uniaxial_capacity_circular(D, d_prime, layers, fc, fy, Es, phi_c_max
             Ac_comp = Ag
         else:
             h_seg = a_cm
-            Ac_comp = r**2 * math.acos((r - h_seg)/r) - (r - h_seg) * math.sqrt(2*r*h_seg - h_seg**2)
+            _arg_ac = np.clip((r - h_seg) / r, -1.0, 1.0)
+            Ac_comp = r**2 * math.acos(_arg_ac) - (r - h_seg) * math.sqrt(max(0.0, 2*r*h_seg - h_seg**2))
         
         Cc = 0.85 * fc * Ac_comp * 100
         if a_cm >= D:
             y_cent = r
         else:
-            y_cent = (4*r * math.sin((math.acos((r - a_cm)/r))/2)**3) / (3*(math.acos((r - a_cm)/r) - math.sin(math.acos((r - a_cm)/r))*math.cos(math.acos((r - a_cm)/r))))
+            _arg_yc = np.clip((r - a_cm) / r, -1.0, 1.0)
+            _angle = math.acos(_arg_yc)
+            y_cent = (4*r * math.sin(_angle / 2)**3) / (3 * (_angle - math.sin(_angle) * math.cos(_angle)))
         Mc = Cc * (r - y_cent) / 10
         
         Ps = 0.0; Ms = 0.0; eps_t = 0.0
@@ -680,9 +696,9 @@ def interp_pm_curve(M_query, phi_Mn_arr, phi_Pn_arr):
     if M_query <= 0:
         return float(phi_Pn_arr[np.argmax(phi_Pn_arr)])
     
-    # Si el momento pedido supera el máximo → falla total
+    # Si el momento pedido supera el máximo → falla total (marcador -1 para distinguirlo de Pn=0 real)
     if M_query > M_max:
-        return 0.0
+        return -1.0  # sentinel: M excede el diagrama en este eje
     
     # Índice del punto de balance (donde φMn es máximo)
     idx_bal = int(np.argmax(phi_Mn_arr))
@@ -724,6 +740,25 @@ def biaxial_bresler(Pu, Mux, Muy, cap_x, cap_y, Po, phi_factor):
             'ok':      False
         }
 
+    # Detectar sentinel -1.0: el momento supera el diagrama en ese eje
+    eje_excedido = []
+    if phi_Pnx < 0:
+        eje_excedido.append("X")
+    if phi_Pny < 0:
+        eje_excedido.append("Y")
+
+    if eje_excedido:
+        msg = f"Mux/Muy excede el diagrama P-M en eje {'&'.join(eje_excedido)}: aumentar sección o acero"
+        return {
+            'phi_Pnx': max(phi_Pnx, 0.0),
+            'phi_Pny': max(phi_Pny, 0.0),
+            'phi_P0':  phi_P0,
+            'phi_Pni': 0.0,
+            'ratio':   float('inf'),
+            'ok':      False,
+            'msg_exceso': msg,
+        }
+
     if phi_Pnx > 0 and phi_Pny > 0 and phi_P0 > 0:
         inv = 1/phi_Pnx + 1/phi_Pny - 1/phi_P0
         phi_Pni = 1/inv if inv > 0 else 0.0
@@ -739,14 +774,15 @@ def biaxial_bresler(Pu, Mux, Muy, cap_x, cap_y, Po, phi_factor):
         'phi_P0':  phi_P0,
         'phi_Pni': phi_Pni,
         'ratio':   ratio,
-        'ok':      ok
+        'ok':      ok,
+        'msg_exceso': None,
     }
 
 # ─────────────────────────────────────────────
 # FUNCIÓN PARA ESBELTEZ (NSR-10 C.10.10 / ACI 6.6)
 # ─────────────────────────────────────────────
-def check_slenderness(L, b, h, k, Pu, M1, M2, fc, fy, Es, factor_fuerza):
-    r = min(b, h) / math.sqrt(12)
+def check_slenderness(L, b, h, k, Pu, M1, M2, fc, fy, Es, factor_fuerza, es_circular=False):
+    r = 0.25 * b if es_circular else min(b, h) / math.sqrt(12)
     kl = k * L
     kl_r = kl / r if r > 0 else 999
     
@@ -758,7 +794,11 @@ def check_slenderness(L, b, h, k, Pu, M1, M2, fc, fy, Es, factor_fuerza):
         slender = True
         classification = "Columna esbelta (requiere magnificación de momentos)"
         Ec = 4700 * math.sqrt(fc)
-        Ig = b * h**3 / 12
+        # Bug Fix: para sección circular usar Ig = π*D⁴/64, no b*h³/12
+        if es_circular:
+            Ig = math.pi * b**4 / 64   # b == D cuando se llama para circular
+        else:
+            Ig = b * h**3 / 12
         Ig_mm4 = Ig * 1e4
         EI = 0.4 * Ec * Ig_mm4 / (1 + 0.0)
         Pc = math.pi**2 * EI / (kl * 1000)**2
@@ -837,8 +877,11 @@ fy = st.sidebar.number_input("Fluencia del Acero (fy) [MPa]", 240.0, 500.0, 420.
 Es = 200000.0
 
 st.sidebar.header(_t("2. Geometría de la Sección", "2. Section Geometry"))
-seccion_type = "Circular"
-es_circular = True
+seccion_type = st.sidebar.selectbox(_t("Tipo de sección", "Section type"), 
+                                    [_t("Rectangular / Cuadrada", "Rectangular / Square"), 
+                                     _t("Circular (con espiral)", "Circular (with spiral)")],
+                                    key="circ_pm_seccion_type")
+es_circular = "Circular" in seccion_type
 
 if es_circular:
     D = st.sidebar.number_input(_t("Diámetro (D) [cm]", "Diameter (D) [cm]"), 15.0, 150.0, 40.0, 5.0, key="circ_pm_D")
@@ -1032,15 +1075,15 @@ st.sidebar.markdown("""
 # =============================================================================
 # CÁLCULOS DE CAPACIDAD UNIAXIAL (X y Y)
 # =============================================================================
+layers_y = []
 if es_circular:
     cap_x = compute_uniaxial_capacity_circular(D, d_prime, layers, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza)
     cap_y = cap_x
 else:
     cap_x = compute_uniaxial_capacity(b, h, d_prime, layers, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza)
-    
-    layers_y = []
     layers_y.append({'d': d_prime, 'As': num_filas_v * rebar_area})
-    num_capas_intermedias_y = num_filas_h - 2
+    # Bug Fix: eje Y depende de num_filas_v (dirección b), no de num_filas_h
+    num_capas_intermedias_y = num_filas_v - 2
     if num_capas_intermedias_y > 0:
         espacio_y = (b - 2 * d_prime) / (num_capas_intermedias_y + 1)
         for i in range(1, num_capas_intermedias_y + 1):
@@ -1145,7 +1188,7 @@ with st.expander("📐 Compresión Axial Pura — Verificación Paso a Paso (NSR
 # ═══════════════════════════════════════════════════════════════
 
 if es_circular:
-    slenderness = check_slenderness(L_col, D, D, k_factor, Pu_input, Mux_input, Mux_input, fc, fy, Es, factor_fuerza)
+    slenderness = check_slenderness(L_col, D, D, k_factor, Pu_input, Mux_input, Mux_input, fc, fy, Es, factor_fuerza, es_circular=True)
 else:
     slenderness = check_slenderness(L_col, b, h, k_factor, Pu_input, Mux_input, Mux_input, fc, fy, Es, factor_fuerza)
 
@@ -1538,7 +1581,7 @@ with tab2:
             ))
     else:
         rc_sp = D/2 - recub_cm
-        theta_sp = np.linspace(0, 2*np.pi, 36)
+        theta_sp = np.linspace(0, 2*np.pi, 60)
         z_sp = np.arange(0, L_col + paso_espiral, paso_espiral)
         for ze in z_sp:
             fig3d_col.add_trace(go.Scatter3d(
@@ -1550,7 +1593,7 @@ with tab2:
                 showlegend=False, name='Espiral'
             ))
 
-    fig3d_col.update_layout(scene=dict(aspectmode='data', xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)'),
+    fig3d_col.update_layout(scene=dict(aspectmode='manual', aspectratio=dict(x=1,y=1,z=1.2), xaxis_title='b (cm)', yaxis_title='h (cm)', zaxis_title='L (cm)'),
                             height=450, margin=dict(l=0, r=0, b=0, t=0))
     st.plotly_chart(fig3d_col, use_container_width=True)
     st.markdown("---")
@@ -2191,20 +2234,26 @@ with tab4:
         btn_docx_col = st.button(_t("📝 Generar Memoria DOCX", "📝 Generate DOCX Report"), type="primary")
     with col_d2:
         try:
-            # Para circular usar D×D como envolvente rectangular del sólido IFC
-            _ifc_b = D if es_circular else b
-            _ifc_h = D if es_circular else h
-            _ifc_fname = f"Columna_circ_D{D:.0f}.ifc" if es_circular else f"Columna_{b:.0f}x{h:.0f}.ifc"
-            buf_ifc_col = ifc_export.ifc_columna(
-                _ifc_b, _ifc_h, L_col / 100, fc, fy, n_barras, rebar_type, rebar_diam, stirrup_diam,
-                Ast, recub_cm, Pu_input, max(abs(Mux_input), abs(Muy_input)),
-                cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0,
-                norma_sel, "Proyecto NSR-10"
-            )
+            if es_circular:
+                _ifc_fname = f"Columna_circ_D{D:.0f}.ifc"
+                buf_ifc_col = ifc_export.ifc_columna_circular(
+                    D, L_col / 100, fc, fy, n_barras, rebar_type, rebar_diam, stirrup_diam,
+                    Ast, recub_cm, Pu_input, max(abs(Mux_input), abs(Muy_input)),
+                    cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0,
+                    norma_sel, "Proyecto NSR-10"
+                )
+            else:
+                _ifc_fname = f"Columna_{b:.0f}x{h:.0f}.ifc"
+                buf_ifc_col = ifc_export.ifc_columna(
+                    b, h, L_col / 100, fc, fy, n_barras, rebar_type, rebar_diam, stirrup_diam,
+                    Ast, recub_cm, Pu_input, max(abs(Mux_input), abs(Muy_input)),
+                    cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0,
+                    norma_sel, "Proyecto NSR-10"
+                )
+            
             st.download_button("📦 Exportar IFC (BIM)", data=buf_ifc_col,
                                file_name=_ifc_fname, mime="application/x-step", key="ifc_col")
-            if es_circular:
-                st.caption("ℹ️ El IFC de columna circular exporta la sección como sólido rectangular envolvente (D×D). El refuerzo longitudinal se incluye como geometría simplificada.")
+
         except ImportError:
             st.warning("⚠️ La librería `ifcopenshell` no está instalada. Ejecuta `pip install ifcopenshell` para habilitar la exportación IFC/BIM.")
         except Exception as e:

@@ -72,8 +72,8 @@
                 info.add_run(
                     f'Proyecto: KonteWall — Diseño Estructural\n'
                     f'Norma de diseño: {norma_sel}\n'
-                    f'Autor: Ing. Msc. César Augusto Giraldo Chaparro\n'
-                    f'Empresa: Konte — Construcción, Consultoría y Tecnología\n'
+                    f'Diseñó: ________________________________\n'
+                    f'Empresa: _______________________________\n'
                     f'Fecha: {datetime.date.today().strftime("%d de %B de %Y")}\n'
                     f'Versión: KonteWall v1.0'
                 )
@@ -348,9 +348,8 @@
                 firma.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 firma.add_run(
                     '___________________________________\n'
-                    'Ing. Msc. César Augusto Giraldo Chaparro\n'
+                    'Ingeniero Diseñador\n'
                     'Matrícula Profesional: _______________\n'
-                    'Konte — Construcción, Consultoría y Tecnología\n'
                     f'Fecha: {datetime.date.today().strftime("%d/%m/%Y")}'
                 )
 

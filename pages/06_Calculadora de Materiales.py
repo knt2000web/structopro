@@ -757,7 +757,7 @@ iso = PAIS_ISO.get(pais, "un")
 # Badge de norma activa
 st.sidebar.markdown(
     f'<div style="background:#1e3a1e;border-radius:8px;padding:8px 14px;margin-top:4px;margin-bottom:8px;">'
-    f'<img src="https://flagcdn.com/24x18/{iso}.png" style="vertical-align:middle;margin-right:8px;">'
+    f'<img src="https://flagpedia.net/data/flags/mini/{iso}.png" style="vertical-align:middle;margin-right:8px;">'
     f'<span style="color:#7ec87e;font-weight:600;">{norma_sel}</span></div>',
     unsafe_allow_html=True)
 st.sidebar.caption(f"🌍 **{_t('País', 'Country')}:** {pais}  |  **{_t('Moneda', 'Currency')}:** {moneda}")
@@ -834,7 +834,7 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-st.sidebar.markdown('<div style="text-align:center;color:gray;font-size:10px;">© 2026 Konte — Ing. Msc. César A. Giraldo<br><i>⚠️ Uso profesional exclusivo</i></div>',unsafe_allow_html=True)
+st.sidebar.markdown('<div style="text-align:center;color:gray;font-size:10px;">© 2026 Konte — <br><i>⚠️ Uso profesional exclusivo</i></div>',unsafe_allow_html=True)
 
 RENDIMIENTOS_MO = [
     {'Actividad': 'Excavación Zanja Drenaje a negras PVC', 'Cantidad': 1.75, 'Unidad': 'm³/día/peón'},

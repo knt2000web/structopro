@@ -32,7 +32,7 @@ st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
-    Ing. Msc. César Augusto Giraldo Chaparro<br><br>
+    <br><br>
     <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
@@ -151,7 +151,7 @@ _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE
 _iso = _PAIS_ISO.get(norma_sel, "un")
 st.sidebar.markdown(
     f'<div style="background:#1e3a1e;border-radius:6px;padding:8px 12px;margin-bottom:4px;">'
-    f'<img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
+    f'<img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
     f'<span style="color:#7ec87e;font-weight:600;font-size:13px;">{_t("Norma Activa:","Active Code:")} {norma_sel}</span>'
     f'</div>', unsafe_allow_html=True
 )
@@ -666,9 +666,13 @@ with tab2:
     else:
         msp.add_text(f"Empalme Clase B\nLap={splice_length_mm/10:.0f} cm",
                      dxfattribs={'layer':'TEXTO','height':0.18,'insert':(off_x+pie_muro+base_pantalla+0.2, H_muro/3)})
-    _out = io.StringIO()
-    doc_dxf.write(_out)
-    st.download_button("Descargar DXF", data=_out.getvalue().encode('utf-8'), file_name=f"Muro_{H_muro:.1f}m.dxf", mime="application/dxf")
+    import tempfile, os
+    with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp__out:
+        tmp_path__out = tmp__out.name
+    doc_dxf.saveas(tmp_path__out)
+    with open(tmp_path__out, 'rb') as f__out:
+        bytes__out = f__out.read()
+    os.unlink(tmp_path__out)    st.download_button("Descargar DXF", data=bytes__out, file_name=f"Muro_{H_muro:.1f}m.dxf")
 
 with tab3:
     st.subheader(_t("🧊 Visualización 3D", "🧊 3D Visualization"))

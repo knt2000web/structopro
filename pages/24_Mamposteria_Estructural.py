@@ -152,7 +152,7 @@ nc = NORMAS_AC[norma_ac]
 _iso = nc["pais"]
 st.sidebar.markdown(
     f'<div style="background:#1e3a1e;border-radius:6px;padding:8px 12px;margin-bottom:4px;">'
-    f'<img src="https://flagcdn.com/24x18/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
+    f'<img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;">'
     f'<span style="color:#7ec87e;font-weight:600;font-size:13px;">{norma_ac}</span>'
     f'</div>', unsafe_allow_html=True
 )
