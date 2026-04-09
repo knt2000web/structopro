@@ -377,7 +377,7 @@ with tab_geo:
                         if r_env['c (kPa)'] > 0: props += f" c={r_env['c (kPa)']}"
                         if r_env['φ (°)'] > 0: props += f" φ={r_env['φ (°)']}°"
                         texto_capa = f"<b>{r_env['Tipo']}</b><br><span style='font-size:10px'>{props}</span>"
-                        fig_pf.add_annotation(x=1.0, y=(r_env["z_top"]+r_env["z_bot"])/2, text=texto_capa, showarrow=False, font=dict(color="white"))
+                        fig_pf.add_annotation(x=1.5, y=(r_env["z_top"]+r_env["z_bot"])/2, text=texto_capa, showarrow=False, font=dict(color="white"), align="center")
                 
                 # Dibujar pilote actual sobrepuesto
                 fig_pf.add_shape(type="rect", x0=0.8, y0=0, x1=1.2, y1=L_pilote, line=dict(color="white", width=2), fillcolor="#b0bec5")
@@ -1145,7 +1145,15 @@ with tab_mem:
                     doc.add_paragraph(f"• Capacidad por Fuste (Tomlinson/Beta): {_Qs:.1f} kN")
                     doc.add_paragraph(f"• Eficiencia Converse-Labarre: {(_efi*100):.1f}%")
                     
-                    doc.add_heading("3. Refuerzo Estructural ACI-318", level=1)
+                    doc.add_heading("3. Perfil Estratigráfico Relevante", level=1)
+                    for _, rem in df.iterrows():
+                        doc.add_paragraph(f"• Estrato {int(rem['Estrato'])}: {rem['Tipo']} | Prof: {rem['z_top']}m a {rem['z_bot']}m")
+                        prp = f"   γ={rem['γ (kN/m³)']}"
+                        if rem['c (kPa)'] > 0: prp += f", c={rem['c (kPa)']} kPa"
+                        if rem['φ (°)'] > 0: prp += f", φ={rem['φ (°)']}°"
+                        doc.add_paragraph(prp)
+                    
+                    doc.add_heading("4. Refuerzo Estructural ACI-318", level=1)
                     doc.add_paragraph(f"• Concreto f'c: {fc_pilote:.0f} MPa")
                     doc.add_paragraph(f"• Acero Longitudinal: {n_barras_p} barras {barras_long}")
                     doc.add_paragraph(f"• Acero Confinamiento: {barras_trans} c/{s_trans_cm} cm ({tipo_trans})")
@@ -1228,6 +1236,16 @@ with tab_mem:
                         _t_c.set_placement((rot_x + rot_w*0.02, yr + row_h*0.25))
                         _t_v = msp.add_text(v, dxfattribs={'height': row_h*0.45, 'layer': 'ROTULO'})
                         _t_v.set_placement((rot_x + rot_w*0.38, yr + row_h*0.20))
+                    
+                    # Añadir Estratigrafía al DXF (Debajo del Rótulo)
+                    _tx_est = msp.add_text("PERFIL ESTRATIGRAFICO:", dxfattribs={'height': row_h*0.4, 'layer': 'TEXTOS'})
+                    _tx_est.set_placement((rot_x, rot_y - row_h*1.5))
+                    for i_est, (_, rem) in enumerate(df.iterrows()):
+                        props_txt = f"[{rem['z_top']}-{rem['z_bot']}m] {rem['Tipo']} | gam={rem['γ (kN/m³)']}"
+                        if rem['c (kPa)'] > 0: props_txt += f" c={rem['c (kPa)']}"
+                        if rem['φ (°)'] > 0: props_txt += f" phi={rem['φ (°)']}"
+                        _tx_p = msp.add_text(props_txt, dxfattribs={'height': row_h*0.35, 'layer': 'TEXTOS'})
+                        _tx_p.set_placement((rot_x, rot_y - row_h * (i_est + 2.5)))
 
                     dxf_io = io.StringIO()
                     doc_dxf.write(dxf_io)
