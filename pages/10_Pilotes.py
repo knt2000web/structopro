@@ -598,10 +598,10 @@ with tab_est:
                 # Refuerzo transversal (Espiral o Estribos circulares)
                 _X_t, _Y_t, _Z_t = [], [], []
                 if tipo_trans == "Espiral Continua":
-                    _t = np.linspace(0, 2 * math.pi * (_L / s_trans_cm), int(20 * (_L / s_trans_cm)))
-                    _X_t = _R_core * np.cos(_t)
-                    _Y_t = _R_core * np.sin(_t)
-                    _Z_t = _t / (2 * math.pi) * s_trans_cm
+                    _theta_t = np.linspace(0, 2 * math.pi * (_L / s_trans_cm), int(20 * (_L / s_trans_cm)))
+                    _X_t = _R_core * np.cos(_theta_t)
+                    _Y_t = _R_core * np.sin(_theta_t)
+                    _Z_t = _theta_t / (2 * math.pi) * s_trans_cm
                     fig_p3d.add_trace(go.Scatter3d(x=_X_t, y=_Y_t, z=_Z_t, mode='lines', line=dict(color='cornflowerblue', width=4), name='Espiral'))
                 else: # Estribo Cerrado Circular
                     for _z in np.arange(s_trans_cm, _L, s_trans_cm):
