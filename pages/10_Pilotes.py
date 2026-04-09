@@ -762,38 +762,59 @@ with tab_est:
         # ── 4.4 Presupuesto Consolidado ───────────────────────────────────────────
         st.markdown("#####  Presupuesto Consolidado")
 
-        # KPI cards
-        ka, kb, kc, kd, ke = st.columns(5)
-        ka.metric("Costo Directo",          f"${costo_directo:,.0f}")
-        kb.metric(f"Administración ({pct_admin}%)", f"${v_admin:,.0f}")
-        kc.metric(f"Imprevistos ({pct_impr}%)",     f"${v_impr:,.0f}")
-        kd.metric(f"Utilidad ({pct_util}%)",         f"${v_util:,.0f}")
-        ke.metric(f"TOTAL (A.I.U.={pct_aiu_total}%)",f"${costo_total:,.0f}",
-                  delta=f"${costo_total/n_pil_apu:,.0f} / pilote")
+        # KPI cards — HTML para evitar truncamiento en valores COP grandes
+        st.markdown(f"""
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px">
+            <div style="font-size:11px;color:#8b949e;margin-bottom:4px">Costo Directo</div>
+            <div style="font-size:1.15rem;font-weight:700;color:#e6edf3">${costo_directo:,.0f}</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px">
+            <div style="font-size:11px;color:#8b949e;margin-bottom:4px">Administración ({pct_admin}%)</div>
+            <div style="font-size:1.15rem;font-weight:700;color:#e6edf3">${v_admin:,.0f}</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px">
+            <div style="font-size:11px;color:#8b949e;margin-bottom:4px">Imprevistos ({pct_impr}%)</div>
+            <div style="font-size:1.15rem;font-weight:700;color:#e6edf3">${v_impr:,.0f}</div>
+          </div>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 16px">
+            <div style="font-size:11px;color:#8b949e;margin-bottom:4px">Utilidad ({pct_util}%)</div>
+            <div style="font-size:1.15rem;font-weight:700;color:#e6edf3">${v_util:,.0f}</div>
+          </div>
+          <div style="background:#1e3a5f;border:1px solid #1f6feb;border-radius:8px;padding:14px 16px">
+            <div style="font-size:11px;color:#79c0ff;margin-bottom:4px">TOTAL (A.I.U.={pct_aiu_total}%)</div>
+            <div style="font-size:1.15rem;font-weight:700;color:#79c0ff">${costo_total:,.0f}</div>
+            <div style="font-size:10px;color:#58a6ff;margin-top:4px">${costo_total/n_pil_apu:,.0f} / pilote</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Tabla detallada
         df_final = df_pres[["Nº","Descripción","Unidad","Cantidad","Precio Unitario (COP)","Subtotal (COP)"]].copy()
 
         # Agregar fila resumen AIU al final
         resumen_rows = pd.DataFrame([
-            {"Nº": "", "Descripción": "── SUBTOTAL COSTO DIRECTO",     "Unidad": "",   "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": costo_directo},
-            {"Nº": "", "Descripción": f"  Administración ({pct_admin}%)","Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_admin},
-            {"Nº": "", "Descripción": f"  Imprevistos ({pct_impr}%)",   "Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_impr},
-            {"Nº": "", "Descripción": f"  Utilidad ({pct_util}%)",      "Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_util},
-            {"Nº": "", "Descripción": "★ TOTAL PRESUPUESTO",            "Unidad": "",   "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": costo_total},
+            {"Nº": "", "Descripción": "── SUBTOTAL COSTO DIRECTO",       "Unidad": "",  "Cantidad": "—", "Precio Unitario (COP)": "—", "Subtotal (COP)": f"${costo_directo:,.0f}"},
+            {"Nº": "", "Descripción": f"  Administración ({pct_admin}%)", "Unidad": "%", "Cantidad": "—", "Precio Unitario (COP)": "—", "Subtotal (COP)": f"${v_admin:,.0f}"},
+            {"Nº": "", "Descripción": f"  Imprevistos ({pct_impr}%)",    "Unidad": "%", "Cantidad": "—", "Precio Unitario (COP)": "—", "Subtotal (COP)": f"${v_impr:,.0f}"},
+            {"Nº": "", "Descripción": f"  Utilidad ({pct_util}%)",       "Unidad": "%", "Cantidad": "—", "Precio Unitario (COP)": "—", "Subtotal (COP)": f"${v_util:,.0f}"},
+            {"Nº": "", "Descripción": "TOTAL PRESUPUESTO",               "Unidad": "",  "Cantidad": "—", "Precio Unitario (COP)": "—", "Subtotal (COP)": f"${costo_total:,.0f}"},
         ])
         df_tabla_final = pd.concat([df_final, resumen_rows], ignore_index=True)
 
+        # Formatear columnas numéricas solo en las filas de detalle
+        df_detalle_fmt = df_final.copy()
+        df_detalle_fmt["Cantidad"]              = df_detalle_fmt["Cantidad"].map(lambda x: f"{x:,.2f}")
+        df_detalle_fmt["Precio Unitario (COP)"] = df_detalle_fmt["Precio Unitario (COP)"].map(lambda x: f"${x:,.0f}")
+        df_detalle_fmt["Subtotal (COP)"]        = df_detalle_fmt["Subtotal (COP)"].map(lambda x: f"${x:,.0f}")
+        df_tabla_final = pd.concat([df_detalle_fmt, resumen_rows], ignore_index=True)
+
         st.dataframe(
-            df_tabla_final.style.format({
-                "Cantidad":              lambda x: f"{x:,.2f}" if pd.notna(x) else "—",
-                "Precio Unitario (COP)": lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
-                "Subtotal (COP)":        lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
-            }).apply(lambda row: [
+            df_tabla_final.style.apply(lambda row: [
                 "background-color: #1e3a5f; font-weight:bold; color:#29b6f6"
-                if row["Descripción"].startswith("★") else
-                "background-color: #1a2a3a; font-weight:bold"
-                if row["Descripción"].startswith("──") else ""
+                if str(row["Descripción"]).startswith("TOTAL") else
+                "background-color: #1a2a3a; font-weight:bold; color:#e6edf3"
+                if str(row["Descripción"]).startswith("──") else ""
             ] * len(row), axis=1),
             use_container_width=True, hide_index=True
         )
