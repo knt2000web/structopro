@@ -1646,9 +1646,8 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         st.error(
             f"🛑 **ÁREA INSUFICIENTE** — Se requieren {A_req:.2f} m² "
             f"pero se proveen {B_use*L_use:.2f} m². "
-            f"Aumenta B o L antes de continuar."
+            f"Aumenta B o L."
         )
-        st.stop()   # ← bloquea todo lo que sigue (entregables, DXF, etc.)
     
     Ix = (B_use * L_use**3) / 12   # momento de inercia respecto al eje X (paralelo a B)
     Iy = (L_use * B_use**3) / 12   # momento de inercia respecto al eje Y (paralelo a L)
@@ -1948,12 +1947,12 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         ]
         st.table(pd.DataFrame(data_res))
 
-        if A_use < Area_req:
+        area_ok = A_use >= Area_req
+        if not area_ok:
             st.error(
                 f"🛑 **ÁREA INSUFICIENTE** — Requerida: {Area_req:.2f} m² | "
-                f"Provista: {A_use:.2f} m². Aumenta B o L antes de continuar."
+                f"Provista: {A_use:.2f} m². Aumenta B o L."
             )
-            st.stop()
 
         # B4 aviso si se activó el área efectiva Meyerhof
         if _meyerhof_info:
@@ -2529,23 +2528,27 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         # ── BOTONES INTELIGENTES (3 COLUMNAS) ──────────────────────────────
         st.markdown("---")
         st.write("#### 📥 Entregables")
+        
+        if not area_ok:
+            st.warning("⚠️ **Área insuficiente.** Corrige las dimensiones de la zapata para habilitar la exportación.")
+            
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
             st.download_button("📝 Memoria DOCX", data=f_zap_io,
                                file_name=f"Memoria_Zapata_{B_use:.1f}x{L_use:.1f}m.docx",
                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                               use_container_width=True)
+                               use_container_width=True, disabled=not area_ok)
         with col_m2:
             st.download_button("📐 Plano DXF (ICONTEC)", data=_dxf_bytes,
                                file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}m.dxf",
                                mime="application/dxf",
-                               use_container_width=True)
+                               use_container_width=True, disabled=not area_ok)
         with col_m3:
             if buf_ifc:
                 st.download_button("📦 Modelo BIM (IFC)", data=buf_ifc,
                                    file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}m.ifc",
                                    mime="application/x-step",
-                                   use_container_width=True)
+                                   use_container_width=True, disabled=not area_ok)
     with tab_dwg:
         st.subheader("🧊 Visualización 3D de la Fundación con Acero de Refuerzo")
         fig3d = go.Figure()
