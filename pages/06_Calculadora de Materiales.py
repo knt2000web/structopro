@@ -994,11 +994,11 @@ tabs=st.tabs([f"{R['concreto']}","Mampostería","Columna","Viga","Losa","Cimient
 
 # ══════════ TAB 1 — CONCRETO ══════════
 with tabs[0]:
-    st.subheader(f" Calculadora de {R['concreto']}")
+    st.subheader(f"Calculadora de {R['concreto']}")
     st.caption(f"Dosificaciones CM-V3.0 | Norma: {norma_sel}")
     geo_col, elem_col = st.columns([2, 3])
     with geo_col:
-        geo_mode = st.radio("Tipo de geometría:", [" Cubo", " Cilindro", " Volumen"],
+        geo_mode = st.radio("Tipo de geometría:", ["Cubo", " Cilindro", " Volumen"],
                             horizontal=True, key="kc_geo_mode")
     with elem_col:
         elemento_conc = st.selectbox("Elemento estructural:",
@@ -1029,12 +1029,12 @@ with tabs[0]:
             vol_geo = st.number_input("Volumen [m³]", min_value=0.0, value=1.00, step=0.10, key="kc_vol_dir", format="%.4f")
             cantidad = st.number_input("Cantidad (und)", min_value=1, value=1, step=1, key="kc_qty3")
             vol_geo *= cantidad
-        st.caption(f" Volumen neto calculado: **{vol_geo:.4f} m³**")
+        st.caption(f"Volumen neto calculado: **{vol_geo:.4f} m³**")
         st.markdown("#####  Concreto")
         mode_conc = st.radio("Seleccionar por:", ["Dosificación", "Resistencia f\'c"], horizontal=True, key="kc_mode_conc")
         if mode_conc == "Dosificación":
             dos_labels = [f"{m['dos']}  →  {m['fc_kgcm2']} kg/cm² ({m['fc_mpa']} MPa)" for m in MIX_DESIGNS]
-            dos_sel = st.selectbox(" Dosificación C:A:G", dos_labels, index=4, key="kc_dos_sel")
+            dos_sel = st.selectbox("Dosificación C:A:G", dos_labels, index=4, key="kc_dos_sel")
             mix = MIX_DESIGNS[[m["dos"] for m in MIX_DESIGNS].index(dos_sel.split("  →")[0])]
         else:
             fc_kgcm2_opts = sorted(set(m["fc_kgcm2"] for m in MIX_DESIGNS))
@@ -1099,7 +1099,7 @@ with tabs[0]:
         f'&nbsp;&nbsp; <span style="color:#ffcc80;">Dosificación: <b>{mix["dos"]}</b> | f\'c = <b>{mix["fc_kgcm2"]} kg/cm²</b> ({mix["fc_mpa"]} MPa)</span>'
         f'</div>', unsafe_allow_html=True)
     # ── Panel de precios aplicados (diagnóstico rápido) ──────────────────
-    with st.expander(" Precios unitarios aplicados en este cálculo", expanded=False):
+    with st.expander("Precios unitarios aplicados en este cálculo", expanded=False):
         _pr = st.session_state.kc_precios
         st.markdown(f"""
 <div style="display:flex;flex-wrap:wrap;gap:10px;padding:4px 0;">
@@ -1132,7 +1132,7 @@ with tabs[0]:
   Los precios se pueden ajustar manualmente en <b> Precios de Materiales</b> (panel izquierdo).
 </div>
 """, unsafe_allow_html=True)
-    if st.button(f" Agregar {elemento_conc} al Resumen", key="kc_add_conc", type="primary"):
+    if st.button(f"Agregar {elemento_conc} al Resumen", key="kc_add_conc", type="primary"):
         label = desc_elem if desc_elem else elemento_conc
         st.session_state.kc_rows.extend([
             {"elemento": f"{label} — {R['cemento']}", "unidad": "bultos", "cant": round(bolsas, 0), "precio": p["cemento"]},
@@ -1145,7 +1145,7 @@ with tabs[0]:
 
 # ══════════ TAB 2 — PARED / MAMPOSTERÍA (7 modos) ══════════
 with tabs[1]:
-    st.subheader(" Calculadora de Pared")
+    st.subheader("Calculadora de Pared")
     st.caption(f"CM-V3.0 | 7 tipos | {norma_sel}")
 
     MODOS_PARED = [" Block"," Ladrillo"," Ciclópeo"," Por % (CA)"," Dimensión (CA)"," Panel Yeso"," Pintura"]
@@ -1285,8 +1285,8 @@ with tabs[1]:
             a1.metric(f"Cem. {nom_rep}", f"{bol_rep} {und_bol}"); a2.metric("Cem. Afinado", f"{bol_afin} {und_bol}")
             a3.metric("Arena", f"{arena_rep+arena_afin:.2f}m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
             
-        st.info(f" Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
-        with st.expander(" Precios unitarios aplicados", expanded=False):
+        st.info(f"Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("Precios unitarios aplicados", expanded=False):
             _pr = st.session_state.kc_precios
             st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
   <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
@@ -1306,14 +1306,14 @@ with tabs[1]:
     <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
   </div>
 </div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda activa: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
-        if st.button(" Agregar al Resumen",key="kc_add_b",type="primary"):
+        if st.button("Agregar al Resumen",key="kc_add_b",type="primary"):
             lb = desc_pared or f"Muro {tipo_b}"
             st.session_state.kc_rows.extend([
                 {"elemento":f"{lb} — {R['bloque']}","unidad":"und","cant":und_blq,"precio":_precio("bloque")},
                 {"elemento":f"{lb} — Cemento Base","unidad":und_bol,"cant":bol_pega,"precio":_precio("cemento")},
                 {"elemento":f"{lb} — Cemento Acabados","unidad":und_bol,"cant":bol_rep+bol_afin,"precio":_precio("cemento")},
                 {"elemento":f"{lb} — Arena","unidad":"m³","cant":round(arena_pega+arena_rep+arena_afin,3),"precio":_precio("arena")},
-            ]); st.success(f" Añadido: {und_blq} bloques + {bol_pega} base + {bol_rep+bol_afin} acabados")
+            ]); st.success(f"Añadido: {und_blq} bloques + {bol_pega} base + {bol_rep+bol_afin} acabados")
 
     # ========= LADRILLO =========
     elif modo_pared == " Ladrillo":
@@ -1356,8 +1356,8 @@ with tabs[1]:
             a1.metric(f"Cem. {nom_rep}", f"{bol_rep} {und_bol}"); a2.metric("Cem. Afinado", f"{bol_afin} {und_bol}")
             a3.metric("Arena", f"{arena_rep+arena_afin:.2f}m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
             
-        st.info(f" Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
-        with st.expander(" Precios unitarios aplicados", expanded=False):
+        st.info(f"Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("Precios unitarios aplicados", expanded=False):
             _pr = st.session_state.kc_precios
             st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
   <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
@@ -1377,14 +1377,14 @@ with tabs[1]:
     <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
   </div>
 </div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda activa: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
-        if st.button(" Agregar al Resumen",key="kc_add_l",type="primary"):
+        if st.button("Agregar al Resumen",key="kc_add_l",type="primary"):
             lb=desc_pared or f"Muro {tipo_l}"
             st.session_state.kc_rows.extend([
                 {"elemento":f"{lb} — Ladrillos","unidad":"und","cant":und_l,"precio":_precio("bloque")*0.6},
                 {"elemento":f"{lb} — Cemento Base","unidad":und_bol,"cant":bp,"precio":_precio("cemento")},
                 {"elemento":f"{lb} — Cemento Acabados","unidad":und_bol,"cant":bol_rep+bol_afin,"precio":_precio("cemento")},
                 {"elemento":f"{lb} — Arena","unidad":"m³","cant":round(ap+arena_rep+arena_afin,3),"precio":_precio("arena")},
-            ]); st.success(f" Añadido: {und_l} ladrillos + {bp} base + {bol_rep+bol_afin} acabados")
+            ]); st.success(f"Añadido: {und_l} ladrillos + {bp} base + {bol_rep+bol_afin} acabados")
 
     # ========= CICLÓPEO =========
     elif modo_pared == " Ciclópeo":
@@ -1430,8 +1430,8 @@ with tabs[1]:
             a1.metric(f"Cem. {nom_rep}", f"{bol_rep} {und_bol}"); a2.metric("Cem. Afinado", f"{bol_afin} {und_bol}")
             a3.metric("Arena", f"{arena_rep+arena_afin:.2f}m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
 
-        st.info(f" Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
-        with st.expander(" Precios unitarios aplicados", expanded=False):
+        st.info(f"Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("Precios unitarios aplicados", expanded=False):
             _pr = st.session_state.kc_precios
             st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
   <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:140px;">
@@ -1451,14 +1451,14 @@ with tabs[1]:
     <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
   </div>
 </div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda activa: <b>{moneda}</b></div>""", unsafe_allow_html=True)
-        if st.button(" Agregar al Resumen",key="kc_add_c",type="primary"):
+        if st.button("Agregar al Resumen",key="kc_add_c",type="primary"):
             lb=desc_pared or "Muro Ciclópeo"
             st.session_state.kc_rows.extend([
                 {"elemento":f"{lb} — Piedra","unidad":"m³","cant":round(vol_piedra,3),"precio":_precio("grava")*0.8},
                 {"elemento":f"{lb} — Cemento Base","unidad":und_bol,"cant":bol_c,"precio":_precio("cemento")},
                 {"elemento":f"{lb} — Cemento Acabados","unidad":und_bol,"cant":bol_rep+bol_afin,"precio":_precio("cemento")},
                 {"elemento":f"{lb} — Arena","unidad":"m³","cant":round(arena_c_val+arena_rep+arena_afin,3),"precio":_precio("arena")},
-            ]); st.success(f" Añadido: {vol_piedra:.2f}m³ piedra + {bol_c} base + {bol_rep+bol_afin} acabados")
+            ]); st.success(f"Añadido: {vol_piedra:.2f}m³ piedra + {bol_c} base + {bol_rep+bol_afin} acabados")
 
     # ========= POR % (Concreto Armado) =========
     elif modo_pared == " Por % (CA)":
@@ -1508,8 +1508,8 @@ with tabs[1]:
             a1.metric(f"Cem. {nom_rep}", f"{bol_rep} {und_bol}"); a2.metric("Cem. Afinado", f"{bol_afin} {und_bol}")
             a3.metric("Arena", f"{arena_rep+arena_afin:.2f}m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
 
-        st.info(f" Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
-        with st.expander(" Precios unitarios aplicados", expanded=False):
+        st.info(f"Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("Precios unitarios aplicados", expanded=False):
             _pr = st.session_state.kc_precios
             st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
   <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
@@ -1523,7 +1523,7 @@ with tabs[1]:
   <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
     <div style="color:#ffcc80;font-size:11px;"> TOTAL</div><b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b></div>
 </div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
-        if st.button(" Agregar al Resumen",key="kc_add_pca",type="primary"):
+        if st.button("Agregar al Resumen",key="kc_add_pca",type="primary"):
             lb=desc_pared or f"Muro CA Por%"
             st.session_state.kc_rows.extend([
                 {"elemento":f"{lb} — Cemento Base","unidad":und_bol,"cant":bol_pca,"precio":_precio("cemento")},
@@ -1531,7 +1531,7 @@ with tabs[1]:
                 {"elemento":f"{lb} — Arena","unidad":"m³","cant":round(arena_pca+arena_rep+arena_afin,3),"precio":_precio("arena")},
                 {"elemento":f"{lb} — Grava (Base)","unidad":"m³","cant":round(grava_pca,3),"precio":_precio("grava")},
                 {"elemento":f"{lb} — Acero {var_pca}","unidad":"kg","cant":round(kg_ace,1),"precio":_precio("acero_kg")},
-            ]); st.success(f" Añadido: {bol_pca} bultos base + {bol_rep+bol_afin} acabados + {kg_ace:.1f} kg acero")
+            ]); st.success(f"Añadido: {bol_pca} bultos base + {bol_rep+bol_afin} acabados + {kg_ace:.1f} kg acero")
 
     # ========= DIMENSIÓN (Concreto Armado detallado) =========
     elif modo_pared == " Dimensión (CA)":
@@ -1606,8 +1606,8 @@ with tabs[1]:
             a1.metric(f"Cem. {nom_rep}", f"{bol_rep} {und_bol}"); a2.metric("Cem. Afinado", f"{bol_afin} {und_bol}")
             a3.metric("Arena", f"{arena_rep+arena_afin:.2f}m³"); a4.metric("Agua", f"{agua_rep+agua_afin:.0f} lt")
             
-        st.info(f" Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
-        with st.expander(" Precios unitarios aplicados", expanded=False):
+        st.info(f"Costo Total Estimado: **{moneda} {costo_base+costo_acabados:,.0f}**")
+        with st.expander("Precios unitarios aplicados", expanded=False):
             _pr = st.session_state.kc_precios
             st.markdown(f"""<div style="display:flex;flex-wrap:wrap;gap:8px;">
   <div style="background:#0d2137;border:1px solid #1e4d8c;border-radius:8px;padding:6px 12px;min-width:130px;">
@@ -1621,7 +1621,7 @@ with tabs[1]:
   <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
     <div style="color:#ffcc80;font-size:11px;"> TOTAL</div><b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b></div>
 </div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
-        if st.button(" Agregar al Resumen",key="kc_add_dim",type="primary"):
+        if st.button("Agregar al Resumen",key="kc_add_dim",type="primary"):
             lb=desc_pared or "Muro CA Dimensión"
             st.session_state.kc_rows.extend([
                 {"elemento":f"{lb} — Cemento Base","unidad":und_bol,"cant":bol_dim,"precio":_precio("cemento")},
@@ -1630,7 +1630,7 @@ with tabs[1]:
                 {"elemento":f"{lb} — Grava (Base)","unidad":"m³","cant":round(grava_dim,3),"precio":_precio("grava")},
                 {"elemento":f"{lb} — Acero vert. {var_v}","unidad":"kg","cant":round(kg_v,1),"precio":_precio("acero_kg")},
                 {"elemento":f"{lb} — Acero horiz. {var_h}","unidad":"kg","cant":round(kg_h,1),"precio":_precio("acero_kg")},
-            ]); st.success(f" Añadido: {bol_dim} bultos base + {bol_rep+bol_afin} acabados + {kg_total_dim:.1f} kg acero")
+            ]); st.success(f"Añadido: {bol_dim} bultos base + {bol_rep+bol_afin} acabados + {kg_total_dim:.1f} kg acero")
 
     # ========= PANEL YESO =========
     elif modo_pared == " Panel Yeso":
@@ -1666,8 +1666,8 @@ with tabs[1]:
         rpy1,rpy2,rpy3,rpy4,rpy5,rpy6=st.columns(6)
         rpy1.metric(" Paneles",f"{n_paneles} und"); rpy2.metric("⚙ Canales",f"{n_canales} und"); rpy3.metric(" Parantes",f"{n_parantes} und")
         rpy4.metric(" Masilla",f"{n_masilla} cubetas"); rpy5.metric(" T. Estructura",f"{t_estr} und"); rpy6.metric(" T. Panel",f"{t_pan} und")
-        st.info(f" Área: {area_py:.2f} m² | Perímetro: {perim_py:.2f} m | Tipo: {doble}")
-        if st.button(" Agregar Panel Yeso al Resumen",key="kc_add_py",type="primary"):
+        st.info(f"Área: {area_py:.2f} m² | Perímetro: {perim_py:.2f} m | Tipo: {doble}")
+        if st.button("Agregar Panel Yeso al Resumen",key="kc_add_py",type="primary"):
             lb=desc_pared or "Panel Yeso"
             st.session_state.kc_rows.extend([
                 {"elemento":f"{lb} — Paneles ({panel_tipo})","unidad":"und","cant":n_paneles,"precio":_precio("ceramica")*2},
@@ -1703,7 +1703,7 @@ with tabs[1]:
         rpp1,rpp2,rpp3=st.columns(3)
         rpp1.metric(f" {R['pintura']}",f"{lt_pp} lt",f"{manos_pp} manos · {lados_pp} lado(s)")
         rpp2.metric(" Área total",f"{area_pp*cant_pp:.1f} m²"); rpp3.metric(" Costo",f"{moneda} {costo_pp:,.0f}")
-        if st.button(" Agregar Pintura al Resumen",key="kc_add_pp",type="primary"):
+        if st.button("Agregar Pintura al Resumen",key="kc_add_pp",type="primary"):
             lb=desc_pared or "Pintura"
             rows_pp=[{"elemento":f"{lb} — {R['pintura']}","unidad":"lt","cant":lt_pp,"precio":_precio("pintura")/4}]
             for e in extras: rows_pp.append({"elemento":f"{lb} — {e['nombre']}","unidad":"und","cant":e["cant"],"precio":e["pu"]})
@@ -1712,7 +1712,7 @@ with tabs[1]:
 
 # ══════════ TAB 3 — COLUMNA (7 secciones CM-V3.0) ══════════
 with tabs[2]:
-    st.subheader(" Calculadora de Columna")
+    st.subheader("Calculadora de Columna")
     st.caption(f"CM-V3.0 | 7 tipos de sección | {norma_sel}")
 
     SECCION_TIPOS = [
@@ -1790,7 +1790,7 @@ with tabs[2]:
                 <span style='font-size:0.65rem;color:#ccc;'>{_lbl}</span></div>""",
                 unsafe_allow_html=True
             )
-            if st.button("" if _selected else "○", key=f"kc_sec_btn_{_i}",
+            if st.button(""if _selected else "○", key=f"kc_sec_btn_{_i}",
                          help=_stype, use_container_width=True):
                 st.session_state["kc_col_sec"] = _stype
                 st.rerun()
@@ -1965,19 +1965,19 @@ with tabs[2]:
             "<div style='text-align:center;font-weight:700;color:#90caf9;margin-bottom:6px;'>Materiales Concreto</div>",
             unsafe_allow_html=True)
         st.metric(f" {R.get('cemento','Cemento')}", f"{bol_col} bultos")
-        st.metric(" Arena", f"{arena_col:.2f}m³")
-        st.metric(" Grava", f"{grava_col:.2f}m³")
-        st.metric(" Agua",  f"{agua_col:.0f} lt")
+        st.metric("Arena", f"{arena_col:.2f}m³")
+        st.metric("Grava", f"{grava_col:.2f}m³")
+        st.metric("Agua",  f"{agua_col:.0f} lt")
 
     with rc2:
         st.markdown(
             "<div style='text-align:center;font-size:1.8rem;'></div>"
             "<div style='text-align:center;font-weight:700;color:#ffcc80;margin-bottom:6px;'>Costos Concreto</div>",
             unsafe_allow_html=True)
-        st.metric(" Cemento",  f"{moneda} {_costo_cem:,.0f}")
-        st.metric(" Arena",   f"{moneda} {_costo_are:,.0f}")
-        st.metric(" Grava",   f"{moneda} {_costo_gra:,.0f}")
-        st.metric(" Dosif.",   mix_col["dos"])
+        st.metric("Cemento",  f"{moneda} {_costo_cem:,.0f}")
+        st.metric("Arena",   f"{moneda} {_costo_are:,.0f}")
+        st.metric("Grava",   f"{moneda} {_costo_gra:,.0f}")
+        st.metric("Dosif.",   mix_col["dos"])
 
     with rc3:
         st.markdown(
@@ -1997,8 +1997,8 @@ with tabs[2]:
             unsafe_allow_html=True)
         st.metric("Longitudinal",  f"{moneda} {_costo_long:,.0f}")
         st.metric("Estribos",      f"{moneda} {_costo_est:,.0f}")
-        st.metric(" Vol. concreto", f"{vol_col_neto*cant_col:.2f}m³")
-        st.metric(" COSTO TOTAL",   f"{moneda} {costo_col:,.0f}")
+        st.metric("Vol. concreto", f"{vol_col_neto*cant_col:.2f}m³")
+        st.metric("COSTO TOTAL",   f"{moneda} {costo_col:,.0f}")
 
     st.markdown(
         f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;">'
@@ -2006,7 +2006,7 @@ with tabs[2]:
         f'h={alt_col} m | V1:{n_v1} brs + V2:{n_v2} brs | E.1:{n_est_e1} estrib.</span></div>',
         unsafe_allow_html=True)
 
-    with st.expander(" Precios unitarios aplicados en Columna", expanded=False):
+    with st.expander("Precios unitarios aplicados en Columna", expanded=False):
         _pr = st.session_state.kc_precios
         _cp_cem2 = float(_pr.get('cemento', 0))
         _cp_are2 = float(_pr.get('arena', 0))
@@ -2030,7 +2030,7 @@ with tabs[2]:
     <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_col:,.0f}</b></div>
 </div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
 
-    if st.button(" Agregar Columna al Resumen", key="kc_add_col", type="primary"):
+    if st.button("Agregar Columna al Resumen", key="kc_add_col", type="primary"):
         lb = desc_col or "Columna"
         st.session_state.kc_rows.extend([
             {"elemento": f"{lb} — {R.get('cemento','Cemento')}", "unidad": "bultos", "cant": bol_col,       "precio": _cp_cem},
@@ -2045,7 +2045,7 @@ with tabs[2]:
 
 # ══════════ TAB 4 — VIGA (4 secciones CM-V3.0) ══════════
 with tabs[3]:
-    st.subheader(" Calculadora de Viga")
+    st.subheader("Calculadora de Viga")
     st.caption(f"CM-V3.0 | 4 tipos | Acero +/- | {norma_sel}")
 
     SEC_VIGA = ["■ Sec.1  A+:2 A-:2", "■■ Sec.2  A+:3 A-:2", "■■■ Sec.3  A+:4 A-:2", "n  Ilimitado"]
@@ -2090,7 +2090,7 @@ with tabs[3]:
                 <span style='font-size:0.65rem;color:#ccc;'>{_lbl}</span></div>""",
                 unsafe_allow_html=True
             )
-            if st.button("" if _selected else "○", key=f"kc_vsec_btn_{_i}",
+            if st.button(""if _selected else "○", key=f"kc_vsec_btn_{_i}",
                          help=_stype, use_container_width=True):
                 st.session_state["kc_viga_sec"] = _stype
                 st.rerun()
@@ -2255,13 +2255,13 @@ with tabs[3]:
     rv1,rv2,rv3,rv4 = st.columns(4)
     with rv1:
         st.markdown("**Materiales Concreto**")
-        st.metric(" Cemento", f"{bol_viga} bultos"); st.metric(" Arena", f"{arena_v:.2f}m³")
-        st.metric(" Grava", f"{grava_v:.2f}m³"); st.metric(" Agua", f"{agua_v:.0f} lt")
+        st.metric("Cemento", f"{bol_viga} bultos"); st.metric("Arena", f"{arena_v:.2f}m³")
+        st.metric("Grava", f"{grava_v:.2f}m³"); st.metric("Agua", f"{agua_v:.0f} lt")
     with rv2:
         st.markdown("**Acero Longitudinal**")
-        st.metric(f" Acero+ ({nb_pos} brs)", f"{kg_pos:.2f} kg")
-        st.metric(f" Acero− ({nb_neg} brs)", f"{kg_neg:.2f} kg")
-        st.metric(" Total long.", f"{kg_long_v:.2f} kg")
+        st.metric(f"Acero+ ({nb_pos} brs)", f"{kg_pos:.2f} kg")
+        st.metric(f"Acero− ({nb_neg} brs)", f"{kg_neg:.2f} kg")
+        st.metric("Total long.", f"{kg_long_v:.2f} kg")
     with rv3:
         st.markdown("**Estribos E.1**")
         st.metric("N° estribos ZC×2", f"{n_zc_v}")
@@ -2270,17 +2270,17 @@ with tabs[3]:
         st.metric("⚙ Peso E.1", f"{kg_est_v:.2f} kg")
     with rv4:
         st.markdown("**Totales**")
-        st.metric(" Acero total", f"{kg_ace_v:.2f} kg")
-        st.metric(" Vol. concreto", f"{vol_viga_neto*cant_viga:.2f}m³")
-        st.metric(" Dosif.", mix_viga["dos"])
-        st.metric(" Costo", f"{moneda} {costo_v:,.0f}")
+        st.metric("Acero total", f"{kg_ace_v:.2f} kg")
+        st.metric("Vol. concreto", f"{vol_viga_neto*cant_viga:.2f}m³")
+        st.metric("Dosif.", mix_viga["dos"])
+        st.metric("Costo", f"{moneda} {costo_v:,.0f}")
 
     st.markdown(
         f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;">'
         f'<span style="color:#ffcc80;">f\'c={fc_viga} kg/cm² | {a_viga}×{b_viga}m | '
         f'L={largo_viga}m | A+:{nb_pos}brs {var_pos} | A-:{nb_neg}brs {var_neg} | E.1:{n_est_v}estr.</span></div>',
         unsafe_allow_html=True)
-    with st.expander(" Precios unitarios aplicados en Viga", expanded=False):
+    with st.expander("Precios unitarios aplicados en Viga", expanded=False):
         _pr = st.session_state.kc_precios
         _pv_cem = float(_pr.get('cemento', 0))
         _pv_are = float(_pr.get('arena', 0))
@@ -2303,7 +2303,7 @@ with tabs[3]:
     <div style="color:#ffcc80;font-size:11px;"> COSTO TOTAL</div>
     <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_v:,.0f}</b></div>
 </div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
-    if st.button(" Agregar Viga al Resumen", key="kc_add_viga", type="primary"):
+    if st.button("Agregar Viga al Resumen", key="kc_add_viga", type="primary"):
         lb = desc_viga or "Viga"
         st.session_state.kc_rows.extend([
             {"elemento":f"{lb} — {R['cemento']}","unidad":"bultos","cant":bol_viga,"precio":float(p.get("cemento",0))},
@@ -2318,7 +2318,7 @@ with tabs[3]:
 
 # ══════════ TAB 5 — LOSA (CM-V3.0) ══════════
 with tabs[4]:
-    st.subheader(" Calculadora de Losa")
+    st.subheader("Calculadora de Losa")
     st.caption(f"CM-V3.0 | Maciza · Nervada · Ilimitado | {norma_sel}")
 
     TIPOS_LOSA = ["■ Maciza (1 capa)", "■■ Maciza (2 capas)", "▤ Nervada", "⊞ Casetonada", "n Ilimitado"]
@@ -2392,7 +2392,7 @@ with tabs[4]:
                 <span style='font-size:0.65rem;color:#ccc;'>{_lbl}</span></div>""",
                 unsafe_allow_html=True
             )
-            if st.button("" if _selected else "○", key=f"kc_lsec_btn_{_i}",
+            if st.button(""if _selected else "○", key=f"kc_lsec_btn_{_i}",
                          help=_ltype, use_container_width=True):
                 st.session_state["kc_losa_tipo"] = _ltype
                 st.rerun()
@@ -2606,29 +2606,29 @@ with tabs[4]:
     rl1,rl2,rl3,rl4 = st.columns(4)
     with rl1:
         st.markdown("**Concreto**")
-        st.metric(" Cemento", f"{bol_l} bultos"); st.metric(" Arena", f"{arena_l:.2f}m³")
-        st.metric(" Grava", f"{grava_l:.2f}m³"); st.metric(" Agua", f"{agua_l:.0f} lt")
+        st.metric("Cemento", f"{bol_l} bultos"); st.metric("Arena", f"{arena_l:.2f}m³")
+        st.metric("Grava", f"{grava_l:.2f}m³"); st.metric("Agua", f"{agua_l:.0f} lt")
     with rl2:
         st.markdown("**Acero X**")
-        st.metric(f" X inf. ({n_barras_x} brs)", f"{kg_x:.2f} kg")
-        if kg_x2: st.metric(f" X sup. ({n_barras_x2} brs)", f"{kg_x2:.2f} kg")
-        st.metric(" Temperatura", f"{kg_temp:.2f} kg")
+        st.metric(f"X inf. ({n_barras_x} brs)", f"{kg_x:.2f} kg")
+        if kg_x2: st.metric(f"X sup. ({n_barras_x2} brs)", f"{kg_x2:.2f} kg")
+        st.metric("Temperatura", f"{kg_temp:.2f} kg")
     with rl3:
         st.markdown("**Acero Y**")
-        st.metric(f" Y inf. ({n_barras_y} brs)", f"{kg_y:.2f} kg")
-        if kg_y2: st.metric(f" Y sup. ({n_barras_y2} brs)", f"{kg_y2:.2f} kg")
+        st.metric(f"Y inf. ({n_barras_y} brs)", f"{kg_y:.2f} kg")
+        if kg_y2: st.metric(f"Y sup. ({n_barras_y2} brs)", f"{kg_y2:.2f} kg")
     with rl4:
         st.markdown("**Totales**")
-        st.metric(" Acero total", f"{kg_ace_l:.2f} kg")
-        st.metric(" Volumen", f"{vol_neto:.2f}m³")
-        st.metric(" Área", f"{area_l:.2f} m²")
-        st.metric(" Costo", f"{moneda} {costo_l:,.0f}")
+        st.metric("Acero total", f"{kg_ace_l:.2f} kg")
+        st.metric("Volumen", f"{vol_neto:.2f}m³")
+        st.metric("Área", f"{area_l:.2f} m²")
+        st.metric("Costo", f"{moneda} {costo_l:,.0f}")
     st.markdown(
         f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;">'
         f'<span style="color:#ffcc80;">{tipo_losa} | {largo_l}×{ancho_l}m | e={esp_l}m | '
         f'f\'c={fc_l}kg/cm² | {kg_ace_l:.1f}kg acero | Vol={vol_neto:.2f}m³</span></div>',
         unsafe_allow_html=True)
-    with st.expander(" Precios unitarios aplicados en Losa", expanded=False):
+    with st.expander("Precios unitarios aplicados en Losa", expanded=False):
         _pr = st.session_state.kc_precios
         _pl_cem = float(_pr.get('cemento', 0))
         _pl_are = float(_pr.get('arena', 0))
@@ -2651,7 +2651,7 @@ with tabs[4]:
     <div style="color:#ffcc80;font-size:11px;"> COSTO TOTAL</div>
     <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_l:,.0f}</b></div>
 </div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
-    if st.button(" Agregar Losa al Resumen", key="kc_add_losa", type="primary"):
+    if st.button("Agregar Losa al Resumen", key="kc_add_losa", type="primary"):
         lb = desc_losa or f"Losa {tipo_losa[:5]}"
         st.session_state.kc_rows.extend([
             {"elemento":f"{lb} — {R['cemento']}","unidad":"bultos","cant":bol_l,"precio":float(p.get("cemento",0))},
@@ -2665,7 +2665,7 @@ with tabs[4]:
 
 # ══════════ TAB 6 — CIMIENTO (CM-V3.0 · 11 modos) ══════════
 with tabs[5]:
-    st.subheader(" Calculadora de Cimiento")
+    st.subheader("Calculadora de Cimiento")
     st.caption(f"CM-V3.0 | 11 modos | {norma_sel}")
 
     # Mortar mix empirical constants (Colombia)
@@ -2849,8 +2849,8 @@ with tabs[5]:
         st.markdown("---"); st.markdown("####  Resultados")
         rci1,rci2 = st.columns(2)
         with rci1:
-            st.metric(" Piedra",f"{vol_piedra:.2f}m³"); st.metric(" Cemento",f"{bol_cim} bultos")
-            st.metric(" Arena",f"{arena_cim:.2f}m³"); st.metric(" Agua",f"{agua_cim:.0f} lt")
+            st.metric("Piedra",f"{vol_piedra:.2f}m³"); st.metric("Cemento",f"{bol_cim} bultos")
+            st.metric("Arena",f"{arena_cim:.2f}m³"); st.metric("Agua",f"{agua_cim:.0f} lt")
         with rci2:
             st.metric("Dosif.",dos_mort); st.metric("% Piedra",f"{pct_piedra}%"); st.metric("Vol Piedra",f"{vol_piedra:.2f}m³"); st.metric("Vol Mortero",f"{vol_mort:.2f}m³")
 
@@ -2897,11 +2897,11 @@ with tabs[5]:
         st.markdown("---"); st.markdown("####  Resultados")
         rz1,rz2,rz3,rz4 = st.columns(4)
         with rz1:
-            st.metric(" Cemento",f"{bol_cim} bultos"); st.metric(" Arena",f"{arena_cim:.2f}m³")
-            st.metric(" Grava",f"{grava_cim:.2f}m³"); st.metric(" Agua",f"{agua_cim:.0f} lt")
-        with rz2: st.metric(f" Acero X ({n_bars_x_z}brs)",f"{kg_x_z:.2f} kg")
-        with rz3: st.metric(f" Acero Y ({n_bars_y_z}brs)",f"{kg_y_z:.2f} kg")
-        with rz4: st.metric(" Acero total",f"{kg_ace_z:.2f} kg"); st.metric(" Costo",f"{moneda} {costo_c:,.0f}")
+            st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Arena",f"{arena_cim:.2f}m³")
+            st.metric("Grava",f"{grava_cim:.2f}m³"); st.metric("Agua",f"{agua_cim:.0f} lt")
+        with rz2: st.metric(f"Acero X ({n_bars_x_z}brs)",f"{kg_x_z:.2f} kg")
+        with rz3: st.metric(f"Acero Y ({n_bars_y_z}brs)",f"{kg_y_z:.2f} kg")
+        with rz4: st.metric("Acero total",f"{kg_ace_z:.2f} kg"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
     # ─────── LOSA CIMENTACIÓN POR % ───────
     elif modo_cim == "% Losa Cim · Por %":
@@ -2924,8 +2924,8 @@ with tabs[5]:
         costo_c = bol_cim*float(p.get("cemento",0))+arena_cim*float(p.get("arena",0))+grava_cim*float(p.get("grava",0))+kg_ace_lc*float(p.get("acero_kg",0))
         st.markdown("---"); st.markdown("####  Resultados")
         rp1,rp2 = st.columns(2)
-        with rp1: st.metric(" Cemento",f"{bol_cim} bultos"); st.metric(" Arena",f"{arena_cim:.2f}m³"); st.metric(" Grava",f"{grava_cim:.2f}m³"); st.metric(" Agua",f"{agua_cim:.0f}lt")
-        with rp2: st.metric(" Acero",f"{kg_ace_lc:.2f} kg"); st.metric(" Dosif",mix_lc["dos"]); st.metric(" Costo",f"{moneda} {costo_c:,.0f}")
+        with rp1: st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Arena",f"{arena_cim:.2f}m³"); st.metric("Grava",f"{grava_cim:.2f}m³"); st.metric("Agua",f"{agua_cim:.0f}lt")
+        with rp2: st.metric("Acero",f"{kg_ace_lc:.2f} kg"); st.metric("Dosif",mix_lc["dos"]); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
     # ─────── LOSA CIMENTACIÓN DIMENSIÓN ───────
     elif modo_cim == "D Losa Cim · Dimensión":
@@ -2966,10 +2966,10 @@ with tabs[5]:
         costo_c=bol_cim*float(p.get("cemento",0))+arena_cim*float(p.get("arena",0))+grava_cim*float(p.get("grava",0))+kg_ace_ld*float(p.get("acero_kg",0))
         st.markdown("---"); st.markdown("####  Resultados")
         rd1,rd2,rd3,rd4 = st.columns(4)
-        with rd1: st.metric(" Cemento",f"{bol_cim} bultos"); st.metric(" Arena",f"{arena_cim:.2f}m³"); st.metric(" Grava",f"{grava_cim:.2f}m³"); st.metric(" Agua",f"{agua_cim:.0f}lt")
-        with rd2: st.metric(f" Xa ({nb_xa}brs)",f"{kg_xa:.2f}kg"); st.metric(f" Xb ({nb_xb}brs)",f"{kg_xb:.2f}kg")
-        with rd3: st.metric(f" Ya ({nb_ya}brs)",f"{kg_ya:.2f}kg"); st.metric(f" Yb ({nb_yb}brs)",f"{kg_yb:.2f}kg")
-        with rd4: st.metric(" Total Acero",f"{kg_ace_ld:.2f}kg"); st.metric(" Costo",f"{moneda} {costo_c:,.0f}")
+        with rd1: st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Arena",f"{arena_cim:.2f}m³"); st.metric("Grava",f"{grava_cim:.2f}m³"); st.metric("Agua",f"{agua_cim:.0f}lt")
+        with rd2: st.metric(f"Xa ({nb_xa}brs)",f"{kg_xa:.2f}kg"); st.metric(f"Xb ({nb_xb}brs)",f"{kg_xb:.2f}kg")
+        with rd3: st.metric(f"Ya ({nb_ya}brs)",f"{kg_ya:.2f}kg"); st.metric(f"Yb ({nb_yb}brs)",f"{kg_yb:.2f}kg")
+        with rd4: st.metric("Total Acero",f"{kg_ace_ld:.2f}kg"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
     # ─────── ZAPATA CORRIDA ───────
     elif modo_cim == "→ Zapata Corrida":
@@ -3001,10 +3001,10 @@ with tabs[5]:
         kg_ace_zc=kg_xzc+kg_yzc; costo_c=bol_cim*float(p.get("cemento",0))+arena_cim*float(p.get("arena",0))+grava_cim*float(p.get("grava",0))+kg_ace_zc*float(p.get("acero_kg",0))
         st.markdown("---"); st.markdown("####  Resultados")
         rzc1,rzc2,rzc3,rzc4=st.columns(4)
-        with rzc1: st.metric(" Cemento",f"{bol_cim} bultos"); st.metric(" Arena",f"{arena_cim:.2f}m³"); st.metric(" Grava",f"{grava_cim:.2f}m³"); st.metric(" Agua",f"{agua_cim:.0f}lt")
-        with rzc2: st.metric(f" Acero X ({nb_xzc}brs)",f"{kg_xzc:.2f}kg")
-        with rzc3: st.metric(f" Acero Y ({nb_yzc}brs)",f"{kg_yzc:.2f}kg")
-        with rzc4: st.metric(" Total",f"{kg_ace_zc:.2f}kg"); st.metric(" Costo",f"{moneda} {costo_c:,.0f}")
+        with rzc1: st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Arena",f"{arena_cim:.2f}m³"); st.metric("Grava",f"{grava_cim:.2f}m³"); st.metric("Agua",f"{agua_cim:.0f}lt")
+        with rzc2: st.metric(f"Acero X ({nb_xzc}brs)",f"{kg_xzc:.2f}kg")
+        with rzc3: st.metric(f"Acero Y ({nb_yzc}brs)",f"{kg_yzc:.2f}kg")
+        with rzc4: st.metric("Total",f"{kg_ace_zc:.2f}kg"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
     # ─────── ELECTROMALLA ───────
     elif modo_cim == "⚡ Electromalla":
@@ -3028,8 +3028,8 @@ with tabs[5]:
         costo_c=bol_cim*float(p.get("cemento",0))+arena_cim*float(p.get("arena",0))+grava_cim*float(p.get("grava",0))
         st.markdown("---"); st.markdown("####  Resultados")
         rem1,rem2=st.columns(2)
-        with rem1: st.metric(" Cemento",f"{bol_cim} bultos"); st.metric(" Arena",f"{arena_cim:.2f}m³"); st.metric(" Grava",f"{grava_cim:.2f}m³"); st.metric(" Agua",f"{agua_cim:.0f}lt")
-        with rem2: st.metric("⚡ Electromalla",f"{n_piezas_em} piezas"); st.metric(" Dosif.",mix_em["dos"]); st.metric(" Volumen",f"{vol_em:.2f}m³"); st.metric(" Costo",f"{moneda} {costo_c:,.0f}")
+        with rem1: st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Arena",f"{arena_cim:.2f}m³"); st.metric("Grava",f"{grava_cim:.2f}m³"); st.metric("Agua",f"{agua_cim:.0f}lt")
+        with rem2: st.metric("⚡ Electromalla",f"{n_piezas_em} piezas"); st.metric("Dosif.",mix_em["dos"]); st.metric("Volumen",f"{vol_em:.2f}m³"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
     # ─────── SUELO CEMENTO ───────
     elif modo_cim == " Suelo Cemento":
@@ -3051,15 +3051,15 @@ with tabs[5]:
         costo_c    = bol_cim*float(p.get("cemento",0))
         st.markdown("---"); st.markdown("####  Resultados")
         rsc1,rsc2=st.columns(2)
-        with rsc1: st.metric(" Cemento",f"{bol_cim} bultos"); st.metric(" Suelo Selecto",f"{vol_suelo:.2f} m³")
-        with rsc2: st.metric("Dosif.",dos_sc); st.metric("Volumen",f"{vol_suelo:.2f} m³"); st.metric(" Costo cem",f"{moneda} {costo_c:,.0f}")
+        with rsc1: st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Suelo Selecto",f"{vol_suelo:.2f} m³")
+        with rsc2: st.metric("Dosif.",dos_sc); st.metric("Volumen",f"{vol_suelo:.2f} m³"); st.metric("Costo cem",f"{moneda} {costo_c:,.0f}")
 
     # ─────── BOTÓN AGREGAR ───────
     # Summary strip
     st.markdown(
         f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;">'
         f'<span style="color:#ffcc80;">{modo_cim}</span></div>', unsafe_allow_html=True)
-    if st.button(" Agregar Cimiento al Resumen", key="kc_add_cim", type="primary"):
+    if st.button("Agregar Cimiento al Resumen", key="kc_add_cim", type="primary"):
         lb = desc_cim or "Cimiento"
         rows=[{"elemento":f"{lb} — {R['cemento']}","unidad":"bultos","cant":bol_cim,"precio":float(p.get("cemento",0))}]
         if arena_cim: rows.append({"elemento":f"{lb} — Arena","unidad":"m³","cant":round(arena_cim,3),"precio":float(p.get("arena",0))})
@@ -3070,7 +3070,7 @@ with tabs[5]:
 
 # ══════════ TAB 7 — MURO DE CONTENCIÓN (CM-V3.0 · 11 modos) ══════════
 with tabs[6]:
-    st.subheader(" Calculadora de Muro de Contención")
+    st.subheader("Calculadora de Muro de Contención")
     st.caption(f"CM-V3.0 | Ciclópeo (6) + Estructural (4) | {norma_sel}")
 
     # Mortar mix constants per m³ mortar (calibrated from CM-V3.0)
@@ -3245,12 +3245,12 @@ with tabs[6]:
         st.markdown("---"); st.markdown("####  Resultados")
         rm1,rm2 = st.columns(2)
         with rm1:
-            st.metric(" Piedra",f"{vol_p_desp:.2f}m³"); st.metric(" Cemento",f"{bol_m} bultos")
-            st.metric(" Arena",f"{arena_m:.2f}m³"); st.metric(" Agua",f"{agua_m:.0f} lt")
+            st.metric("Piedra",f"{vol_p_desp:.2f}m³"); st.metric("Cemento",f"{bol_m} bultos")
+            st.metric("Arena",f"{arena_m:.2f}m³"); st.metric("Agua",f"{agua_m:.0f} lt")
         with rm2:
             st.metric("Dosif.",dos_m); st.metric(f"% Piedra",f"{pct_p_m}%")
             st.metric("Vol Piedra",f"{vol_p_neto:.2f} m³"); st.metric("Vol Mortero",f"{vol_mort_n:.2f} m³")
-            st.metric(" Costo est.",f"{moneda} {costo_m:,.0f}")
+            st.metric("Costo est.",f"{moneda} {costo_m:,.0f}")
 
     # ─────── ESTRUCTURAL ───────
     else:
@@ -3331,14 +3331,14 @@ with tabs[6]:
         costo_m = bol_m*float(p.get("cemento",0))+arena_m*float(p.get("arena",0))+grava_m*float(p.get("grava",0))+kg_ace_m*float(p.get("acero_kg",0))
         st.markdown("---"); st.markdown("####  Resultados")
         re1,re2,re3,re4 = st.columns(4)
-        with re1: st.metric(" Cemento",f"{bol_m} bultos"); st.metric(" Arena",f"{arena_m:.2f} m³"); st.metric(" Grava",f"{grava_m:.2f} m³"); st.metric(" Agua",f"{agua_m:.0f} lt")
-        with re2: st.metric(" Acero Vert_1",f"{kg_v1:.2f}kg"); st.metric(" Acero Vert_2",f"{kg_v2:.2f}kg")
-        with re3: st.metric(" Long. Muro",f"{kg_lm:.2f}kg"); st.metric(" Long. Cim.",f"{kg_lc:.2f}kg"); st.metric(" H.Cim.",f"{kg_hc:.2f}kg")
-        with re4: st.metric(" Acero Total",f"{kg_ace_m:.2f}kg"); st.metric(" Vol.Concreto",f"{vol_e:.2f}m³"); st.metric(" Costo",f"{moneda} {costo_m:,.0f}")
+        with re1: st.metric("Cemento",f"{bol_m} bultos"); st.metric("Arena",f"{arena_m:.2f} m³"); st.metric("Grava",f"{grava_m:.2f} m³"); st.metric("Agua",f"{agua_m:.0f} lt")
+        with re2: st.metric("Acero Vert_1",f"{kg_v1:.2f}kg"); st.metric("Acero Vert_2",f"{kg_v2:.2f}kg")
+        with re3: st.metric("Long. Muro",f"{kg_lm:.2f}kg"); st.metric("Long. Cim.",f"{kg_lc:.2f}kg"); st.metric("H.Cim.",f"{kg_hc:.2f}kg")
+        with re4: st.metric("Acero Total",f"{kg_ace_m:.2f}kg"); st.metric("Vol.Concreto",f"{vol_e:.2f}m³"); st.metric("Costo",f"{moneda} {costo_m:,.0f}")
 
     # ─────── BOTÓN AGREGAR ───────
     st.markdown(f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;"><span style="color:#ffcc80;">{modo_m}</span></div>',unsafe_allow_html=True)
-    if st.button(" Agregar Muro al Resumen", key="kc_add_muro", type="primary"):
+    if st.button("Agregar Muro al Resumen", key="kc_add_muro", type="primary"):
         lb = desc_m or f"Muro {modo_m[:10]}"
         rows=[{"elemento":f"{lb} — {R['cemento']}","unidad":"bultos","cant":bol_m,"precio":float(p.get("cemento",0))}]
         if arena_m: rows.append({"elemento":f"{lb} — Arena","unidad":"m³","cant":round(arena_m,3),"precio":float(p.get("arena",0))})
@@ -3352,13 +3352,13 @@ with tabs[6]:
 with tabs[14]:
     sal = SALARIOS_MIN.get(pais)
     if sal:
-        st.subheader(f" Salario Mínimo y Liquidación Laboral — {pais}")
+        st.subheader(f"Salario Mínimo y Liquidación Laboral — {pais}")
         st.caption("Cálculo estimado de nómina y prestaciones sociales.")
         
         # Selector de año
         _hist = HIST_SAL.get(pais, {})
         _anios = list(_hist.keys()) if _hist else [2026]
-        anio_sel = st.selectbox(" Año de liquidación:", _anios, key="kc_anio_liq")
+        anio_sel = st.selectbox("Año de liquidación:", _anios, key="kc_anio_liq")
         
         # Obtener valores
         s_base = sal.get("salario_base", 0)
@@ -3442,7 +3442,7 @@ with tabs[14]:
             <p><small>Generado con Konte Calculadora - Estimación referencial, verifique con la normativa local vigente.</small></p>
             </body></html>"""
             
-            st.download_button(" Exportar a DOC", data=html_doc.encode('utf-8'), file_name="Liquidacion_Laboral.doc", mime="application/msword", use_container_width=True)
+            st.download_button("Exportar a DOC", data=html_doc.encode('utf-8'), file_name="Liquidacion_Laboral.doc", mime="application/msword", use_container_width=True)
         else:
             st.warning("La fecha de retiro debe ser mayor al ingreso.")
 
@@ -3642,7 +3642,7 @@ with tabs[15]:
     ]))
 
     # ── 13 CONFIG SUB-TABS ──
-    cfg_tabs = st.tabs([" Concreto"," Mortero"," Cemento/Afinado"," Unidades"," Aproximaciones",
+    cfg_tabs = st.tabs(["Concreto"," Mortero"," Cemento/Afinado"," Unidades"," Aproximaciones",
                          f" Costos ({moneda})"," Mampostería"," Acero"," Losa"," Perfiles",
                          " Panel Yeso"," Techo"," Piso"])
 
@@ -3651,16 +3651,16 @@ with tabs[15]:
         st.markdown(f"**Dosificaciones del Concreto para 1m³** — Bolsa: {R['peso_bolsa']}kg")
         st.caption("Verifique las dosificaciones según su normativa local.")
         edited_mix = st.data_editor(st.session_state.kc_cfg_mix, num_rows="dynamic", use_container_width=True, key="de_mix")
-        if st.button(" Guardar Concreto",key="cfg_sv_mix"):
-            st.session_state.kc_cfg_mix = edited_mix; st.success(" Dosificaciones guardadas")
+        if st.button("Guardar Concreto",key="cfg_sv_mix"):
+            st.session_state.kc_cfg_mix = edited_mix; st.success("Dosificaciones guardadas")
 
     # ─ 1: Mortero ─
     with cfg_tabs[1]:
         st.markdown("**Dosificaciones del Mortero para 1m³**")
         st.caption("Configure las mezclas de mortero para su región.")
         edited_mort = st.data_editor(st.session_state.kc_cfg_mort, num_rows="dynamic", use_container_width=True, key="de_mort")
-        if st.button(" Guardar Mortero",key="cfg_sv_mort"):
-            st.session_state.kc_cfg_mort = edited_mort; st.success(" Mortero guardado")
+        if st.button("Guardar Mortero",key="cfg_sv_mort"):
+            st.session_state.kc_cfg_mort = edited_mort; st.success("Mortero guardado")
 
     # ─ 2: Cemento/Afinado ─
     with cfg_tabs[2]:
@@ -3686,8 +3686,8 @@ with tabs[15]:
         agua_opt = st.selectbox("Unidades de Agua:", ["lt","barr","gal"], key="cfg_agua_ud")
         st.caption(f"Unidad seleccionada: **{agua_opt}** — Las unidades se aplican solo a los resultados, no al ingreso de datos.")
         st.info("ℹ Las conversiones: 1 barr ≈ 159 lt | 1 gal ≈ 3.785 lt")
-        if st.button(" Guardar Unidades",key="cfg_sv_ud"):
-            st.session_state.kc_cfg_agua_ud = agua_opt; st.success(f" Unidad de agua: {agua_opt}")
+        if st.button("Guardar Unidades",key="cfg_sv_ud"):
+            st.session_state.kc_cfg_agua_ud = agua_opt; st.success(f"Unidad de agua: {agua_opt}")
 
     # ─ 4: Aproximaciones ─
     with cfg_tabs[4]:
@@ -3699,23 +3699,23 @@ with tabs[15]:
             aprox_df,
             column_config={"Aprox": st.column_config.SelectboxColumn("Aprox", options=aprox_opts)},
             num_rows="fixed", use_container_width=True, key="de_aprox")
-        if st.button(" Guardar Aproximaciones",key="cfg_sv_aprox"):
-            st.session_state.kc_cfg_aprox = edited_aprox; st.success(" Aproximaciones guardadas")
+        if st.button("Guardar Aproximaciones",key="cfg_sv_aprox"):
+            st.session_state.kc_cfg_aprox = edited_aprox; st.success("Aproximaciones guardadas")
 
     # ─ 5: Costos ─
     with cfg_tabs[5]:
         st.markdown(f"**Costos de Materiales — {moneda}**")
-        st.caption(f" País: **{pais}** | Los costos están en **{moneda}**. Actualice según los precios actuales de su región.")
+        st.caption(f"País: **{pais}** | Los costos están en **{moneda}**. Actualice según los precios actuales de su región.")
         cc1, cc2 = st.columns([3,1])
         with cc2:
-            if st.button(" Consultar Precios en Vivo", key="cfg_live_prices", use_container_width=True):
+            if st.button("Consultar Precios en Vivo", key="cfg_live_prices", use_container_width=True):
                 with st.spinner("Consultando precios..."):
                     live = get_live_prices(pais, _ref_cos); st.session_state.kc_precios.update(live)
-                st.success(" Precios actualizados desde sitios web")
+                st.success("Precios actualizados desde sitios web")
         with cc1:
             edited_cos = st.data_editor(st.session_state.kc_cfg_costos, num_rows="dynamic", use_container_width=True, key="de_costos",
                 column_config={"Costo": st.column_config.NumberColumn(f"Costo ({moneda})", format="%.2f", min_value=0.0)})
-            if st.button(" Guardar Costos",key="cfg_sv_cos"):
+            if st.button("Guardar Costos",key="cfg_sv_cos"):
                 st.session_state.kc_cfg_costos = edited_cos
                 # Sync key prices back to p dict
                 for row in edited_cos.itertuples():
@@ -3726,7 +3726,7 @@ with tabs[15]:
                     elif "acero" in nm or "varilla" in nm: p["acero_kg"] = float(row.Costo)
                     elif "pintura" in nm: p["pintura"] = float(row.Costo)
                     elif "bloque" in nm and "10x20" in nm: p["bloque"] = float(row.Costo)
-                st.session_state.kc_precios = p; st.success(f" Costos en {moneda} guardados y aplicados")
+                st.session_state.kc_precios = p; st.success(f"Costos en {moneda} guardados y aplicados")
 
     # ─ 6: Mampostería ─
     with cfg_tabs[6]:
@@ -3735,21 +3735,21 @@ with tabs[15]:
             st.markdown("**Mampostería Bloque**")
             st.caption("UN/m²: unidades por m². MORTERO: m³ por m².")
             edited_blq = st.data_editor(st.session_state.kc_cfg_mamp_blq, num_rows="dynamic", use_container_width=True, key="de_blq")
-            if st.button(" Guardar Bloques",key="cfg_sv_blq"):
-                st.session_state.kc_cfg_mamp_blq = edited_blq; st.success(" Bloques guardados")
+            if st.button("Guardar Bloques",key="cfg_sv_blq"):
+                st.session_state.kc_cfg_mamp_blq = edited_blq; st.success("Bloques guardados")
         with m2:
             st.markdown("**Mampostería Ladrillo**")
             edited_lad = st.data_editor(st.session_state.kc_cfg_mamp_lad, num_rows="dynamic", use_container_width=True, key="de_lad")
-            if st.button(" Guardar Ladrillos",key="cfg_sv_lad"):
-                st.session_state.kc_cfg_mamp_lad = edited_lad; st.success(" Ladrillos guardados")
+            if st.button("Guardar Ladrillos",key="cfg_sv_lad"):
+                st.session_state.kc_cfg_mamp_lad = edited_lad; st.success("Ladrillos guardados")
 
     # ─ 7: Acero ─
     with cfg_tabs[7]:
         st.markdown("**Configuración de Acero / Varillas**")
         st.caption("DIÁMETRO: nombre de la varilla | m/var: longitud de cada varilla | Kg/m: peso por metro.")
         edited_acer = st.data_editor(st.session_state.kc_cfg_acero, num_rows="dynamic", use_container_width=True, key="de_acer")
-        if st.button(" Guardar Acero",key="cfg_sv_ace"):
-            st.session_state.kc_cfg_acero = edited_acer; st.success(" Acero guardado")
+        if st.button("Guardar Acero",key="cfg_sv_ace"):
+            st.session_state.kc_cfg_acero = edited_acer; st.success("Acero guardado")
 
     # ─ 8: Losa ─
     with cfg_tabs[8]:
@@ -3758,13 +3758,13 @@ with tabs[15]:
             st.markdown("**Bovedillas de Losa**")
             st.caption("Ingrese ancho y largo según el esquema para calcular área.")
             edited_bov = st.data_editor(st.session_state.kc_cfg_bovedilla, num_rows="dynamic", use_container_width=True, key="de_bov")
-            if st.button(" Guardar Bovedillas",key="cfg_sv_bov"):
-                st.session_state.kc_cfg_bovedilla = edited_bov; st.success(" Bovedillas guardadas")
+            if st.button("Guardar Bovedillas",key="cfg_sv_bov"):
+                st.session_state.kc_cfg_bovedilla = edited_bov; st.success("Bovedillas guardadas")
         with l2:
             st.markdown("**Electromalla**")
             edited_elm = st.data_editor(st.session_state.kc_cfg_electromalla, num_rows="dynamic", use_container_width=True, key="de_elm")
-            if st.button(" Guardar Electromalla",key="cfg_sv_elm"):
-                st.session_state.kc_cfg_electromalla = edited_elm; st.success(" Electromalla guardada")
+            if st.button("Guardar Electromalla",key="cfg_sv_elm"):
+                st.session_state.kc_cfg_electromalla = edited_elm; st.success("Electromalla guardada")
 
     # ─ 9: Perfiles ─
     with cfg_tabs[9]:
@@ -3772,16 +3772,16 @@ with tabs[15]:
         with p1:
             st.markdown("**Perfiles Pared: Panel Yeso**")
             edited_ppared = st.data_editor(st.session_state.kc_cfg_perfiles_pared, num_rows="dynamic", use_container_width=True, key="de_ppared")
-            if st.button(" Guardar Perfiles Pared",key="cfg_sv_ppared"):
-                st.session_state.kc_cfg_perfiles_pared = edited_ppared; st.success(" Guardado")
+            if st.button("Guardar Perfiles Pared",key="cfg_sv_ppared"):
+                st.session_state.kc_cfg_perfiles_pared = edited_ppared; st.success("Guardado")
             st.markdown("---"); st.markdown("**Tornillos Pared (Tor/m²)**")
             st.number_input('Tornillo Estructura 6x1" [Tor/m²]', value=10.0, key="cfg_torn_est_pr")
             st.number_input('Tornillo Panel 7x7/16" [Tor/m²]',  value=5.0,  key="cfg_torn_pan_pr")
         with p2:
             st.markdown("**Perfiles Cielo Raso: Panel Yeso**")
             edited_pcielo = st.data_editor(st.session_state.kc_cfg_perfiles_cielo, num_rows="dynamic", use_container_width=True, key="de_pcielo")
-            if st.button(" Guardar Perfiles Cielo",key="cfg_sv_pcielo"):
-                st.session_state.kc_cfg_perfiles_cielo = edited_pcielo; st.success(" Guardado")
+            if st.button("Guardar Perfiles Cielo",key="cfg_sv_pcielo"):
+                st.session_state.kc_cfg_perfiles_cielo = edited_pcielo; st.success("Guardado")
             st.markdown("---"); st.markdown("**Tornillos Cielo Raso (Tor/m²)**")
             st.number_input('Tornillo Estructura 6x1" [Tor/m²]', value=10.0, key="cfg_torn_est_cr")
             st.number_input('Tornillo Panel 7x7/16" [Tor/m²]',  value=5.0,  key="cfg_torn_pan_cr")
@@ -3792,7 +3792,7 @@ with tabs[15]:
         with py1:
             st.markdown("**Paneles Pared y Cielo Raso**")
             edited_py = st.data_editor(st.session_state.kc_cfg_panel_yeso, num_rows="dynamic", use_container_width=True, key="de_py")
-            if st.button(" Guardar Paneles",key="cfg_sv_py"):
+            if st.button("Guardar Paneles",key="cfg_sv_py"):
                 st.session_state.kc_cfg_panel_yeso = edited_py; st.success("")
         with py2:
             st.markdown("**Masilla Yeso**")
@@ -3816,13 +3816,13 @@ with tabs[15]:
             st.markdown("**Láminas — Dimensiones y Traslapes**")
             st.caption("ANCHO: ancho total de la lámina | TRAS.L: traslape longitudinal | TRAS.T: traslape transversal")
             edited_lam = st.data_editor(st.session_state.kc_cfg_laminas, num_rows="dynamic", use_container_width=True, key="de_lam")
-            if st.button(" Guardar Láminas",key="cfg_sv_lam"):
-                st.session_state.kc_cfg_laminas = edited_lam; st.success(" Láminas guardadas")
+            if st.button("Guardar Láminas",key="cfg_sv_lam"):
+                st.session_state.kc_cfg_laminas = edited_lam; st.success("Láminas guardadas")
         with t2:
             st.markdown("**Teja — Cobertura (unidades/m²)**")
             edited_tja = st.data_editor(st.session_state.kc_cfg_tejas, num_rows="dynamic", use_container_width=True, key="de_tja")
-            if st.button(" Guardar Tejas",key="cfg_sv_tja"):
-                st.session_state.kc_cfg_tejas = edited_tja; st.success(" Tejas guardadas")
+            if st.button("Guardar Tejas",key="cfg_sv_tja"):
+                st.session_state.kc_cfg_tejas = edited_tja; st.success("Tejas guardadas")
 
     # ─ 12: Piso ─
     with cfg_tabs[12]:
@@ -3830,11 +3830,11 @@ with tabs[15]:
         with ps1:
             st.markdown("**Cerámica**")
             edited_cer = st.data_editor(st.session_state.kc_cfg_ceramica, num_rows="dynamic", use_container_width=True, key="de_cer")
-            if st.button(" Guardar Cerámica",key="cfg_sv_cer"):
+            if st.button("Guardar Cerámica",key="cfg_sv_cer"):
                 st.session_state.kc_cfg_ceramica = edited_cer; st.success("")
             st.markdown("**Porcelanato**")
             edited_pn = st.data_editor(st.session_state.kc_cfg_porcelanato, num_rows="dynamic", use_container_width=True, key="de_pn")
-            if st.button(" Guardar Porcelanato",key="cfg_sv_pn"):
+            if st.button("Guardar Porcelanato",key="cfg_sv_pn"):
                 st.session_state.kc_cfg_porcelanato = edited_pn; st.success("")
         with ps2:
             st.markdown("**Adhesivo Cerámica**")
@@ -3845,13 +3845,13 @@ with tabs[15]:
             st.data_editor(st.session_state.kc_cfg_adh_pn, use_container_width=True, key="de_adh_pn")
             st.markdown("**Boquilla Porcelanato**")
             st.data_editor(st.session_state.kc_cfg_boq_pn, use_container_width=True, key="de_boq_pn")
-            if st.button(" Guardar Adhesivos / Boquillas",key="cfg_sv_adh"):
-                st.success(" Constantes de instalación guardadas")
+            if st.button("Guardar Adhesivos / Boquillas",key="cfg_sv_adh"):
+                st.success("Constantes de instalación guardadas")
 
 
 # ══════════ TAB RESUMEN — TECHO (CM-V3.0 · 7 modos) ══════════
 with tabs[7]:
-    st.subheader(" Calculadora de Techo")
+    st.subheader("Calculadora de Techo")
     st.caption(f"CM-V3.0 | Tejas (1A/2A/4A/Área) + Láminas (1/2/3 Filas) | {norma_sel}")
 
     # Tile type lookup: typical coverage in Colombia (uds/m²)
@@ -3898,7 +3898,7 @@ with tabs[7]:
                     slant_l = math.sqrt((largo_t/2)**2 + alto_t**2)
                     slant_a = math.sqrt((ancho_t/2)**2 + alto_t**2)
                     area_t = ancho_t * slant_l + largo_t * slant_a
-                st.metric(" Área inclinada", f"{area_t:.2f} m²")
+                st.metric("Área inclinada", f"{area_t:.2f} m²")
             cant_t = st.number_input("Cantidad (secciones)",min_value=1,value=1,key="kc_techo_qty_1")
             area_total_t = area_t * cant_t
         with tc2:
@@ -3915,9 +3915,9 @@ with tabs[7]:
         costo_t = n_tejas * precio_teja
         st.markdown("---"); st.markdown("####  Resultados")
         rt1,rt2,rt3 = st.columns(3)
-        with rt1: st.metric(" Tejas",f"{n_tejas} unidades"); st.metric(" Área",f"{area_total_t:.2f} m²")
+        with rt1: st.metric("Tejas",f"{n_tejas} unidades"); st.metric("Área",f"{area_total_t:.2f} m²")
         with rt2: st.metric("Tipo",tipo_t); st.metric("Densidad",f"{density_t} uds/m²")
-        with rt3: st.metric(" Costo",f"{moneda} {costo_t:,.0f}")
+        with rt3: st.metric("Costo",f"{moneda} {costo_t:,.0f}")
         mat_res = [{"elemento":f"{desc_t or 'Techo'} — {tipo_t}","unidad":"unidad","cant":n_tejas,"precio":precio_teja}]
 
     # ─────── LÁMINAS (3 modos) ───────
@@ -3950,21 +3950,21 @@ with tabs[7]:
         costo_t = metros_laminas * precio_m_lam
         st.markdown("---"); st.markdown("####  Resultados")
         rl1,rl2,rl3 = st.columns(3)
-        with rl1: st.metric(" Láminas",f"{n_laminas_total} unidades"); st.metric(" Área",f"{area_l:.2f} m²")
+        with rl1: st.metric("Láminas",f"{n_laminas_total} unidades"); st.metric("Área",f"{area_l:.2f} m²")
         with rl2: st.metric("Tipo",tipo_lam); st.metric("Metros Lámina",f"{metros_laminas:.2f} m")
-        with rl3: st.metric("$/m",f"{moneda} {precio_m_lam:.2f}"); st.metric(" Costo",f"{moneda} {costo_t:,.0f}")
+        with rl3: st.metric("$/m",f"{moneda} {precio_m_lam:.2f}"); st.metric("Costo",f"{moneda} {costo_t:,.0f}")
         mat_res = [{"elemento":f"{desc_t or 'Techo'} — {tipo_lam}","unidad":"m","cant":round(metros_laminas,2),"precio":precio_m_lam}]
 
     # ─────── BOTÓN AGREGAR ───────
     st.markdown(f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;"><span style="color:#ffcc80;">{modo_t}</span></div>',unsafe_allow_html=True)
-    if st.button(" Agregar Techo al Resumen", key="kc_add_techo", type="primary"):
+    if st.button("Agregar Techo al Resumen", key="kc_add_techo", type="primary"):
         st.session_state.kc_rows.extend(mat_res)
         st.success(f" {desc_t or 'Techo'} agregado al resumen")
 
 
 # ══════════ TAB 9 — PISOS (CM-V3.0 · 6 modos) ══════════
 with tabs[8]:
-    st.subheader(" Calculadora de Pisos")
+    st.subheader("Calculadora de Pisos")
     st.caption(f"CM-V3.0 | Cerámica · Porcelanato · Zócalo | {norma_sel} | {moneda}")
 
     # Tile type catalog: (width_m, height_m, uds_per_box)
@@ -4088,7 +4088,7 @@ with tabs[8]:
                 area_pi  = ancho_pi * largo_pi * cant_pi
             else:
                 area_pi = st.number_input("Área [m²]",0.0,value=25.0,step=1.0,key="kc_piso_area") * cant_pi
-            st.metric(" Área total",f"{area_pi:.2f} m²")
+            st.metric("Área total",f"{area_pi:.2f} m²")
         with pp2:
             st.markdown(f"** Tipo {mat_lbl}**")
             tipo_pi = st.selectbox("Tipo:",list(tipos.keys()),key="kc_cfg_piso_tipo")
@@ -4117,17 +4117,17 @@ with tabs[8]:
         ri1,ri2,ri3 = st.columns(3)
         with ri1:
             st.metric(f" {mat_lbl}",f"{n_tiles} unidades")
-            st.metric(" Cajas",f"{n_cajas:.2f} cajas")
-            st.metric(f" Área",f"{area_pi:.2f} m²")
+            st.metric("Cajas",f"{n_cajas:.2f} cajas")
+            st.metric(f"Área",f"{area_pi:.2f} m²")
             st.metric("Tipo",tipo_pi)
             st.metric("Uds/Caja",str(uds_caja))
         with ri2:
-            st.metric(" Adhesivo",f"{adh_bol:.2f} bultos")
-            st.metric(" Agua adhesivo",f"{adh_agua:.2f} lt")
+            st.metric("Adhesivo",f"{adh_bol:.2f} bultos")
+            st.metric("Agua adhesivo",f"{adh_agua:.2f} lt")
         with ri3:
-            st.metric(" Boquilla",f"{boq_bol:.2f} bultos")
-            st.metric(" Agua boquilla",f"{boq_agua:.2f} lt")
-            st.metric(" Costo est.",f"{moneda} {costo_pi:,.0f}")
+            st.metric("Boquilla",f"{boq_bol:.2f} bultos")
+            st.metric("Agua boquilla",f"{boq_agua:.2f} lt")
+            st.metric("Costo est.",f"{moneda} {costo_pi:,.0f}")
 
         mat_res = [
             {"elemento":f"{desc_pi or 'Piso'} — {mat_lbl} ({tipo_pi})","unidad":"caja","cant":round(n_cajas,2),"precio":precio_caja_pi},
@@ -4147,7 +4147,7 @@ with tabs[8]:
             long_z  = st.number_input("Longitud [m]",0.0,value=15.0,step=0.5,key="kc_piso_zlong")
             alto_z  = st.number_input("Altura Zócalo [m]",0.0,value=0.07,step=0.01,key="kc_piso_zalto")
             area_z  = long_z * alto_z * cant_pi
-            st.metric(" Área zócalo",f"{area_z:.3f} m²")
+            st.metric("Área zócalo",f"{area_z:.3f} m²")
         with pz2:
             st.markdown(f"** Tipo {mat_lbl}**")
             tipo_z  = st.selectbox("Tipo:",list(tipos_z.keys()),key="kc_piso_ztipo")
@@ -4177,18 +4177,18 @@ with tabs[8]:
         rz1,rz2,rz3 = st.columns(3)
         with rz1:
             st.metric(f" {mat_lbl} (físicas)",f"{n_phys_tiles} unidades")
-            st.metric(" Cajas",f"{n_cajas_z:.2f} cajas")
+            st.metric("Cajas",f"{n_cajas_z:.2f} cajas")
             st.metric("Longitud",f"{long_z*cant_pi:.1f} m")
             st.metric("Tipo",tipo_z)
             st.metric(f"Zócalos (piezas)",f"{n_zocalo_pcs}")
             st.metric("Uds/Caja",str(uds_caja_z))
         with rz2:
-            st.metric(" Adhesivo",f"{adh_bol_z:.2f} bultos")
-            st.metric(" Agua adh.",f"{adh_agua_z:.2f} lt")
+            st.metric("Adhesivo",f"{adh_bol_z:.2f} bultos")
+            st.metric("Agua adh.",f"{adh_agua_z:.2f} lt")
         with rz3:
-            st.metric(" Boquilla",f"{boq_bol_z:.2f} bultos")
-            st.metric(" Agua boq.",f"{boq_agua_z:.2f} lt")
-            st.metric(" Costo est.",f"{moneda} {costo_z:,.0f}")
+            st.metric("Boquilla",f"{boq_bol_z:.2f} bultos")
+            st.metric("Agua boq.",f"{boq_agua_z:.2f} lt")
+            st.metric("Costo est.",f"{moneda} {costo_z:,.0f}")
 
         mat_res = [
             {"elemento":f"{desc_pi or 'Zócalo'} — {mat_lbl}","unidad":"caja","cant":round(n_cajas_z,2),"precio":precio_caja_z},
@@ -4198,14 +4198,14 @@ with tabs[8]:
 
     # ─────── BOTÓN AGREGAR ───────
     st.markdown(f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;"><span style="color:#ffcc80;">{modo_pi} | {moneda}</span></div>',unsafe_allow_html=True)
-    if st.button(" Agregar Piso al Resumen", key="kc_add_piso_1", type="primary"):
+    if st.button("Agregar Piso al Resumen", key="kc_add_piso_1", type="primary"):
         st.session_state.kc_rows.extend(mat_res)
         st.success(f" {desc_pi or 'Piso'} agregado | {moneda}")
 
 
 # ══════════ TAB 10 — CIELO RASO (CM-V3.0 · Panel Yeso) ══════════
 with tabs[9]:
-    st.subheader(" Calculadora de Cielo Raso")
+    st.subheader("Calculadora de Cielo Raso")
     st.caption(f"CM-V3.0 | Panel Yeso / Drywall | {norma_sel} | {moneda}")
 
     # Element standard lengths (all in 2.44m = 8ft)
@@ -4235,7 +4235,7 @@ with tabs[9]:
         desc_cr  = st.text_input("Descripción",placeholder="Ej: Cielo sala",key="kc_cr_desc")
         area_cr  = ancho_cr * largo_cr * cant_cr
         perim_cr = 2*(ancho_cr + largo_cr) * cant_cr
-        st.metric(" Área",f"{area_cr:.2f} m²"); st.metric(" Perímetro",f"{perim_cr:.2f} m")
+        st.metric("Área",f"{area_cr:.2f} m²"); st.metric("Perímetro",f"{perim_cr:.2f} m")
 
     with cr2:
         st.markdown("** Estructura**")
@@ -4330,26 +4330,26 @@ with tabs[9]:
     rc1,rc2,rc3 = st.columns(3)
     with rc1:
         st.markdown("**Paneles y Estructura**")
-        st.metric(" Paneles",f"{n_panels_desp:.2f} unidades")
-        st.metric(" Viguetas",f"{n_viguetas} unidades")
-        st.metric(" Omegas",f"{n_omegas} unidades")
-        st.metric(" Ángulo Perimetral",f"{n_angulo} unidades")
+        st.metric("Paneles",f"{n_panels_desp:.2f} unidades")
+        st.metric("Viguetas",f"{n_viguetas} unidades")
+        st.metric("Omegas",f"{n_omegas} unidades")
+        st.metric("Ángulo Perimetral",f"{n_angulo} unidades")
     with rc2:
         st.markdown("**Acabados**")
-        st.metric(" Masilla",f"{n_masilla:.2f} cubetas")
-        st.metric(" Tornillos Estructura",f"{n_torn_est}")
-        st.metric(" Tornillos Paneles",f"{n_torn_pan}")
+        st.metric("Masilla",f"{n_masilla:.2f} cubetas")
+        st.metric("Tornillos Estructura",f"{n_torn_est}")
+        st.metric("Tornillos Paneles",f"{n_torn_pan}")
     with rc3:
         st.markdown("**Dimensiones**")
-        st.metric(" Área",f"{area_cr:.2f} m²")
-        st.metric(" Perímetro",f"{perim_cr:.2f} m")
-        st.metric(" Costo total",f"{moneda} {costo_cr:,.0f}")
+        st.metric("Área",f"{area_cr:.2f} m²")
+        st.metric("Perímetro",f"{perim_cr:.2f} m")
+        st.metric("Costo total",f"{moneda} {costo_cr:,.0f}")
 
     st.markdown(
         f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;">'
         f'<span style="color:#ffcc80;">Panel Yeso | {panel_t} | {area_cr:.1f}m² | {moneda} {costo_cr:,.0f}</span></div>',
         unsafe_allow_html=True)
-    if st.button(" Agregar Cielo Raso al Resumen", key="kc_add_cr", type="primary"):
+    if st.button("Agregar Cielo Raso al Resumen", key="kc_add_cr", type="primary"):
         lb = desc_cr or "Cielo Raso"
         st.session_state.kc_rows.extend([
             {"elemento":f"{lb} — Paneles ({panel_t})","unidad":"unidad","cant":round(n_panels_desp,2),"precio":precio_panel},
@@ -4366,7 +4366,7 @@ with tabs[9]:
 
 # ══════════ TAB 3 — VARILLAS ══════════
 with tabs[10]:
-    st.subheader(f" Calculadora de {R['varilla']}"); st.caption(f"Base de datos CM-V3.0 | {norma_sel}")
+    st.subheader(f"Calculadora de {R['varilla']}"); st.caption(f"Base de datos CM-V3.0 | {norma_sel}")
     v1,v2,v3,v4=st.columns(4)
     with v1:
         var_nombres=[v["nombre"] for v in VARILLAS]
@@ -4380,7 +4380,7 @@ with tabs[10]:
         bar_len=float(bars_by_length.split()[0])
     with v4:
         st.metric("⚖ Peso por metro",f"{vkd['kg_m']:.3f} kg/m")
-        st.metric(" Peso por barra",f"{vkd['kg_m']*bar_len:.2f} kg/{int(bar_len)}m")
+        st.metric("Peso por barra",f"{vkd['kg_m']*bar_len:.2f} kg/{int(bar_len)}m")
     
     # ======= DIAGRAMA TÉCNICO PROFESIONAL DE VARILLA =======
     _w_svg_v, _h_svg_v = 500, 160
@@ -4400,11 +4400,11 @@ with tabs[10]:
     va1.metric(" Longitud + traslape",f"{long_total:.2f} m"); va2.metric(f" Barras {int(bar_len)}m",f"{barras_total}")
     va3.metric("⚖ Peso total",f"{kg_total:.2f} kg"); va4.metric("⚖ Toneladas",f"{kg_total/1000:.3f} ton")
     va5.metric(" Costo est.",f"{moneda} {costo_acero:,.0f}")
-    with st.expander(" Tabla completa de varillas"):
+    with st.expander("Tabla completa de varillas"):
         df_var=pd.DataFrame(VARILLAS)
         df_var["Precio/barra 6m"]=df_var["kg_6m"].apply(lambda x: f"{moneda} {x*p['acero_kg']:,.0f}")
         st.dataframe(df_var.rename(columns={"nombre":"Varilla","diam_mm":"Ø mm","diam_pulg":"Ø pulg","kg_6m":"kg/6m","kg_m":"kg/m"}),use_container_width=True)
-    if st.button(f" Agregar {R['varilla']} al Resumen",key="kc_add_var",type="primary"):
+    if st.button(f"Agregar {R['varilla']} al Resumen",key="kc_add_var",type="primary"):
         st.session_state.kc_rows.append({"elemento":f"{R['varilla']} {var_sel}","unidad":"kg","cant":round(kg_total,2),"precio":p["acero_kg"]})
         st.success(f" {kg_total:.2f} kg de {var_sel} agregados")
 
@@ -4414,7 +4414,7 @@ with tabs[11]:
     p1,p2,p3=st.columns(3)
     with p1:
         lbl_area = f"{_t('Área', 'Area')} [{_u('m²','sq ft')}]"
-        area_pin=st.number_input(lbl_area,min_value=1.0,value=50.0 if st.session_state["unidades"]=="Métrico" else 500.0,step=5.0,key="kc_area_pin")
+        area_pin=st.number_input(lbl_area,min_value=1.0,value=50.0 if st.session_state["unidades"]=="Métrico"else 500.0,step=5.0,key="kc_area_pin")
         if "kc_manos_pin" not in st.session_state:
             st.session_state["kc_manos_pin"] = 2
         st.radio(_t("Número de manos:", "Number of coats:"), [1, 2, 3],
@@ -4474,7 +4474,7 @@ with tabs[11]:
 
 # ══════════ TAB 6 — CUBIERTA ══════════
 with tabs[12]:
-    st.subheader(f" Calculadora de {R['cubierta']}")
+    st.subheader(f"Calculadora de {R['cubierta']}")
     CUBIERTA_TIPOS={"Lámina ZincAlum (0.80m útil)":{"ancho_util":0.80,"tipo":"lamina"},"Lámina Galvanizada (0.80m útil)":{"ancho_util":0.80,"tipo":"lamina"},
                     "Teja española (5 und/m²)":{"und_m2":5,"tipo":"teja"},"Teja plana (6 und/m²)":{"und_m2":6,"tipo":"teja"},"Teja ondulada (7 und/m²)":{"und_m2":7,"tipo":"teja"}}
     cu1,cu2=st.columns(2)
@@ -4501,17 +4501,17 @@ with tabs[12]:
     import streamlit.components.v1 as _stc_c
     _stc_c.html(_html_c, height=210, scrolling=False)
     if ckd["tipo"]=="lamina":
-        laminas=math.ceil(area_t_cub/ckd["ancho_util"]); st.metric(" Láminas",f"{laminas} und")
-        if st.button(" Agregar Cubierta al Resumen",key="kc_add_cub",type="primary"):
+        laminas=math.ceil(area_t_cub/ckd["ancho_util"]); st.metric("Láminas",f"{laminas} und")
+        if st.button("Agregar Cubierta al Resumen",key="kc_add_cub",type="primary"):
             st.session_state.kc_rows.append({"elemento":f"Cubierta — {cub_tipo}","unidad":"und","cant":laminas,"precio":p.get("lamina",p["ceramica"]*5)}); st.success(f" {laminas} láminas agregadas")
     else:
-        und_cub=math.ceil(area_t_cub*ckd["und_m2"]); st.metric(" Tejas",f"{und_cub:,} und")
-        if st.button(" Agregar Cubierta al Resumen",key="kc_add_cub2",type="primary"):
+        und_cub=math.ceil(area_t_cub*ckd["und_m2"]); st.metric("Tejas",f"{und_cub:,} und")
+        if st.button("Agregar Cubierta al Resumen",key="kc_add_cub2",type="primary"):
             st.session_state.kc_rows.append({"elemento":f"Cubierta — {cub_tipo}","unidad":"und","cant":und_cub,"precio":p.get("teja",p["ceramica"]*0.3)}); st.success(f" {und_cub} tejas agregadas")
 
 # ══════════ TAB 7 — IMPORTAR EXCEL ══════════
 with tabs[13]:
-    st.subheader(" Importar desde Excel")
+    st.subheader("Importar desde Excel")
     template_rows=[
         {"Elemento":"Columna C1","Tipo":"Concreto","Volumen_m3":0.5,"Area_m2":"","Longitud_m":"","fc_MPa":21,"Dosificacion":"1:2:4"},
         {"Elemento":"Viga V1","Tipo":"Concreto","Volumen_m3":0.8,"Area_m2":"","Longitud_m":"","fc_MPa":21,"Dosificacion":"1:2:4"},
@@ -4519,8 +4519,8 @@ with tabs[13]:
         {"Elemento":"Varilla N4","Tipo":"Acero","Volumen_m3":"","Area_m2":"","Longitud_m":120,"fc_MPa":"","Dosificacion":"N4 - 1/2\""},
     ]
     tmpl_buf=BytesIO(); pd.DataFrame(template_rows).to_excel(tmpl_buf,index=False,engine="xlsxwriter"); tmpl_buf.seek(0)
-    st.download_button(" Descargar Plantilla Excel",tmpl_buf,file_name="Konte_Plantilla.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    up_file=st.file_uploader(" Subir Excel:",type=["xlsx","xls"],key="kc_upload")
+    st.download_button("Descargar Plantilla Excel",tmpl_buf,file_name="Konte_Plantilla.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    up_file=st.file_uploader("Subir Excel:",type=["xlsx","xls"],key="kc_upload")
     if up_file:
         try:
             df_up=pd.read_excel(up_file); st.dataframe(df_up,use_container_width=True); new_rows=[]
@@ -4541,7 +4541,7 @@ with tabs[13]:
                     area_i=float(row.get("Area_m2",0) or 0)
                     new_rows.append({"elemento":elem,"unidad":"m²","cant":area_i,"precio":p["bloque"]*12.5})
             if new_rows: st.session_state.kc_rows.extend(new_rows); st.success(f" {len(new_rows)} materiales importados"); st.dataframe(pd.DataFrame(new_rows),use_container_width=True)
-        except Exception as e: st.error(f" Error: {e}")
+        except Exception as e: st.error(f"Error: {e}")
 
 # ══════════ TAB RESUMEN — RESUMEN Y EXPORTAR ══════════
 
@@ -4549,7 +4549,7 @@ with tabs[13]:
 with tabs[16]:
     st.subheader("♂ Factor de Rendimiento (Mano de Obra)")
     st.caption("Consulte tiempos requeridos (días) según volumen de obra, basados en 'Rendimientos.xlsx'.")
-    search_rend = st.text_input(" Buscar actividad:")
+    search_rend = st.text_input("Buscar actividad:")
     
     df_rend = pd.DataFrame(RENDIMIENTOS_MO)
     if search_rend:
@@ -4575,7 +4575,7 @@ with tabs[16]:
 
 # ══════════ TAB 17 — PRESUPUESTO ══════════
 with tabs[17]:
-    st.subheader(" Generador de Presupuestos APU")
+    st.subheader("Generador de Presupuestos APU")
     st.caption("Presupuesto preconfigurado con precios unitarios, mano de obra, IVA y AIU según la región seleccionada.")
 
     # ─ Parametros regionales ─────────────────────────────────────────────────
@@ -4681,7 +4681,7 @@ with tabs[17]:
     i3.metric("Jornal c/prestaciones", f"{moneda} {jd:,.0f}")
     i4.metric("IVA", f"{_iva*100:.0f}%")
     i5.metric("AIU", f"{_aiu*100:.0f}%")
-    st.caption(f" Los Precios Unitarios (PU) calculados abajo incluyen Materiales + Mano de Obra + AIU + IVA según normativas de {pais}.")
+    st.caption(f"Los Precios Unitarios (PU) calculados abajo incluyen Materiales + Mano de Obra + AIU + IVA según normativas de {pais}.")
 
     st.markdown("Edite cantidades. **TOTAL = CANTIDAD × PU**. Exporte a Excel para el formato presupuestos.")
 
@@ -4702,16 +4702,16 @@ with tabs[17]:
     try:
         _d = edited_pres.copy()
         _tot = _d[_d["PU"] > 0]["CANTIDAD"] * _d[_d["PU"] > 0]["PU"]
-        st.metric(f" TOTAL PRESUPUESTO PRELIMINAR ESTIMADO", f"{moneda} {_tot.sum():,.0f}")
+        st.metric(f"TOTAL PRESUPUESTO PRELIMINAR ESTIMADO", f"{moneda} {_tot.sum():,.0f}")
     except: pass
 
     bp1, bp2 = st.columns(2)
     with bp1:
-        if st.button(" Guardar cambios", key="btn_sv_pres", use_container_width=True):
+        if st.button("Guardar cambios", key="btn_sv_pres", use_container_width=True):
             st.session_state.kc_presupuesto = edited_pres
-            st.success(" Actualizado")
+            st.success("Actualizado")
     with bp2:
-        if st.button(" Restaurar APU original", key="btn_reset_pres", use_container_width=True, type="secondary"):
+        if st.button("Restaurar APU original", key="btn_reset_pres", use_container_width=True, type="secondary"):
             del st.session_state["kc_presupuesto"]
             del st.session_state["kc_pres_pais"]
             st.rerun()
@@ -4728,7 +4728,7 @@ with tabs[17]:
 
 # ══════════ TAB 18 — RESUMEN Y EXPORTAR ══════════
 with tabs[18]:
-    st.subheader(" Resumen de Materiales y Exportación")
+    st.subheader("Resumen de Materiales y Exportación")
     if not st.session_state.kc_rows:
         st.info("ℹ Agrega materiales desde cualquier tab de cálculo y aparecerán aquí.")
     else:
@@ -4740,7 +4740,7 @@ with tabs[18]:
             df_d=df_res.copy()
             df_d["cant"]=df_d["cant"].apply(lambda x:f"{x:,.2f}"); df_d["precio"]=df_d["precio"].apply(lambda x:f"{moneda} {x:,.2f}")
             df_d["subtotal"]=df_d["subtotal"].apply(lambda x:f"{moneda} {x:,.2f}"); df_d.columns=["Elemento","Unidad","Cantidad","P. Unit.","Subtotal"]
-            st.dataframe(df_d,use_container_width=True,height=350); st.metric(" TOTAL ESTIMADO",f"{moneda} {total_global:,.2f}")
+            st.dataframe(df_d,use_container_width=True,height=350); st.metric("TOTAL ESTIMADO",f"{moneda} {total_global:,.2f}")
         with col_chart:
             st.markdown("####  Distribución de Costos")
             df_grp=df_res.groupby("elemento")["subtotal"].sum().nlargest(10)
@@ -4751,13 +4751,13 @@ with tabs[18]:
         st.markdown("---"); ex1,ex2,ex3=st.columns(3)
         with ex1:
             excel_buf=build_excel_resumen(st.session_state.kc_rows,p,R)
-            st.download_button(" Exportar a Excel",excel_buf,file_name=f"Konte_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+            st.download_button("Exportar a Excel",excel_buf,file_name=f"Konte_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True)
         with ex2:
             csv_str=df_res.to_csv(index=False).encode("utf-8")
-            st.download_button(" Exportar a CSV",csv_str,file_name=f"Konte_{datetime.datetime.now().strftime('%Y%m%d')}.csv",mime="text/csv",use_container_width=True)
+            st.download_button("Exportar a CSV",csv_str,file_name=f"Konte_{datetime.datetime.now().strftime('%Y%m%d')}.csv",mime="text/csv",use_container_width=True)
         with ex3:
-            if st.button(" Limpiar Resumen",use_container_width=True,type="secondary"):
+            if st.button("Limpiar Resumen",use_container_width=True,type="secondary"):
                 st.session_state.kc_rows=[]
                 save_state()
                 st.rerun()

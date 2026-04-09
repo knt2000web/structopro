@@ -358,8 +358,8 @@ with tab_C:
         if P_u <= phi_Pn:
             st.success(f" ¡Aprobado! (FS = {phi_Pn/P_u:.2f})")
         else:
-            st.error(" No Aprobado por Compresión Axial / Pandeo.")
-            st.warning(" **Recomendación:** Aumente el área de la sección incrementando **bf**, **d**, o sus espesores (**tf**, **tw**). También puede reducir la longitud no arriostrada **Lc**.")
+            st.error("No Aprobado por Compresión Axial / Pandeo.")
+            st.warning("**Recomendación:** Aumente el área de la sección incrementando **bf**, **d**, o sus espesores (**tf**, **tw**). También puede reducir la longitud no arriostrada **Lc**.")
         st.pyplot(fig_c, use_container_width=False)
 
         # Agregar al despiece si se desea
@@ -431,8 +431,8 @@ with tab_F:
         if Mu <= phi_Mn:
             st.success(f" ¡Viga Cumple a Flexión! (FS={phi_Mn/Mu:.2f})")
         else:
-            st.error(" Viga falla por Flexión / LTB.")
-            st.warning(" **Recomendación:** Para flexión, lo más eficiente es aumentar la inercia incrementando el peralte **d**. También ayuda ensanchar **bf** y aumentar espesores, o arriostrar más seguido reduciendo **Lb**.")
+            st.error("Viga falla por Flexión / LTB.")
+            st.warning("**Recomendación:** Para flexión, lo más eficiente es aumentar la inercia incrementando el peralte **d**. También ayuda ensanchar **bf** y aumentar espesores, o arriostrar más seguido reduciendo **Lb**.")
             
         # Add pyplot W-Shape here to visualize real-time
         fig_f = plot_W(d_f, bf_f, tw_f, tf_f)
@@ -522,8 +522,8 @@ with tab_CF:
         if Pu_cf <= phi_Pn_cf:
             st.success(" ¡El perfil conformado en frío CUMPLE!")
         else:
-            st.error(" El perfil falla por compresión / pandeo global o local.")
-            st.warning(" **Recomendación:** Aumente el espesor de la lámina **t**, agrande las dimensiones **h** o **b**, o incluya labios rigidizadores para mitigar el pandeo local.")
+            st.error("El perfil falla por compresión / pandeo global o local.")
+            st.warning("**Recomendación:** Aumente el espesor de la lámina **t**, agrande las dimensiones **h** o **b**, o incluya labios rigidizadores para mitigar el pandeo local.")
         st.pyplot(fig_cf, use_container_width=False)
 
         if st.button(_t("Agregar este perfil al despiece", "Add this profile to the list"), key="btn_add_cf_section"):
@@ -542,10 +542,10 @@ with tab_CF:
 # TAB 5: EXPORTACIONES GLOBALES
 # ─────────────────────────────────────────────
 with tab_E:
-    st.header(_t(" Exportaciones Globales", " Global Exports"))
+    st.header(_t("Exportaciones Globales", " Global Exports"))
 
     # Mostrar despiece acumulado
-    st.subheader(_t(" Despiece de Acero", " Steel Cutting List"))
+    st.subheader(_t("Despiece de Acero", " Steel Cutting List"))
     if st.session_state.steel_despiece:
         df_desp = pd.DataFrame(st.session_state.steel_despiece)
         st.dataframe(df_desp.style.format({"Longitud (m)": "{:.2f}", "Peso (kg)": "{:.2f}"}), use_container_width=True, hide_index=False)
@@ -569,7 +569,7 @@ with tab_E:
         st.info(_t("Aún no hay elementos en el despiece. Agrega perfiles desde las pestañas anteriores.", "No elements in the list yet. Add profiles from the previous tabs."))
 
     st.markdown("---")
-    st.subheader(_t(" Memoria de Cálculo (DOCX)", " Calculation Report (DOCX)"))
+    st.subheader(_t("Memoria de Cálculo (DOCX)", " Calculation Report (DOCX)"))
     if st.button(_t("Generar Memoria DOCX", "Generate DOCX Report")):
         doc = Document()
         doc.add_heading(_t(f"Memoria de Estructuras Metálicas - {norma_sel}", f"Steel Structures Report - {norma_sel}"), 0)
@@ -610,10 +610,10 @@ with tab_E:
         doc_mem = io.BytesIO()
         doc.save(doc_mem)
         doc_mem.seek(0)
-        st.download_button(_t(" Descargar Memoria", " Download Report"), data=doc_mem, file_name="Memoria_Acero.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(_t("Descargar Memoria", " Download Report"), data=doc_mem, file_name="Memoria_Acero.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
     st.markdown("---")
-    st.subheader(_t(" Presupuesto APU", " APU Budget"))
+    st.subheader(_t("Presupuesto APU", " APU Budget"))
     apu = st.session_state.get("apu_config", {
         "moneda": "COP$",
         "costo_dia_mo": 69333.33,
@@ -680,11 +680,11 @@ with tab_E:
         worksheet.write(row, 0, "TOTAL PRESUPUESTO", workbook.add_format({'bold': True}))
         worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
     output_excel.seek(0)
-    st.download_button(_t(" Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel,
+    st.download_button(_t("Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel,
                        file_name="APU_Acero.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     st.markdown("---")
-    st.subheader(_t(" DXF de Sección", " Section DXF"))
+    st.subheader(_t("DXF de Sección", " Section DXF"))
     st.write(_t("Genera un archivo DXF con la sección transversal del último perfil W definido en la pestaña de propiedades.", "Generates a DXF file with the cross-section of the last W-shape defined in the properties tab."))
     try:
         from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
@@ -726,7 +726,7 @@ with tab_E:
                 dxf_rotulo(msp_st, _cam_m, -bfw/2*sc, -dw/2*sc - 0.25, rot_w=max(bfw*sc*2, 0.2), rot_h=0.15, escala=20)
             out_dxf = io.StringIO()
             doc_dxf.write(out_dxf)
-            st.download_button(_t(" Descargar Perfil_W.dxf", " Download Perfil_W.dxf"),
+            st.download_button(_t("Descargar Perfil_W.dxf", " Download Perfil_W.dxf"),
                                data=out_dxf.getvalue().encode('utf-8'),
                                file_name=f"Perfil_W_{show_mm(dw):.0f}x{show_mm(bfw):.0f}.dxf", mime="application/dxf")
         else:

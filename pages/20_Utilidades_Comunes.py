@@ -12,7 +12,7 @@ def _t(es, en):
     return en if lang == "English" else es
 
 st.set_page_config(page_title=_t("Utilidades Comunes", "Common Utilities"), layout="wide")
-st.title(_t(" Herramientas Comunes", " Common Tools"))
+st.title(_t("Herramientas Comunes", " Common Tools"))
 st.markdown(_t("Transformación de Unidades Estructurales, Conversión de Moneda y Utilidades Rápidas.", "Structural Unit Conversion, Currency Exchange, and Quick Utilities."))
 
 # ─────────────────────────────────────────────
@@ -206,7 +206,7 @@ with tab1:
 
     # Tabla rápida de equivalencias
     st.markdown("---")
-    st.write(_t(" **Tabla Rápida de Equivalencias (1 unidad base):**", " **Quick Equivalency Table (1 base unit):**"))
+    st.write(_t("**Tabla Rápida de Equivalencias (1 unidad base):**", " **Quick Equivalency Table (1 base unit):**"))
     quick_dict = {}
     for target in unidades:
         v_base = 1.0 * CONV_DICT[categoria][unit_in]
@@ -216,7 +216,7 @@ with tab1:
     st.dataframe(df_quick.style.format("{:,.5g}"), use_container_width=True)
     
     # Botón exportar tabla a Excel
-    if st.button(_t(" Exportar tabla de conversión a Excel", " Export conversion table to Excel")):
+    if st.button(_t("Exportar tabla de conversión a Excel", " Export conversion table to Excel")):
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             # Hoja de conversión actual
@@ -231,7 +231,7 @@ with tab1:
             df_all = pd.DataFrame(all_factors)
             df_all.to_excel(writer, sheet_name="Todos los factores", index=False)
         output.seek(0)
-        st.download_button(_t(" Descargar Excel", " Download Excel"), data=output,
+        st.download_button(_t("Descargar Excel", " Download Excel"), data=output,
                            file_name=f"Conversiones_{categoria}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # =============================================================================
@@ -267,7 +267,7 @@ with tab2:
         monto = st.number_input(_t("Cantidad a convertir", "Amount to convert"), value=st.session_state.get("cur_monto", 1.0), key="cur_monto")
     with col_cur3:
         # Obtener tasa
-        if st.button(_t(" Actualizar tasa", " Update rate"), key="update_rate"):
+        if st.button(_t("Actualizar tasa", " Update rate"), key="update_rate"):
             st.session_state.cur_rate = get_exchange_rate(base_code, target_code)
             st.rerun()
         if "cur_rate" not in st.session_state:
@@ -280,7 +280,7 @@ with tab2:
     
     # Mostrar tasas cruzadas
     st.markdown("---")
-    st.write(_t(" **Tasas de cambio cruzadas (frente al USD):**", " **Cross exchange rates (vs USD):**"))
+    st.write(_t("**Tasas de cambio cruzadas (frente al USD):**", " **Cross exchange rates (vs USD):**"))
     # Obtener tasas para todas las monedas respecto al USD (o a la base)
     rates_usd = {}
     for cur in monedas:
@@ -298,7 +298,7 @@ with tab2:
     st.dataframe(df_rates.style.format({_t("Tasa USD", "Rate USD"): "{:.6f}"}), use_container_width=True, hide_index=True)
     
     # Exportar a Excel
-    if st.button(_t(" Exportar tasas de cambio a Excel", " Export exchange rates to Excel")):
+    if st.button(_t("Exportar tasas de cambio a Excel", " Export exchange rates to Excel")):
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df_rates.to_excel(writer, sheet_name="Tasas USD", index=False)
@@ -312,7 +312,7 @@ with tab2:
             })
             df_conv.to_excel(writer, sheet_name="Conversión", index=False)
         output.seek(0)
-        st.download_button(_t(" Descargar Excel", " Download Excel"), data=output,
+        st.download_button(_t("Descargar Excel", " Download Excel"), data=output,
                            file_name="Tasas_Cambio.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # =============================================================================

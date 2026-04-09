@@ -304,11 +304,11 @@ header[data-testid="stHeader"]{background:transparent}
     st.markdown('<p class="section-title">Cómo comenzar</p>', unsafe_allow_html=True)
     c1s, c2s, c3s = st.columns(3)
     with c1s:
-        st.markdown("""<div class="step-card"><div class="step-num" style="background:#2ea043">1</div><div class="step-title">Configurar norma global</div><p class="step-desc">En la barra lateral selecciona la normativa y el nivel sísmico. Todos los módulos leen esta configuración automáticamente — fc, fy, factores φ y referencias normativas se actualizan al instante.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="step-card"><div class="step-num"style="background:#2ea043">1</div><div class="step-title">Configurar norma global</div><p class="step-desc">En la barra lateral selecciona la normativa y el nivel sísmico. Todos los módulos leen esta configuración automáticamente — fc, fy, factores φ y referencias normativas se actualizan al instante.</p></div>""", unsafe_allow_html=True)
     with c2s:
-        st.markdown("""<div class="step-card"><div class="step-num" style="background:#1f6feb">2</div><div class="step-title">Seleccionar módulo</div><p class="step-desc">Usa el menú desplegable en la parte superior de la barra lateral. Cada módulo tiene su propio flujo de ingreso de datos, pestañas de resultados, sección 2D/3D y generación de memoria técnica.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="step-card"><div class="step-num"style="background:#1f6feb">2</div><div class="step-title">Seleccionar módulo</div><p class="step-desc">Usa el menú desplegable en la parte superior de la barra lateral. Cada módulo tiene su propio flujo de ingreso de datos, pestañas de resultados, sección 2D/3D y generación de memoria técnica.</p></div>""", unsafe_allow_html=True)
     with c3s:
-        st.markdown("""<div class="step-card"><div class="step-num" style="background:#d29922">3</div><div class="step-title">Guardar y exportar</div><p class="step-desc">Guarda el proyecto en Supabase Cloud con nombre personalizado. Genera la memoria DOCX, plano DXF o modelo IFC-BIM desde la pestaña de exportación de cada módulo. Los datos persisten entre sesiones.</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="step-card"><div class="step-num"style="background:#d29922">3</div><div class="step-title">Guardar y exportar</div><p class="step-desc">Guarda el proyecto en Supabase Cloud con nombre personalizado. Genera la memoria DOCX, plano DXF o modelo IFC-BIM desde la pestaña de exportación de cada módulo. Los datos persisten entre sesiones.</p></div>""", unsafe_allow_html=True)
 
     # ── CUADRO DE MANDO (historial sesión) ────────────────────────────────────
     st.markdown('<div class="hs-divider"></div>', unsafe_allow_html=True)
@@ -316,7 +316,7 @@ header[data-testid="stHeader"]{background:transparent}
     if st.session_state.historial_disenos:
         df_hist = pd.DataFrame(st.session_state.historial_disenos)
         st.dataframe(df_hist, use_container_width=True, hide_index=True)
-        if st.button(" Limpiar Historial", key="btn_limpiar_home"):
+        if st.button("Limpiar Historial", key="btn_limpiar_home"):
             st.session_state.historial_disenos = []
             st.rerun()
     else:
@@ -465,7 +465,7 @@ with st.sidebar.expander(" Cargar de la Nube", expanded=False):
     except Exception as e:
         err_str = str(e)
         if "404" in err_str and "proyectos" in err_str:
-            st.error(" La tabla 'proyectos' no existe en tu base de datos de Supabase.")
+            st.error("La tabla 'proyectos' no existe en tu base de datos de Supabase.")
             with st.expander(" ¿Cómo solucionar este error?"):
                 st.markdown("Ve a tu panel de **Supabase**, entra a **SQL Editor**, copia y ejecuta este código para crear la tabla necesaria:")
                 st.code('''CREATE TABLE proyectos (

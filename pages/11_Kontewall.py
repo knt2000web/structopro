@@ -24,10 +24,10 @@ if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = True
 _c1, _c2 = st.sidebar.columns([1, 3])
 with _c1:
-    if st.button("" if st.session_state.dark_mode else "☀", key="kw_dm"):
+    if st.button(""if st.session_state.dark_mode else "☀", key="kw_dm"):
         st.session_state.dark_mode = not st.session_state.dark_mode
 with _c2:
-    st.caption("Modo oscuro " if st.session_state.dark_mode else "Modo claro ☀")
+    st.caption("Modo oscuro "if st.session_state.dark_mode else "Modo claro ☀")
 
 _BG     = "#0e1117" if st.session_state.dark_mode else "#FFFFFF"
 _FG     = "#FFFFFF" if st.session_state.dark_mode else "#111111"
@@ -63,7 +63,7 @@ st.caption(
     "COVENIN 1753 · NB 1225001 · CIRSOC 201"
 )
 
-with st.expander(" KonteWall — Solución Integral para el Análisis y Diseño de Muros de Contención", expanded=False):
+with st.expander("KonteWall — Solución Integral para el Análisis y Diseño de Muros de Contención", expanded=False):
     st.markdown(
         "## ¿Qué es KonteWall?\n\n"
         "**KonteWall** es una plataforma avanzada de ingeniería para el **diseño, análisis y "
@@ -439,7 +439,7 @@ if st.sidebar.button(_t(" Calcular Muro", " Design Wall"), type="primary"):
     st.session_state["calculado"] = True
 
 if not st.session_state.get("calculado", False):
-    st.info(_t(" Configure los parámetros y pulse **Calcular Muro**",
+    st.info(_t("Configure los parámetros y pulse **Calcular Muro**",
                " Set parameters and press **Design Wall**"))
     st.stop()
 
@@ -681,11 +681,11 @@ with st.expander("01. Datos Generales y Predimensionamiento", expanded=True):
         st.write(f"Diámetro asumido: 5/8\" (d_b = {db_supuesto:.2f} cm)")
         st.write(f"Longitud de anclaje requerida Ldh = {Ldh_supuesto*100:.2f} cm")
         st.write(f"Altura necesaria de zapata: hz_necesaria = Ldh + rec = {hz_necesaria*100:.2f} cm")
-        st.write(f"Altura adoptada: hz = {hz*100:.2f} cm → {' OK' if hz >= hz_necesaria else '⚠ Aumentar'}")
+        st.write(f"Altura adoptada: hz = {hz*100:.2f} cm → {'OK' if hz >= hz_necesaria else '⚠ Aumentar'}")
     with colB:
         st.markdown("**Longitud de la base**")
         st.write(f"Rango recomendado: H/2 = {Ht/2:.2f} m  a  2H/3 = {2*Ht/3:.2f} m")
-        st.write(f"Valor adoptado: B = {B:.2f} m → {' OK' if Ht/2 <= B <= 2*Ht/3 else '⚠ Revisar'}")
+        st.write(f"Valor adoptado: B = {B:.2f} m → {'OK' if Ht/2 <= B <= 2*Ht/3 else '⚠ Revisar'}")
 
     st.markdown("---")
     st.markdown("### Verificación de dimensiones")
@@ -717,7 +717,7 @@ with st.expander("02. Coeficientes de Empuje Coulomb / Mononobe-Okabe", expanded
              r"\left(1+\sqrt{\frac{\sin(\phi_1+\delta)\sin(\phi_1-\alpha)}{\sin(\beta-\delta)\sin(\alpha+\beta)}}\right)^2}")
     st.caption("Con β = 90° (muro vertical)")
 
-with st.expander("03. Verificación de Estabilidad" + (" + Sismo Mononobe-Okabe" if sismo else ""), expanded=True):
+with st.expander("03. Verificación de Estabilidad" + (" + Sismo Mononobe-Okabe"if sismo else ""), expanded=True):
     cf, cv = st.columns(2)
     with cf:
         st.markdown("**Fuerzas Horizontales [kg/m]**")
@@ -982,7 +982,7 @@ with st.expander(f"07. Diseño Talón Delantero (Punta) — b={b:.2f}m", expande
 
     with c2:
         st.markdown("**Cálculo Mu Punta**")
-        st.latex(r"M_u = 1.7\left(\frac{5 q_1 b^2}{6} - \frac{q_1' b^2}{3}\right)")
+        st.latex(r"M_u = 1.7\left(\frac{5 q_1 b^2}{6} - \frac{q_1'b^2}{3}\right)")
         st.write(f"**Mu = {Mupu:.2f} kg·m/m**  |  d = {dz:.2f} cm")
         st.write(f"As req = **{Aspu:.2f} cm²/m**")
         st.table(tabla_barras(Aspu))
@@ -1708,7 +1708,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
 
         with col_exp1:
             st.markdown("####  Plano DXF 2D")
-            if st.button(" Generar DXF", key="btn_dxf"):
+            if st.button("Generar DXF", key="btn_dxf"):
                 try:
                     import ezdxf
                     try:
@@ -1863,14 +1863,14 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                         buf,
                         file_name=f"KonteWall_{Ht:.1f}m.dxf",
                         mime="application/octet-stream")
-                    st.success(" DXF 2D generado con capas mejoradas y cotas completas")
+                    st.success("DXF 2D generado con capas mejoradas y cotas completas")
                 except Exception as e:
                     st.error(f"Error DXF: {e}")
 
         # DOCX y XLSX (se mantienen igual que antes, no se repiten por brevedad)
         with col_exp2:
             st.markdown("####  Memoria Técnica DOCX")
-            if st.button(" Generar DOCX", key="btn_docx"):
+            if st.button("Generar DOCX", key="btn_docx"):
                 try:
                     from docx import Document as DocxDoc
                     from docx.shared import Pt
@@ -2028,13 +2028,13 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                         buf_docx,
                         file_name=f"KonteWall_Memoria_Ht{Ht:.1f}m.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                    st.success(" Memoria técnica generada")
+                    st.success("Memoria técnica generada")
                 except Exception as edocx:
                     st.error(f"Error DOCX: {edocx}")
 
         with col_exp3:
             st.markdown("####  Hoja de Cálculo XLSX")
-            if st.button(" Generar XLSX", key="btn_xlsx"):
+            if st.button("Generar XLSX", key="btn_xlsx"):
                 try:
                     import openpyxl
                     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -2161,7 +2161,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                         buf_xlsx,
                         file_name=f"KonteWall_Calculo_Ht{Ht:.1f}m.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    st.success(" Hoja de cálculo generada")
+                    st.success("Hoja de cálculo generada")
                 except Exception as exlsx:
                     st.error(f"Error XLSX: {exlsx}")
 

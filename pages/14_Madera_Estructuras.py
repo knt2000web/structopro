@@ -78,7 +78,7 @@ val_G = st.sidebar.number_input(_t("Gravedad Específica G", "Specific Gravity G
 # ─────────────────────────────────────────────
 # T1: CALCULADORA DE PIES MADEREROS
 # ─────────────────────────────────────────────
-with st.expander(_t(" 1. Calculadora de Pies² de Madera (Board Feet)", " 1. Board Feet Calculator"), expanded=False):
+with st.expander(_t("1. Calculadora de Pies² de Madera (Board Feet)", " 1. Board Feet Calculator"), expanded=False):
     st.info(_t("Ingresa el espesor y ancho en pulgadas, y el largo de la pieza (en pies o metros).", "Enter thickness/width in inches, and length."))
     
     col1, col2, col3, col4 = st.columns(4)
@@ -118,7 +118,7 @@ with st.expander(_t(" 1. Calculadora de Pies² de Madera (Board Feet)", " 1. Boa
 # ─────────────────────────────────────────────
 # T2: DISEÑO DE VIGAS DE MADERA
 # ─────────────────────────────────────────────
-with st.expander(_t(" 2. Diseño de Vigas de Madera (Flexión y Cortante)", " 2. Timber Beam Design (Flexure and Shear)"), expanded=False):
+with st.expander(_t("2. Diseño de Vigas de Madera (Flexión y Cortante)", " 2. Timber Beam Design (Flexure and Shear)"), expanded=False):
     v1, v2, v3 = st.columns(3)
     with v1:
         span_L = st.number_input(_t("Luz Viga L [m]", "Beam Span L [m]"), 1.0, 15.0, st.session_state.get("m_v_L", 4.0), 0.1, key="m_v_L")
@@ -175,7 +175,7 @@ with st.expander(_t(" 2. Diseño de Vigas de Madera (Flexión y Cortante)", " 2.
 # ─────────────────────────────────────────────
 # T3: COLUMNAS DE MADERA A COMPRESIÓN PURA
 # ─────────────────────────────────────────────
-with st.expander(_t(" 3. Diseño de Columnas de Madera (Compresión)", " 3. Timber Column Design (Compression)"), expanded=False):
+with st.expander(_t("3. Diseño de Columnas de Madera (Compresión)", " 3. Timber Column Design (Compression)"), expanded=False):
     c1, c2, c3 = st.columns(3)
     with c1:
         P_ax = st.number_input("Carga Axial Actuante P [kN]", 5.0, 500.0, st.session_state.get("m_c_P", 20.0), 5.0, key="m_c_P")
@@ -189,7 +189,7 @@ with st.expander(_t(" 3. Diseño de Columnas de Madera (Compresión)", " 3. Timb
         st.markdown(rf"**$\lambda = kL/d$:** {esbeltez_l:.2f}")
     
     if esbeltez_l > 50:
-        st.error(_t(" Columna muy esbelta (λ > 50). ¡Aumentar sección!", " Column too slender (λ > 50)!"))
+        st.error(_t("Columna muy esbelta (λ > 50). ¡Aumentar sección!", " Column too slender (λ > 50)!"))
     else:
         F_cE = (0.822 * val_E) / (esbeltez_l**2)
         ratio_alpha = F_cE / val_Fc; c_factor = 0.8
@@ -220,7 +220,7 @@ with st.expander(_t(" 3. Diseño de Columnas de Madera (Compresión)", " 3. Timb
 # ─────────────────────────────────────────────
 # T4: UNIONES CON CLAVOS (NDS)
 # ─────────────────────────────────────────────
-with st.expander(_t(" 4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4. Nail Connection (Lateral Shear)"), expanded=False):
+with st.expander(_t("4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4. Nail Connection (Lateral Shear)"), expanded=False):
     st.info(_t("Según NDS 2018, la resistencia de diseño lateral para clavos se ajusta por factores de duración de carga, humedad, temperatura y grupo.", "Based on NDS 2018, design lateral resistance for nails is adjusted by load duration, moisture, temperature and group factors."))
     uc1, uc2, uc3 = st.columns([1,1,2])
     with uc1:
@@ -254,7 +254,7 @@ with st.expander(_t(" 4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4
     D_req_full = 10.0 * diam_clavo; D_req_min = 6.0 * diam_clavo
     
     if penetracion_p < D_req_min:
-        st.error(_t(" Penetración < 6D. No cumple requerimiento mínimo.", " Penetration < 6D. Minimum requirement not met."))
+        st.error(_t("Penetración < 6D. No cumple requerimiento mínimo.", " Penetration < 6D. Minimum requirement not met."))
         Z_adm = 0.0
     else:
         Cd_factor = min(1.0, penetracion_p / D_req_full)
@@ -280,7 +280,7 @@ with st.expander(_t(" 4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4
 # EXPORTACIÓN INTEGRAL (DXF, DOCX, APU)
 # ─────────────────────────────────────────────
 st.markdown("---")
-st.subheader(_t(" Exportación Integral", " Comprehensive Export"))
+st.subheader(_t("Exportación Integral", " Comprehensive Export"))
 
 # Preparar datos comunes para despiece y APU
 pt_viga = (b_beam/25.4) * (h_beam/25.4) * (span_L * 3.28084) / 12.0
@@ -444,7 +444,7 @@ with tab_doc:
         buf = io.BytesIO()
         doc.save(buf)
         buf.seek(0)
-        st.download_button(_t(" Descargar Memoria", " Download Report"), data=buf, file_name="Memoria_Madera.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(_t("Descargar Memoria", " Download Report"), data=buf, file_name="Memoria_Madera.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_apu:
     if "apu_config" in st.session_state:
@@ -476,7 +476,7 @@ with tab_apu:
             f"Subtotal [{mon}]": [f"{costo_madera:,.2f}", f"{costo_mo:,.2f}", f"{herramienta:,.2f}", f"{aiu:,.2f}", f"{iva:,.2f}"]
         }
         st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
-        st.metric(f" Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
+        st.metric(f"Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
         st.info("ℹ Ve a **APU Mercado** para descargar los costos en tiempo real aquí mismo.")
         
         # Excel APU
@@ -495,6 +495,6 @@ with tab_apu:
             worksheet.set_column('A:A', 25)
             worksheet.set_column('B:D', 15, money_fmt)
         output_excel.seek(0)
-        st.download_button(_t(" Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel, file_name="APU_Madera.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(_t("Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel, file_name="APU_Madera.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info(_t(" Ve a la página 'APU Mercado' para cargar los costos en vivo.", " Go to the 'Market APU' page to load live costs."))
+        st.info(_t("Ve a la página 'APU Mercado' para cargar los costos en vivo.", " Go to the 'Market APU' page to load live costs."))

@@ -16,7 +16,7 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
 
-st.title(_t(" Análisis de Precios Unitarios (APU) — En Vivo", " Unit Price Analysis (APU) — Live"))
+st.title(_t("Análisis de Precios Unitarios (APU) — En Vivo", " Unit Price Analysis (APU) — Live"))
 st.cache_data.clear()
 
 # ─────────────────────────────────────────────
@@ -364,7 +364,7 @@ def update_regional_prices(pais, cem_type, steel_diam):
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 pais_sugerido = "Colombia" if "NSR" in norma_sel else "Perú" if ("E.060" in norma_sel or "Perú" in norma_sel) else "México" if "NTC" in norma_sel else "Argentina" if "CIRSOC" in norma_sel else "Ecuador" if "NEC" in norma_sel else "Chile" if "CIRSOC" not in norma_sel and "ACI" in norma_sel else "Bolivia" if "NB" in norma_sel else "USA" if "ACI" in norma_sel else "Otro"
 
-st.subheader(_t(f" Contexto Regional: {pais_sugerido}", f" Regional Context: {pais_sugerido}"))
+st.subheader(_t(f"Contexto Regional: {pais_sugerido}", f" Regional Context: {pais_sugerido}"))
 
 c_p1, c_p2 = st.columns(2)
 with c_p1:
@@ -372,10 +372,10 @@ with c_p1:
     cem_weight = st.selectbox(_t("Peso del Bulto:", "Bag Weight:"), ["50kg", "42.5kg", "94lb"], index=0 if pais_sugerido!="Perú" else 1)
 with c_p2:
     steel_diam = st.selectbox(_t("Diámetro de Varilla:", "Rebar Diameter:"), ["1/4", "3/8", "1/2", "5/8", "3/4", "1\""], index=2)
-    steel_qty = st.caption(_t(f"Unidad base: Varilla x {'6m' if pais_sugerido=='Colombia' else '9m' if pais_sugerido=='Perú' else '12m'}", f"Base unit: Rebar x {'6m' if pais_sugerido=='Colombia' else '9m' if pais_sugerido=='Perú' else '12m'}"))
+    steel_qty = st.caption(_t(f"Unidad base: Varilla x {'6m'if pais_sugerido=='Colombia' else '9m' if pais_sugerido=='Perú' else '12m'}", f"Base unit: Rebar x {'6m' if pais_sugerido=='Colombia' else '9m' if pais_sugerido=='Perú' else '12m'}"))
 
 if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
-    if st.button(_t(f" Consultar y Promediar Precios en Vivo ({pais_sugerido})", f" Query and Average Live Prices ({pais_sugerido})"), use_container_width=True):
+    if st.button(_t(f"Consultar y Promediar Precios en Vivo ({pais_sugerido})", f" Query and Average Live Prices ({pais_sugerido})"), use_container_width=True):
         if f"apu_details_{pais_sugerido}" in st.session_state:
             del st.session_state[f"apu_details_{pais_sugerido}"]
         update_regional_prices(pais_sugerido, f"{cem_type} {cem_weight}", steel_diam)
@@ -434,7 +434,7 @@ if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
                     st.error(f"{k}: " + _t("Sin conexión o N/D", "No connection or N/A"))
             if valid_c:
                 avg_c = sum(valid_c)/len(valid_c)
-                st.info(_t(f" **Promedio Cemento: {mon_sym} {avg_c:,.2f}**", f" **Average Cement: {mon_sym} {avg_c:,.2f}**"))
+                st.info(_t(f"**Promedio Cemento: {mon_sym} {avg_c:,.2f}**", f" **Average Cement: {mon_sym} {avg_c:,.2f}**"))
         
         with c2:
             st.write(_t(f"** Acero (Varilla {steel_diam}\"):**", f"** Steel (Rebar {steel_diam}\"):**"))
@@ -447,10 +447,10 @@ if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
                     st.error(f"{k}: " + _t("Sin conexión o N/D", "No connection or N/A"))
             if valid_s:
                 avg_s_unit = sum(valid_s)/len(valid_s)
-                st.info(_t(f" **Promedio Acero (Unidad): {mon_sym} {avg_s_unit:,.2f}**", f" **Average Steel (Unit): {mon_sym} {avg_s_unit:,.2f}**"))
+                st.info(_t(f"**Promedio Acero (Unidad): {mon_sym} {avg_s_unit:,.2f}**", f" **Average Steel (Unit): {mon_sym} {avg_s_unit:,.2f}**"))
         
         # Botón exportar a Excel
-        if st.button(_t(" Exportar cotizaciones a Excel", " Export quotes to Excel")):
+        if st.button(_t("Exportar cotizaciones a Excel", " Export quotes to Excel")):
             # Preparar dataframe
             df_c = pd.DataFrame([{"Fuente": k, "Precio": v} for k, v in det["cemento"].items() if isinstance(v, (float, int))])
             df_s = pd.DataFrame([{"Fuente": k, "Precio": v} for k, v in det["acero"].items() if isinstance(v, (float, int))])
@@ -482,20 +482,20 @@ with col_s1:
 with col_s2:
     if search_query:
         search_url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}"
-        st.link_button(_t(" Buscar en Google", " Search on Google"), search_url, use_container_width=True)
+        st.link_button(_t("Buscar en Google", " Search on Google"), search_url, use_container_width=True)
     else:
-        st.button(_t(" Buscar en Web", " Search Web"), disabled=True, use_container_width=True)
+        st.button(_t("Buscar en Web", " Search Web"), disabled=True, use_container_width=True)
 
 st.markdown(_t("####  Extraer de Link Propio (Cualquier Sitio)", "####  Extract from Own Link (Any Site)"))
 st.caption(_t("Pega el link de un producto de cualquier ferretería o tienda online y pulsa extraer.", "Paste the link of a product from any hardware store or online shop and click extract."))
 custom_url = st.text_input(_t("URL del producto:", "Product URL:"), placeholder="https://www.tienda.com/producto...")
-if st.button(_t(" Ejecutar Extracción Inteligente", " Run Smart Extraction"), use_container_width=True):
+if st.button(_t("Ejecutar Extracción Inteligente", " Run Smart Extraction"), use_container_width=True):
     if custom_url:
         with st.spinner(_t("Escaneando sitio web...", "Scanning website...")):
             plat = "sodimac" if "sodimac" in custom_url else "vtex" if ("disensa" in custom_url or "easy" in custom_url or "kywi" in custom_url) else "homecenter" if "homecenter" in custom_url else "homedepot_us" if "homedepot" in custom_url else "other"
             res_val = fetch_common(custom_url, plat)
             if isinstance(res_val, float):
-                st.success(_t(f" Precio detectado: **{res_val:,.2f}**", f" Price detected: **{res_val:,.2f}**"))
+                st.success(_t(f"Precio detectado: **{res_val:,.2f}**", f" Price detected: **{res_val:,.2f}**"))
                 c1, c2 = st.columns(2)
                 if c1.button(_t(" Usar para Cemento", " Use for Cement")):
                     st.session_state.apu_val_cem = res_val
@@ -505,7 +505,7 @@ if st.button(_t(" Ejecutar Extracción Inteligente", " Run Smart Extraction"), u
                     st.session_state.apu_val_ace = res_val / (0.994 * 12)
                     st.rerun()
             else:
-                st.error(_t(" No se encontró un patrón de precio claro. Por favor ingresa el valor abajo.", " No clear price pattern found. Please enter the value below."))
+                st.error(_t("No se encontró un patrón de precio claro. Por favor ingresa el valor abajo.", " No clear price pattern found. Please enter the value below."))
 
 st.markdown("---")
 st.markdown(_t("###  Cotizador Global con Entrada Manual", "###  Global Quoter with Manual Input"))
@@ -575,7 +575,7 @@ if st.button(_t("⚙ Aplicar estos precios como default en todos los módulos", 
         "usar_concreto_premezclado": usar_concreto_premezclado,
         "precio_concreto_m3": precio_concreto_m3 if usar_concreto_premezclado else 0.0
     }
-    st.success(_t(" Precios guardados en la sesión. Aparecerán reflejados en el análisis APU de tus memorias de cálculo.", " Prices saved in session. They will be reflected in the APU analysis of your calculation reports."))
+    st.success(_t("Precios guardados en la sesión. Aparecerán reflejados en el análisis APU de tus memorias de cálculo.", " Prices saved in session. They will be reflected in the APU analysis of your calculation reports."))
     st.rerun()
 else:
     # Guardar configuración actual en session_state para que esté disponible para otros módulos
@@ -596,4 +596,4 @@ else:
         "precio_concreto_m3": precio_concreto_m3 if usar_concreto_premezclado else 0.0
     }
 
-st.success(_t(" Los precios han sido guardados temporalmente en la sesión. Aparecerán reflejados en el análisis APU de tus memorias de cálculo.", " Prices have been temporarily saved in the session. They will be reflected in the APU analysis of your calculation reports."))
+st.success(_t("Los precios han sido guardados temporalmente en la sesión. Aparecerán reflejados en el análisis APU de tus memorias de cálculo.", " Prices have been temporarily saved in the session. They will be reflected in the APU analysis of your calculation reports."))

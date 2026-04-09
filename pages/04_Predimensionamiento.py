@@ -678,7 +678,7 @@ with tab_cim:
     st.pyplot(fig_zap)
 
 with tab_exp:
-    _sub_dxf, _sub_mem, _sub_qty, _sub_apu = st.tabs([" DXF", " Memoria", " Cantidades", " APU"])
+    _sub_dxf, _sub_mem, _sub_qty, _sub_apu = st.tabs(["DXF", " Memoria", " Cantidades", " APU"])
 
 with _sub_dxf:
     st.subheader("Descargar Plano Estructural DXF")
@@ -725,11 +725,11 @@ with _sub_dxf:
         _cam_pr = dxf_rotulo_campos(f"Predimensionamiento {num_stories}P {norma_sel[:15]}", norma_sel, "001")
         dxf_rotulo(msp, _cam_pr, 0, -6, rot_w=nx*lx, rot_h=4, escala=100)
     _out_dxf = io.StringIO(); doc_dxf.write(_out_dxf)
-    st.download_button(" Descargar DXF Planta", data=_out_dxf.getvalue().encode('utf-8'), file_name=f"Predimensionamiento_{lx}x{ly}.dxf", mime="application/dxf")
+    st.download_button("Descargar DXF Planta", data=_out_dxf.getvalue().encode('utf-8'), file_name=f"Predimensionamiento_{lx}x{ly}.dxf", mime="application/dxf")
 
 with _sub_mem:
     st.subheader("Generar Memoria de Cálculo")
-    if st.button(" Descargar Reporte DOCX"):
+    if st.button("Descargar Reporte DOCX"):
         doc = Document()
         doc.add_heading(f"PREDIMENSIONAMIENTO ESTRUCTURAL — {norma_sel}", 0)
         doc.add_paragraph(f"Fecha: {datetime.now().strftime('%d/%m/%Y')}")
@@ -810,7 +810,7 @@ with _sub_mem:
         doc.add_picture(buf_est, width=Inches(3.5)); plt.close(fig_est)
         doc_mem = io.BytesIO()
         doc.save(doc_mem); doc_mem.seek(0)
-        st.download_button(" Descargar DOCX", data=doc_mem, file_name="Memoria_Predim.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button("Descargar DOCX", data=doc_mem, file_name="Memoria_Predim.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with _sub_qty:
     st.subheader("Estimación de Cantidades de Materiales")
@@ -896,7 +896,7 @@ with _sub_apu:
                               f"{herramienta:,.0f}", f"{aiu:,.0f}", f"{iva_util:,.0f}", f"{total_proyecto:,.0f}"]
     })
     st.dataframe(df_apu, use_container_width=True, hide_index=True)
-    st.metric(f" Gran Total Proyecto ({mon})", f"{total_proyecto:,.0f}")
+    st.metric(f"Gran Total Proyecto ({mon})", f"{total_proyecto:,.0f}")
     out_xl = io.BytesIO()
     with pd.ExcelWriter(out_xl, engine='xlsxwriter') as wr:
         df_apu.to_excel(wr, sheet_name='Presupuesto', index=False)
@@ -905,4 +905,4 @@ with _sub_apu:
         pd.DataFrame({"Material": ["Cemento (bultos)", "Arena (m³)", "Grava (m³)", "Agua (m³)", "Acero (kg)", "Excavación (m³)"],
                       "Cantidad": [bultos_cemento, arena_m3, grava_m3, agua_m3, acero_estimado, vol_excavacion]}).to_excel(wr, sheet_name='Cantidades', index=False)
     out_xl.seek(0)
-    st.download_button(" Descargar Excel", data=out_xl, file_name="Presupuesto_Predim.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.download_button("Descargar Excel", data=out_xl, file_name="Presupuesto_Predim.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

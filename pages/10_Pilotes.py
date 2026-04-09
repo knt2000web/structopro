@@ -169,7 +169,7 @@ st.markdown('''
 </div>
 ''', unsafe_allow_html=True)
 
-with st.expander(_t(" ¿Qué hace este módulo? — Guía rápida", " Quick Guide"), expanded=False):
+with st.expander(_t(" ¿Qué hace este módulo? — Guía rápida", "Quick Guide"), expanded=False):
     st.markdown('''
     ###  Pilotes — Verificaciones Geotécnicas y Estructurales
     | Módulo | Qué calcula | Métodos |
@@ -241,7 +241,7 @@ tab_geo, tab_grup, tab_est, tab_apu, tab_mem = st.tabs([
 
 with tab_geo:
     st.subheader(_t("1.1 Definición del Perfil de Suelo (Por Capas)", "1.1 Soil Profile (Layered)"))
-    st.info(" Ingresa la estratigrafía del terreno. La capacidad por fricción sumará cada estrato atravesado.")
+    st.info("Ingresa la estratigrafía del terreno. La capacidad por fricción sumará cada estrato atravesado.")
     st.session_state.perfil_suelo = st.data_editor(
         st.session_state.perfil_suelo,
         num_rows="dynamic",
@@ -265,9 +265,9 @@ with tab_geo:
 
     prof_total = st.session_state.perfil_suelo['Espesor (m)'].sum()
     if L_pilote > prof_total:
-        st.error(f" El pilote ({L_pilote}m) atraviesa más suelo del definido ({prof_total:.1f}m). Agrega estratos.")
+        st.error(f"El pilote ({L_pilote}m) atraviesa más suelo del definido ({prof_total:.1f}m). Agrega estratos.")
     else:
-        st.success(f" Pilote apoyado dentro de la estratigrafía (Prof. Mínima Estudiada {prof_total:.1f}m)")
+        st.success(f"Pilote apoyado dentro de la estratigrafía (Prof. Mínima Estudiada {prof_total:.1f}m)")
 
         # ──── CÁLCULOS GEOTÉCNICOS ────────────────────────────────────────
         import numpy as np
@@ -382,7 +382,7 @@ with tab_grup:
         margen = max(0.30, D_pilote * 0.5)
         B_dado = (n_cols - 1) * S_metros + D_pilote + 2 * margen
         L_dado = (m_filas - 1) * S_metros + D_pilote + 2 * margen
-        st.info(f" **S = {S_metros:.2f} m**\n\nEncepado: **{B_dado:.2f}m × {L_dado:.2f}m**")
+        st.info(f"**S = {S_metros:.2f} m**\n\nEncepado: **{B_dado:.2f}m × {L_dado:.2f}m**")
     with col_g6:
         H_dado = st.number_input("Peralte del Encepado (H) [m]", 0.40, 3.00, 0.80, 0.10)
         
@@ -394,7 +394,7 @@ with tab_grup:
     if n_pilotes == 1:
         eficiencia = 1.0
         Q_grupo = Qadm
-        st.success(f" Pilote único. Eficiencia η = 1.0. Capacidad = {Q_grupo:.1f} kN")
+        st.success(f"Pilote único. Eficiencia η = 1.0. Capacidad = {Q_grupo:.1f} kN")
     else:
         # Converse-Labarre
         theta = math.degrees(math.atan(D_pilote / S_metros))
@@ -413,9 +413,9 @@ with tab_grup:
         
         st.markdown(f"**Carga Total Actuante (Incl. Dado):** {P_total_act:.1f} kN")
         if P_total_act <= Q_grupo:
-            st.success(f" **CUMPLE.** FS > {FS_global:.1f} para todo el grupo bajo carga {P_ult_grupo:.1f} kN.")
+            st.success(f"**CUMPLE.** FS > {FS_global:.1f} para todo el grupo bajo carga {P_ult_grupo:.1f} kN.")
         else:
-            st.error(f" **NO CUMPLE.** La carga actuante de {P_total_act:.1f} kN sobrepasa la capacidad del grupo conectada ({Q_grupo:.1f} kN). Aumente Q_adm mejorando la geometría o adicione pilotes.")
+            st.error(f"**NO CUMPLE.** La carga actuante de {P_total_act:.1f} kN sobrepasa la capacidad del grupo conectada ({Q_grupo:.1f} kN). Aumente Q_adm mejorando la geometría o adicione pilotes.")
 
     # Grafica esquematica
     if _PLOTLY_AVAILABLE:
@@ -468,7 +468,7 @@ with tab_grup:
         st.plotly_chart(fig_g, use_container_width=True)
         # --- P2: ASENTAMIENTO DE GRUPO ---
         st.markdown("---")
-        st.subheader(" Asentamiento Estimado del Grupo (Bloque Equivalente)")
+        st.subheader("Asentamiento Estimado del Grupo (Bloque Equivalente)")
         col_s1, col_s2 = st.columns(2)
         E_s_pil = col_s1.number_input("Módulo elástico terreno Es [MPa]", 1.0, 200.0, 30.0, 5.0, key="es_pil")
         nu_s_pil = col_s2.number_input("Relación de Poisson terreno ν", 0.1, 0.49, 0.35, 0.05, key="nu_pil")
@@ -482,11 +482,11 @@ with tab_grup:
         S_m = (q_eq_kpa * math.sqrt(Area_eq) * (1 - nu_s_pil**2)) / (E_s_pil * 1000)
         S_mm = S_m * 1000
         
-        st.metric("Asentamiento Total Grupo", f"{S_mm:.1f} mm", delta=f"{25.0 - S_mm:.1f} mm Disp", delta_color="normal" if S_mm<=25.0 else "inverse")
+        st.metric("Asentamiento Total Grupo", f"{S_mm:.1f} mm", delta=f"{25.0 - S_mm:.1f} mm Disp", delta_color="normal"if S_mm<=25.0 else "inverse")
         if S_mm <= 25.0:
-            st.success(" Asentamiento dentro de tolerancias convencionales (< 25 mm).")
+            st.success("Asentamiento dentro de tolerancias convencionales (< 25 mm).")
         else:
-            st.error(" Asentamiento excesivo (> 25 mm). Considere aumentar separación (S), ensanchar grupo o profundizar pilotes.")
+            st.error("Asentamiento excesivo (> 25 mm). Considere aumentar separación (S), ensanchar grupo o profundizar pilotes.")
 
 with tab_est:
     st.subheader(_t("3.1 Refuerzo Longitudinal y Confinamiento", "3.1 Longitudinal Reinforcement & Confinement"))
@@ -568,11 +568,11 @@ with tab_est:
             st.markdown(f"Requerido ACI §18.7.5: **{(rho_s_req*100):.2f}%**")
             st.markdown(estado_espiral)
         else:
-            st.info(" Verificación volumétrica requerida principalmente en pilotes circulares con espiral en zona de amenaza sísmica alta.")
+            st.info("Verificación volumétrica requerida principalmente en pilotes circulares con espiral en zona de amenaza sísmica alta.")
 
 # --- P3: DIAGRAMA ESTRUCTURAL P-M ---
         st.divider()
-        st.subheader(" Interacción P-M (Flexocompresión Biaxial)")
+        st.subheader("Interacción P-M (Flexocompresión Biaxial)")
         Mu_req = st.number_input("Momento Actuante Mayorado Mu [kN·m]", 0.0, 10000.0, 50.0, 10.0, key="mu_pil")
         
         # Conectar con 01_Columnas_PM matemáticamente
@@ -635,8 +635,8 @@ with tab_est:
             fig_pm.update_layout(title="Diagrama P-M del Pilote Individual", xaxis_title="Momento (kN·m)", yaxis_title="Carga Axial (kN)", paper_bgcolor="#0f1117", plot_bgcolor="#0f1117", font=dict(color="white"))
             st.plotly_chart(fig_pm, use_container_width=True)
             
-            if ok_pm: st.success(" **CUMPLE.** La combinación Pu-Mu reside dentro de la envolvente segura.")
-            else: st.error(" **NO CUMPLE.** La combinación Pu-Mu excede la capacidad estructural del pilote.")
+            if ok_pm: st.success("**CUMPLE.** La combinación Pu-Mu reside dentro de la envolvente segura.")
+            else: st.error("**NO CUMPLE.** La combinación Pu-Mu excede la capacidad estructural del pilote.")
             
         except Exception as e:
             st.warning(f"No se pudo cargar generador P-M: {e}")
@@ -935,7 +935,7 @@ with tab_mem:
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         key="btn_dl_docx"
                     )
-                    st.success(" Memoria DOCX Generada.")
+                    st.success("Memoria DOCX Generada.")
                 except Exception as e:
                     st.error(f"Error DOCX: {e}")
 
@@ -988,7 +988,7 @@ with tab_mem:
                         mime="application/dxf",
                         key="btn_dl_dxf"
                     )
-                    st.success(" Plano DXF Geométrico Generado.")
+                    st.success("Plano DXF Geométrico Generado.")
                 except Exception as e:
                     st.error(f"Error DXF: {e}")
 
@@ -1019,7 +1019,7 @@ with tab_mem:
                             mime="application/octet-stream",
                             key="btn_dl_ifc"
                         )
-                        st.success(" Modelo IFC4 Generado con Éxito.")
+                        st.success("Modelo IFC4 Generado con Éxito.")
                 except Exception as e:
                     st.error(f"Error Genérico IFC: {e}")
 
@@ -1027,10 +1027,10 @@ with tab_mem:
 # P2 & P3: CUADRO DE MANDO Y ASENTAMIENTOS DIFERENCIALES
 # ==============================================================================
 st.divider()
-st.subheader(" Cuadro de Mando — Registro de Grupos de Pilotes")
+st.subheader("Cuadro de Mando — Registro de Grupos de Pilotes")
 
 etiqueta_pi = st.text_input("Etiqueta del grupo (ej. P-1, Eje 3-B)", value="P-1", key="pi_etiqueta")
-if st.button(" Agregar al proyecto", key="pi_agregar"):
+if st.button("Agregar al proyecto", key="pi_agregar"):
     try:
         if "registro_pilotes" not in st.session_state:
             st.session_state.registro_pilotes = []
@@ -1048,7 +1048,7 @@ if st.button(" Agregar al proyecto", key="pi_agregar"):
 if st.session_state.get("registro_pilotes"):
     st.dataframe(pd.DataFrame(st.session_state.registro_pilotes),
                  use_container_width=True, hide_index=True)
-    if st.button(" Limpiar registro", key="pi_limpiar"):
+    if st.button("Limpiar registro", key="pi_limpiar"):
         st.session_state.registro_pilotes = []
         st.rerun()
 
@@ -1063,4 +1063,4 @@ if len(st.session_state.get("registro_pilotes", [])) >= 2:
         st.error("⚠ Asentamiento diferencial > 19 mm (NSR-10 H.3.4). "
                  "Revisar rigidez de la superestructura o nivelar profundidades.")
     else:
-        st.success(f" Δs = {delta_s:.1f} mm ≤ 19 mm — Dentro de tolerancia NSR-10.")
+        st.success(f"Δs = {delta_s:.1f} mm ≤ 19 mm — Dentro de tolerancia NSR-10.")

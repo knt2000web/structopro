@@ -188,7 +188,7 @@ bultos_cemento   = math.ceil(total_cemento_kg / 50)
 if perfil_largo > 3.5 and perfil_largo <= 4.2:
     st.warning(f"⚠ La luz de los perfiles es {perfil_largo:.2f} m. Está cerca del máximo de {norma['luz_max']} m.")
 elif perfil_largo > norma["luz_max"]:
-    st.error(f" La luz de los perfiles ({perfil_largo:.2f} m) excede el máximo permitido ({norma['luz_max']} m). Se requiere viga intermedia.")
+    st.error(f"La luz de los perfiles ({perfil_largo:.2f} m) excede el máximo permitido ({norma['luz_max']} m). Se requiere viga intermedia.")
 
 # ─────────────────────────────────────────────
 # CÁLCULOS ESTRUCTURALES
@@ -641,7 +641,7 @@ with tab_res:
     st.write(f"**Refuerzo:** {ref_beam}, estribos @ {s_beam*100:.0f} cm")
     st.write(f"**Zona sísmica:** {zona_sismica} | **Sistema:** {sistema_estructural}")
     if confinement_zone_length > 0:
-        st.info(f" Zona de confinamiento: {confinement_zone_length*100:.0f} cm desde apoyo | Estribos @ {s_beam*100:.0f} cm (NSR-10 C.21)")
+        st.info(f"Zona de confinamiento: {confinement_zone_length*100:.0f} cm desde apoyo | Estribos @ {s_beam*100:.0f} cm (NSR-10 C.21)")
 
     st.markdown("### Sección compuesta y longitud de desarrollo")
     col_sc1, col_sc2, col_sc3 = st.columns(3)
@@ -691,14 +691,14 @@ with tab_dxf:
                                 incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente,
                                 plano_numero, escala_plano, elaboro, revisado, aprobado, ref_beam,
                                 zona_sismica, sistema_estructural, s_beam, confinement_zone_length)
-        st.download_button(" Descargar DXF", data=dxf_data,
+        st.download_button("Descargar DXF", data=dxf_data,
                           file_name=f"PlacaFacil_{proyecto_nombre}.dxf", mime="application/dxf")
 
 with tab_mem:
     st.subheader("Memoria de cálculo")
     if st.button("Generar memoria DOCX"):
         buf = generate_memory()
-        st.download_button(" Descargar Memoria", data=buf,
+        st.download_button("Descargar Memoria", data=buf,
                           file_name=f"Memoria_PlacaFacil_{proyecto_nombre}.docx",
                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
@@ -757,11 +757,11 @@ with tab_resumen:
         if sobrecosto > 0:
             st.warning(f"⚠ Sobrecosto vs placa maciza: {moneda} {sobrecosto:,.0f}")
         else:
-            st.success(f" Ahorro vs placa maciza: {moneda} {ahorro:,.0f}")
-        st.metric("Deflexión", f"{' OK' if cumple_deflexion else ' EXCEDE'} — {delta_calc*1000:.1f} mm")
+            st.success(f"Ahorro vs placa maciza: {moneda} {ahorro:,.0f}")
+        st.metric("Deflexión", f"{'OK' if cumple_deflexion else ' EXCEDE'} — {delta_calc*1000:.1f} mm")
         st.metric("Zona sísmica", f"{zona_sismica}")
     if st.button("Generar PDF Resumen"):
         pdf_data = generate_pdf()
-        st.download_button(" Descargar PDF Resumen", data=pdf_data,
+        st.download_button("Descargar PDF Resumen", data=pdf_data,
                           file_name=f"Resumen_PlacaFacil_{proyecto_nombre}.pdf",
                           mime="application/pdf")

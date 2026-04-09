@@ -478,7 +478,7 @@ tab_res, tab_col, tab_sol, tab_diag, tab_3d, tab_dxf, tab_mem, tab_qty, tab_apu 
 ])
 
 with tab_res:
-    st.subheader(f" Muro: {nombre_muro} | {piso_muro}")
+    st.subheader(f"Muro: {nombre_muro} | {piso_muro}")
     ms1, ms2, ms3 = st.columns(3)
     sigma_m_out = sigma_m_kgcm2 * factor_fuerza if unidades_salida == "Toneladas fuerza (tonf, tonf·m)" else sigma_m_kgcm2
     Fa_out = Fa * factor_fuerza if unidades_salida == "Toneladas fuerza (tonf, tonf·m)" else Fa
@@ -491,9 +491,9 @@ with tab_res:
     st.markdown("---")
 
     if ok_sigma and ok_rho_h:
-        st.success(f" **DISEÑO ESTRUCTURAL OK SEGÚN {norma_ac}** — El muro cumple con las comprobaciones normativas limitantes.")
+        st.success(f"**DISEÑO ESTRUCTURAL OK SEGÚN {norma_ac}** — El muro cumple con las comprobaciones normativas limitantes.")
     else:
-        st.error(f" **FALLO EN DISEÑO SEGÚN {norma_ac}** — Revise las verificaciones en rojo abajo.")
+        st.error(f"**FALLO EN DISEÑO SEGÚN {norma_ac}** — Revise las verificaciones en rojo abajo.")
 
     r1, r2 = st.columns(2)
     # Referencias normativas por país
@@ -536,30 +536,30 @@ with tab_res:
         st.markdown(f"- σ_m = {sigma_m_kgcm2:.2f} kg/cm²\n"
                     f"- Fa = min({Fa_inner:.2f}, {Fa_lim:.2f}) = **{Fa:.2f} kg/cm²**")
         if ok_sigma:
-            st.success(f" σ_m ({sigma_m_kgcm2:.2f}) ≤ Fa ({Fa:.2f}) **— CUMPLE**")
+            st.success(f"σ_m ({sigma_m_kgcm2:.2f}) ≤ Fa ({Fa:.2f}) **— CUMPLE**")
         else:
-            st.error(f" σ_m ({sigma_m_kgcm2:.2f}) > Fa ({Fa:.2f}) **— NO CUMPLE**")
-            st.warning(" **Sugerencia:** Aumentar la longitud del muro (`L`), el espesor (`t`), o escoger un Ladrillo de mayor resistencia a compresión (`f'm`).")
+            st.error(f"σ_m ({sigma_m_kgcm2:.2f}) > Fa ({Fa:.2f}) **— NO CUMPLE**")
+            st.warning("**Sugerencia:** Aumentar la longitud del muro (`L`), el espesor (`t`), o escoger un Ladrillo de mayor resistencia a compresión (`f'm`).")
         st.markdown(f"#### 04 — Cortante Base `{art_ref2}`")
         st.markdown(f"- α = {alpha:.3f} (Ve·L/Me) ∈ [1/3, 1.0]\n"
                     f"- **Vm = {Vm1:.2f} ton** | Vui = {Vui_calc:.2f} ton | Mui = {Mui_calc:.2f} ton·m")
         if Vui_calc <= 2.0 * Vm1:
-            st.success(f" Vui ({Vui_calc:.2f}) ≤ 2·Vm ({2*Vm1:.2f}) **— CUMPLE**")
+            st.success(f"Vui ({Vui_calc:.2f}) ≤ 2·Vm ({2*Vm1:.2f}) **— CUMPLE**")
         else:
-            st.error(f" Vui ({Vui_calc:.2f}) > 2·Vm ({2*Vm1:.2f}) **— SECCIÓN INSUFICIENTE**")
+            st.error(f"Vui ({Vui_calc:.2f}) > 2·Vm ({2*Vm1:.2f}) **— SECCIÓN INSUFICIENTE**")
         st.markdown(f"#### 05 — Fisuración `{art_ref3}`")
         if ok_fisura:
-            st.success(f" Ve ({Ve:.2f}) ≤ 0.55·Vm ({0.55*Vm1:.2f}) — No Agrietado **— CUMPLE**")
+            st.success(f"Ve ({Ve:.2f}) ≤ 0.55·Vm ({0.55*Vm1:.2f}) — No Agrietado **— CUMPLE**")
         else:
-            st.error(f" Ve ({Ve:.2f}) > 0.55·Vm ({0.55*Vm1:.2f}) — MURO AGRIETADO")
-            st.warning(" **Sugerencia:** Para evitar el agrietamiento, aumente el espesor del muro (`t`), o use un Ladrillo con mayor resistencia al corte (`v'm`).")
+            st.error(f"Ve ({Ve:.2f}) > 0.55·Vm ({0.55*Vm1:.2f}) — MURO AGRIETADO")
+            st.warning("**Sugerencia:** Para evitar el agrietamiento, aumente el espesor del muro (`t`), o use un Ladrillo con mayor resistencia al corte (`v'm`).")
         st.markdown(f"#### 06 — Refuerzo Horizontal `{art_ref6}`")
         if necesita_Hz:
             estado_hz = ' CUMPLE' if ok_rho_h else ' NO CUMPLE'
             st.warning(f"⚠ 1 {bar_hor_sel} @ {s_hor:.0f}cm | ρh={rho_h_prov:.5f} — {estado_hz}")
             st.caption(f"ρh_min = {rho_h_min:.4f} | ρh_prov = {rho_h_prov:.5f}")
         else:
-            st.success(" No requiere refuerzo horizontal según la norma aplicada")
+            st.success("No requiere refuerzo horizontal según la norma aplicada")
 
 with tab_col:
     if _pais == "pe":
@@ -570,7 +570,7 @@ with tab_col:
         art_col = "§6.7 — NEC-SE-MP (Ecuador)"
     else:
         art_col = "§7.6 — COVENIN 1753 (Venezuela)"
-    st.subheader(f" Columnas de Confinamiento ({art_col})")
+    st.subheader(f"Columnas de Confinamiento ({art_col})")
     cc1, cc2 = st.columns(2)
     with cc1:
         st.markdown("#### 07-08 — Fuerzas de Diseño")
@@ -598,7 +598,7 @@ with tab_col:
                 ("As req = T/(φ·fy)", f"{As_req:.2f} cm²"),
                 ("As mín (4Ø8mm)", f"{As_min_four_d8:.2f} cm²"),
             ])
-        st.success(f" **{n_bars_f} {bar_col_sel}** → As prov = {As_prov_f:.2f} cm²")
+        st.success(f"**{n_bars_f} {bar_col_sel}** → As prov = {As_prov_f:.2f} cm²")
         st.markdown("#### 09b — Núcleo Concreto An")
         qty_table([("An compresión", f"{An_comp:.1f} cm²"), ("mín 15t", f"{15*t_m:.0f} cm²")])
         st.markdown("#### 09c — Corte-Fricción Acf")
@@ -656,7 +656,7 @@ with tab_sol:
 with tab_diag:
     # Nombre de la viga según norma (también disponible fuera del tab)
     _nombre_viga_local = "Viga de Amarre" if _pais == "co" else ("Viga Corona" if _pais == "ve" else "Viga Solera")
-    st.subheader(f" Diagrama 2D del Muro y Sección Transversal ({_nombre_viga_local})")
+    st.subheader(f"Diagrama 2D del Muro y Sección Transversal ({_nombre_viga_local})")
     # Figura con 4 columnas: [alzado, espacio, corte columna, corte viga]
     fig2d = plt.figure(figsize=(16, 9))
     fig2d.patch.set_facecolor('#1a1a2e')
@@ -818,7 +818,7 @@ with tab_diag:
     buf_mv.seek(0); plt.close(fig_mv)
 
 with tab_3d:
-    st.subheader(" Visualización 3D")
+    st.subheader("Visualización 3D")
     Lw3=L_m_in; Hw3=h_m_in; tw3=t_m_in
     bc3=col_b_min/100; hv3=vs_h_in/100
     fig3d = go.Figure()
@@ -913,7 +913,7 @@ with tab_3d:
 
 
 with tab_dxf:
-    st.subheader(" Plano DXF — Planta, Elevación y Sección")
+    st.subheader("Plano DXF — Planta, Elevación y Sección")
     try:
         from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
                                  dxf_dim_horiz, dxf_dim_vert, dxf_rotulo,
@@ -984,13 +984,13 @@ with tab_dxf:
         _cam = dxf_rotulo_campos(f"Albanileria Confinada {nombre_muro} L={L_m_in:.1f}m h={h_m_in:.1f}m", norma_ac, "001")
         dxf_rotulo(msp, _cam, 0, -4.5, rot_w=9, rot_h=3, escala=50)
     _out=io.StringIO(); doc_dxf.write(_out)
-    st.download_button(" Descargar DXF",data=_out.getvalue().encode('utf-8'),
+    st.download_button("Descargar DXF",data=_out.getvalue().encode('utf-8'),
                        file_name=f"AlbConfinada_{nombre_muro}.dxf",mime="application/dxf")
     st.info("Plano incluye: Elevacion con acero, Planta y Seccion columna.")
 
 with tab_mem:
-    st.subheader(" Memoria de Cálculo DOCX")
-    if st.button(" Generar Memoria DOCX"):
+    st.subheader("Memoria de Cálculo DOCX")
+    if st.button("Generar Memoria DOCX"):
         doc = Document()
         doc.add_heading(f"ALBAÑILERÍA CONFINADA — {norma_ac}", 0)
         p=doc.add_paragraph(); p.add_run(f"{nombre_muro} | {piso_muro} | {datetime.now().strftime('%d/%m/%Y')}").bold=True
@@ -1066,12 +1066,12 @@ with tab_mem:
             doc.add_picture(buf_hz, width=Inches(4.5))
             plt.close(fig_hz)
         buf_doc=io.BytesIO(); doc.save(buf_doc); buf_doc.seek(0)
-        st.download_button(" Descargar Memoria DOCX",data=buf_doc,
+        st.download_button("Descargar Memoria DOCX",data=buf_doc,
                            file_name=f"Memoria_{nombre_muro}.docx",
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_qty:
-    st.subheader(" Cantidades")
+    st.subheader("Cantidades")
     cem_kg, agua_L, arena_kg, grava_kg = mix_for_fc(fc_in)
     bags = math.ceil(cem_kg * vol_conc_total / bag_kg)
     cq1, cq2 = st.columns(2)
@@ -1122,7 +1122,7 @@ with tab_qty:
     st.metric("⚖ Total Acero", f"{total_acero_kg:.1f} kg")
 
     # Figurado
-    with st.expander(" Dibujo de Figurado para Taller", expanded=False):
+    with st.expander("Dibujo de Figurado para Taller", expanded=False):
         st.markdown("A continuación se muestran las formas reales de las barras para facilitar el figurado.")
         hook_len = 12 * db_col / 10
         straight_len = (h_m/100) * 100 - 2 * hook_len
@@ -1138,7 +1138,7 @@ with tab_qty:
             st.pyplot(fig_hz)
 
 with tab_apu:
-    st.subheader(" Presupuesto APU")
+    st.subheader("Presupuesto APU")
     ap1, ap2 = st.columns(2)
     with ap1:
         if "apu_config" in st.session_state:
@@ -1175,7 +1175,7 @@ with tab_apu:
                    f"{herr:,.0f}",f"{aiu:,.0f}",f"{ivat:,.0f}",f"{gran_total:,.0f}"]
     })
     st.dataframe(apu_df, use_container_width=True, hide_index=True)
-    st.metric(f" Gran Total [{mon}]", f"{gran_total:,.0f}")
+    st.metric(f"Gran Total [{mon}]", f"{gran_total:,.0f}")
     out_xl=io.BytesIO()
     with pd.ExcelWriter(out_xl,engine='xlsxwriter') as wr:
         apu_df.to_excel(wr,sheet_name='Presupuesto',index=False)
@@ -1184,7 +1184,7 @@ with tab_apu:
                       "Cantidad":[vol_conc_total,total_acero_kg,n_ladrillos_total,vol_mortero_total,bags]
                      }).to_excel(wr,sheet_name='Cantidades',index=False)
     out_xl.seek(0)
-    st.download_button(" Descargar Excel",data=out_xl,
+    st.download_button("Descargar Excel",data=out_xl,
                        file_name=f"Presupuesto_{nombre_muro}.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 

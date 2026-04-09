@@ -916,8 +916,8 @@ def generar_docx_ampliado(zap_ext_d, zap_int_d, viga_d, dis_d, dist_d, norma, fi
 # ─────────────────────────────────────────────
 # T1: ESFUERZOS EN EL SUELO (BOUSSINESQ)
 # ─────────────────────────────────────────────
-with st.expander(_t(" 1. Esfuerzos en masa de suelo debajo de zapata", " 1. Soil Stresses under Footing (Boussinesq)"), expanded=False):
-    st.info(_t(" **Modo de uso:** Ingresa las dimensiones de la zapata y la carga aplicada. El programa usa la solución de Boussinesq (integración de carga rectangular) para encontrar el incremento de esfuerzo vertical a cierta profundidad Z debajo del centro de la zapata.", " **How to use:** Enter footing dimensions and load. Uses Boussinesq method to find vertical stress increment at depth Z."))
+with st.expander(_t("1. Esfuerzos en masa de suelo debajo de zapata", " 1. Soil Stresses under Footing (Boussinesq)"), expanded=False):
+    st.info(_t("**Modo de uso:** Ingresa las dimensiones de la zapata y la carga aplicada. El programa usa la solución de Boussinesq (integración de carga rectangular) para encontrar el incremento de esfuerzo vertical a cierta profundidad Z debajo del centro de la zapata.", " **How to use:** Enter footing dimensions and load. Uses Boussinesq method to find vertical stress increment at depth Z."))
     c1, c2 = st.columns(2)
     with c1:
         # ── Selector de Unidades para la Carga ──────────────────────────
@@ -961,7 +961,7 @@ with st.expander(_t(" 1. Esfuerzos en masa de suelo debajo de zapata", " 1. Soil
     n = (L_bous/2.0) / Z_bous
     delta_sigma_z = 4 * q_0 * I_z_bous(m, n)
     
-    st.success(f" Incremento de esfuerzo vertical bajo el centro a Z={Z_bous}m: **Δσ_z = {delta_sigma_z:.2f} kPa**")
+    st.success(f"Incremento de esfuerzo vertical bajo el centro a Z={Z_bous}m: **Δσ_z = {delta_sigma_z:.2f} kPa**")
     
     # --- Gráficos Analíticos Boussinesq ---
     fig_b, (ax_v, ax_h) = plt.subplots(1, 2, figsize=(12, 4.5))
@@ -1037,7 +1037,7 @@ with st.expander(_t(" 1. Esfuerzos en masa de suelo debajo de zapata", " 1. Soil
 # ─────────────────────────────────────────────
 # T2: CAPACIDAD PORTANTE DE SUELO (TERZAGHI) + ASENTAMIENTOS
 # ─────────────────────────────────────────────
-with st.expander(_t(" 2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos", " 2. Bearing Capacity (Terzaghi) and Settlements"), expanded=False):
+with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos", " 2. Bearing Capacity (Terzaghi) and Settlements"), expanded=False):
     st.info(_t(
         " **Modo de uso:** Ingresa φ, c, γ y la geometría de la zapata. "
         "El módulo calcula la capacidad última de Terzaghi con influencia del NF, "
@@ -1197,9 +1197,9 @@ with st.expander(_t(" 2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos"
     col_c3.metric("FS Calculado (q_ult / q_act)", fs_calc_disp, delta=f"Requerido: {FS_terz:.2f}", delta_color="off")
     
     if cumplio:
-        st.success(f" **Verificación Exitosa:** El esfuerzo actuante ({q_act:.2f} kPa) es MENOR o IGUAL al esfuerzo admisible ({q_adm:.2f} kPa).")
+        st.success(f"**Verificación Exitosa:** El esfuerzo actuante ({q_act:.2f} kPa) es MENOR o IGUAL al esfuerzo admisible ({q_adm:.2f} kPa).")
     else:
-        st.error(f" **Falla por Capacidad:** El esfuerzo actuante ({q_act:.2f} kPa) es MAYOR al esfuerzo admisible ({q_adm:.2f} kPa). Aumenta la sección de la zapata o reduce la carga.")
+        st.error(f"**Falla por Capacidad:** El esfuerzo actuante ({q_act:.2f} kPa) es MAYOR al esfuerzo admisible ({q_adm:.2f} kPa). Aumenta la sección de la zapata o reduce la carga.")
 
     col_r1, col_r2 = st.columns(2)
     with col_r1:
@@ -1222,7 +1222,7 @@ with st.expander(_t(" 2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos"
     
     # (Detector de pilotes removido de aquí, mantenemos la versión completa más abajo)
     # ITEMS 2 & 3: Calculadora ks (coeficiente de balasto) y Rigidez Lambda
-    with st.expander(" Coeficiente de Balasto ks (Winkler) y Rigidez Relativa"):
+    with st.expander("Coeficiente de Balasto ks (Winkler) y Rigidez Relativa"):
         col_ks1, col_ks2 = st.columns(2)
         with col_ks1:
             Es_mpa = st.number_input("Módulo elástico suelo Es [MPa]", 1.0, 200.0, 20.0, 1.0)
@@ -1250,7 +1250,7 @@ with st.expander(_t(" 2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos"
             st.markdown(tipo_rig)
 
     # ── ASENTAMIENTO ELÁSTICO (opcional) ─────────────────────────────
-    with st.expander(" Asentamiento elástico inmediato", expanded=True):
+    with st.expander("Asentamiento elástico inmediato", expanded=True):
         usar_asent = st.checkbox("Calcular asentamiento inmediato", value=False)
         if usar_asent:
             c_e1, c_e2 = st.columns(2)
@@ -1292,7 +1292,7 @@ with st.expander(_t(" 2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos"
             _necesita_pilotes = True
             st.warning("⚠ **Considera cimentación profunda (pilotes):**\n" + 
                        "\n".join(f"- {r}" for r in _razones_pil))
-            st.info(" *Este módulo calcula zapatas superficiales. Para pilotes, ver módulo **10_Pilotes** (próximamente).*")
+            st.info("*Este módulo calcula zapatas superficiales. Para pilotes, ver módulo **10_Pilotes** (próximamente).*")
 
     # ── GRÁFICA: TIPO DE FALLA (Vesic 1973 / SPT) ──────────────────────────
     st.divider()
@@ -1457,7 +1457,7 @@ with st.expander(_t(" 2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos"
 # ─────────────────────────────────────────────
 # T4: PROFUNDIDAD MÍNIMA EXPLORACIÓN
 # ─────────────────────────────────────────────
-with st.expander(_t(" 4. Profundidad Mínima de Exploración de Subsuelo (NSR-10)", " 4. Minimum Subsurface Exploration Depth")):
+with st.expander(_t("4. Profundidad Mínima de Exploración de Subsuelo (NSR-10)", " 4. Minimum Subsurface Exploration Depth")):
     st.info(_t(
         " **Modo de uso:** Sincronizado automáticamente con las dimensiones (B, L) y carga (Q_actuante) ingresadas en el panel principal. "
         "Según la norma **NSR-10 (Título H.3.2.3)**, las perforaciones deben alcanzar una profundidad donde el incremento de "
@@ -1482,7 +1482,7 @@ with st.expander(_t(" 4. Profundidad Mínima de Exploración de Subsuelo (NSR-10
         else:
             z_high = z_mid
             
-    st.success(f" La profundidad mínima normativa de exploración (donde Δσ_z = 10% de q0) es: **Z_exploración = {z_mid:.2f} m** bajo el nivel de fundación.")
+    st.success(f"La profundidad mínima normativa de exploración (donde Δσ_z = 10% de q0) es: **Z_exploración = {z_mid:.2f} m** bajo el nivel de fundación.")
     
     # Gráfica ilustrativa del descenso del esfuerzo
     fig_ex, ax_ex = plt.subplots(figsize=(8, 5))
@@ -1520,7 +1520,7 @@ with st.expander(_t(" 4. Profundidad Mínima de Exploración de Subsuelo (NSR-10
 # ─────────────────────────────────────────────
 # T3: DISEÑO ESTRUCTURAL DE ZAPATA + DIBUJADOR 3000 (con biaxialidad)
 # ─────────────────────────────────────────────
-with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3000", " 3. Footing Structural Design & DXF Drafter"), expanded=True):
+with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 3000", " 3. Footing Structural Design & DXF Drafter"), expanded=True):
     st.markdown(f"**Norma Estructural activa:** `{norma_sel}`")
 
     # ─── SELECTOR DE TIPO DE ZAPATA (Opción B) ───────────────────────────────
@@ -1552,7 +1552,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
         # Los tipos 2/3/4 tienen su propio flujo completo, no continúan el bloque T3
     else:
         # ─── TIPO 1: Flujo original de zapata aislada céntrica ────────────────
-        st.info(_t(" **Modo: Zapata Aislada Céntrica** — Ingresa las Cargas de Servicio (para dimensionar BxL) y Últimas (para diseñar espesor y acero).",
+        st.info(_t("**Modo: Zapata Aislada Céntrica** — Ingresa las Cargas de Servicio (para dimensionar BxL) y Últimas (para diseñar espesor y acero).",
                    " **Mode: Isolated Centered Footing** — Enter Service Loads (BxL sizing) and Ultimate Loads (thickness and steel)."))
 
     colA, colB, colC = st.columns(3)
@@ -1590,7 +1590,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
             q_adm_z = q_val_input * 98.0665
 
         # Mostrar equivalencias en formato adaptable (evita que se corte la métrica en pantallas reducidas)
-        st.info(f" **Equivalencia:** `{q_adm_z:.1f} kPa` | `{q_adm_z/9.80665:.2f} ton/m²` | `{q_adm_z/98.0665:.3f} kg/cm²` | `{q_adm_z/1000:.4f} MPa`")
+        st.info(f"**Equivalencia:** `{q_adm_z:.1f} kPa` | `{q_adm_z/9.80665:.2f} ton/m²` | `{q_adm_z/98.0665:.3f} kg/cm²` | `{q_adm_z/1000:.4f} MPa`")
 
         c1_col = st.number_input(_t("Dim. Columna c1 (dir. B) [cm]", "Column dim. c1 (B dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
         c2_col = st.number_input(_t("Dim. Columna c2 (dir. L) [cm]", "Column dim. c2 (L dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
@@ -1608,7 +1608,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
         
     # ─── Validaciones robustas ──────────────────────────────────────────────
     if c1_col <= 0 or c2_col <= 0:
-        st.error(" Las dimensiones de la columna (c1, c2) deben ser mayores a 0 cm.")
+        st.error("Las dimensiones de la columna (c1, c2) deben ser mayores a 0 cm.")
         st.stop()
     # Verificar espesor mínimo
     d_min = recub_z + db_bar_z/10.0 + 2  # cm
@@ -1617,7 +1617,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
     # Verificar q_net positivo
     q_net = q_adm_z - gamma_prom * Df_z
     if q_net <= 0:
-        st.error(f" El esfuerzo neto disponible q_net = {q_net:.2f} kPa es negativo o nulo. Reduzca Df o aumente q_adm.")
+        st.error(f"El esfuerzo neto disponible q_net = {q_net:.2f} kPa es negativo o nulo. Reduzca Df o aumente q_adm.")
         st.stop()
 
     # Paso 1: Dimensionamiento en planta (considerando excentricidades)
@@ -1687,7 +1687,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
     # Peralte efectivo
     d_z = H_zap - recub_z - (db_bar_z/10.0)
     if d_z <= 0:
-        st.error(f" EC-3: Peralte efectivo d_z = {d_z:.2f} cm ≤ 0. Aumente H o reduzca recub. / diámetro.")
+        st.error(f"EC-3: Peralte efectivo d_z = {d_z:.2f} cm ≤ 0. Aumente H o reduzca recub. / diámetro.")
         st.stop()
     d_z_m = d_z / 100.0
 
@@ -1888,7 +1888,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
     L_gancho_real_cm = min(h_gancho_disp, L_ext_gancho_cm + radio_doblez_cm + db_mm/10.0) # Lo que cabe en la zapata
 
 
-    tab_res, tab_dwg, tab_apu = st.tabs([" Resultados del Diseño", " Plano 3000 (DXF)", " Cantidades APU"])
+    tab_res, tab_dwg, tab_apu = st.tabs(["Resultados del Diseño", " Plano 3000 (DXF)", " Cantidades APU"])
     
     with tab_res:
         st.markdown(f"**Revisión Estructural: f'c = {fc_basico} MPa | fy = {fy_basico} MPa**")
@@ -1907,22 +1907,22 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
         with c2d1:
             st.markdown(r"**1. Cortante 1D Dir. B:** $\phi V_c \ge V_u$")
             if ok_1way_B:
-                st.success(f" OK Dir B: $\\phi V_c = {phi_Vc_1way_B:.1f}$ $\\ge {Vu_1way_B:.1f}$ kN")
+                st.success(f"OK Dir B: $\\phi V_c = {phi_Vc_1way_B:.1f}$ $\\ge {Vu_1way_B:.1f}$ kN")
             else:
-                st.error(f" FALLA Dir B: $\\phi V_c = {phi_Vc_1way_B:.1f}$ $< {Vu_1way_B:.1f}$ kN")
+                st.error(f"FALLA Dir B: $\\phi V_c = {phi_Vc_1way_B:.1f}$ $< {Vu_1way_B:.1f}$ kN")
                 
             st.markdown(r"**1b. Cortante 1D Dir. L:** $\phi V_c \ge V_u$")
             if ok_1way_L:
-                st.success(f" OK Dir L: $\\phi V_c = {phi_Vc_1way_L:.1f}$ $\\ge {Vu_1way_L:.1f}$ kN")
+                st.success(f"OK Dir L: $\\phi V_c = {phi_Vc_1way_L:.1f}$ $\\ge {Vu_1way_L:.1f}$ kN")
             else:
-                st.error(f" FALLA Dir L: $\\phi V_c = {phi_Vc_1way_L:.1f}$ $< {Vu_1way_L:.1f}$ kN $\\rightarrow$ **Aumentar H**")
+                st.error(f"FALLA Dir L: $\\phi V_c = {phi_Vc_1way_L:.1f}$ $< {Vu_1way_L:.1f}$ kN $\\rightarrow$ **Aumentar H**")
 
         with c2d2:
             st.markdown(r"**2. Punzonamiento:** $\phi V_c \ge V_{up}$")
             if ok_punz:
-                st.success(f" OK Punzonamiento: $\\phi V_c = {phi_Vc_punz:.1f}$ $\\ge {Vu_punz:.1f}$ kN")
+                st.success(f"OK Punzonamiento: $\\phi V_c = {phi_Vc_punz:.1f}$ $\\ge {Vu_punz:.1f}$ kN")
             else:
-                st.error(f" FALLA Punzonamiento: $\\phi V_c = {phi_Vc_punz:.1f}$ $< {Vu_punz:.1f}$ kN $\\rightarrow$ **Aumentar H o Columna**")
+                st.error(f"FALLA Punzonamiento: $\\phi V_c = {phi_Vc_punz:.1f}$ $< {Vu_punz:.1f}$ kN $\\rightarrow$ **Aumentar H o Columna**")
         
         st.markdown("---")
         
@@ -1963,7 +1963,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
         # ═══════════════════════════════════════════════════════════════════
         st.markdown("---")
         st.markdown("###  Estabilidad Global — Volcamiento y Deslizamiento (NSR-10 H.4)")
-        with st.expander(" Parámetros de estabilidad", expanded=True):
+        with st.expander("Parámetros de estabilidad", expanded=True):
             _c_fs1, _c_fs2, _c_fs3 = st.columns(3)
             H_horiz = _c_fs1.number_input("Carga horizontal H [kN]", 0.0, 5000.0,
                                           st.session_state.get("z_Hhoriz", 0.0), 10.0, key="z_Hhoriz")
@@ -1997,20 +1997,20 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
             st.metric("FS Volcamiento", fs_v_disp, delta=f"Req. ≥ 1.50",
                       delta_color="normal" if ok_volc else "inverse")
             if ok_volc:
-                st.success(f" FSv = {fs_v_disp} ≥ 1.50  —  M_estab={M_estab:.1f} / M_volc={M_volc:.1f} kN·m")
+                st.success(f"FSv = {fs_v_disp} ≥ 1.50  —  M_estab={M_estab:.1f} / M_volc={M_volc:.1f} kN·m")
             else:
-                st.error(f" FSv = {fs_v_disp} < 1.50  —  Aumentar B o Df, o reducir H_horiz")
+                st.error(f"FSv = {fs_v_disp} < 1.50  —  Aumentar B o Df, o reducir H_horiz")
         with _col_d:
             st.markdown("**Deslizamiento:**")
             fs_d_disp = "∞" if H_horiz == 0 else f"{FS_desl:.2f}"
             st.metric("FS Deslizamiento", fs_d_disp, delta=f"Req. ≥ 1.50",
                       delta_color="normal" if ok_desl else "inverse")
             if ok_desl:
-                st.success(f" FSd = {fs_d_disp} ≥ 1.50  —  FR={FR:.1f} / H={H_horiz:.1f} kN")
+                st.success(f"FSd = {fs_d_disp} ≥ 1.50  —  FR={FR:.1f} / H={H_horiz:.1f} kN")
             elif H_horiz == 0:
                 st.info("ℹ Ingresa H horizontal > 0 para calcular deslizamiento")
             else:
-                st.error(f" FSd = {fs_d_disp} < 1.50  —  Considerar llave de corte o aumentar Df")
+                st.error(f"FSd = {fs_d_disp} < 1.50  —  Considerar llave de corte o aumentar Df")
 
         # Actualizar data_res con estabilidad
         st.caption(f"δ = {delta_ang:.1f}° | W_total = {W_total:.1f} kN | b. estabilizador = {B_use/2.0:.2f} m | brazo volcador(H) = {arm_volc:.2f} m")
@@ -2020,7 +2020,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
         # ═══════════════════════════════════════════════════════════════════
         st.markdown("---")
         st.markdown("###  Distribución de Presiones bajo la Zapata — qu(x,y)")
-        with st.expander(" Mapa de calor 3D de esfuerzos de contacto", expanded=True):
+        with st.expander("Mapa de calor 3D de esfuerzos de contacto", expanded=True):
             _nx, _ny = 30, 30
             _x_grid = np.linspace(-B_use/2, B_use/2, _nx)
             _y_grid = np.linspace(-L_use/2, L_use/2, _ny)
@@ -2118,7 +2118,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
         # ═══════════════════════════════════════════════════════════════════
         st.markdown("---")
         st.markdown("### ⚙ Optimizador de Espesor H (Diseño Automático Iterativo)")
-        with st.expander(" Encontrar H mínimo que cumple cortante y punzonamiento", expanded=False):
+        with st.expander("Encontrar H mínimo que cumple cortante y punzonamiento", expanded=False):
             st.info("El optimizador busca el menor H [cm] (en pasos de 5 cm) que satisface simultáneamente "
                     "Cortante 1D (Dir.B), Cortante 1D (Dir.L) y Punzonamiento, con los materiales y cargas actuales.")
             _H_min_check = st.number_input("H mínimo a considerar [cm]", 20.0, 80.0, 20.0, 5.0, key="z_opt_hmin")
@@ -2196,15 +2196,15 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
                 st.dataframe(pd.DataFrame(_res_iter), use_container_width=True, hide_index=True)
 
                 if _H_optimo:
-                    st.success(f" **H óptimo = {_H_optimo:.0f} cm** — Es el menor espesor que cumple todos los criterios "
+                    st.success(f"**H óptimo = {_H_optimo:.0f} cm** — Es el menor espesor que cumple todos los criterios "
                                f"estructurales con los materiales y cargas actuales.")
-                    st.info(f" Ahora puede escribir **H = {_H_optimo:.0f} cm** en el input del panel principal y recalcular.")
+                    st.info(f"Ahora puede escribir **H = {_H_optimo:.0f} cm** en el input del panel principal y recalcular.")
                 else:
-                    st.error(f" Ningún H en el rango [{_H_min_check:.0f}–{_H_max_check:.0f}] cm cumple todos los criterios. "
+                    st.error(f"Ningún H en el rango [{_H_min_check:.0f}–{_H_max_check:.0f}] cm cumple todos los criterios. "
                              f"Considere aumentar B×L o f'c.")
 
         # Grafico 2D esquemático
-        with st.expander(" Ver Esquema de Armado 2D", expanded=False):
+        with st.expander("Ver Esquema de Armado 2D", expanded=False):
             fig_2d, ax_2d = plt.subplots(figsize=(5,5))
             fig_2d.patch.set_facecolor("#0f1117"); ax_2d.set_facecolor("#161b22")
             zap_rect = plt.Rectangle((-B_use/2, -L_use/2), B_use, L_use, fill=True, color="#2c3e50", ec="#3498db", lw=2)
@@ -2534,23 +2534,23 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
             
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
-            st.download_button(" Memoria DOCX", data=f_zap_io,
+            st.download_button("Memoria DOCX", data=f_zap_io,
                                file_name=f"Memoria_Zapata_{B_use:.1f}x{L_use:.1f}m.docx",
                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                use_container_width=True, disabled=not area_ok)
         with col_m2:
-            st.download_button(" Plano DXF (ICONTEC)", data=_dxf_bytes,
+            st.download_button("Plano DXF (ICONTEC)", data=_dxf_bytes,
                                file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}m.dxf",
                                mime="application/dxf",
                                use_container_width=True, disabled=not area_ok)
         with col_m3:
             if buf_ifc:
-                st.download_button(" Modelo BIM (IFC)", data=buf_ifc,
+                st.download_button("Modelo BIM (IFC)", data=buf_ifc,
                                    file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}m.ifc",
                                    mime="application/x-step",
                                    use_container_width=True, disabled=not area_ok)
     with tab_dwg:
-        st.subheader(" Visualización 3D de la Fundación con Acero de Refuerzo")
+        st.subheader("Visualización 3D de la Fundación con Acero de Refuerzo")
         fig3d = go.Figure()
 
         Hz_m  = H_zap / 100.0
@@ -2811,7 +2811,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
 
         if _has_prices:
             _total_mat = _c_exc + _c_cem + _c_are + _c_gra + _c_ace
-            st.metric(f" Total Materiales [{_mon}]", f"{_total_mat:,.0f}")
+            st.metric(f"Total Materiales [{_mon}]", f"{_total_mat:,.0f}")
 
         # ─── SECCIÓN 2: Despiece de Acero con costos ─────────────────────────
         st.markdown("####  Despiece de Acero de Refuerzo")
@@ -2969,7 +2969,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
                 ]
             }
             st.dataframe(pd.DataFrame(data_zap_apu), use_container_width=True, hide_index=True)
-            st.info(f" **Diferencia Gran Total vs Materiales:** {total_proyecto - total_mat:,.0f} {mon} = Mano de Obra ({costo_mo:,.0f}) + Herramienta ({herramienta:,.0f}) + AIU ({aiu:,.0f}) + IVA ({iva:,.0f})")
+            st.info(f"**Diferencia Gran Total vs Materiales:** {total_proyecto - total_mat:,.0f} {mon} = Mano de Obra ({costo_mo:,.0f}) + Herramienta ({herramienta:,.0f}) + AIU ({aiu:,.0f}) + IVA ({iva:,.0f})")
 
             
             # Excel APU Export
@@ -3007,10 +3007,10 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
                 worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
                 
             output_excel.seek(0)
-            st.download_button(label=" Descargar Presupuesto Excel (.xlsx)", data=output_excel, 
+            st.download_button(label="Descargar Presupuesto Excel (.xlsx)", data=output_excel, 
                                file_name=f"APU_Zapata_{B_use}x{L_use}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         else:
-            st.info(" Ve a la página 'APU Mercado' para cargar los costos base de agregados, acero y cemento y que tu presupuesto se genere automáticamente.")
+            st.info("Ve a la página 'APU Mercado' para cargar los costos base de agregados, acero y cemento y que tu presupuesto se genere automáticamente.")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # B5 — CUADRO DE MANDO MULTI-ZAPATA + C6 ASENTAMIENTO DIFERENCIAL
@@ -3075,10 +3075,10 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
         if _nombre_zap in _nombres_existentes:
             _idx = _nombres_existentes.index(_nombre_zap)
             st.session_state["zapatas_proyecto"][_idx] = _entrada
-            st.success(f" Zapata **{_nombre_zap}** actualizada en el registro.")
+            st.success(f"Zapata **{_nombre_zap}** actualizada en el registro.")
         else:
             st.session_state["zapatas_proyecto"].append(_entrada)
-            st.success(f" Zapata **{_nombre_zap}** agregada al proyecto ({len(st.session_state['zapatas_proyecto'])} total).")
+            st.success(f"Zapata **{_nombre_zap}** agregada al proyecto ({len(st.session_state['zapatas_proyecto'])} total).")
 
     if _col_btn2.button(" Limpiar registro"):
         st.session_state["zapatas_proyecto"] = []
@@ -3101,7 +3101,7 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
                 _ws2.write(0, _ci, _col, _hdr_fmt)
                 _ws2.set_column(_ci, _ci, max(12, len(str(_col))+2))
         _buf_proy.seek(0)
-        st.download_button(" Exportar tabla de proyecto a Excel",
+        st.download_button("Exportar tabla de proyecto a Excel",
                            data=_buf_proy,
                            file_name="Cuadro_Mando_Zapatas.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -3135,11 +3135,11 @@ with st.expander(_t(" 3. Diseño Estructural de Zapata Prismática y Dibujador 3
 
             _max_delta = max(abs(_asen_vals[i+1] - _asen_vals[i]) for i in range(len(_asen_vals)-1))
             if _max_delta <= _delta_adm:
-                st.success(f" **Asentamiento diferencial máximo = {_max_delta:.1f} mm ≤ {_delta_adm:.1f} mm** (L_viga/{300}) — NSR-10 H.3 satisfecho.")
+                st.success(f"**Asentamiento diferencial máximo = {_max_delta:.1f} mm ≤ {_delta_adm:.1f} mm** (L_viga/{300}) — NSR-10 H.3 satisfecho.")
             else:
-                st.error(f" **Δs_max = {_max_delta:.1f} mm > {_delta_adm:.1f} mm** — El asentamiento diferencial excede el límite NSR-10 H.3. "
+                st.error(f"**Δs_max = {_max_delta:.1f} mm > {_delta_adm:.1f} mm** — El asentamiento diferencial excede el límite NSR-10 H.3. "
                          "Considere zapatas más rígidas, aumentar B×L o usar vigas de cimentación.")
-            st.caption(f"Nota: los asentamientos se leen del campo 'Asentam. [mm]' registrado para cada zapata. "
+            st.caption(f"Nota: los asentamientos se leen del campo 'Asentam. [mm]'registrado para cada zapata. "
                        "Si el valor es 0, calcule el asentamiento en la pestaña de Geotecnia antes de agregar la zapata al registro.")
     else:
         st.info("ℹ Agrega al menos una zapata con el botón ** Agregar al proyecto** para activar el cuadro de mando.")
@@ -3179,7 +3179,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
     # TAB 1: GEOMETRÍA Y DISTRIBUCIÓN DE PRESIONES
     # ══════════════════════════════════════════════════════════════════════════
     with tab_geo:
-        st.subheader(" Geometría y Cargas")
+        st.subheader("Geometría y Cargas")
         cA, cB, cC = st.columns(3)
         with cA:
             st.markdown("##### Zapata Exterior (lindero)")
@@ -3220,14 +3220,14 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                                                 "La excentricidad se calculará automáticamente.")
             gamma_c_m = st.number_input("γ_concreto [kN/m³]", 22.0, 26.0, 24.0, 0.5, key="zm_gam")
 
-        with st.expander(" Optimizador automático B×L (Medianera)", expanded=False):
+        with st.expander("Optimizador automático B×L (Medianera)", expanded=False):
             st.caption("Busca la combinación mínima Be×Le / Bi×Li que cumpla q_adm con carga dada.")
             _q_adm_opt = st.number_input("q_adm objetivo [kPa]", 50.0, 600.0,
                                          st.session_state.get("zm_qadm", 150.0), 10.0, key="opt_qadm_zm")
             _Pe_opt = st.number_input("Carga exterior P_ext [kN]", 50.0, 5000.0, 500.0, 50.0, key="opt_Pe_zm")
             _Pi_opt = st.number_input("Carga interior P_int [kN]", 50.0, 5000.0, 700.0, 50.0, key="opt_Pi_zm")
             _paso   = st.selectbox("Paso de búsqueda [m]", [0.05, 0.10, 0.25], index=1, key="opt_paso_zm")
-            if st.button(" Optimizar dimensiones", key="opt_btn_zm"):
+            if st.button("Optimizar dimensiones", key="opt_btn_zm"):
                 import itertools as _it
                 import numpy as _np_opt
                 _dims = _np_opt.arange(0.5, 6.0 + _paso, _paso)
@@ -3239,18 +3239,18 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                         if _best is None or _area < _best[2]:
                             _best = (_b, _l, _area, _qu)
                 if _best:
-                    st.success(f" Dimensión óptima exterior: B = **{_best[0]:.2f} m** × L = **{_best[1]:.2f} m**")
+                    st.success(f"Dimensión óptima exterior: B = **{_best[0]:.2f} m** × L = **{_best[1]:.2f} m**")
                     st.metric("q_neto", f"{_best[3]:.1f} kPa", delta=f"{_q_adm_opt - _best[3]:.1f} kPa de reserva")
                     _b2, _l2 = _best[0], _best[1]
                     _qu2 = _Pi_opt / (_b2 * _l2)
                     _ok2 = _qu2 <= _q_adm_opt
                     st.info(f"Interior (misma dimensión {_b2:.2f}×{_l2:.2f}m): qu = {_qu2:.1f} kPa  {'' if _ok2 else ' aumentar'}")
                 else:
-                    st.error(" No se encontró dimensión dentro del rango 0.5–6.0 m. Revisa q_adm o las cargas.")
+                    st.error("No se encontró dimensión dentro del rango 0.5–6.0 m. Revisa q_adm o las cargas.")
 
         st.divider()
         # ─── CÁLCULO DISTRIBUCIONES DE PRESIONES ──────────────────────────────
-        st.subheader(" Distribución de Presiones")
+        st.subheader("Distribución de Presiones")
         col_pe, col_pi = st.columns(2)
 
         def _mostrar_presiones(label, P, M_B, M_L, B, L, c1_cm, c2_cm, prefix, q_adm):
@@ -3340,7 +3340,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
     # TAB 2: DISEÑO DE LA VIGA DE AMARRE
     # ══════════════════════════════════════════════════════════════════════════
     with tab_viga:
-        st.subheader(f" Diseño de {sn['nombre']} — {norma}")
+        st.subheader(f"Diseño de {sn['nombre']} — {norma}")
         st.markdown(f"> Artículo de referencia: **{sn['art']}** | "
                     f"Dimensión mínima: L / {sn['h_factor']} | "
                     f"Fuerza axial sísmica: {sn['F_ax_pct']*100:.1f}% × ΣP")
@@ -3413,7 +3413,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
 
         st.divider()
         # Tabla de armado
-        st.subheader(f" Armado de {sn['nombre']}")
+        st.subheader(f"Armado de {sn['nombre']}")
         _a_col1, _a_col2 = st.columns(2)
         with _a_col1:
             st.markdown(f"""
@@ -3436,7 +3436,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
 """)
 
         # Diagrama V(x) / M(x)
-        st.subheader(" Diagrama de Esfuerzos Internos")
+        st.subheader("Diagrama de Esfuerzos Internos")
         fig_vm = render_diagrama_VM(x_arr, V_arr, M_arr,
                                     R_strap_kN_ui, R_int, pp_viga, L_libre)
         st.plotly_chart(fig_vm, use_container_width=True)
@@ -3453,7 +3453,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
     # TAB 3: VISTA 3D PLOTLY
     # ══════════════════════════════════════════════════════════════════════════
     with tab_3d:
-        st.subheader(" Vista 3D del Sistema")
+        st.subheader("Vista 3D del Sistema")
         dis_3d  = st.session_state.get("zm_dis")
         viga_3d = st.session_state.get("zm_viga_d")
         if dis_3d and viga_3d:
@@ -3461,7 +3461,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
             zap_int_3d = {"x0": Be + L_libre, "y0": 0.0, "B": Bi, "L": Li, "H": Hi, "c1": c1i, "c2": c2i}
             fig_3d = render_3d_sistema(zap_ext_3d, zap_int_3d, viga_3d, dis_3d)
             st.plotly_chart(fig_3d, use_container_width=True)
-            st.caption(" Arrastra para rotar • Doble clic para resetear vista • Rueda para zoom")
+            st.caption("Arrastra para rotar • Doble clic para resetear vista • Rueda para zoom")
         else:
             st.info("ℹ Completa primero la pestaña **'Geometría y Presiones'** y el **'Diseño de Viga'** para generar la vista 3D.")
 
@@ -3469,7 +3469,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
     # TAB 4: EXPORTACIÓN DXF
     # ══════════════════════════════════════════════════════════════════════════
     with tab_dxf:
-        st.subheader(" Planos DXF (3 Vistas + Rótulo)")
+        st.subheader("Planos DXF (3 Vistas + Rótulo)")
         dis_dxf  = st.session_state.get("zm_dis")
         viga_dxf = st.session_state.get("zm_viga_d")
         dist_e_dxf = st.session_state.get("zm_dist_e")
@@ -3477,7 +3477,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         if dis_dxf and viga_dxf:
             zap_ext_dxf = {"B_cm": Be*100, "L_cm": Le*100, "H_cm": He}
             zap_int_dxf = {"B_cm": Bi*100, "L_cm": Li*100, "H_cm": Hi}
-            if st.button(" Generar DXF del Sistema", key="zm_gen_dxf", type="primary"):
+            if st.button("Generar DXF del Sistema", key="zm_gen_dxf", type="primary"):
                 with st.spinner("Generando planos DXF..."):
                     try:
                         doc_dxf = generar_dxf_sistema(zap_ext_dxf, zap_int_dxf, viga_dxf, dis_dxf, norma, fc, fy)
@@ -3491,7 +3491,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                             mime="application/dxf",
                             key="zm_dl_dxf"
                         )
-                        st.success(" DXF generado con: Planta general, Corte A-A longitudinal, Corte B-B transversal y Rótulo normativo.")
+                        st.success("DXF generado con: Planta general, Corte A-A longitudinal, Corte B-B transversal y Rótulo normativo.")
                         st.markdown(f"""
 **Layers incluidos:**
 - `ZAPATA_EXT` (amarillo) — Zapata en lindero
@@ -3513,7 +3513,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         _c_ifc1, _c_ifc2 = st.columns(2)
         _proyecto_ifc = _c_ifc1.text_input("Nombre del proyecto IFC", value="Proyecto NSR-10", key="zm_ifc_proy")
         _edificio_ifc = _c_ifc2.text_input("Elemento (ej. Zapata Medianera Z-M1)", value=f"ZAP-M-{tipo_zap[:1]}", key="zm_ifc_elem")
-        if st.button(" Generar IFC del sistema", key="zm_btn_ifc"):
+        if st.button("Generar IFC del sistema", key="zm_btn_ifc"):
             try:
                 import ifc_export as _ifc_mod
                 # Usar la función ifc_zapata para la zapata exterior + viga como IfcBeam
@@ -3535,7 +3535,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                     mime="application/x-step",
                     key="zm_dl_ifc"
                 )
-                st.success(" IFC generado: IfcFooting (zapata ext.) + datos del sistema.")
+                st.success("IFC generado: IfcFooting (zapata ext.) + datos del sistema.")
             except ImportError:
                 # Fallback: IFC texto plano mínimo si ifcopenshell no está disponible
                 st.warning("⚠ `ifc_export` no disponible — generando IFC mínimo en texto plano.")
@@ -3562,7 +3562,7 @@ END-ISO-10303-21;
                     mime="application/x-step",
                     key="zm_dl_ifc_txt"
                 )
-        st.caption(" Para IFC completo con geometría 3D, instala: `pip install ifcopenshell`")
+        st.caption("Para IFC completo con geometría 3D, instala: `pip install ifcopenshell`")
         # ────────────────────────────────────────────────────────────────────────
 
 
@@ -3570,7 +3570,7 @@ END-ISO-10303-21;
     # TAB 5: MEMORIA DOCX
     # ══════════════════════════════════════════════════════════════════════════
     with tab_docx:
-        st.subheader(f" Memoria de Cálculo — {sn['nombre']}")
+        st.subheader(f"Memoria de Cálculo — {sn['nombre']}")
         dis_doc  = st.session_state.get("zm_dis")
         viga_doc = st.session_state.get("zm_viga_d")
         dist_e_doc = st.session_state.get("zm_dist_e", {})
@@ -3587,7 +3587,7 @@ END-ISO-10303-21;
                 "e_L": dist_e_doc.get("e_L", 0),
                 "meyerhof": dist_e_doc.get("meyerhof"),
             }
-            if st.button(" Generar Memoria DOCX", key="zm_gen_docx", type="primary"):
+            if st.button("Generar Memoria DOCX", key="zm_gen_docx", type="primary"):
                 with st.spinner("Generando memoria de cálculo..."):
                     try:
                         doc_word = generar_docx_ampliado(
@@ -3602,14 +3602,14 @@ END-ISO-10303-21;
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                             key="zm_dl_docx"
                         )
-                        st.success(" Memoria generada: 4 secciones (Datos, Presiones, Diseño, Diagramas V/M)")
+                        st.success("Memoria generada: 4 secciones (Datos, Presiones, Diseño, Diagramas V/M)")
                     except Exception as _e_doc:
                         st.error(f"Error generando DOCX: {_e_doc}")
 
             # Preview de armado en pantalla
             if dis_doc:
                 st.divider()
-                st.subheader(" Resumen de Diseño")
+                st.subheader("Resumen de Diseño")
                 st.markdown(f"""
 | Elemento | Especificación |
 |---|---|
@@ -3629,7 +3629,7 @@ END-ISO-10303-21;
     # ═══════════════════════════════════════════════════════════════════════════
     # Crear APU dinámicamente añadido a continuación del flujo de trabajo
     st.divider()
-    with st.expander(" APU — Cantidades y Presupuesto del Sistema (Viga de Amarre)", expanded=False):
+    with st.expander("APU — Cantidades y Presupuesto del Sistema (Viga de Amarre)", expanded=False):
         _vd_a = st.session_state.get("zm_viga_d", {})
         _dd_a = st.session_state.get("zm_dis",    {})
         if _vd_a and _dd_a:
@@ -3769,7 +3769,7 @@ END-ISO-10303-21;
                  "Subtotal": f"**{_gran:,.0f} {_mon_a}**"},
             ]
             st.dataframe(pd.DataFrame(_rows_apu), use_container_width=True, hide_index=True)
-            st.metric(f" Gran Total Sistema [{_mon_a}]", f"{_gran:,.0f}")
+            st.metric(f"Gran Total Sistema [{_mon_a}]", f"{_gran:,.0f}")
 
             # Despiece de acero
             st.markdown("####  Despiece de Acero — Viga de Amarre")

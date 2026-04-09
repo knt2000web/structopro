@@ -540,7 +540,7 @@ with tab_dxf:
     if st.button("Generar archivo DXF"):
         dxf_data = generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo, 
                                 block_length, incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente)
-        st.download_button(" Descargar DXF", data=dxf_data, file_name=f"PlacaFacil_{proyecto_nombre}.dxf", mime="application/dxf")
+        st.download_button("Descargar DXF", data=dxf_data, file_name=f"PlacaFacil_{proyecto_nombre}.dxf", mime="application/dxf")
 
 with tab_mem:
     st.subheader("Memoria de cálculo")
@@ -549,7 +549,7 @@ with tab_mem:
         buf = io.BytesIO()
         doc.save(buf)
         buf.seek(0)
-        st.download_button(" Descargar Memoria", data=buf, file_name=f"Memoria_PlacaFacil_{proyecto_nombre}.docx", 
+        st.download_button("Descargar Memoria", data=buf, file_name=f"Memoria_PlacaFacil_{proyecto_nombre}.docx", 
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_qty:
@@ -590,7 +590,7 @@ with tab_apu:
         use_container_width=True,
         hide_index=True
     )
-    st.metric(f" Gran Total Proyecto ({moneda})", f"{total_proyecto:,.0f}")
+    st.metric(f"Gran Total Proyecto ({moneda})", f"{total_proyecto:,.0f}")
     
     if st.button("Exportar presupuesto a Excel"):
         output = io.BytesIO()
@@ -598,7 +598,7 @@ with tab_apu:
             df_costo.to_excel(writer, sheet_name="Presupuesto", index=False)
             df_qty.to_excel(writer, sheet_name="Cantidades", index=False)
         output.seek(0)
-        st.download_button(" Descargar Excel", data=output, file_name=f"Presupuesto_PlacaFacil_{proyecto_nombre}.xlsx", 
+        st.download_button("Descargar Excel", data=output, file_name=f"Presupuesto_PlacaFacil_{proyecto_nombre}.xlsx", 
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ─────────────────────────────────────────────
