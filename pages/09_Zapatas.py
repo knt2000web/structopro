@@ -385,14 +385,20 @@ def render_mapa_calor_presiones(B, L, P, M_B, M_L, Ix, Iy, A, qu_max_val, qu_min
     fig = go.Figure()
     _rango = max(float(np.max(_Qp)) - float(np.min(_Qp[_Qp > 0]) if np.any(_Qp > 0) else 0), 1.0)
     _cmin  = max(0.0, float(np.max(_Qp)) - _rango * 4)
+    if _rango < 5.0:
+        _cmin = 0.0
+
     fig.add_trace(go.Surface(x=_xg, y=_yg, z=_Qp, colorscale="RdYlGn_r",
                              cmin=_cmin, cmax=float(np.max(_Qp))*1.02,
                              colorbar=dict(title=dict(text="qu [kPa]", font=dict(color="white")), tickfont=dict(color="white")),
                              opacity=0.9, name="qu(x,y)"))
-    _imax = np.unravel_index(np.argmax(_Qm), _Qm.shape)
-    fig.add_trace(go.Scatter3d(x=[_xg[_imax[1]]], y=[_yg[_imax[0]]], z=[float(_Qm[_imax])],
-                               mode="markers+text", marker=dict(color="#ff4444", size=8, symbol="diamond"),
-                               text=[f"qu_max={qu_max_val:.1f}kPa"], textfont=dict(color="white"), name=f"qu_max"))
+    
+    rango_real = float(np.max(_Qp)) - float(np.min(_Qp[_Qp > 0])) if np.any(_Qp > 0) else 0
+    if rango_real > 1.0:
+        _imax = np.unravel_index(np.argmax(_Qm), _Qm.shape)
+        fig.add_trace(go.Scatter3d(x=[_xg[_imax[1]]], y=[_yg[_imax[0]]], z=[float(_Qm[_imax])],
+                                   mode="markers+text", marker=dict(color="#ff4444", size=8, symbol="diamond"),
+                                   text=[f"qu_max={qu_max_val:.1f}kPa"], textfont=dict(color="white"), name=f"qu_max"))
     _c1m = c1_col_cm/100; _c2m = c2_col_cm/100
     _cx = [-_c1m/2, _c1m/2, _c1m/2, -_c1m/2, -_c1m/2]
     _cy = [-_c2m/2, -_c2m/2, _c2m/2, _c2m/2, -_c2m/2]
@@ -1214,25 +1220,7 @@ with st.expander(_t("🛑 2. Capacidad Portante de Suelo (Terzaghi) y Asentamien
         m3.metric("kg/cm²", f"{q_adm/98.0665:.3f}")
 
     
-    # ITEM 4: Detector de pilotes
-    razones_pilotes = []
-    if q_adm < 50:
-        razones_pilotes.append(f"q_adm = {q_adm:.0f} kPa < 50 kPa — suelo muy blando")
-    # Para el asentamiento, usamos variables que existen en la función _cálculos_Terzaghi
-    asentamiento_max = 0.0 # Se calcula abajo, pero usamos una heurística básica
-    try:
-        if Df_cp > B_cp * 3.0:
-            razones_pilotes.append(f"Df/B = {Df_cp/B_cp:.1f} > 3 — cimentación superficial ineficiente")
-    except: pass
-    
-    if razones_pilotes:
-        st.warning(
-            "⚠️ **Este suelo puede requerir cimentación profunda (pilotes):**\n\n" +
-            "\n".join(f"- {r}" for r in razones_pilotes) +
-            "\n\n📌 *Este módulo calcula zapatas superficiales. "
-            "Para pilotes consulta el módulo **🔩 Pilotes** en el menú lateral.*"
-        )
-        
+    # (Detector de pilotes removido de aquí, mantenemos la versión completa más abajo)
     # ITEMS 2 & 3: Calculadora ks (coeficiente de balasto) y Rigidez Lambda
     with st.expander("🔩 Coeficiente de Balasto ks (Winkler) y Rigidez Relativa"):
         col_ks1, col_ks2 = st.columns(2)
@@ -1960,6 +1948,13 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
         ]
         st.table(pd.DataFrame(data_res))
 
+        if A_use < Area_req:
+            st.error(
+                f"🛑 **ÁREA INSUFICIENTE** — Requerida: {Area_req:.2f} m² | "
+                f"Provista: {A_use:.2f} m². Aumenta B o L antes de continuar."
+            )
+            st.stop()
+
         # B4 aviso si se activó el área efectiva Meyerhof
         if _meyerhof_info:
             st.warning(_meyerhof_info)
@@ -2042,6 +2037,9 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
             # Superficie 3D
             _r2 = max(float(np.max(_Qm_plot)) - (float(np.min(_Qm_plot[_Qm_plot > 0])) if np.any(_Qm_plot > 0) else 0), 1.0)
             _cmin2 = max(0.0, float(np.max(_Qm_plot)) - _r2 * 4)
+            if _r2 < 5.0:
+                _cmin2 = 0.0
+
             _fig_heat.add_trace(go.Surface(
                 x=_x_grid, y=_y_grid, z=_Qm_plot,
                 colorscale="RdYlGn_r",
@@ -2053,15 +2051,17 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
             ))
 
             # Punto qu_max
-            _imax = np.unravel_index(np.argmax(_Qm), _Qm.shape)
-            _fig_heat.add_trace(go.Scatter3d(
-                x=[_x_grid[_imax[1]]], y=[_y_grid[_imax[0]]], z=[float(_Qm[_imax])],
-                mode="markers+text",
-                marker=dict(color="#ff4444", size=8, symbol="diamond"),
-                text=[f"qu_max={qu_max:.1f} kPa"],
-                textfont=dict(color="white"),
-                name=f"qu_max = {qu_max:.1f} kPa"
-            ))
+            rango_real_iso = float(np.max(_Qm_plot)) - float(np.min(_Qm_plot[_Qm_plot > 0])) if np.any(_Qm_plot > 0) else 0
+            if rango_real_iso > 1.0:
+                _imax = np.unravel_index(np.argmax(_Qm), _Qm.shape)
+                _fig_heat.add_trace(go.Scatter3d(
+                    x=[_x_grid[_imax[1]]], y=[_y_grid[_imax[0]]], z=[float(_Qm[_imax])],
+                    mode="markers+text",
+                    marker=dict(color="#ff4444", size=8, symbol="diamond"),
+                    text=[f"qu_max={qu_max:.1f} kPa"],
+                    textfont=dict(color="white"),
+                    name=f"qu_max = {qu_max:.1f} kPa"
+                ))
 
             # Columna proyectada
             _c1m = c1_col / 100.0; _c2m = c2_col / 100.0
@@ -2095,17 +2095,24 @@ with st.expander(_t("🏗️ 3. Diseño Estructural de Zapata Prismática y Dibu
             st.plotly_chart(_fig_heat, use_container_width=True)
             if abs(qu_max - qu_min) < 1.0:
                 st.info(
-                    f"📐 **Distribución uniforme** — qu = {qu_max:.1f} kPa constante "
-                    f"en toda la huella. El gráfico 3D cobra valor cuando ingresas "
-                    f"momentos Mu ≠ 0 para ver la variación de presiones."
+                    "📐 **Distribución uniforme** — qu = "
+                    f"{qu_max:.1f} kPa constante en toda la huella. "
+                    "El gráfico 3D cobra valor cuando ingresas momentos Mu ≠ 0 "
+                    "para ver la variación de presiones."
                 )
-
-            if _tiene_tension:
-                st.warning("⚠️ **Levantamiento detectado** — Hay zona con qu < 0 (tensión). El suelo no resiste tracción. "
-                           "Considere: (1) aumentar B×L para reducir excentricidad, (2) aumentar P_svc, "
-                           "o (3) activar el método de Área Efectiva Meyerhof (Bloque B4 disponible en la tabla de estado).")
             else:
-                st.success("✅ Distribución completamente en compresión — Toda la huella de la zapata trabaja.")
+                if not _tiene_tension:
+                    st.warning(
+                        f"⚠️ **Distribución trapezoidal** — "
+                        f"qu_max = {qu_max:.1f} kPa | qu_min = {qu_min:.1f} kPa. "
+                        f"Excentricidad activa en la zapata."
+                    )
+                else:
+                    st.error(
+                        f"🔴 **Levantamiento parcial** — qu_min = {qu_min:.1f} kPa < 0. "
+                        "Parte de la zapata no está en contacto con el suelo. Considere aumentar dimensiones "
+                        "o activar el método de Área Efectiva Meyerhof (Bloque B4 disponible abajo)."
+                    )
 
         # ═══════════════════════════════════════════════════════════════════
         # A3 — DISEÑO AUTOMÁTICO ITERATIVO DE H
@@ -3282,7 +3289,24 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                                                        titulo=f"qu(x,y) — {label}", q_adm=q_adm)
             st.plotly_chart(fig_hm, use_container_width=True)
         if abs(qu_max_z - qu_min_z) < 1.0:
-            st.info(f"📐 **Distribución uniforme** — qu = {qu_max_z:.1f} kPa constante en toda la huella.")
+            st.info(
+                "📐 **Distribución uniforme** — qu = "
+                f"{qu_max_z:.1f} kPa constante en toda la huella. "
+                "El gráfico 3D cobra valor cuando ingresas momentos Mu ≠ 0 "
+                "para ver la variación de presiones."
+            )
+        else:
+            if qu_min_z >= 0:
+                st.warning(
+                    f"⚠️ **Distribución trapezoidal** — "
+                    f"qu_max = {qu_max_z:.1f} kPa | qu_min = {qu_min_z:.1f} kPa. "
+                    f"Excentricidad activa en la zapata."
+                )
+            else:
+                st.error(
+                    f"🔴 **Levantamiento parcial** — qu_min = {qu_min_z:.1f} kPa < 0. "
+                    "Parte de la zapata no está en contacto con el suelo."
+                )
             return {"qu_max": qu_max, "qu_min": qu_min, "tipo": tipo_dist,
                     "e_B": e_B, "e_L": e_L, "Ix": Ix, "Iy": Iy, "A": A,
                     "qu_avg": qu_avg_uso, "meyerhof": meyerhof_data}
