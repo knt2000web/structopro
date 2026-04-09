@@ -613,7 +613,8 @@ with tab_est:
                 spacing = ((D_pilote*100) - 2*recub_pil) / (bars_per_face - 1) if bars_per_face > 1 else 0
                 for i in range(n_barras_p):
                     # Simplified discrete layer distribution
-                    layers_pil.append({'As': ab_long, 'd': recub_pil + (D_pilote*100 - 2*recub_pil)*(i/(n_barras_p-1))})
+                    _denom = max(n_barras_p - 1, 1)  # EF-3: evita div/0 si solo 1 barra
+                    layers_pil.append({'As': ab_long, 'd': recub_pil + (D_pilote*100 - 2*recub_pil)*(i/_denom)})
                 
                 res_pm = pm_calc.compute_uniaxial_capacity(
                     b=D_pilote*100, h=D_pilote*100, d_prime=recub_pil, layers=layers_pil,

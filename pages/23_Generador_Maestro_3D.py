@@ -816,7 +816,8 @@ if st.session_state.get("g3d_ready", False):
                     dwg.saveas(tmp_path_out16)
                     with open(tmp_path_out16, 'rb') as f_out16:
                         bytes_out16 = f_out16.read()
-                    os.unlink(tmp_path_out16)                    st.download_button("Descargar DXF", data=bytes_out16, file_name="Edificio_3D.dxf")
+                    os.unlink(tmp_path_out16)
+                    st.download_button("Descargar DXF", data=bytes_out16, file_name="Edificio_3D.dxf")
 
             # APU (presupuesto)
             if "apu_config" in st.session_state:

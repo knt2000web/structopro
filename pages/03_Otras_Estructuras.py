@@ -350,7 +350,8 @@ with st.expander(_t("Cortante a una Distancia X del Apoyo (Vigas)", " Shear at a
         doc_dxf.saveas(tmp_path_out_str)
         with open(tmp_path_out_str, 'rb') as f_out_str:
             bytes_out_str = f_out_str.read()
-        os.unlink(tmp_path_out_str)        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Seccion_Cortante.dxf")
+        os.unlink(tmp_path_out_str)
+        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Seccion_Cortante.dxf")
 
 # =============================================================================
 # 2. MÉNSULAS (CORBELS) – ACI 318
@@ -534,7 +535,8 @@ with st.expander(_t("Diseño de Ménsulas (Corbels / ACI 318)", " Corbel Design 
             doc_dxf.saveas(tmp_path_out_str)
             with open(tmp_path_out_str, 'rb') as f_out_str:
                 bytes_out_str = f_out_str.read()
-            os.unlink(tmp_path_out_str)            st.download_button("Descargar DXF", data=bytes_out_str, file_name="Corbel.dxf")
+            os.unlink(tmp_path_out_str)
+        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Corbel.dxf")
 
 # =============================================================================
 # 3. PREDIMENSIONAMIENTO DE COLUMNAS
@@ -639,7 +641,8 @@ with st.expander(_t("Predimensionamiento de Columnas", "Column Preliminary Sizin
         doc_dxf.saveas(tmp_path_out_str)
         with open(tmp_path_out_str, 'rb') as f_out_str:
             bytes_out_str = f_out_str.read()
-        os.unlink(tmp_path_out_str)        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Columna_Predim.dxf")
+        os.unlink(tmp_path_out_str)
+        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Columna_Predim.dxf")
 
 # =============================================================================
 # 4. CAPACIDAD AXIAL COLUMNAS CORTAS

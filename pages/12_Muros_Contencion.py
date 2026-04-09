@@ -672,7 +672,8 @@ with tab2:
     doc_dxf.saveas(tmp_path__out)
     with open(tmp_path__out, 'rb') as f__out:
         bytes__out = f__out.read()
-    os.unlink(tmp_path__out)    st.download_button("Descargar DXF", data=bytes__out, file_name=f"Muro_{H_muro:.1f}m.dxf")
+    os.unlink(tmp_path__out)
+    st.download_button("Descargar DXF", data=bytes__out, file_name=f"Muro_{H_muro:.1f}m.dxf")
 
 with tab3:
     st.subheader(_t("Visualización 3D", "3D Visualization"))
