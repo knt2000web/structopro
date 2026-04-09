@@ -381,7 +381,7 @@ with tab_geo:
                 
                 # Dibujar pilote actual sobrepuesto
                 fig_pf.add_shape(type="rect", x0=0.8, y0=0, x1=1.2, y1=L_pilote, line=dict(color="white", width=2), fillcolor="#b0bec5")
-                fig_pf.add_annotation(x=1.0, y=L_pilote, text="▶ Base", showarrow=True, arrowhead=-1, ax=40, ay=0, font=dict(color="white"))
+                fig_pf.add_annotation(x=1.0, y=L_pilote, text="▶ Base", showarrow=True, arrowhead=1, ax=40, ay=0, font=dict(color="white"))
                 
                 fig_pf.update_layout(
                     title="Perfil del Suelo vs Pilote", 
