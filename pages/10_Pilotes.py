@@ -660,6 +660,21 @@ with tab_est:
                 for _i, (_bx, _by) in enumerate(_coord_list):
                     fig_p3d.add_trace(go.Scatter3d(x=[_bx, _bx], y=[_by, _by], z=[0, _L], mode='lines', line=dict(color='#ff6b35', width=6), showlegend=(_i==0), name='Acero Long.'))
 
+            # Añadir Encepado (Dado) Esquemático en la parte superior
+            try:
+                _H_dado_cm = H_dado * 100
+                _B_dado_cm = B_dado * 100
+                _L_dado_cm = L_dado * 100
+            except NameError:
+                # Fallback por si la pestaña 2 no se ha ejecutado en este run state
+                _H_dado_cm, _B_dado_cm, _L_dado_cm = 80.0, _D*3, _D*3
+            
+            _xD = [-_B_dado_cm/2, _B_dado_cm/2, _B_dado_cm/2, -_B_dado_cm/2, -_B_dado_cm/2, _B_dado_cm/2, _B_dado_cm/2, -_B_dado_cm/2]
+            _yD = [-_L_dado_cm/2, -_L_dado_cm/2, _L_dado_cm/2, _L_dado_cm/2, -_L_dado_cm/2, -_L_dado_cm/2, _L_dado_cm/2, _L_dado_cm/2]
+            _zD = [_L-_H_dado_cm, _L-_H_dado_cm, _L-_H_dado_cm, _L-_H_dado_cm, _L, _L, _L, _L]
+            _I_box, _J_box, _K_box = [0,0,4,4,0,1,2,3], [1,3,5,7,4,5,6,7], [2,2,6,6,1,2,3,0]
+            fig_p3d.add_trace(go.Mesh3d(x=_xD, y=_yD, z=_zD, i=_I_box, j=_J_box, k=_K_box, opacity=0.2, color='#ffaa00', name='Dado (Eq. Esquemático)'))
+
             fig_p3d.update_layout(
                 scene=dict(aspectmode='data', xaxis_title='X (cm)', yaxis_title='Y (cm)', zaxis_title='Z (cm)', bgcolor='#1a1a2e'),
                 paper_bgcolor='#1a1a2e', font=dict(color='white'),
@@ -1106,6 +1121,29 @@ with tab_mem:
                     _t1.set_placement((-B_dado/2, L_dado/2 + 0.3))
                     _t2 = msp.add_text(f"DADO: {B_dado:.2f}x{L_dado:.2f}x{H_dado:.2f}m", dxfattribs={'height': 0.15, 'layer': 'TEXTOS'})
                     _t2.set_placement((-B_dado/2, L_dado/2 + 0.1))
+
+                    # ROTULO PERIMETRAL ICONTEC
+                    rot_w = max(4.0, B_dado/1.5); rot_h = max(1.0, B_dado/6); row_h = rot_h / 6
+                    rot_x = B_dado/2 + 1.0; rot_y = -L_dado/2
+                    # Marco
+                    if 'ROTULO' not in doc_dxf.layers: doc_dxf.layers.add('ROTULO', color=6)
+                    msp.add_lwpolyline([(rot_x, rot_y), (rot_x + rot_w, rot_y), (rot_x + rot_w, rot_y + rot_h), (rot_x, rot_y + rot_h)], close=True, dxfattribs={'layer': 'ROTULO'})
+                    msp.add_line((rot_x + rot_w*0.35, rot_y), (rot_x + rot_w*0.35, rot_y + rot_h), dxfattribs={'layer': 'ROTULO'})
+                    import datetime as _dt_dxf
+                    _rotulo_filas = [
+                        ("PROYECTO", f"Grupo {n_pilotes} Pilotes"),
+                        ("DADO", f"{B_dado:.2f}x{L_dado:.2f}x{H_dado:.2f}m"),
+                        ("DISEÑO", "StructuroPro"),
+                        ("FECHA", _dt_dxf.date.today().strftime('%d/%m/%Y')),
+                        ("PLANO", "PIL-001"), ("REV", "R0")
+                    ]
+                    for _i_rot, (c, v) in enumerate(_rotulo_filas):
+                        yr = rot_y + rot_h - (_i_rot + 1) * row_h
+                        if _i_rot > 0: msp.add_line((rot_x, yr + row_h), (rot_x + rot_w, yr + row_h), dxfattribs={'layer': 'ROTULO'})
+                        _t_c = msp.add_text(c, dxfattribs={'height': row_h*0.35, 'layer': 'ROTULO'})
+                        _t_c.set_placement((rot_x + rot_w*0.02, yr + row_h*0.25))
+                        _t_v = msp.add_text(v, dxfattribs={'height': row_h*0.45, 'layer': 'ROTULO'})
+                        _t_v.set_placement((rot_x + rot_w*0.38, yr + row_h*0.20))
 
                     dxf_io = io.StringIO()
                     doc_dxf.write(dxf_io)
