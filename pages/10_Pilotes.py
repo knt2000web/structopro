@@ -370,16 +370,26 @@ with tab_geo:
                 color_map = {"Arcilla": "#8B4513", "Arena": "#DEB887", "Grava": "#8e9eab", "Roca": "#546e7a"}
                 for _, r_env in df.iterrows():
                     fig_pf.add_shape(type="rect", 
-                        x0=0.1, y0=-r_env["z_top"], x1=1.9, y1=-r_env["z_bot"],
+                        x0=0.1, y0=r_env["z_top"], x1=1.9, y1=r_env["z_bot"],
                         line=dict(color="black", width=1), fillcolor=color_map.get(r_env["Tipo"], "#999"), opacity=0.7)
-                    if (r_env["z_bot"] - r_env["z_top"]) > 0.5:
-                        fig_pf.add_annotation(x=1.0, y=-(r_env["z_top"]+r_env["z_bot"])/2, text=f"{r_env['Tipo']}", showarrow=False, font=dict(color="white"))
+                    if (r_env["z_bot"] - r_env["z_top"]) >= 0.5:
+                        props = f"γ={r_env['γ (kN/m³)']}"
+                        if r_env['c (kPa)'] > 0: props += f" c={r_env['c (kPa)']}"
+                        if r_env['φ (°)'] > 0: props += f" φ={r_env['φ (°)']}°"
+                        texto_capa = f"<b>{r_env['Tipo']}</b><br><span style='font-size:10px'>{props}</span>"
+                        fig_pf.add_annotation(x=1.0, y=(r_env["z_top"]+r_env["z_bot"])/2, text=texto_capa, showarrow=False, font=dict(color="white"))
                 
                 # Dibujar pilote actual sobrepuesto
-                fig_pf.add_shape(type="rect", x0=0.8, y0=0, x1=1.2, y1=-L_pilote, line=dict(color="white", width=2), fillcolor="#b0bec5")
-                fig_pf.add_annotation(x=1.0, y=-L_pilote, text="▶ Base", showarrow=True, arrowhead=1, ax=40, ay=0, font=dict(color="white"))
+                fig_pf.add_shape(type="rect", x0=0.8, y0=0, x1=1.2, y1=L_pilote, line=dict(color="white", width=2), fillcolor="#b0bec5")
+                fig_pf.add_annotation(x=1.0, y=L_pilote, text="▶ Base", showarrow=True, arrowhead=-1, ax=40, ay=0, font=dict(color="white"))
                 
-                fig_pf.update_layout(title="Perfil del Suelo vs Pilote", xaxis=dict(visible=False, range=[0, 2]), yaxis=dict(title="Profundidad [m]"), height=400, margin=dict(l=20, r=20, t=40, b=20), paper_bgcolor="#1e2530", plot_bgcolor="#1e2530", font=dict(color="white"))
+                fig_pf.update_layout(
+                    title="Perfil del Suelo vs Pilote", 
+                    xaxis=dict(visible=False, range=[0, 2]), 
+                    yaxis=dict(title="Profundidad [m]", range=[prof_total, 0]), 
+                    height=450, margin=dict(l=20, r=20, t=40, b=20), 
+                    paper_bgcolor="#1e2530", plot_bgcolor="#1e2530", font=dict(color="white")
+                )
                 st.plotly_chart(fig_pf, use_container_width=True)
 
         with col_opt2:
