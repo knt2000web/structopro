@@ -510,6 +510,54 @@ with tab_grup:
             height=400, margin=dict(l=20, r=20, t=50, b=20)
         )
         st.plotly_chart(fig_g, use_container_width=True)
+
+        # --- Visor 3D del Grupo ---
+        st.markdown("---")
+        st.subheader("Visualización 3D del Grupo de Cimentación")
+        if _PLOTLY_AVAILABLE:
+            fig_g3d = go.Figure()
+            # Encepado (Dado) Transparente
+            _Hd_cm = H_dado * 100
+            _Bd_cm = B_dado * 100
+            _Ld_cm = L_dado * 100
+            _xD = [-_Bd_cm/2, _Bd_cm/2, _Bd_cm/2, -_Bd_cm/2, -_Bd_cm/2, _Bd_cm/2, _Bd_cm/2, -_Bd_cm/2]
+            _yD = [-_Ld_cm/2, -_Ld_cm/2, _Ld_cm/2, _Ld_cm/2, -_Ld_cm/2, -_Ld_cm/2, _Ld_cm/2, _Ld_cm/2]
+            _zD = [0, 0, 0, 0, _Hd_cm, _Hd_cm, _Hd_cm, _Hd_cm]  # Base del dado en Z=0
+            _I_box, _J_box, _K_box = [0,0,4,4,0,1,2,3], [1,3,5,7,4,5,6,7], [2,2,6,6,1,2,3,0]
+            fig_g3d.add_trace(go.Mesh3d(x=_xD, y=_yD, z=_zD, i=_I_box, j=_J_box, k=_K_box, opacity=0.3, color='#ffaa00', name='Encepado'))
+
+            # Pilotes extruidos hacia abajo
+            _Lp_cm = L_pilote * 100
+            # max prof limit for visual proportion
+            _Lp_disp = min(_Lp_cm, 600)
+            _D_cm = D_pilote * 100
+            offset_x_cm = offset_x * 100
+            offset_y_cm = offset_y * 100
+
+            for i in range(n_cols):
+                for j in range(m_filas):
+                    cx = -offset_x_cm + i * (S_metros * 100)
+                    cy = -offset_y_cm + j * (S_metros * 100)
+                    
+                    if tipo_seccion == "Circular":
+                        _u = np.linspace(0, 2*np.pi, 20)
+                        _v = np.linspace(-_Lp_disp, 0, 2)
+                        _U, _V = np.meshgrid(_u, _v)
+                        _X = cx + (_D_cm/2) * np.cos(_U)
+                        _Y = cy + (_D_cm/2) * np.sin(_U)
+                        _Z = _V
+                        fig_g3d.add_trace(go.Surface(x=_X, y=_Y, z=_Z, colorscale=[[0, '#29b6f6'], [1, '#29b6f6']], showscale=False, opacity=0.7, name=f'Pilote {i}-{j}'))
+                    else:
+                        hx, hy = _D_cm/2, _D_cm/2
+                        _xP = [cx-hx, cx+hx, cx+hx, cx-hx, cx-hx, cx+hx, cx+hx, cx-hx]
+                        _yP = [cy-hy, cy-hy, cy+hy, cy+hy, cy-hy, cy-hy, cy+hy, cy+hy]
+                        _zP = [-_Lp_disp, -_Lp_disp, -_Lp_disp, -_Lp_disp, 0, 0, 0, 0]
+                        fig_g3d.add_trace(go.Mesh3d(x=_xP, y=_yP, z=_zP, i=_I_box, j=_J_box, k=_K_box, color='#29b6f6', opacity=0.8, name=f'Pilote {i}-{j}'))
+
+            fig_g3d.update_layout(scene=dict(aspectmode='data', xaxis_title='X (cm)', yaxis_title='Y (cm)', zaxis_title='Z (cm)'), paper_bgcolor="#0f1117", height=550, margin=dict(l=0, r=0, b=0, t=30))
+            st.plotly_chart(fig_g3d, use_container_width=True)
+            if _Lp_cm > 600:
+                st.caption(f"Nota visual: La profundidad de los pilotes en el diagrama ha sido truncada a 6.0m por proporción. Longitud real calculada: {L_pilote}m.")
         # --- P2: ASENTAMIENTO DE GRUPO ---
         st.markdown("---")
         st.subheader("Asentamiento Estimado del Grupo (Bloque Equivalente)")
@@ -700,21 +748,6 @@ with tab_est:
                 for _i, (_bx, _by) in enumerate(_coord_list):
                     fig_p3d.add_trace(go.Scatter3d(x=[_bx, _bx], y=[_by, _by], z=[0, _L], mode='lines', line=dict(color='#ff6b35', width=6), showlegend=(_i==0), name='Acero Long.'))
 
-            # Añadir Encepado (Dado) Esquemático en la parte superior
-            try:
-                _H_dado_cm = H_dado * 100
-                _B_dado_cm = B_dado * 100
-                _L_dado_cm = L_dado * 100
-            except NameError:
-                # Fallback por si la pestaña 2 no se ha ejecutado en este run state
-                _H_dado_cm, _B_dado_cm, _L_dado_cm = 80.0, _D*3, _D*3
-            
-            _xD = [-_B_dado_cm/2, _B_dado_cm/2, _B_dado_cm/2, -_B_dado_cm/2, -_B_dado_cm/2, _B_dado_cm/2, _B_dado_cm/2, -_B_dado_cm/2]
-            _yD = [-_L_dado_cm/2, -_L_dado_cm/2, _L_dado_cm/2, _L_dado_cm/2, -_L_dado_cm/2, -_L_dado_cm/2, _L_dado_cm/2, _L_dado_cm/2]
-            _zD = [_L-_H_dado_cm, _L-_H_dado_cm, _L-_H_dado_cm, _L-_H_dado_cm, _L, _L, _L, _L]
-            _I_box, _J_box, _K_box = [0,0,4,4,0,1,2,3], [1,3,5,7,4,5,6,7], [2,2,6,6,1,2,3,0]
-            fig_p3d.add_trace(go.Mesh3d(x=_xD, y=_yD, z=_zD, i=_I_box, j=_J_box, k=_K_box, opacity=0.2, color='#ffaa00', name='Dado (Eq. Esquemático)'))
-
             fig_p3d.update_layout(
                 scene=dict(aspectmode='data', xaxis_title='X (cm)', yaxis_title='Y (cm)', zaxis_title='Z (cm)', bgcolor='#1a1a2e'),
                 paper_bgcolor='#1a1a2e', font=dict(color='white'),
@@ -722,6 +755,7 @@ with tab_est:
                 title=dict(text=f"Pilote {tipo_seccion} ({_D:.0f}cm) | Vista Modelo", font=dict(color='white'))
             )
             st.plotly_chart(fig_p3d, use_container_width=True)
+            st.caption("El visor 3D Estructural ilustra el acero longitudinal y transversal de **UNA (1) sola unidad representativa** de la sección.")
 
 # --- P3: DIAGRAMA ESTRUCTURAL P-M ---
         st.divider()
