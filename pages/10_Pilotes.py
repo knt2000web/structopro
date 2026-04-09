@@ -573,6 +573,100 @@ with tab_est:
             st.markdown(estado_espiral)
         else:
             st.info("Verificación volumétrica requerida principalmente en pilotes circulares con espiral en zona de amenaza sísmica alta.")
+            
+        # --- VISUALIZACION 3D DEL PILOTE INDIVIDUAL ---
+        st.divider()
+        st.markdown("####  Visualización 3D del Pilote (Estructural)")
+        if _PLOTLY_AVAILABLE:
+            import numpy as np
+            fig_p3d = go.Figure()
+            _D = D_pilote * 100 # cm
+            _L = min(L_pilote * 100, 300) # limitarlo a 3m en la visualizacion 3D para que no quede muy delgado
+            _R = _D / 2
+            _R_core = _R - recub_pil
+
+            if tipo_seccion == "Circular":
+                # Concreto (Cilindro transparente)
+                _u = np.linspace(0, 2 * np.pi, 25)
+                _v = np.linspace(0, _L, 2)
+                _U, _V = np.meshgrid(_u, _v)
+                _X = _R * np.cos(_U)
+                _Y = _R * np.sin(_U)
+                _Z = _V
+                fig_p3d.add_trace(go.Surface(x=_X, y=_Y, z=_Z, opacity=0.15, colorscale=[[0, '#4a4a6a'], [1, '#4a4a6a']], showscale=False, name='Concreto'))
+
+                # Refuerzo transversal (Espiral o Estribos circulares)
+                _X_t, _Y_t, _Z_t = [], [], []
+                if tipo_trans == "Espiral Continua":
+                    _t = np.linspace(0, 2 * math.pi * (_L / s_trans_cm), int(20 * (_L / s_trans_cm)))
+                    _X_t = _R_core * np.cos(_t)
+                    _Y_t = _R_core * np.sin(_t)
+                    _Z_t = _t / (2 * math.pi) * s_trans_cm
+                    fig_p3d.add_trace(go.Scatter3d(x=_X_t, y=_Y_t, z=_Z_t, mode='lines', line=dict(color='cornflowerblue', width=4), name='Espiral'))
+                else: # Estribo Cerrado Circular
+                    for _z in np.arange(s_trans_cm, _L, s_trans_cm):
+                        _c_u = np.linspace(0, 2*np.pi, 20)
+                        _cx = _R_core * np.cos(_c_u)
+                        _cy = _R_core * np.sin(_c_u)
+                        _cz = np.full_like(_c_u, _z)
+                        _X_t.extend(list(_cx) + [None])
+                        _Y_t.extend(list(_cy) + [None])
+                        _Z_t.extend(list(_cz) + [None])
+                    fig_p3d.add_trace(go.Scatter3d(x=_X_t, y=_Y_t, z=_Z_t, mode='lines', line=dict(color='cornflowerblue', width=4), name='Estribos'))
+
+                # Refuerzo longitudinal
+                _rad_l = _R_core - 0.5 - math.sqrt(ab_long/math.pi)
+                for _i in range(n_barras_p):
+                    _ang = 2 * math.pi * _i / n_barras_p
+                    _bx = _rad_l * math.cos(_ang)
+                    _by = _rad_l * math.sin(_ang)
+                    fig_p3d.add_trace(go.Scatter3d(x=[_bx, _bx], y=[_by, _by], z=[0, _L], mode='lines', line=dict(color='#ff6b35', width=6), showlegend=(_i==0), name='Acero Long.'))
+
+            else: # Cuadrado
+                # Concreto (Prisma transparente)
+                _W = _D
+                _X = [-_W/2, _W/2, _W/2, -_W/2, -_W/2, _W/2, _W/2, -_W/2]
+                _Y = [-_W/2, -_W/2, _W/2, _W/2, -_W/2, -_W/2, _W/2, _W/2]
+                _Z = [0, 0, 0, 0, _L, _L, _L, _L]
+                _I = [0,0,4,4,0,1,2,3]; _J = [1,3,5,7,4,5,6,7]; _K = [2,2,6,6,1,2,3,0]
+                fig_p3d.add_trace(go.Mesh3d(x=_X, y=_Y, z=_Z, i=_I, j=_J, k=_K, opacity=0.15, color='#4a4a6a', name='Concreto'))
+
+                # Refuerzo transversal (Estribos cuadrados)
+                _W_c = _W - 2 * recub_pil
+                _X_t, _Y_t, _Z_t = [], [], []
+                for _z in np.arange(s_trans_cm, _L, s_trans_cm):
+                    _X_t.extend([-_W_c/2, _W_c/2, _W_c/2, -_W_c/2, -_W_c/2, None])
+                    _Y_t.extend([-_W_c/2, -_W_c/2, _W_c/2, _W_c/2, -_W_c/2, None])
+                    _Z_t.extend([_z, _z, _z, _z, _z, None])
+                fig_p3d.add_trace(go.Scatter3d(x=_X_t, y=_Y_t, z=_Z_t, mode='lines', line=dict(color='cornflowerblue', width=4), name='Estribos'))
+
+                # Refuerzo longitudinal
+                _bars_per_face = n_barras_p // 4 + 1
+                _spacing = _W_c / max(1, (_bars_per_face - 1))
+                _b_coords = set()
+                # Bottom & Top
+                for _i in range(_bars_per_face):
+                    _b_coords.add((-_W_c/2 + _i*_spacing, -_W_c/2))
+                    _b_coords.add((-_W_c/2 + _i*_spacing,  _W_c/2))
+                # Left & Right
+                for _i in range(_bars_per_face):
+                    _b_coords.add((-_W_c/2, -_W_c/2 + _i*_spacing))
+                    _b_coords.add(( _W_c/2, -_W_c/2 + _i*_spacing))
+                
+                _coord_list = list(_b_coords)
+                while len(_coord_list) > n_barras_p:
+                   _coord_list.pop()
+
+                for _i, (_bx, _by) in enumerate(_coord_list):
+                    fig_p3d.add_trace(go.Scatter3d(x=[_bx, _bx], y=[_by, _by], z=[0, _L], mode='lines', line=dict(color='#ff6b35', width=6), showlegend=(_i==0), name='Acero Long.'))
+
+            fig_p3d.update_layout(
+                scene=dict(aspectmode='data', xaxis_title='X (cm)', yaxis_title='Y (cm)', zaxis_title='Z (cm)', bgcolor='#1a1a2e'),
+                paper_bgcolor='#1a1a2e', font=dict(color='white'),
+                height=500, margin=dict(l=0,r=0,t=40,b=0), dragmode='turntable',
+                title=dict(text=f"Pilote {tipo_seccion} ({_D:.0f}cm) | Vista Modelo", font=dict(color='white'))
+            )
+            st.plotly_chart(fig_p3d, use_container_width=True)
 
 # --- P3: DIAGRAMA ESTRUCTURAL P-M ---
         st.divider()
