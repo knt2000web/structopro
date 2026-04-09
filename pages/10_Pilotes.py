@@ -1022,3 +1022,45 @@ with tab_mem:
                         st.success("✅ Modelo IFC4 Generado con Éxito.")
                 except Exception as e:
                     st.error(f"Error Genérico IFC: {e}")
+
+# ==============================================================================
+# P2 & P3: CUADRO DE MANDO Y ASENTAMIENTOS DIFERENCIALES
+# ==============================================================================
+st.divider()
+st.subheader("🗂️ Cuadro de Mando — Registro de Grupos de Pilotes")
+
+etiqueta_pi = st.text_input("Etiqueta del grupo (ej. P-1, Eje 3-B)", value="P-1", key="pi_etiqueta")
+if st.button("➕ Agregar al proyecto", key="pi_agregar"):
+    try:
+        if "registro_pilotes" not in st.session_state:
+            st.session_state.registro_pilotes = []
+        st.session_state.registro_pilotes.append({
+            "Grupo": etiqueta_pi, "N Pilotes": n_pilotes,
+            "D [m]": D_pilote, "L [m]": L_pilote,
+            "Qadm [kN]": round(Qadm, 1), "Qgrupo [kN]": round(Q_grupo, 1),
+            "Eficiencia [%]": round(eficiencia * 100, 1),
+            "Asentamiento [mm]": round(S_mm, 1),
+            "Estado": "✅ CUMPLE" if P_total_act <= Q_grupo else "❌ NO CUMPLE"
+        })
+    except NameError:
+        st.warning("⚠️ Completa los cálculos y geometría antes de guardar el grupo.")
+
+if st.session_state.get("registro_pilotes"):
+    st.dataframe(pd.DataFrame(st.session_state.registro_pilotes),
+                 use_container_width=True, hide_index=True)
+    if st.button("🗑️ Limpiar registro", key="pi_limpiar"):
+        st.session_state.registro_pilotes = []
+        st.rerun()
+
+if len(st.session_state.get("registro_pilotes", [])) >= 2:
+    asentamientos = [r["Asentamiento [mm]"] for r in st.session_state.registro_pilotes]
+    delta_s = max(asentamientos) - min(asentamientos)
+    col_d1, col_d2 = st.columns(2)
+    col_d1.metric("Δ Asentamiento diferencial máx.", f"{delta_s:.1f} mm",
+                  delta=f"{19.0 - delta_s:.1f} mm Margen",
+                  delta_color="normal" if delta_s <= 19 else "inverse")
+    if delta_s > 19:
+        st.error("⚠️ Asentamiento diferencial > 19 mm (NSR-10 H.3.4). "
+                 "Revisar rigidez de la superestructura o nivelar profundidades.")
+    else:
+        st.success(f"✅ Δs = {delta_s:.1f} mm ≤ 19 mm — Dentro de tolerancia NSR-10.")
