@@ -72,12 +72,12 @@ def _punto(ifc, x, y, z=0.):
     return ifc.createIfcCartesianPoint((float(x), float(y), float(z)))
 
 
-def _placement_local(ifc, x=0., y=0., z=0., eje_x=None, eje_z=None):
+def _placement_local(ifc, x=0., y=0., z=0., eje_x=None, eje_z=None, rel_to=None):
     """Genera un IfcLocalPlacement en la posición (x,y,z)."""
     ejeZ = ifc.createIfcDirection(eje_z if eje_z else (0., 0., 1.))
     ejeX = ifc.createIfcDirection(eje_x if eje_x else (1., 0., 0.))
     ax   = ifc.createIfcAxis2Placement3D(_punto(ifc, x, y, z), ejeZ, ejeX)
-    return ifc.createIfcLocalPlacement(None, ax)
+    return ifc.createIfcLocalPlacement(rel_to, ax)
 
 
 def _pset_diseno(ifc, elemento, propiedades: dict, nombre: str = "Pset_StructuralDesign"):
@@ -226,7 +226,7 @@ def ifc_viga_rectangular(
 
         rep_r = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid_r])
         prod_r = ifc.createIfcProductDefinitionShape(None, None, [rep_r])
-        place_r = _placement_local(ifc, 0., 0., 0.)
+        place_r = _placement_local(ifc, 0., 0., 0., rel_to=place_viga)
 
         rebar = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None,
@@ -339,7 +339,7 @@ def ifc_viga_t(
             perf_r, ax3d_r, ifc.createIfcDirection((0., 0., 1.)), L)
         rep_r = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid_r])
         prod_r = ifc.createIfcProductDefinitionShape(None, None, [rep_r])
-        place_r = _placement_local(ifc, 0., 0., 0.)
+        place_r = _placement_local(ifc, 0., 0., 0., rel_to=place_viga)
 
         rebar = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None, f"Bar_{idx+1}",
@@ -429,7 +429,7 @@ def ifc_losa(
             perf_r, ax3d_r, ifc.createIfcDirection((0., 0., 1.)), L)
         rep_r = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid_r])
         prod_r = ifc.createIfcProductDefinitionShape(None, None, [rep_r])
-        place_r = _placement_local(ifc, 0., 0., 0.)
+        place_r = _placement_local(ifc, 0., 0., 0., rel_to=place_losa)
 
         rebar = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None, f"Bar_Princ_{i+1}",
@@ -539,7 +539,7 @@ def ifc_columna(
             perf_r, ax3d_r, ifc.createIfcDirection((0., 0., 1.)), L)
         rep_r = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid_r])
         prod_r = ifc.createIfcProductDefinitionShape(None, None, [rep_r])
-        place_r = _placement_local(ifc, 0., 0., 0.)
+        place_r = _placement_local(ifc, 0., 0., 0., rel_to=place_col)
 
         rebar = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None, f"Bar_{idx+1}",
@@ -624,7 +624,7 @@ def ifc_zapata(
             perf_r, ax3d_r, ifc.createIfcDirection((0., 0., 1.)), Bx)
         rep_r = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid_r])
         prod_r = ifc.createIfcProductDefinitionShape(None, None, [rep_r])
-        place_r = _placement_local(ifc, 0., 0., 0.)
+        place_r = _placement_local(ifc, 0., 0., 0., rel_to=place_z)
         rebar = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None, f"BarX_{i+1}",
             f"Ø{db_x_mm:.0f}mm-X | {bar_name_x}", None, place_r, prod_r, None,
@@ -648,7 +648,7 @@ def ifc_zapata(
             perf_r, ax3d_r, ifc.createIfcDirection((0., 0., 1.)), By)
         rep_r = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid_r])
         prod_r = ifc.createIfcProductDefinitionShape(None, None, [rep_r])
-        place_r = _placement_local(ifc, 0., 0., 0.)
+        place_r = _placement_local(ifc, 0., 0., 0., rel_to=place_z)
         rebar = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None, f"BarY_{i+1}",
             f"Ø{db_y_mm:.0f}mm-Y | {bar_name_y}", None, place_r, prod_r, None,
@@ -740,7 +740,7 @@ def ifc_columna_circular(
             perf_r, ax3d_r, ifc.createIfcDirection((0., 0., 1.)), L)
         rep_r = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid_r])
         prod_r = ifc.createIfcProductDefinitionShape(None, None, [rep_r])
-        place_r = _placement_local(ifc, 0., 0., 0.)
+        place_r = _placement_local(ifc, 0., 0., 0., rel_to=place_col)
 
         rebar = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None, f"Bar_{i+1}",
