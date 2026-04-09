@@ -289,80 +289,120 @@ with tab_geo:
             sigma_v.append(sv)
         df["σv' base (kPa)"] = sigma_v
 
-        # 3. Fricción lateral por capa (solo capas que el pilote atraviesa)
-        A_fuste = math.pi * D_pilote if tipo_seccion == "Circular" else 4 * D_pilote  # perímetro [m]
-        A_punta = math.pi * (D_pilote/2)**2 if tipo_seccion == "Circular" else D_pilote**2  # área punta [m²]
-
-        Qs_total = 0.0
-        filas_fuste = []
-
-        for _, row in df.iterrows():
-            if row["z_top"] >= L_pilote:
-                break  # pilote no llega aquí
-            espesor_activo = min(row["z_bot"], L_pilote) - row["z_top"]
+        # 3. Función encapsulada de cálculo geotécnico y Optimizador
+        def calcular_capacidad(Lp_eval, df_eval, D_pil, tipo_sec, NF, FS_val):
+            Aw_fuste = math.pi * D_pil if tipo_sec == "Circular" else 4 * D_pil
+            Aw_punta = math.pi * (D_pil/2)**2 if tipo_sec == "Circular" else D_pil**2
+            Qs_tot = 0.0
+            filas_fs = []
             
-            if row["Tipo"] == "Arcilla":
-                # Método α (Tomlinson) — NSR-10 / ACI
-                alpha = 0.55 if row["c (kPa)"] < 50 else (0.55 - 0.1*(row["c (kPa)"]-50)/50)
-                alpha = max(0.20, min(alpha, 0.55))
-                qs = alpha * row["c (kPa)"]  # kPa
-            elif row["Tipo"] in ["Arena", "Grava"]:
-                # Método β
-                K0 = 1 - math.sin(math.radians(row["φ (°)"]))
-                beta = K0 * math.tan(math.radians(row["φ (°)"]))
-                beta = max(0.15, min(beta, 0.40))
-                # EC-2 fix: σv' en el centroide = σv'_base - γ_ef * (espesor/2)
-                # La tabla ya debe contener γ efectivo (γ' subm.) cuando hay NF
-                sv_mid = max(0.0, row["σv' base (kPa)"] - row["γ (kN/m³)"] * espesor_activo / 2)
-                qs = beta * sv_mid
-            else:  # Roca
-                qs = 0.1 * row["c (kPa)"]
+            for _, row in df_eval.iterrows():
+                if row["z_top"] >= Lp_eval: break
+                h_activo = min(row["z_bot"], Lp_eval) - row["z_top"]
+                if h_activo <= 0: continue
+                
+                if row["Tipo"] == "Arcilla":
+                    alpha = 0.55 if row["c (kPa)"] < 50 else (0.55 - 0.1*(row["c (kPa)"]-50)/50)
+                    alpha = max(0.20, min(alpha, 0.55))
+                    qs = alpha * row["c (kPa)"]
+                elif row["Tipo"] in ["Arena", "Grava"]:
+                    K0 = 1 - math.sin(math.radians(row["φ (°)"]))
+                    beta = K0 * math.tan(math.radians(row["φ (°)"]))
+                    beta = max(0.15, min(beta, 0.40))
+                    # EC-2 Fix: Usar gamma efectivo por capa bajo nivel freático
+                    g_ef = row["γ (kN/m³)"] - 9.81 if row["z_bot"] > NF else row["γ (kN/m³)"]
+                    sv_m = max(0.0, row["σv' base (kPa)"] - g_ef * h_activo / 2.0)
+                    qs = beta * sv_m
+                else:  # Roca
+                    qs = 0.1 * row["c (kPa)"]
+                
+                Qs_c = qs * Aw_fuste * h_activo
+                Qs_tot += Qs_c
+                filas_fs.append({"Estrato": int(row["Estrato"]), "Tipo": row["Tipo"], "H activo (m)": round(h_activo, 2), "qs (kPa)": round(qs, 2), "Qs capa (kN)": round(Qs_c, 1)})
+                
+            _df_p = df_eval[df_eval["z_bot"] >= Lp_eval - 1e-6]
+            f_punta = _df_p.iloc[0] if not _df_p.empty else df_eval.iloc[-1]
+            phi_p, c_p, sv_p = f_punta["φ (°)"], f_punta["c (kPa)"], f_punta["σv' base (kPa)"]
             
-            Qs_capa = qs * A_fuste * espesor_activo
-            Qs_total += Qs_capa
-            filas_fuste.append({
-                "Estrato": int(row["Estrato"]), "Tipo": row["Tipo"],
-                "H activo (m)": round(espesor_activo, 2),
-                "qs (kPa)": round(qs, 2),
-                "Qs capa (kN)": round(Qs_capa, 1)
-            })
+            if f_punta["Tipo"] == "Roca":
+                Qp_tot = 3.0 * c_p * Aw_punta * 1000
+            elif phi_p > 0:
+                Nq_m = (math.exp(math.pi * math.tan(math.radians(phi_p))) * math.tan(math.radians(45 + phi_p/2))**2)
+                Nq_m = min(Nq_m, 60)
+                Qp_tot = min(sv_p * Nq_m, 11000) * Aw_punta
+            else:
+                Qp_tot = 9.0 * c_p * Aw_punta
+                
+            Qu_tot = Qp_tot + Qs_tot
+            Qa_tot = Qu_tot / FS_val
+            return Qp_tot, Qs_tot, Qu_tot, Qa_tot, filas_fs, f_punta
 
-        # 4. Resistencia de punta — Meyerhof
-        # Nq de Meyerhof para pilote
-        # EC-3 fix: filtro >= puede devolver vacío si L_pilote == z_bot exacto de última capa
-        _df_punta = df[df["z_bot"] > L_pilote - 1e-6]  # tolerancia numérica
-        fila_punta = _df_punta.iloc[0] if not _df_punta.empty else df.iloc[-1]
-        phi_p = fila_punta["φ (°)"]
-        c_p   = fila_punta["c (kPa)"]
-        sv_p  = fila_punta["σv' base (kPa)"]
+        # --- Análisis Pilote Único Actual ---
+        Qp, Qs_total, Qu, Qadm, filas_fuste, fila_punta = calcular_capacidad(L_pilote, df, D_pilote, tipo_seccion, NF_prof, FS_global)
 
-        if fila_punta["Tipo"] == "Roca":
-            Qp = 3.0 * c_p * A_punta * 1000  # simplificado
-        elif phi_p > 0:
-            Nq_m = (math.exp(math.pi * math.tan(math.radians(phi_p))) *
-                    math.tan(math.radians(45 + phi_p/2))**2)
-            Nq_m = min(Nq_m, 60)  # límite práctico Meyerhof (1976) — ver NSR-10 C.9 / Das 2011
-            qp = sv_p * Nq_m
-            qp = min(qp, 11000)  # límite Meyerhof kPa
-            Qp = qp * A_punta
-        else:  # arcilla: Qp = 9·c·A
-            Qp = 9.0 * c_p * A_punta
+        # Advertencia de estrato blando
+        if fila_punta["Tipo"] == "Arcilla" and fila_punta.get("N60", 100) < 5:
+            st.warning(f"⚠️ **Seguridad:** El pilote (L={L_pilote}m) termina apoyado sobre el Estrato {int(fila_punta['Estrato'])} (Arcilla Blanda, N60={fila_punta.get('N60',0)}). Considere profundizar la cimentación hasta un estrato competente o roca.")
 
-        Qu = Qp + Qs_total
-        Qadm = Qu / FS_global
-
-        # 5. Mostrar resultados
+        # Mostrar resultados del pilote único
         st.divider()
-        st.subheader("1.3 Resultados de Capacidad del Pilote Único")
+        st.subheader("1.3 Resultados de Capacidad Portante del Pilote")
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Q_punta (kN)", f"{Qp:.1f}")
         m2.metric("Q_fuste total (kN)", f"{Qs_total:.1f}")
         m3.metric("Q_última (kN)", f"{Qu:.1f}")
-        m4.metric(f"Q_adm (kN) — FS={FS_global}", f"{Qadm:.1f}",
-                  delta=f"Área punta: {A_punta:.3f} m²")
+        m4.metric(f"Q_adm (kN) — FS={FS_global}", f"{Qadm:.1f}")
 
-        st.markdown("**Desglose de Fricción Lateral por Capa:**")
-        st.dataframe(pd.DataFrame(filas_fuste), use_container_width=True, hide_index=True)
+        with st.expander("Tabla de Fricción Lateral por Capa", expanded=False):
+            st.dataframe(pd.DataFrame(filas_fuste), use_container_width=True, hide_index=True)
+
+        # 6. Optimizador de Profundidad y Perfil Visual
+        st.divider()
+        st.subheader("1.4 Optimizador y Perfil Estratigráfico Geotécnico")
+        
+        col_opt1, col_opt2 = st.columns([1.5, 2.5])
+        with col_opt1:
+            Pu_req = st.number_input("Carga Axial Requerida (por pilote) [kN]", 0.0, 50000.0, 1000.0, 50.0)
+            
+            # Gráfico de Perfil
+            if _PLOTLY_AVAILABLE:
+                fig_pf = go.Figure()
+                color_map = {"Arcilla": "#8B4513", "Arena": "#DEB887", "Grava": "#8e9eab", "Roca": "#546e7a"}
+                for _, r_env in df.iterrows():
+                    fig_pf.add_shape(type="rect", 
+                        x0=0.1, y0=-r_env["z_top"], x1=1.9, y1=-r_env["z_bot"],
+                        line=dict(color="black", width=1), fillcolor=color_map.get(r_env["Tipo"], "#999"), opacity=0.7)
+                    if (r_env["z_bot"] - r_env["z_top"]) > 0.5:
+                        fig_pf.add_annotation(x=1.0, y=-(r_env["z_top"]+r_env["z_bot"])/2, text=f"{r_env['Tipo']}", showarrow=False, font=dict(color="white"))
+                
+                # Dibujar pilote actual sobrepuesto
+                fig_pf.add_shape(type="rect", x0=0.8, y0=0, x1=1.2, y1=-L_pilote, line=dict(color="white", width=2), fillcolor="#b0bec5")
+                fig_pf.add_annotation(x=1.0, y=-L_pilote, text="▶ Base", showarrow=True, arrowhead=1, ax=40, ay=0, font=dict(color="white"))
+                
+                fig_pf.update_layout(title="Perfil del Suelo vs Pilote", xaxis=dict(visible=False, range=[0, 2]), yaxis=dict(title="Profundidad [m]"), height=400, margin=dict(l=20, r=20, t=40, b=20), paper_bgcolor="#1e2530", plot_bgcolor="#1e2530", font=dict(color="white"))
+                st.plotly_chart(fig_pf, use_container_width=True)
+
+        with col_opt2:
+            if _PLOTLY_AVAILABLE and Pu_req > 0:
+                Lp_vals = np.arange(3.0, prof_total + 0.1, 0.5)
+                Qa_vals = [calcular_capacidad(lv, df, D_pilote, tipo_seccion, NF_prof, FS_global)[3] for lv in Lp_vals]
+                
+                fig_opt = go.Figure()
+                fig_opt.add_trace(go.Scatter(x=Lp_vals, y=Qa_vals, mode='lines+markers', name='Capacidad Q_adm', line=dict(color='#00e676', width=3)))
+                fig_opt.add_hline(y=Pu_req, line_dash="dash", line_color="orange", annotation_text=f"Requerido: {Pu_req} kN")
+                
+                idx_cumple = next((i for i, v in enumerate(Qa_vals) if v >= Pu_req), -1)
+                if idx_cumple != -1:
+                    Lp_opt = Lp_vals[idx_cumple]
+                    fig_opt.add_vline(x=Lp_opt, line_dash="dot", line_color="#29b6f6", annotation_text=f"L_mín = {Lp_opt} m")
+                    st.success(f"✔️ Para la carga requerida de {Pu_req} kN, la longitud mínima recomendada es **{Lp_opt} m**.")
+                else:
+                    st.error(f"❌ La carga de {Pu_req} kN sobrepasa la capacidad máxima (L={prof_total}m). Profundice la exploración o aumente diámetro.")
+
+                fig_opt.update_layout(title="Curva de Optimización: Q_adm vs L_p", xaxis_title="Longitud Pilote L_p [m]", yaxis_title="Capacidad Admisible Q_adm [kN]", height=400, margin=dict(l=20, r=20, t=40, b=20), paper_bgcolor="#1e2530", plot_bgcolor="#1e2530", font=dict(color="white"))
+                st.plotly_chart(fig_opt, use_container_width=True)
+            elif _PLOTLY_AVAILABLE:
+                st.info("Ingresa una carga métrica mayor a 0 para trazar el cruce de optimización.")
 
 
 with tab_grup:
