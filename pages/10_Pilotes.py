@@ -71,9 +71,9 @@ def guardar_proyecto_supabase(nombre, estado_dict, ref):
                 with open(db_path, "r", encoding="utf-8") as f: db = json.load(f)
             db[f"[{ref.upper()}] {nombre}"] = {"nombre_proyecto": f"[{ref.upper()}] {nombre}", "estado_json": json.dumps(estado_dict)}
             with open(db_path, "w", encoding="utf-8") as f: json.dump(db, f)
-            return True, "✅ Proyecto guardado (Local)"
+            return True, " Proyecto guardado (Local)"
         except Exception as e:
-            return False, f"❌ Error local: {e}"
+            return False, f" Error local: {e}"
     
     headers = {
         "apikey": key,
@@ -89,9 +89,9 @@ def guardar_proyecto_supabase(nombre, estado_dict, ref):
     try:
         endpoint = f"{url}/rest/v1/proyectos?on_conflict=nombre_proyecto"
         res = requests.post(endpoint, headers=headers, json=payload)
-        if res.status_code in [200, 201, 204]: return True, "✅ Proyecto en la nube"
-        return False, f"❌ Error API: {res.text}"
-    except Exception as e: return False, f"❌ Error API: {e}"
+        if res.status_code in [200, 201, 204]: return True, " Proyecto en la nube"
+        return False, f" Error API: {res.text}"
+    except Exception as e: return False, f" Error API: {e}"
 
 def cargar_proyecto_supabase(nombre, ref):
     url, key = get_supabase_rest_info()
@@ -106,8 +106,8 @@ def cargar_proyecto_supabase(nombre, ref):
                 if match:
                     estado = json.loads(match["estado_json"])
                     for k, v in estado.items(): st.session_state[k] = v
-                    return True, "✅ Proyecto cargado (Local)"
-            return False, "❌ No encontrado"
+                    return True, " Proyecto cargado (Local)"
+            return False, " No encontrado"
         except Exception as e: return False, str(e)
     headers = {"apikey": key, "Authorization": f"Bearer {key}", "Accept": "application/json"}
     try:
@@ -118,8 +118,8 @@ def cargar_proyecto_supabase(nombre, ref):
             if data:
                 estado = json.loads(data[0]["estado_json"])
                 for k, v in estado.items(): st.session_state[k] = v
-                return True, "✅ Proyecto cargado"
-        return False, "❌ No encontrado"
+                return True, " Proyecto cargado"
+        return False, " No encontrado"
     except Exception as e: return False, str(e)
 
 def listar_proyectos_supabase(ref):
@@ -169,9 +169,9 @@ st.markdown('''
 </div>
 ''', unsafe_allow_html=True)
 
-with st.expander(_t("📖 ¿Qué hace este módulo? — Guía rápida", "📖 Quick Guide"), expanded=False):
+with st.expander(_t(" ¿Qué hace este módulo? — Guía rápida", " Quick Guide"), expanded=False):
     st.markdown('''
-    ### 🏗️ Pilotes — Verificaciones Geotécnicas y Estructurales
+    ###  Pilotes — Verificaciones Geotécnicas y Estructurales
     | Módulo | Qué calcula | Métodos |
     |--------|------------|-------|
     | **Geotécnico** | Capacidad por punta y fuste por cada estrato | Meyerhof, Vesic, α, β |
@@ -180,18 +180,18 @@ with st.expander(_t("📖 ¿Qué hace este módulo? — Guía rápida", "📖 Qu
     | **Encepado** | Dimensionamiento del dado de pilotes | ACI 318 / NSR-10 |
     ''')
 
-st.sidebar.header(_t("⚙️ Configuración Global", "⚙️ Global Settings"))
+st.sidebar.header(_t("⚙ Configuración Global", "⚙ Global Settings"))
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 st.sidebar.success(f"{_t('Norma Activa:', 'Active Code:')} {norma_sel}")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("💾 Guardar / Cargar Proyecto")
+st.sidebar.subheader(" Guardar / Cargar Proyecto")
 nombre_producido = st.session_state.get(f"np_{"pilotes"}", "")
 
 st.sidebar.markdown("**Nuevo Proyecto / Guardar**")
 nombre_proy_guardar = st.sidebar.text_input("Nombre para guardar", value=nombre_producido, key=f"input_guardar_{"pilotes"}")
 
-if st.sidebar.button("💾 Guardar Proyecto", use_container_width=True, key=f"btn_save_{"pilotes"}"):
+if st.sidebar.button(" Guardar Proyecto", use_container_width=True, key=f"btn_save_{"pilotes"}"):
     if nombre_proy_guardar:
         ok, msg = guardar_proyecto_supabase(nombre_proy_guardar, capturar_estado_module("pilotes"), "pilotes")
         if ok:
@@ -215,7 +215,7 @@ if lista_proyectos:
             st.session_state[f"__msg_cargar_{"pilotes"}"] = (ok, msg)
             if ok: st.session_state[f"np_{"pilotes"}"] = proy
 
-    st.sidebar.button("📂 Cargar", on_click=on_cargar_click, use_container_width=True, key=f"btn_load_{"pilotes"}")
+    st.sidebar.button(" Cargar", on_click=on_cargar_click, use_container_width=True, key=f"btn_load_{"pilotes"}")
 
     if f"__msg_cargar_{"pilotes"}" in st.session_state:
         ok, msg = st.session_state.pop(f"__msg_cargar_{"pilotes"}")
@@ -241,7 +241,7 @@ tab_geo, tab_grup, tab_est, tab_apu, tab_mem = st.tabs([
 
 with tab_geo:
     st.subheader(_t("1.1 Definición del Perfil de Suelo (Por Capas)", "1.1 Soil Profile (Layered)"))
-    st.info("💡 Ingresa la estratigrafía del terreno. La capacidad por fricción sumará cada estrato atravesado.")
+    st.info(" Ingresa la estratigrafía del terreno. La capacidad por fricción sumará cada estrato atravesado.")
     st.session_state.perfil_suelo = st.data_editor(
         st.session_state.perfil_suelo,
         num_rows="dynamic",
@@ -265,9 +265,9 @@ with tab_geo:
 
     prof_total = st.session_state.perfil_suelo['Espesor (m)'].sum()
     if L_pilote > prof_total:
-        st.error(f"❌ El pilote ({L_pilote}m) atraviesa más suelo del definido ({prof_total:.1f}m). Agrega estratos.")
+        st.error(f" El pilote ({L_pilote}m) atraviesa más suelo del definido ({prof_total:.1f}m). Agrega estratos.")
     else:
-        st.success(f"✅ Pilote apoyado dentro de la estratigrafía (Prof. Mínima Estudiada {prof_total:.1f}m)")
+        st.success(f" Pilote apoyado dentro de la estratigrafía (Prof. Mínima Estudiada {prof_total:.1f}m)")
 
         # ──── CÁLCULOS GEOTÉCNICOS ────────────────────────────────────────
         import numpy as np
@@ -382,7 +382,7 @@ with tab_grup:
         margen = max(0.30, D_pilote * 0.5)
         B_dado = (n_cols - 1) * S_metros + D_pilote + 2 * margen
         L_dado = (m_filas - 1) * S_metros + D_pilote + 2 * margen
-        st.info(f"📐 **S = {S_metros:.2f} m**\n\nEncepado: **{B_dado:.2f}m × {L_dado:.2f}m**")
+        st.info(f" **S = {S_metros:.2f} m**\n\nEncepado: **{B_dado:.2f}m × {L_dado:.2f}m**")
     with col_g6:
         H_dado = st.number_input("Peralte del Encepado (H) [m]", 0.40, 3.00, 0.80, 0.10)
         
@@ -394,7 +394,7 @@ with tab_grup:
     if n_pilotes == 1:
         eficiencia = 1.0
         Q_grupo = Qadm
-        st.success(f"✅ Pilote único. Eficiencia η = 1.0. Capacidad = {Q_grupo:.1f} kN")
+        st.success(f" Pilote único. Eficiencia η = 1.0. Capacidad = {Q_grupo:.1f} kN")
     else:
         # Converse-Labarre
         theta = math.degrees(math.atan(D_pilote / S_metros))
@@ -408,14 +408,14 @@ with tab_grup:
         
         col_r1, col_r2, col_r3 = st.columns(3)
         col_r1.metric("N° Pilotes", f"{n_pilotes}", delta=f"{m_filas}×{n_cols}")
-        col_r2.metric("Eficiencia Converse-Labarre (η)", f"{eficiencia:.2f}", delta=f"{(eficiencia*100):.1f}% admisible" if eficiencia > 0.70 else "⚠️ Eficiencia Baja", delta_color="normal")
+        col_r2.metric("Eficiencia Converse-Labarre (η)", f"{eficiencia:.2f}", delta=f"{(eficiencia*100):.1f}% admisible" if eficiencia > 0.70 else "⚠ Eficiencia Baja", delta_color="normal")
         col_r3.metric("Capacidad Total del Grupo", f"{Q_grupo:.1f} kN")
         
         st.markdown(f"**Carga Total Actuante (Incl. Dado):** {P_total_act:.1f} kN")
         if P_total_act <= Q_grupo:
-            st.success(f"✅ **CUMPLE.** FS > {FS_global:.1f} para todo el grupo bajo carga {P_ult_grupo:.1f} kN.")
+            st.success(f" **CUMPLE.** FS > {FS_global:.1f} para todo el grupo bajo carga {P_ult_grupo:.1f} kN.")
         else:
-            st.error(f"❌ **NO CUMPLE.** La carga actuante de {P_total_act:.1f} kN sobrepasa la capacidad del grupo conectada ({Q_grupo:.1f} kN). Aumente Q_adm mejorando la geometría o adicione pilotes.")
+            st.error(f" **NO CUMPLE.** La carga actuante de {P_total_act:.1f} kN sobrepasa la capacidad del grupo conectada ({Q_grupo:.1f} kN). Aumente Q_adm mejorando la geometría o adicione pilotes.")
 
     # Grafica esquematica
     if _PLOTLY_AVAILABLE:
@@ -468,7 +468,7 @@ with tab_grup:
         st.plotly_chart(fig_g, use_container_width=True)
         # --- P2: ASENTAMIENTO DE GRUPO ---
         st.markdown("---")
-        st.subheader("📉 Asentamiento Estimado del Grupo (Bloque Equivalente)")
+        st.subheader(" Asentamiento Estimado del Grupo (Bloque Equivalente)")
         col_s1, col_s2 = st.columns(2)
         E_s_pil = col_s1.number_input("Módulo elástico terreno Es [MPa]", 1.0, 200.0, 30.0, 5.0, key="es_pil")
         nu_s_pil = col_s2.number_input("Relación de Poisson terreno ν", 0.1, 0.49, 0.35, 0.05, key="nu_pil")
@@ -484,9 +484,9 @@ with tab_grup:
         
         st.metric("Asentamiento Total Grupo", f"{S_mm:.1f} mm", delta=f"{25.0 - S_mm:.1f} mm Disp", delta_color="normal" if S_mm<=25.0 else "inverse")
         if S_mm <= 25.0:
-            st.success("✅ Asentamiento dentro de tolerancias convencionales (< 25 mm).")
+            st.success(" Asentamiento dentro de tolerancias convencionales (< 25 mm).")
         else:
-            st.error("❌ Asentamiento excesivo (> 25 mm). Considere aumentar separación (S), ensanchar grupo o profundizar pilotes.")
+            st.error(" Asentamiento excesivo (> 25 mm). Considere aumentar separación (S), ensanchar grupo o profundizar pilotes.")
 
 with tab_est:
     st.subheader(_t("3.1 Refuerzo Longitudinal y Confinamiento", "3.1 Longitudinal Reinforcement & Confinement"))
@@ -531,7 +531,7 @@ with tab_est:
         st.metric("Área Bruta Ag", f"{Ag_cm2:.1f} cm²")
         st.metric("Acero Provisto As", f"{As_prov_cm2:.1f} cm²")
         
-        estado_cuantia = "✅ OK" if rho_min <= rho_prov <= rho_max else "❌ INCUMPLE"
+        estado_cuantia = " OK" if rho_min <= rho_prov <= rho_max else " INCUMPLE"
         st.markdown(f"**Cuantía ρ:** {(rho_prov*100):.2f}% ({estado_cuantia})")
         st.caption(f"Límites normativos: 1% a 8%")
         
@@ -542,7 +542,7 @@ with tab_est:
         s_libre_long = (perim_int_cm / n_barras_p) - db_long_cm
         
         s_lim_min = max(4.0, 1.5 * db_long_cm) # ACI límite práctico
-        estado_slibre = "✅ OK" if s_libre_long >= s_lim_min else "❌ MUY JUNTAS"
+        estado_slibre = " OK" if s_libre_long >= s_lim_min else " MUY JUNTAS"
         st.metric("Espaciamiento libre", f"{s_libre_long:.1f} cm")
         st.markdown(f"**Verificación:** {estado_slibre}")
         st.caption(f"Límite min: {s_lim_min:.1f} cm")
@@ -563,16 +563,16 @@ with tab_est:
             vol_core_1_paso = (math.pi * d_out**2 / 4) * s_trans_cm
             rho_s_prov = vol_esp_1_paso / vol_core_1_paso
             
-            estado_espiral = "✅ OK (Espiral Densa)" if rho_s_prov >= rho_s_req else "⚠️ Aumentar Espiral u optar por estribos simples si no es zona sísmica D."
+            estado_espiral = " OK (Espiral Densa)" if rho_s_prov >= rho_s_req else "⚠ Aumentar Espiral u optar por estribos simples si no es zona sísmica D."
             st.metric("Cuantía Volumétrica ρ_s", f"{(rho_s_prov*100):.2f}%")
             st.markdown(f"Requerido ACI §18.7.5: **{(rho_s_req*100):.2f}%**")
             st.markdown(estado_espiral)
         else:
-            st.info("💡 Verificación volumétrica requerida principalmente en pilotes circulares con espiral en zona de amenaza sísmica alta.")
+            st.info(" Verificación volumétrica requerida principalmente en pilotes circulares con espiral en zona de amenaza sísmica alta.")
 
 # --- P3: DIAGRAMA ESTRUCTURAL P-M ---
         st.divider()
-        st.subheader("🔄 Interacción P-M (Flexocompresión Biaxial)")
+        st.subheader(" Interacción P-M (Flexocompresión Biaxial)")
         Mu_req = st.number_input("Momento Actuante Mayorado Mu [kN·m]", 0.0, 10000.0, 50.0, 10.0, key="mu_pil")
         
         # Conectar con 01_Columnas_PM matemáticamente
@@ -635,8 +635,8 @@ with tab_est:
             fig_pm.update_layout(title="Diagrama P-M del Pilote Individual", xaxis_title="Momento (kN·m)", yaxis_title="Carga Axial (kN)", paper_bgcolor="#0f1117", plot_bgcolor="#0f1117", font=dict(color="white"))
             st.plotly_chart(fig_pm, use_container_width=True)
             
-            if ok_pm: st.success("✅ **CUMPLE.** La combinación Pu-Mu reside dentro de la envolvente segura.")
-            else: st.error("❌ **NO CUMPLE.** La combinación Pu-Mu excede la capacidad estructural del pilote.")
+            if ok_pm: st.success(" **CUMPLE.** La combinación Pu-Mu reside dentro de la envolvente segura.")
+            else: st.error(" **NO CUMPLE.** La combinación Pu-Mu excede la capacidad estructural del pilote.")
             
         except Exception as e:
             st.warning(f"No se pudo cargar generador P-M: {e}")
@@ -681,7 +681,7 @@ with tab_est:
     peso_acero_pilotes = round(peso_long_total + peso_trans_total, 1)
 
     # ── 4.1 Cuadro de Cantidades ─────────────────────────────────────────────
-    st.markdown("##### 📦 Cuadro de Cantidades de Obra")
+    st.markdown("#####  Cuadro de Cantidades de Obra")
 
     filas_cant = [
         {"Nº": 1, "Descripción": "Excavación pilotes (broca/hélice)",      "Unidad": "m³",  "Cantidad": vol_exc_pil},
@@ -705,7 +705,7 @@ with tab_est:
     st.divider()
 
     # ── 4.2 Precios Unitarios (Editables) ────────────────────────────────────
-    st.markdown("##### 💰 Base de Precios Unitarios (COP) — Editable")
+    st.markdown("#####  Base de Precios Unitarios (COP) — Editable")
     st.caption("Los precios son paramétricos. Ajusta según la región y el mercado local.")
 
     precios_default = pd.DataFrame([
@@ -741,7 +741,7 @@ with tab_est:
     st.divider()
 
     # ── 4.3 Configuración de AIU ──────────────────────────────────────────────
-    st.markdown("##### ⚙️ Administración, Imprevistos y Utilidad (A.I.U.)")
+    st.markdown("##### ⚙ Administración, Imprevistos y Utilidad (A.I.U.)")
     col_aiu1, col_aiu2, col_aiu3 = st.columns(3)
     with col_aiu1:
         pct_admin = st.slider("Administración (%)", 5, 25, 15, 1, key="aiu_admin_pil")
@@ -760,7 +760,7 @@ with tab_est:
     st.divider()
 
     # ── 4.4 Presupuesto Consolidado ───────────────────────────────────────────
-    st.markdown("##### 📊 Presupuesto Consolidado")
+    st.markdown("#####  Presupuesto Consolidado")
 
     # KPI cards
     ka, kb, kc, kd, ke = st.columns(5)
@@ -801,7 +801,7 @@ with tab_est:
     st.divider()
 
     # ── 4.5 Indicadores de Costo Técnico ─────────────────────────────────────
-    st.markdown("##### 📐 Indicadores de Eficiencia de Costo")
+    st.markdown("#####  Indicadores de Eficiencia de Costo")
     try:
         _Q_grupo_safe = Q_grupo
     except NameError:
@@ -864,12 +864,12 @@ with tab_est:
 
     # ── 4.7 Export CSV ───────────────────────────────────────────────────────
     st.divider()
-    st.markdown("##### 📥 Exportar Presupuesto")
+    st.markdown("#####  Exportar Presupuesto")
     col_exp1, col_exp2 = st.columns([1, 3])
     with col_exp1:
         csv_out = df_tabla_final.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
-            label="⬇️ Descargar CSV",
+            label="⬇ Descargar CSV",
             data=csv_out,
             file_name=f"APU_Pilotes_{n_pil_apu}u_D{D_pilote}m_L{L_pilote}m.csv",
             mime="text/csv",
@@ -877,7 +877,7 @@ with tab_est:
         )
     with col_exp2:
         st.info(
-            f"💡 **Resumen:** Grupo de **{n_pil_apu} pilotes** {tipo_seccion.lower()}s "
+            f" **Resumen:** Grupo de **{n_pil_apu} pilotes** {tipo_seccion.lower()}s "
             f"Ø{D_pilote}m × {L_pilote}m. "
             f"Presupuesto total: **${costo_total:,.0f} COP** "
             f"(A.I.U. = {pct_aiu_total}%)."
@@ -898,7 +898,7 @@ with tab_mem:
     except NameError: _efi = 1.0
     
     with col_docx:
-        st.markdown('##### 📄 Memoria de Cálculo')
+        st.markdown('#####  Memoria de Cálculo')
         if not _DOCX_AVAILABLE:
             st.error("Librería `python-docx` requerida.")
         else:
@@ -929,18 +929,18 @@ with tab_mem:
                     doc.save(doc_io)
                     doc_io.seek(0)
                     st.download_button(
-                        label="📥 Descargar Memoria.docx",
+                        label=" Descargar Memoria.docx",
                         data=doc_io,
                         file_name=f"Memoria_Pilotes_Konte.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         key="btn_dl_docx"
                     )
-                    st.success("✅ Memoria DOCX Generada.")
+                    st.success(" Memoria DOCX Generada.")
                 except Exception as e:
                     st.error(f"Error DOCX: {e}")
 
     with col_dxf:
-        st.markdown('##### 📐 Plano en Planta (DXF)')
+        st.markdown('#####  Plano en Planta (DXF)')
         if not _DXF_AVAILABLE:
             st.error("Librería `ezdxf` no instalada.")
         else:
@@ -982,18 +982,18 @@ with tab_mem:
                     doc_dxf.write(dxf_io)
                     dxf_io.seek(0)
                     st.download_button(
-                        label="📥 Descargar Plano.dxf",
+                        label=" Descargar Plano.dxf",
                         data=dxf_io.getvalue().encode('utf-8'),
                         file_name=f"Plano_Pilotes_{n_pilotes}u.dxf",
                         mime="application/dxf",
                         key="btn_dl_dxf"
                     )
-                    st.success("✅ Plano DXF Geométrico Generado.")
+                    st.success(" Plano DXF Geométrico Generado.")
                 except Exception as e:
                     st.error(f"Error DXF: {e}")
 
     with col_ifc:
-        st.markdown('##### 🧱 Integración BIM 3D (IFC)')
+        st.markdown('#####  Integración BIM 3D (IFC)')
         if not _IFC_AVAILABLE:
             st.warning("`ifcopenshell` no vinculado en este entorno Python.")
             st.info("Pip install ifcopenshell requerido para activar BIM 3D.")
@@ -1013,13 +1013,13 @@ with tab_mem:
                             nombre_proyecto=f"Grupo de {n_pilotes} Pilotes"
                         )
                         st.download_button(
-                            label="📥 Descargar Modelo.ifc",
+                            label=" Descargar Modelo.ifc",
                             data=ifc_io,
                             file_name=f"Modelo_BIM_{n_pilotes}Pilotes.ifc",
                             mime="application/octet-stream",
                             key="btn_dl_ifc"
                         )
-                        st.success("✅ Modelo IFC4 Generado con Éxito.")
+                        st.success(" Modelo IFC4 Generado con Éxito.")
                 except Exception as e:
                     st.error(f"Error Genérico IFC: {e}")
 
@@ -1027,10 +1027,10 @@ with tab_mem:
 # P2 & P3: CUADRO DE MANDO Y ASENTAMIENTOS DIFERENCIALES
 # ==============================================================================
 st.divider()
-st.subheader("🗂️ Cuadro de Mando — Registro de Grupos de Pilotes")
+st.subheader(" Cuadro de Mando — Registro de Grupos de Pilotes")
 
 etiqueta_pi = st.text_input("Etiqueta del grupo (ej. P-1, Eje 3-B)", value="P-1", key="pi_etiqueta")
-if st.button("➕ Agregar al proyecto", key="pi_agregar"):
+if st.button(" Agregar al proyecto", key="pi_agregar"):
     try:
         if "registro_pilotes" not in st.session_state:
             st.session_state.registro_pilotes = []
@@ -1040,15 +1040,15 @@ if st.button("➕ Agregar al proyecto", key="pi_agregar"):
             "Qadm [kN]": round(Qadm, 1), "Qgrupo [kN]": round(Q_grupo, 1),
             "Eficiencia [%]": round(eficiencia * 100, 1),
             "Asentamiento [mm]": round(S_mm, 1),
-            "Estado": "✅ CUMPLE" if P_total_act <= Q_grupo else "❌ NO CUMPLE"
+            "Estado": " CUMPLE" if P_total_act <= Q_grupo else " NO CUMPLE"
         })
     except NameError:
-        st.warning("⚠️ Completa los cálculos y geometría antes de guardar el grupo.")
+        st.warning("⚠ Completa los cálculos y geometría antes de guardar el grupo.")
 
 if st.session_state.get("registro_pilotes"):
     st.dataframe(pd.DataFrame(st.session_state.registro_pilotes),
                  use_container_width=True, hide_index=True)
-    if st.button("🗑️ Limpiar registro", key="pi_limpiar"):
+    if st.button(" Limpiar registro", key="pi_limpiar"):
         st.session_state.registro_pilotes = []
         st.rerun()
 
@@ -1060,7 +1060,7 @@ if len(st.session_state.get("registro_pilotes", [])) >= 2:
                   delta=f"{19.0 - delta_s:.1f} mm Margen",
                   delta_color="normal" if delta_s <= 19 else "inverse")
     if delta_s > 19:
-        st.error("⚠️ Asentamiento diferencial > 19 mm (NSR-10 H.3.4). "
+        st.error("⚠ Asentamiento diferencial > 19 mm (NSR-10 H.3.4). "
                  "Revisar rigidez de la superestructura o nivelar profundidades.")
     else:
-        st.success(f"✅ Δs = {delta_s:.1f} mm ≤ 19 mm — Dentro de tolerancia NSR-10.")
+        st.success(f" Δs = {delta_s:.1f} mm ≤ 19 mm — Dentro de tolerancia NSR-10.")

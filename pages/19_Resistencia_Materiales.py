@@ -16,7 +16,7 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 
 st.set_page_config(page_title=_t("Resistencia de Materiales", "Mechanics of Materials"), layout="wide")
-st.title(_t("🏗️ Resistencia de Materiales", "🏗️ Mechanics of Materials"))
+st.title(_t(" Resistencia de Materiales", " Mechanics of Materials"))
 st.markdown(_t("Análisis de Esfuerzos Secundarios y Propiedades Geométricas Universales.", 
                "Secondary Stress Analysis and Universal Geometric Properties."))
 
@@ -43,7 +43,7 @@ def export_plotly_as_png(fig):
 # =============================================================================
 tab_mohr, tab_centroide = st.tabs([
     _t("⭕ 1. Círculo de Mohr (Transf. Esfuerzos)", "⭕ 1. Mohr's Circle (Stress Transf.)"),
-    _t("📐 2. Centroides e Inercias (Secc. Compuestas)", "📐 2. Centroids & Inertias (Composite Sections)")
+    _t(" 2. Centroides e Inercias (Secc. Compuestas)", " 2. Centroids & Inertias (Composite Sections)")
 ])
 
 with tab_mohr:
@@ -112,11 +112,11 @@ with tab_mohr:
         
         # Exportación
         st.markdown("---")
-        st.subheader(_t("📥 Exportar", "📥 Export"))
+        st.subheader(_t(" Exportar", " Export"))
         col_exp1, col_exp2 = st.columns(2)
         with col_exp1:
             # Exportar a DOCX
-            if st.button(_t("📄 Generar Memoria DOCX", "📄 Generate DOCX Report")):
+            if st.button(_t(" Generar Memoria DOCX", " Generate DOCX Report")):
                 # Crear una imagen estática del círculo (usando matplotlib)
                 fig_static, ax = plt.subplots(figsize=(6, 5))
                 ax.plot(x_circle, y_circle, 'b-', lw=2)
@@ -151,11 +151,11 @@ with tab_mohr:
                 buf_doc = io.BytesIO()
                 doc.save(buf_doc)
                 buf_doc.seek(0)
-                st.download_button(_t("📥 Descargar Memoria DOCX", "📥 Download DOCX Report"), data=buf_doc,
+                st.download_button(_t(" Descargar Memoria DOCX", " Download DOCX Report"), data=buf_doc,
                                    file_name="Mohr_Report.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
         with col_exp2:
             # Exportar la figura como PNG (desde Plotly requiere kaleido, pero podemos usar matplotlib)
-            if st.button(_t("🖼️ Exportar Figura PNG", "🖼️ Export Figure as PNG")):
+            if st.button(_t(" Exportar Figura PNG", " Export Figure as PNG")):
                 fig_static, ax = plt.subplots(figsize=(6, 5))
                 ax.plot(x_circle, y_circle, 'b-', lw=2)
                 ax.axhline(0, color='k', lw=1); ax.axvline(0, color='k', lw=1)
@@ -169,7 +169,7 @@ with tab_mohr:
                 ax.grid(True, alpha=0.3)
                 ax.set_aspect('equal')
                 buf_img = export_plot_as_png(fig_static)
-                st.download_button(_t("📥 Descargar PNG", "📥 Download PNG"), data=buf_img,
+                st.download_button(_t(" Descargar PNG", " Download PNG"), data=buf_img,
                                    file_name="Mohr_Circle.png", mime="image/png")
 
 # =============================================================================
@@ -206,11 +206,11 @@ with tab_centroide:
             s_h_t = st.number_input(_t("Altura Triángulo h", "Triangle height h"), -1000.0, 1000.0, st.session_state.get("ge_ht", 10.0), 1.0, key="ge_ht")
             s_prop = {"tipo": "Triang", "x": s_x, "y": s_y, "b": s_b_t, "h": s_h_t}
             
-        if st.button(_t("➕ Añadir Figura", "➕ Add Shape")):
+        if st.button(_t(" Añadir Figura", " Add Shape")):
             st.session_state.shapes_list.append(s_prop)
             st.rerun()
             
-        if st.button(_t("🗑️ Limpiar Todo", "🗑️ Clear All")):
+        if st.button(_t(" Limpiar Todo", " Clear All")):
             st.session_state.shapes_list = []
             st.rerun()
             
@@ -298,7 +298,7 @@ with tab_centroide:
             cols_del = st.columns(5)
             for idx in shape_list_for_delete:
                 with cols_del[idx % 5]:
-                    if st.button(f"🗑️ F{idx+1}", key=f"del_{idx}"):
+                    if st.button(f" F{idx+1}", key=f"del_{idx}"):
                         del st.session_state.shapes_list[idx]
                         st.rerun()
             
@@ -334,10 +334,10 @@ with tab_centroide:
             
             # Exportaciones
             st.markdown("---")
-            st.subheader(_t("📥 Exportar", "📥 Export"))
+            st.subheader(_t(" Exportar", " Export"))
             col_exp1, col_exp2, col_exp3 = st.columns(3)
             with col_exp1:
-                if st.button(_t("📄 Memoria DOCX", "📄 DOCX Report")):
+                if st.button(_t(" Memoria DOCX", " DOCX Report")):
                     # Capturar figura
                     buf_img = export_plot_as_png(fig_c)
                     doc = Document()
@@ -374,10 +374,10 @@ with tab_centroide:
                     buf_doc = io.BytesIO()
                     doc.save(buf_doc)
                     buf_doc.seek(0)
-                    st.download_button(_t("📥 Descargar Memoria DOCX", "📥 Download DOCX Report"), data=buf_doc,
+                    st.download_button(_t(" Descargar Memoria DOCX", " Download DOCX Report"), data=buf_doc,
                                        file_name="Seccion_Compuesta.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
             with col_exp2:
-                if st.button(_t("📊 Exportar Excel", "📊 Export Excel")):
+                if st.button(_t(" Exportar Excel", " Export Excel")):
                     # Crear Excel con dos hojas: figuras y propiedades
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -388,10 +388,10 @@ with tab_centroide:
                         })
                         df_res.to_excel(writer, sheet_name=_t("Propiedades", "Properties"), index=False)
                     output.seek(0)
-                    st.download_button(_t("📥 Descargar Excel", "📥 Download Excel"), data=output,
+                    st.download_button(_t(" Descargar Excel", " Download Excel"), data=output,
                                        file_name="Seccion_Propiedades.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             with col_exp3:
-                if st.button(_t("📐 Exportar DXF", "📐 Export DXF")):
+                if st.button(_t(" Exportar DXF", " Export DXF")):
                     try:
                         from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
                                                  dxf_rotulo, dxf_rotulo_campos)
@@ -430,5 +430,5 @@ with tab_centroide:
                         msp.add_text(f"Centroid: ({x_bar:.2f}, {y_bar:.2f})", dxfattribs={'layer':'TEXTO', 'height':1, 'insert':(x_bar+2, y_bar+2)})
                     out_dxf = io.BytesIO()
                     doc_dxf.write(out_dxf)
-                    st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=out_dxf.getvalue(),
+                    st.download_button(_t(" Descargar DXF", " Download DXF"), data=out_dxf.getvalue(),
                                        file_name="Seccion_Compuesta.dxf", mime="application/dxf")

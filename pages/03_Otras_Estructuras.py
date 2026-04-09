@@ -30,7 +30,7 @@ st.sidebar.markdown("""
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
@@ -143,7 +143,7 @@ def qty_table(rows):
 # ══════════════════════════════════════════
 # GLOBAL SIDEBAR (Materiales y Norma)
 # ══════════════════════════════════════════
-st.sidebar.header(_t("🌍 Norma de Diseño", "🌍 Design Code"))
+st.sidebar.header(_t(" Norma de Diseño", " Design Code"))
 if "norma_sel" not in st.session_state:
     st.session_state.norma_sel = list(CODES.keys())[0]
 norma_sel = st.session_state.norma_sel
@@ -156,10 +156,10 @@ st.sidebar.markdown(
     f'</div>', unsafe_allow_html=True
 )
 code = CODES.get(norma_sel, CODES["NSR-10 (Colombia)"])
-st.sidebar.markdown(f"📖 `{code['ref']}`")
+st.sidebar.markdown(f" `{code['ref']}`")
 st.sidebar.markdown(f"**φ flex:** {code['phi_flex']} | **φ cort:** {code['phi_shear']} | **φ comp:** {code['phi_comp']}")
 
-st.sidebar.header(_t("⚙️ Materiales Globales", "⚙️ Global Materials"))
+st.sidebar.header(_t("⚙ Materiales Globales", "⚙ Global Materials"))
 fc_unit = st.sidebar.radio(_t("Unidad f'c:", "f'c Unit:"), ["MPa","PSI","kg/cm²"], horizontal=True, key="o_fc_unit")
 if fc_unit == "PSI":
     psi_options = ["2500","3000","3500","4000","4500","5000"]
@@ -195,8 +195,8 @@ st.sidebar.caption(f"Ec = {Ec:.0f} MPa  |  β₁ = {beta1:.3f}  |  f'c = {fc:.2f
 # =============================================================================
 # 1. CORTANTE A UNA DISTANCIA X (VIGAS) + DISEÑO DE ESTRIBOS
 # =============================================================================
-with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂️ Shear at a Distance X from Support (Beams)")):
-    st.info(_t("📺 **Modo de uso:** Ingresa la carga distribuida Wu, la longitud de la viga y la distancia X. La app calculará el cortante Vu en ese punto y el espaciamiento requerido de estribos.", "📺 **How to use:** Enter load Wu, span L and distance X. Shows required shear at that section and stirrup spacing."))
+with st.expander(_t(" Cortante a una Distancia X del Apoyo (Vigas)", " Shear at a Distance X from Support (Beams)")):
+    st.info(_t(" **Modo de uso:** Ingresa la carga distribuida Wu, la longitud de la viga y la distancia X. La app calculará el cortante Vu en ese punto y el espaciamiento requerido de estribos.", " **How to use:** Enter load Wu, span L and distance X. Shows required shear at that section and stirrup spacing."))
     c1, c2 = st.columns(2)
     with c1:
         L_vga = st.number_input(_t("Longitud luz libre [m]", "Clear span (m)"), 1.0, 20.0, 5.0, 0.5, key="o_cx_L")
@@ -226,7 +226,7 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
     # Limitaciones ACI
     Vs_max = 0.66 * math.sqrt(fc) * (bw_cx*10) * (d_cx*10) / 1000  # kN
     if Vs_req > Vs_max:
-        st.error("❌ Vs requerido excede el máximo permitido. Aumente la sección.")
+        st.error(" Vs requerido excede el máximo permitido. Aumente la sección.")
     s_max = min(d_cx*10/2, 600) if Vs_req <= 0.33*math.sqrt(fc)*(bw_cx*10)*(d_cx*10)/1000 else min(d_cx*10/4, 300)
     s_diseno_mm = min(s_calc_mm, s_max)
     s_diseno_cm = s_diseno_mm/10
@@ -236,7 +236,7 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
     phi_Vn = phi_v * (Vc_kN + Vs_prov)
     ok_cx = phi_Vn >= Vu_x
 
-    tab_res, tab_q, tab_apu, tab_mem, tab_dxf = st.tabs(["📊 Resultados","📦 Cantidades","💰 APU","📄 Memoria","📏 DXF"])
+    tab_res, tab_q, tab_apu, tab_mem, tab_dxf = st.tabs([" Resultados"," Cantidades"," APU"," Memoria"," DXF"])
     with tab_res:
         st.markdown(f"**φ cortante = {phi_v}** | Norma: `{code['ref']}`")
         rows_cx = [
@@ -250,17 +250,17 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
             ("s de diseño", f"**{s_diseno_cm:.1f} cm**"),
             ("Vs provisto", f"{Vs_prov:.2f} kN"),
             ("φVn", f"{phi_Vn:.2f} kN"),
-            ("Estado", "✅ CUMPLE" if ok_cx else "❌ DEFICIENTE"),
+            ("Estado", " CUMPLE" if ok_cx else " DEFICIENTE"),
         ]
         qty_table(rows_cx)
         if ok_cx:
-            st.success(f"✅ Aprobado: Estribos {st_bar_cx} @ {s_diseno_cm:.1f} cm")
+            st.success(f" Aprobado: Estribos {st_bar_cx} @ {s_diseno_cm:.1f} cm")
         else:
-            st.error(f"❌ No aprobado: φVn = {phi_Vn:.2f} kN < Vu = {Vu_x:.2f} kN")
+            st.error(f" No aprobado: φVn = {phi_Vn:.2f} kN < Vu = {Vu_x:.2f} kN")
 
         # ── 3D SECCIÓN TRANSVERSAL ─────────────────────────────────────
         st.markdown("---")
-        st.markdown("#### 🧊 Visualización 3D de la Sección con Estribos")
+        st.markdown("####  Visualización 3D de la Sección con Estribos")
         _fig3d_cx = go.Figure()
         _bw, _d, _L = bw_cx, d_cx, L_vga*100  # cm
         # Cuerpo de la viga
@@ -306,9 +306,9 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
             c_cem = (m[0]*vol_beam/bag_kg) * apu.get("cemento", 0)
             c_ace = peso_est * apu.get("acero", 0)
             total_mat = c_cem + c_ace
-            st.metric(f"💎 Costo Estimado ({mon})", f"{total_mat:,.2f}")
+            st.metric(f" Costo Estimado ({mon})", f"{total_mat:,.2f}")
         else:
-            st.info("💡 Configure APU en la página '4. APU Mercado'.")
+            st.info(" Configure APU en la página '4. APU Mercado'.")
     with tab_mem:
         doc = Document()
         doc.add_heading(f"Memoria de Cálculo – Cortante a X = {x_dist:.2f} m", 0)
@@ -355,8 +355,8 @@ with st.expander(_t("✂️ Cortante a una Distancia X del Apoyo (Vigas)", "✂�
 # =============================================================================
 # 2. MÉNSULAS (CORBELS) – ACI 318
 # =============================================================================
-with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️ Corbel Design (ACI 318)")):
-    st.info(_t("📺 **Modo de uso:** Ingresa la carga vertical Vu, la fuerza horizontal Nuc y la geometría. Se calculará el acero principal, estribos horizontales cerrados y el acero de colgado.", "📺 **How to use:** Enter vertical load Vu, horizontal Nuc and geometry. Calculates main steel and closed ties."))
+with st.expander(_t(" Diseño de Ménsulas (Corbels / ACI 318)", " Corbel Design (ACI 318)")):
+    st.info(_t(" **Modo de uso:** Ingresa la carga vertical Vu, la fuerza horizontal Nuc y la geometría. Se calculará el acero principal, estribos horizontales cerrados y el acero de colgado.", " **How to use:** Enter vertical load Vu, horizontal Nuc and geometry. Calculates main steel and closed ties."))
     c1,c2 = st.columns(2)
     with c1:
         Vu_men = st.number_input(_t("Carga Vertical Vu [kN]", "Vertical Load Vu [kN]"), 50.0, 2000.0, 300.0, 50.0, key="o_men_vu")
@@ -394,7 +394,7 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
         n_bars = math.ceil(As_req_men / Ab_men)
         As_prov_men = n_bars * Ab_men
 
-        tab_res, tab_q, tab_apu, tab_mem, tab_dxf = st.tabs(["📊 Resultados","📦 Cantidades","💰 APU","📄 Memoria","📏 DXF"])
+        tab_res, tab_q, tab_apu, tab_mem, tab_dxf = st.tabs([" Resultados"," Cantidades"," APU"," Memoria"," DXF"])
         with tab_res:
             rows_men = [
                 ("a/d", f"{a_d_ratio:.2f}"),
@@ -409,7 +409,7 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
             
             # ── 3D MÉNSULA REAL ──────────────────────────────────────────────
             st.markdown("---")
-            st.markdown("#### 🧊 Visualización 3D de la Ménsula (Corbel)")
+            st.markdown("####  Visualización 3D de la Ménsula (Corbel)")
             _fm = go.Figure()
             
             # Columna de soporte (haz que la ménsula salga de ella)
@@ -492,9 +492,9 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
                 m = mix_for_fc(fc)
                 c_cem = (m[0]*vol_men/bag_kg) * apu.get("cemento", 0)
                 c_ace = (peso_principal+peso_est_men) * apu.get("acero", 0)
-                st.metric(f"💎 Costo Estimado ({mon})", f"{c_cem + c_ace:,.2f}")
+                st.metric(f" Costo Estimado ({mon})", f"{c_cem + c_ace:,.2f}")
             else:
-                st.info("💡 Configure APU en la página '4. APU Mercado'.")
+                st.info(" Configure APU en la página '4. APU Mercado'.")
         with tab_mem:
             doc = Document()
             doc.add_heading("Memoria de Cálculo – Ménsula (Corbel)", 0)
@@ -539,8 +539,8 @@ with st.expander(_t("🏗️ Diseño de Ménsulas (Corbels / ACI 318)", "🏗️
 # =============================================================================
 # 3. PREDIMENSIONAMIENTO DE COLUMNAS
 # =============================================================================
-with st.expander(_t("📐 Predimensionamiento de Columnas", "📐 Column Preliminary Sizing")):
-    st.info(_t("📺 **Modo de uso:** Ingresa la carga viva y muerta estimada por piso, el número de pisos y el área tributaria. Te recomendaré dimensiones de columna base.", "📺 **How to use:** Enter estimated load per floor, number of floors, and tributary area. Predicts base column section."))
+with st.expander(_t(" Predimensionamiento de Columnas", " Column Preliminary Sizing")):
+    st.info(_t(" **Modo de uso:** Ingresa la carga viva y muerta estimada por piso, el número de pisos y el área tributaria. Te recomendaré dimensiones de columna base.", " **How to use:** Enter estimated load per floor, number of floors, and tributary area. Predicts base column section."))
     c1,c2 = st.columns(2)
     with c1:
         area_trib = st.number_input(_t("Área Tributaria [m²]", "Tributary Area [m²]"), 5.0, 100.0, 20.0, 5.0, key="o_pre_a")
@@ -561,7 +561,7 @@ with st.expander(_t("📐 Predimensionamiento de Columnas", "📐 Column Prelimi
 
     # ── 3D COLUMNA SUGERIDA ──────────────────────────────────────────
     st.markdown("---")
-    st.markdown("#### 🧊 Visualización 3D de la Columna Sugerida")
+    st.markdown("####  Visualización 3D de la Columna Sugerida")
     _h_col = pisos * 3.0 * 100  # cm = pisos * 3m
     _fc2 = go.Figure()
     _cb = b_round / 2
@@ -644,8 +644,8 @@ with st.expander(_t("📐 Predimensionamiento de Columnas", "📐 Column Prelimi
 # =============================================================================
 # 4. CAPACIDAD AXIAL COLUMNAS CORTAS
 # =============================================================================
-with st.expander(_t("🧱 Capacidad Axial Pn,max (Columnas Cortas)", "🧱 Axial Capacity Pn,max (Short Columns)")):
-    st.info(_t("📺 **Modo de uso:** Ingresa la sección transversal probada y su armadura. El sistema calculará la carga axial máxima que soporta, ignorando el pandeo.", "📺 **How to use:** Enter section and steel. Calculates max axial capacity (ignoring slenderness)."))
+with st.expander(_t(" Capacidad Axial Pn,max (Columnas Cortas)", " Axial Capacity Pn,max (Short Columns)")):
+    st.info(_t(" **Modo de uso:** Ingresa la sección transversal probada y su armadura. El sistema calculará la carga axial máxima que soporta, ignorando el pandeo.", " **How to use:** Enter section and steel. Calculates max axial capacity (ignoring slenderness)."))
     c1,c2 = st.columns(2)
     with c1:
         b_c = st.number_input("b [cm]", 20.0, 150.0, 40.0, 5.0, key="o_cap_b")
@@ -677,8 +677,8 @@ with st.expander(_t("🧱 Capacidad Axial Pn,max (Columnas Cortas)", "🧱 Axial
 # =============================================================================
 # 5. LOSAS BIDIRECCIONALES (Método Coeficientes ACI)
 # =============================================================================
-with st.expander(_t("🏗️ Momentos en Losas 2D (Método ACI Coeficientes)", "🏗️ 2D Slab Moments (ACI Coefficients Method)")):
-    st.info(_t("📺 **Modo de uso:** Ingresa las luces la y lb del tablero. Sirve para diseñar losas apoyadas perimetralmente en vigas. Calcula los momentos en ambas direcciones.", "📺 **How to use:** Enter short and long spans. Useful for edge-supported slabs. Calculates moments in both directions."))
+with st.expander(_t(" Momentos en Losas 2D (Método ACI Coeficientes)", " 2D Slab Moments (ACI Coefficients Method)")):
+    st.info(_t(" **Modo de uso:** Ingresa las luces la y lb del tablero. Sirve para diseñar losas apoyadas perimetralmente en vigas. Calcula los momentos en ambas direcciones.", " **How to use:** Enter short and long spans. Useful for edge-supported slabs. Calculates moments in both directions."))
     c1,c2 = st.columns(2)
     with c1:
         la_losa = st.number_input(_t("Luz corta La [m]", "Short span La [m]"), 2.0, 15.0, 4.0, 0.5, key="lo2_la")
@@ -751,5 +751,5 @@ st.markdown(f"""
 > Norma activa: `{norma_sel}`  
 > f'c = {fc:.2f} MPa | fy = {fy:.0f} MPa | Ec = {Ec:.0f} MPa  
 > **Referencia:** {code['ref']}  
-> ⚠️ *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
+> ⚠ *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
 """)

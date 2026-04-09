@@ -190,9 +190,9 @@ with tab_geo:
             "cargas_nudo": st.session_state.cargas_nudo_df.to_dict(orient="records"),
             "norma": norma_sel
         }
-        st.download_button(_t("💾 Guardar Modelo", "💾 Save Model"), data=json.dumps(model_data, indent=2), file_name="modelo.json", mime="application/json")
+        st.download_button(_t(" Guardar Modelo", " Save Model"), data=json.dumps(model_data, indent=2), file_name="modelo.json", mime="application/json")
     with col_load:
-        uploaded = st.file_uploader(_t("📂 Cargar Modelo", "📂 Load Model"), type=["json"])
+        uploaded = st.file_uploader(_t(" Cargar Modelo", " Load Model"), type=["json"])
         if uploaded:
             model = json.load(uploaded)
             st.session_state.nudos_df = pd.DataFrame(model["nudos"])
@@ -221,7 +221,7 @@ with tab_cargas:
     with col_mat2:
         qa_suelo = st.number_input(_t("Capacidad portante suelo qa [kN/m²]", "Soil bearing capacity qa [kN/m²]"), 10.0, 1000.0, st.session_state.get("ana_qa", 150.0), 10.0, key="ana_qa")
 
-    if st.button(_t("🔁 Analizar estructura", "🔁 Analyze structure")):
+    if st.button(_t(" Analizar estructura", " Analyze structure")):
         with st.spinner(_t("Analizando...", "Analyzing...")):
             # Copiamos datos actuales
             nodes = st.session_state.nudos_df.copy().dropna()
@@ -581,13 +581,13 @@ with tab_dis:
 
         # Exportaciones
         st.markdown("---")
-        st.subheader(_t("📥 Exportar resultados", "📥 Export results"))
+        st.subheader(_t(" Exportar resultados", " Export results"))
 
         col_ex1, col_ex2, col_ex3, col_ex4 = st.columns(4)
 
         # 1. Excel
         with col_ex1:
-            if st.button(_t("📊 Exportar a Excel", "📊 Export to Excel")):
+            if st.button(_t(" Exportar a Excel", " Export to Excel")):
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     # Reacciones
@@ -614,11 +614,11 @@ with tab_dis:
                     pd.DataFrame(design_data["vigas"]).to_excel(writer, sheet_name="Vigas", index=False)
                     pd.DataFrame(design_data["columnas"]).to_excel(writer, sheet_name="Columnas", index=False)
                 output.seek(0)
-                st.download_button(_t("📥 Descargar Excel", "📥 Download Excel"), data=output, file_name="resultados_estructura.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                st.download_button(_t(" Descargar Excel", " Download Excel"), data=output, file_name="resultados_estructura.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
         # 2. DXF
         with col_ex2:
-            if st.button(_t("📐 Exportar a DXF", "📐 Export to DXF")):
+            if st.button(_t(" Exportar a DXF", " Export to DXF")):
                 try:
                     from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
                                              dxf_rotulo, dxf_rotulo_campos)
@@ -657,11 +657,11 @@ with tab_dis:
                     msp.add_text(_t("Estructura 2D","2D Structure"), dxfattribs={'layer':'TEXTO','height':0.2,'insert':(0,0)})
                 out_dxf = io.StringIO()
                 doc_dxf.write(out_dxf)
-                st.download_button(_t("📥 Descargar DXF","📥 Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_2d.dxf", mime="application/dxf")
+                st.download_button(_t(" Descargar DXF"," Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_2d.dxf", mime="application/dxf")
 
         # 3. DOCX Memoria
         with col_ex3:
-            if st.button(_t("📄 Generar Memoria DOCX", "📄 Generate DOCX Report")):
+            if st.button(_t(" Generar Memoria DOCX", " Generate DOCX Report")):
                 doc = Document()
                 doc.add_heading(_t("Memoria de análisis estructural 2D", "2D Structural Analysis Report"), 0)
                 doc.add_paragraph(_t(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}", f"Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}"))
@@ -715,11 +715,11 @@ with tab_dis:
                 buf_doc = io.BytesIO()
                 doc.save(buf_doc)
                 buf_doc.seek(0)
-                st.download_button(_t("📥 Descargar Memoria", "📥 Download Report"), data=buf_doc, file_name="memoria_estructura_2d.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                st.download_button(_t(" Descargar Memoria", " Download Report"), data=buf_doc, file_name="memoria_estructura_2d.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
         # 4. APU (presupuesto)
         with col_ex4:
-            if st.button(_t("💰 Presupuesto APU", "💰 APU Budget")):
+            if st.button(_t(" Presupuesto APU", " APU Budget")):
                 if "apu_config" in st.session_state:
                     apu = st.session_state.apu_config
                     mon = apu.get("moneda", "$")

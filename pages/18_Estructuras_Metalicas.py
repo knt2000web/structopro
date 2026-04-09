@@ -36,7 +36,7 @@ st.sidebar.markdown("""
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
@@ -65,8 +65,8 @@ else:
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN MATERIAL Y UNIDADES
 # ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙️ Preferencias", "⚙️ Settings"))
-sys_u = st.sidebar.radio(_t("📐 Sistema de Unidades", "📐 Unit System"), 
+st.sidebar.header(_t("⚙ Preferencias", "⚙ Settings"))
+sys_u = st.sidebar.radio(_t(" Sistema de Unidades", " Unit System"), 
                          ["Métrico (SI)", "Imperial (US)"], 
                          index=0 if st.session_state.get("unidades", "Métrico") == "Métrico" else 1, 
                          key="st_sys_u")
@@ -90,7 +90,7 @@ def show_mm4(v): return v / (f_mm**4)
 def show_kgm(v): return v / (f_kg / f_m)
 
 st.sidebar.markdown("---")
-st.sidebar.header(_t("⚙️ Materiales", "⚙️ Materials"))
+st.sidebar.header(_t("⚙ Materiales", "⚙ Materials"))
 Fy_inp = st.sidebar.number_input(_t(f"Fluencia Fy [{t_MPa}]", f"Yield Fy [{t_MPa}]"), value=250.0 if is_m else 36.0, step=10.0 if is_m else 1.0, key="st_fy_i")
 Fu_inp = st.sidebar.number_input(_t(f"Último Fu [{t_MPa}]", f"Ultimate Fu [{t_MPa}]"), value=400.0 if is_m else 58.0, step=10.0 if is_m else 1.0, key="st_fu_i")
 E_inp = st.sidebar.number_input(_t(f"Elasticidad E [{t_MPa}]", f"Modulus E [{t_MPa}]"), value=200000.0 if is_m else 29000.0, step=1000.0 if is_m else 1000.0, key="st_E_i")
@@ -237,7 +237,7 @@ tab_P, tab_C, tab_F, tab_CF, tab_E = st.tabs([
     _t("2. LAMINADOS: Compresión", "2. HOT-ROLLED: Compression"),
     _t(f"3. LAMINADOS: Flexión ({term_W})", "3. HOT-ROLLED: Flexure"),
     _t("4. CONFORMADOS EN FRÍO", "4. COLD-FORMED"),
-    _t("💾 Exportaciones Globales", "💾 Global Exports")
+    _t(" Exportaciones Globales", " Global Exports")
 ])
 
 # ─────────────────────────────────────────────
@@ -272,7 +272,7 @@ with tab_P:
         st.write(f"**Momento Inercia Eje Débil (Iy):** {show_mm4(Iy_w):.2f} {t_mm}⁴")
         st.write(f"**Radio de Giro (rx):** {show_mm(rx_w):.2f} {t_mm}  |  **(ry):** {show_mm(ry_w):.2f} {t_mm}")
         st.write(f"**Módulo Plástico Fuerte (Zx):** {show_mm3(Zx_w):.2f} {t_mm}³")
-        st.write(f"⚖️ **Peso Lineal Estimado:** {show_kgm(peso_lin):.2f} {t_kg}/{t_m}")
+        st.write(f"⚖ **Peso Lineal Estimado:** {show_kgm(peso_lin):.2f} {t_kg}/{t_m}")
         st.write(f"**Peso total para L={L_ref_i:.2f} {t_m}:** {show_kg(peso_total):.2f} {t_kg}")
 
         # Opción para agregar al despiece
@@ -356,10 +356,10 @@ with tab_C:
         st.markdown(f"**Esfuerzo Crítico (Fcr):** {show_MPa(Fcr):.2f} {t_MPa}")
         st.markdown(f"**Resistencia Axial de Diseño ($\phi P_n$):** <span style='color:blue;font-size:22px'>{show_kN(phi_Pn):.1f} {t_kN}</span>", unsafe_allow_html=True)
         if P_u <= phi_Pn:
-            st.success(f"✅ ¡Aprobado! (FS = {phi_Pn/P_u:.2f})")
+            st.success(f" ¡Aprobado! (FS = {phi_Pn/P_u:.2f})")
         else:
-            st.error("❌ No Aprobado por Compresión Axial / Pandeo.")
-            st.warning("💡 **Recomendación:** Aumente el área de la sección incrementando **bf**, **d**, o sus espesores (**tf**, **tw**). También puede reducir la longitud no arriostrada **Lc**.")
+            st.error(" No Aprobado por Compresión Axial / Pandeo.")
+            st.warning(" **Recomendación:** Aumente el área de la sección incrementando **bf**, **d**, o sus espesores (**tf**, **tw**). También puede reducir la longitud no arriostrada **Lc**.")
         st.pyplot(fig_c, use_container_width=False)
 
         # Agregar al despiece si se desea
@@ -429,10 +429,10 @@ with tab_F:
         st.markdown(f"**Zona Comportamiento:** {estado}")
         st.markdown(f"**Capacidad Momento ($\phi M_n$):** <span style='color:blue;font-size:22px'>{show_kNm(phi_Mn):.1f} {t_kNm}</span>", unsafe_allow_html=True)
         if Mu <= phi_Mn:
-            st.success(f"✅ ¡Viga Cumple a Flexión! (FS={phi_Mn/Mu:.2f})")
+            st.success(f" ¡Viga Cumple a Flexión! (FS={phi_Mn/Mu:.2f})")
         else:
-            st.error("❌ Viga falla por Flexión / LTB.")
-            st.warning("💡 **Recomendación:** Para flexión, lo más eficiente es aumentar la inercia incrementando el peralte **d**. También ayuda ensanchar **bf** y aumentar espesores, o arriostrar más seguido reduciendo **Lb**.")
+            st.error(" Viga falla por Flexión / LTB.")
+            st.warning(" **Recomendación:** Para flexión, lo más eficiente es aumentar la inercia incrementando el peralte **d**. También ayuda ensanchar **bf** y aumentar espesores, o arriostrar más seguido reduciendo **Lb**.")
             
         # Add pyplot W-Shape here to visualize real-time
         fig_f = plot_W(d_f, bf_f, tw_f, tf_f)
@@ -442,7 +442,7 @@ with tab_F:
         A_f = 2 * (bf_f * tf_f) + (d_f - 2*tf_f)*tw_f
         peso_lin_f = (A_f / 1e6) * peso_esp_acero
         peso_total_f = peso_lin_f * L_viga
-        st.write(f"⚖️ **Peso estimado de la viga:** {show_kg(peso_total_f):.2f} {t_kg}")
+        st.write(f"⚖ **Peso estimado de la viga:** {show_kg(peso_total_f):.2f} {t_kg}")
 
         if st.button(_t("Agregar esta viga al despiece", "Add this beam to the list")):
             mem_text = f"Momento Flector Solicitante (Mu): {Mu_i:.1f} {t_kNm}\nLongitud Total (L): {L_viga_i:.2f} {t_m}\nLongitud No Arriostrada (Lb): {show_m(Lb_m):.2f} {t_m}\nLímites LTB: Lp={show_m(Lp):.2f} {t_m}, Lr={show_m(Lr):.2f} {t_m}\nMomento Plástico (Mp): {show_kNm(Mp):.1f} {t_kNm}\nMódulo de Sección Elástico (Sx): {show_mm3(Sx_f):.1f} {t_mm}³\nZona de Comportamiento LTB: {estado}\nResistencia Nominal Equivalente (Mn): {show_kNm(Mn):.1f} {t_kNm}\nResistencia de Diseño a Flexión (φMn): {show_kNm(phi_Mn):.1f} {t_kNm}\nEstado de Evaluación: {'CUMPLE' if Mu <= phi_Mn else 'FALLA'} (Factor de Seguridad LRFD = {phi_Mn/max(Mu, 0.001):.2f})"
@@ -490,7 +490,7 @@ with tab_CF:
         peso_lin_cf = (A_cf / 1e6) * peso_esp_acero
         peso_total_cf = peso_lin_cf * L_cf
         st.write(f"**Área Bruta (A):** {show_mm2(A_cf):.2f} {t_mm}²")
-        st.write(f"⚖️ **Peso Lineal Estimado:** {show_kgm(peso_lin_cf):.2f} {t_kg}/{t_m}")
+        st.write(f"⚖ **Peso Lineal Estimado:** {show_kgm(peso_lin_cf):.2f} {t_kg}/{t_m}")
         st.write(f"**Peso total:** {show_kg(peso_total_cf):.2f} {t_kg}")
     with col_cf2:
         st.subheader("Verificación de Compresión")
@@ -498,7 +498,7 @@ with tab_CF:
         Pu_cf = Pu_cf_i * f_kN
         w_t_ratio = max(h_cf/t_cf, b_cf/t_cf)
         if w_t_ratio > 200:
-            st.warning("⚠️ Relación ancho/espesor > 200. Riesgo de pandeo local muy severo.")
+            st.warning("⚠ Relación ancho/espesor > 200. Riesgo de pandeo local muy severo.")
             Ae = 0.5 * A_cf
         elif w_t_ratio > 50:
             Ae = 0.8 * A_cf
@@ -520,10 +520,10 @@ with tab_CF:
         phi_Pn_cf = 0.85 * Pn_cf
         st.markdown(f"**Resistencia Axial Compresión ($\phi P_n$):** <span style='color:blue;font-size:22px'>{show_kN(phi_Pn_cf):.1f} {t_kN}</span>", unsafe_allow_html=True)
         if Pu_cf <= phi_Pn_cf:
-            st.success("✅ ¡El perfil conformado en frío CUMPLE!")
+            st.success(" ¡El perfil conformado en frío CUMPLE!")
         else:
-            st.error("❌ El perfil falla por compresión / pandeo global o local.")
-            st.warning("💡 **Recomendación:** Aumente el espesor de la lámina **t**, agrande las dimensiones **h** o **b**, o incluya labios rigidizadores para mitigar el pandeo local.")
+            st.error(" El perfil falla por compresión / pandeo global o local.")
+            st.warning(" **Recomendación:** Aumente el espesor de la lámina **t**, agrande las dimensiones **h** o **b**, o incluya labios rigidizadores para mitigar el pandeo local.")
         st.pyplot(fig_cf, use_container_width=False)
 
         if st.button(_t("Agregar este perfil al despiece", "Add this profile to the list"), key="btn_add_cf_section"):
@@ -542,10 +542,10 @@ with tab_CF:
 # TAB 5: EXPORTACIONES GLOBALES
 # ─────────────────────────────────────────────
 with tab_E:
-    st.header(_t("💾 Exportaciones Globales", "💾 Global Exports"))
+    st.header(_t(" Exportaciones Globales", " Global Exports"))
 
     # Mostrar despiece acumulado
-    st.subheader(_t("📋 Despiece de Acero", "📋 Steel Cutting List"))
+    st.subheader(_t(" Despiece de Acero", " Steel Cutting List"))
     if st.session_state.steel_despiece:
         df_desp = pd.DataFrame(st.session_state.steel_despiece)
         st.dataframe(df_desp.style.format({"Longitud (m)": "{:.2f}", "Peso (kg)": "{:.2f}"}), use_container_width=True, hide_index=False)
@@ -569,7 +569,7 @@ with tab_E:
         st.info(_t("Aún no hay elementos en el despiece. Agrega perfiles desde las pestañas anteriores.", "No elements in the list yet. Add profiles from the previous tabs."))
 
     st.markdown("---")
-    st.subheader(_t("📄 Memoria de Cálculo (DOCX)", "📄 Calculation Report (DOCX)"))
+    st.subheader(_t(" Memoria de Cálculo (DOCX)", " Calculation Report (DOCX)"))
     if st.button(_t("Generar Memoria DOCX", "Generate DOCX Report")):
         doc = Document()
         doc.add_heading(_t(f"Memoria de Estructuras Metálicas - {norma_sel}", f"Steel Structures Report - {norma_sel}"), 0)
@@ -610,10 +610,10 @@ with tab_E:
         doc_mem = io.BytesIO()
         doc.save(doc_mem)
         doc_mem.seek(0)
-        st.download_button(_t("📥 Descargar Memoria", "📥 Download Report"), data=doc_mem, file_name="Memoria_Acero.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(_t(" Descargar Memoria", " Download Report"), data=doc_mem, file_name="Memoria_Acero.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
     st.markdown("---")
-    st.subheader(_t("💰 Presupuesto APU", "💰 APU Budget"))
+    st.subheader(_t(" Presupuesto APU", " APU Budget"))
     apu = st.session_state.get("apu_config", {
         "moneda": "COP$",
         "costo_dia_mo": 69333.33,
@@ -680,11 +680,11 @@ with tab_E:
         worksheet.write(row, 0, "TOTAL PRESUPUESTO", workbook.add_format({'bold': True}))
         worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
     output_excel.seek(0)
-    st.download_button(_t("📥 Descargar Presupuesto Excel", "📥 Download Budget Excel"), data=output_excel,
+    st.download_button(_t(" Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel,
                        file_name="APU_Acero.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     st.markdown("---")
-    st.subheader(_t("📐 DXF de Sección", "📐 Section DXF"))
+    st.subheader(_t(" DXF de Sección", " Section DXF"))
     st.write(_t("Genera un archivo DXF con la sección transversal del último perfil W definido en la pestaña de propiedades.", "Generates a DXF file with the cross-section of the last W-shape defined in the properties tab."))
     try:
         from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
@@ -726,7 +726,7 @@ with tab_E:
                 dxf_rotulo(msp_st, _cam_m, -bfw/2*sc, -dw/2*sc - 0.25, rot_w=max(bfw*sc*2, 0.2), rot_h=0.15, escala=20)
             out_dxf = io.StringIO()
             doc_dxf.write(out_dxf)
-            st.download_button(_t("📥 Descargar Perfil_W.dxf", "📥 Download Perfil_W.dxf"),
+            st.download_button(_t(" Descargar Perfil_W.dxf", " Download Perfil_W.dxf"),
                                data=out_dxf.getvalue().encode('utf-8'),
                                file_name=f"Perfil_W_{show_mm(dw):.0f}x{show_mm(bfw):.0f}.dxf", mime="application/dxf")
         else:

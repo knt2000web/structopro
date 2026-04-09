@@ -16,7 +16,7 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
 
-st.title(_t("💸 Análisis de Precios Unitarios (APU) — En Vivo", "💸 Unit Price Analysis (APU) — Live"))
+st.title(_t(" Análisis de Precios Unitarios (APU) — En Vivo", " Unit Price Analysis (APU) — Live"))
 st.cache_data.clear()
 
 # ─────────────────────────────────────────────
@@ -28,18 +28,18 @@ st.sidebar.markdown("""
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown(_t("""
 Este módulo se conecta en tiempo real a las principales ferreterías de Latinoamérica para extraer **el precio del día** del Cemento y el Acero de refuerzo.
 > **Fuentes actuales:** Homecenter (Colombia), Promart (Perú), Sodimac (varios países), y costos base indexados para otras regiones.
-> ⚠️ **Nota:** Algunas tiendas bloquean conexiones desde servidores en la nube (Streamlit Cloud). Si ves "N/A", ingresa el valor manualmente en la sección de "Cotizador Global".
+> ⚠ **Nota:** Algunas tiendas bloquean conexiones desde servidores en la nube (Streamlit Cloud). Si ves "N/A", ingresa el valor manualmente en la sección de "Cotizador Global".
 """, """
 This module connects in real time to major hardware stores in Latin America to extract **today's price** of Cement and Reinforcing Steel.
 > **Current sources:** Homecenter (Colombia), Promart (Perú), Sodimac (various countries), and baseline costs for other regions.
-> ⚠️ **Note:** Some stores block connections from cloud servers (Streamlit Cloud). If you see "N/A", enter the value manually in the "Global Quoter" section.
+> ⚠ **Note:** Some stores block connections from cloud servers (Streamlit Cloud). If you see "N/A", enter the value manually in the "Global Quoter" section.
 """))
 
 # ------------------------------------------------------------------------------
@@ -364,7 +364,7 @@ def update_regional_prices(pais, cem_type, steel_diam):
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 pais_sugerido = "Colombia" if "NSR" in norma_sel else "Perú" if ("E.060" in norma_sel or "Perú" in norma_sel) else "México" if "NTC" in norma_sel else "Argentina" if "CIRSOC" in norma_sel else "Ecuador" if "NEC" in norma_sel else "Chile" if "CIRSOC" not in norma_sel and "ACI" in norma_sel else "Bolivia" if "NB" in norma_sel else "USA" if "ACI" in norma_sel else "Otro"
 
-st.subheader(_t(f"📍 Contexto Regional: {pais_sugerido}", f"📍 Regional Context: {pais_sugerido}"))
+st.subheader(_t(f" Contexto Regional: {pais_sugerido}", f" Regional Context: {pais_sugerido}"))
 
 c_p1, c_p2 = st.columns(2)
 with c_p1:
@@ -375,7 +375,7 @@ with c_p2:
     steel_qty = st.caption(_t(f"Unidad base: Varilla x {'6m' if pais_sugerido=='Colombia' else '9m' if pais_sugerido=='Perú' else '12m'}", f"Base unit: Rebar x {'6m' if pais_sugerido=='Colombia' else '9m' if pais_sugerido=='Perú' else '12m'}"))
 
 if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
-    if st.button(_t(f"🚀 Consultar y Promediar Precios en Vivo ({pais_sugerido})", f"🚀 Query and Average Live Prices ({pais_sugerido})"), use_container_width=True):
+    if st.button(_t(f" Consultar y Promediar Precios en Vivo ({pais_sugerido})", f" Query and Average Live Prices ({pais_sugerido})"), use_container_width=True):
         if f"apu_details_{pais_sugerido}" in st.session_state:
             del st.session_state[f"apu_details_{pais_sugerido}"]
         update_regional_prices(pais_sugerido, f"{cem_type} {cem_weight}", steel_diam)
@@ -388,7 +388,7 @@ if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
         mon_sym = "USD $" if pais_sugerido == "USA" else ""
         
         # Mostrar gráficos
-        st.markdown(_t("#### 📊 Comparación de Precios por Fuente", "#### 📊 Price Comparison by Source"))
+        st.markdown(_t("####  Comparación de Precios por Fuente", "####  Price Comparison by Source"))
         graph_data = st.session_state.get(f"apu_grafica_{pais_sugerido}", {})
         if graph_data:
             fig = go.Figure()
@@ -420,11 +420,11 @@ if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
             st.plotly_chart(fig, use_container_width=True)
         
         # Tabla de precios detallada
-        st.markdown(_t("#### 📋 Detalle de Cotizaciones", "#### 📋 Quote Details"))
+        st.markdown(_t("####  Detalle de Cotizaciones", "####  Quote Details"))
         c1, c2 = st.columns(2)
         
         with c1:
-            st.write(_t(f"**🧱 Cemento ({cem_type} - {cem_weight}):**", f"**🧱 Cement ({cem_type} - {cem_weight}):**"))
+            st.write(_t(f"** Cemento ({cem_type} - {cem_weight}):**", f"** Cement ({cem_type} - {cem_weight}):**"))
             valid_c = []
             for k, v in det["cemento"].items():
                 if isinstance(v, (float, int)) and v > 0:
@@ -434,10 +434,10 @@ if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
                     st.error(f"{k}: " + _t("Sin conexión o N/D", "No connection or N/A"))
             if valid_c:
                 avg_c = sum(valid_c)/len(valid_c)
-                st.info(_t(f"🏆 **Promedio Cemento: {mon_sym} {avg_c:,.2f}**", f"🏆 **Average Cement: {mon_sym} {avg_c:,.2f}**"))
+                st.info(_t(f" **Promedio Cemento: {mon_sym} {avg_c:,.2f}**", f" **Average Cement: {mon_sym} {avg_c:,.2f}**"))
         
         with c2:
-            st.write(_t(f"**🏗️ Acero (Varilla {steel_diam}\"):**", f"**🏗️ Steel (Rebar {steel_diam}\"):**"))
+            st.write(_t(f"** Acero (Varilla {steel_diam}\"):**", f"** Steel (Rebar {steel_diam}\"):**"))
             valid_s = []
             for k, v in det["acero"].items():
                 if isinstance(v, (float, int)) and v > 0:
@@ -447,10 +447,10 @@ if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
                     st.error(f"{k}: " + _t("Sin conexión o N/D", "No connection or N/A"))
             if valid_s:
                 avg_s_unit = sum(valid_s)/len(valid_s)
-                st.info(_t(f"🏆 **Promedio Acero (Unidad): {mon_sym} {avg_s_unit:,.2f}**", f"🏆 **Average Steel (Unit): {mon_sym} {avg_s_unit:,.2f}**"))
+                st.info(_t(f" **Promedio Acero (Unidad): {mon_sym} {avg_s_unit:,.2f}**", f" **Average Steel (Unit): {mon_sym} {avg_s_unit:,.2f}**"))
         
         # Botón exportar a Excel
-        if st.button(_t("📥 Exportar cotizaciones a Excel", "📥 Export quotes to Excel")):
+        if st.button(_t(" Exportar cotizaciones a Excel", " Export quotes to Excel")):
             # Preparar dataframe
             df_c = pd.DataFrame([{"Fuente": k, "Precio": v} for k, v in det["cemento"].items() if isinstance(v, (float, int))])
             df_s = pd.DataFrame([{"Fuente": k, "Precio": v} for k, v in det["acero"].items() if isinstance(v, (float, int))])
@@ -468,13 +468,13 @@ if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         
-        st.caption(_t("⚠️ Nota: Los promedios se calculan automáticamente sobre las fuentes que respondieron con éxito.", "⚠️ Note: Averages are automatically calculated from sources that responded successfully."))
+        st.caption(_t("⚠ Nota: Los promedios se calculan automáticamente sobre las fuentes que respondieron con éxito.", "⚠ Note: Averages are automatically calculated from sources that responded successfully."))
 
 elif pais_sugerido == "Bolivia":
     st.info(_t("🇧🇴 Bolivia: Las fuentes para Bolivia requieren cotización directa. Por favor ingresa los valores en el Cotizador Global.", "🇧🇴 Bolivia: Sources for Bolivia require direct quotation. Please enter values in the Global Quoter."))
 
 st.markdown("---")
-st.markdown(_t("### 🔍 Búsqueda y Cotización Personalizada", "### 🔍 Custom Search and Quote"))
+st.markdown(_t("###  Búsqueda y Cotización Personalizada", "###  Custom Search and Quote"))
 col_s1, col_s2 = st.columns([3, 1])
 with col_s1:
     placeholder_search = _t(f"Ej: 'precio madera estructural {pais_sugerido.lower()}'...", f"e.g., 'structural timber price {pais_sugerido.lower()}'...")
@@ -482,33 +482,33 @@ with col_s1:
 with col_s2:
     if search_query:
         search_url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}"
-        st.link_button(_t("🔎 Buscar en Google", "🔎 Search on Google"), search_url, use_container_width=True)
+        st.link_button(_t(" Buscar en Google", " Search on Google"), search_url, use_container_width=True)
     else:
-        st.button(_t("🔎 Buscar en Web", "🔎 Search Web"), disabled=True, use_container_width=True)
+        st.button(_t(" Buscar en Web", " Search Web"), disabled=True, use_container_width=True)
 
-st.markdown(_t("#### 🔗 Extraer de Link Propio (Cualquier Sitio)", "#### 🔗 Extract from Own Link (Any Site)"))
+st.markdown(_t("####  Extraer de Link Propio (Cualquier Sitio)", "####  Extract from Own Link (Any Site)"))
 st.caption(_t("Pega el link de un producto de cualquier ferretería o tienda online y pulsa extraer.", "Paste the link of a product from any hardware store or online shop and click extract."))
 custom_url = st.text_input(_t("URL del producto:", "Product URL:"), placeholder="https://www.tienda.com/producto...")
-if st.button(_t("🔧 Ejecutar Extracción Inteligente", "🔧 Run Smart Extraction"), use_container_width=True):
+if st.button(_t(" Ejecutar Extracción Inteligente", " Run Smart Extraction"), use_container_width=True):
     if custom_url:
         with st.spinner(_t("Escaneando sitio web...", "Scanning website...")):
             plat = "sodimac" if "sodimac" in custom_url else "vtex" if ("disensa" in custom_url or "easy" in custom_url or "kywi" in custom_url) else "homecenter" if "homecenter" in custom_url else "homedepot_us" if "homedepot" in custom_url else "other"
             res_val = fetch_common(custom_url, plat)
             if isinstance(res_val, float):
-                st.success(_t(f"💰 Precio detectado: **{res_val:,.2f}**", f"💰 Price detected: **{res_val:,.2f}**"))
+                st.success(_t(f" Precio detectado: **{res_val:,.2f}**", f" Price detected: **{res_val:,.2f}**"))
                 c1, c2 = st.columns(2)
-                if c1.button(_t("📥 Usar para Cemento", "📥 Use for Cement")):
+                if c1.button(_t(" Usar para Cemento", " Use for Cement")):
                     st.session_state.apu_val_cem = res_val
                     st.rerun()
-                if c2.button(_t("📥 Usar para Acero", "📥 Use for Steel")):
+                if c2.button(_t(" Usar para Acero", " Use for Steel")):
                     # Convertir a precio por kg asumiendo varilla de 12m y peso 0.994 kg/m
                     st.session_state.apu_val_ace = res_val / (0.994 * 12)
                     st.rerun()
             else:
-                st.error(_t("❌ No se encontró un patrón de precio claro. Por favor ingresa el valor abajo.", "❌ No clear price pattern found. Please enter the value below."))
+                st.error(_t(" No se encontró un patrón de precio claro. Por favor ingresa el valor abajo.", " No clear price pattern found. Please enter the value below."))
 
 st.markdown("---")
-st.markdown(_t("### 🛒 Cotizador Global con Entrada Manual", "### 🛒 Global Quoter with Manual Input"))
+st.markdown(_t("###  Cotizador Global con Entrada Manual", "###  Global Quoter with Manual Input"))
 st.info(_t("Dado que las ferreterías pueden bloquear conexiones automatizadas, siempre puedes ingresar el valor cotizado manualmente para el reporte final.", "Since hardware stores may block automated connections, you can always enter the quoted value manually for the final report."))
 
 c1, c2, c3 = st.columns(3)
@@ -527,7 +527,7 @@ with c3:
     val_m3_arena= st.number_input(_t(f"Precio Arena m³ (Suelto) [{moneda}]", f"Sand price per m³ (loose) [{moneda}]"), value=st.session_state.get("apu_val_are", 70000.0 if pais_manual=="Colombia" else 25.0), key="apu_val_are")
     val_m3_grava= st.number_input(_t(f"Precio Grava m³ (Suelto) [{moneda}]", f"Gravel price per m³ (loose) [{moneda}]"), value=st.session_state.get("apu_val_gra", 80000.0 if pais_manual=="Colombia" else 28.0), key="apu_val_gra")
 
-st.markdown(_t("#### 👷 Mano de Obra e Impuestos", "#### 👷 Labor and Taxes"))
+st.markdown(_t("####  Mano de Obra e Impuestos", "####  Labor and Taxes"))
 c4, c5 = st.columns(2)
 with c4:
     salario_base = st.number_input(_t(f"Salario Mensual Base (ej: SMMLV) [{moneda}]", f"Base Monthly Salary (e.g., Minimum Wage) [{moneda}]"), value=st.session_state.get("apu_sal", 1300000.0 if pais_manual=="Colombia" else 400.0), key="apu_sal")
@@ -543,7 +543,7 @@ with c5:
     pct_utilidad_dentro_aiu = st.number_input(_t("Porcentaje de Utilidad dentro del AIU [%]", "Profit percentage within AIU [%]"), 0.0, 20.0, st.session_state.get("apu_pct_u", 5.0), 1.0, key="apu_pct_u") / 100.0
 
 # Sección de dosificación de concreto
-st.markdown(_t("#### 🧱 Dosificación de Concreto (para APU)", "#### 🧱 Concrete Mix Design (for APU)"))
+st.markdown(_t("####  Dosificación de Concreto (para APU)", "####  Concrete Mix Design (for APU)"))
 col_d1, col_d2, col_d3 = st.columns(3)
 with col_d1:
     usar_concreto_premezclado = st.checkbox(_t("Usar concreto premezclado", "Use ready-mix concrete"), key="usar_premezclado")
@@ -558,7 +558,7 @@ with col_d3:
         st.caption(_t("Proporciones típicas para f'c=21 MPa: 1:2:3 (cemento:arena:grava). Ajuste según necesidad.", "Typical proportions for f'c=21 MPa: 1:2:3 (cement:sand:gravel). Adjust as needed."))
 
 # Botón para aplicar precios como default en otros módulos
-if st.button(_t("⚙️ Aplicar estos precios como default en todos los módulos", "⚙️ Apply these prices as default in all modules"), use_container_width=True):
+if st.button(_t("⚙ Aplicar estos precios como default en todos los módulos", "⚙ Apply these prices as default in all modules"), use_container_width=True):
     st.session_state.apu_config = {
         "moneda": moneda,
         "cemento": val_cemento,
@@ -575,7 +575,7 @@ if st.button(_t("⚙️ Aplicar estos precios como default en todos los módulos
         "usar_concreto_premezclado": usar_concreto_premezclado,
         "precio_concreto_m3": precio_concreto_m3 if usar_concreto_premezclado else 0.0
     }
-    st.success(_t("✅ Precios guardados en la sesión. Aparecerán reflejados en el análisis APU de tus memorias de cálculo.", "✅ Prices saved in session. They will be reflected in the APU analysis of your calculation reports."))
+    st.success(_t(" Precios guardados en la sesión. Aparecerán reflejados en el análisis APU de tus memorias de cálculo.", " Prices saved in session. They will be reflected in the APU analysis of your calculation reports."))
     st.rerun()
 else:
     # Guardar configuración actual en session_state para que esté disponible para otros módulos
@@ -596,4 +596,4 @@ else:
         "precio_concreto_m3": precio_concreto_m3 if usar_concreto_premezclado else 0.0
     }
 
-st.success(_t("✅ Los precios han sido guardados temporalmente en la sesión. Aparecerán reflejados en el análisis APU de tus memorias de cálculo.", "✅ Prices have been temporarily saved in the session. They will be reflected in the APU analysis of your calculation reports."))
+st.success(_t(" Los precios han sido guardados temporalmente en la sesión. Aparecerán reflejados en el análisis APU de tus memorias de cálculo.", " Prices have been temporarily saved in the session. They will be reflected in the APU analysis of your calculation reports."))

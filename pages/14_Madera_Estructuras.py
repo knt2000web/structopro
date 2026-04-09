@@ -32,14 +32,14 @@ st.sidebar.markdown("""
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN GLOBAL
 # ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙️ Configuración Global", "⚙️ Global Settings"))
+st.sidebar.header(_t("⚙ Configuración Global", "⚙ Global Settings"))
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}
 _iso = _PAIS_ISO.get(norma_sel, "un")
@@ -50,7 +50,7 @@ st.sidebar.markdown(
     f'</div>', unsafe_allow_html=True
 )
 
-st.sidebar.header(_t("🪵 Propiedades Mecánicas (MPa)", "🪵 Mechanical Properties (MPa)"))
+st.sidebar.header(_t(" Propiedades Mecánicas (MPa)", " Mechanical Properties (MPa)"))
 grupo_madera_opts = [_t("Grupo A (Alta Dureza)", "Group A (High Density)"),
                      _t("Grupo B (Media)", "Group B (Medium)"),
                      _t("Grupo C (Madera Suave)", "Group C (Softwood)"),
@@ -78,7 +78,7 @@ val_G = st.sidebar.number_input(_t("Gravedad Específica G", "Specific Gravity G
 # ─────────────────────────────────────────────
 # T1: CALCULADORA DE PIES MADEREROS
 # ─────────────────────────────────────────────
-with st.expander(_t("📏 1. Calculadora de Pies² de Madera (Board Feet)", "📏 1. Board Feet Calculator"), expanded=False):
+with st.expander(_t(" 1. Calculadora de Pies² de Madera (Board Feet)", " 1. Board Feet Calculator"), expanded=False):
     st.info(_t("Ingresa el espesor y ancho en pulgadas, y el largo de la pieza (en pies o metros).", "Enter thickness/width in inches, and length."))
     
     col1, col2, col3, col4 = st.columns(4)
@@ -118,7 +118,7 @@ with st.expander(_t("📏 1. Calculadora de Pies² de Madera (Board Feet)", "�
 # ─────────────────────────────────────────────
 # T2: DISEÑO DE VIGAS DE MADERA
 # ─────────────────────────────────────────────
-with st.expander(_t("🪵 2. Diseño de Vigas de Madera (Flexión y Cortante)", "🪵 2. Timber Beam Design (Flexure and Shear)"), expanded=False):
+with st.expander(_t(" 2. Diseño de Vigas de Madera (Flexión y Cortante)", " 2. Timber Beam Design (Flexure and Shear)"), expanded=False):
     v1, v2, v3 = st.columns(3)
     with v1:
         span_L = st.number_input(_t("Luz Viga L [m]", "Beam Span L [m]"), 1.0, 15.0, st.session_state.get("m_v_L", 4.0), 0.1, key="m_v_L")
@@ -144,16 +144,16 @@ with st.expander(_t("🪵 2. Diseño de Vigas de Madera (Flexión y Cortante)", 
     
     r1, r2, r3, r4 = st.columns([1,1,1,2])
     r1.metric("f_b Actuante", f"{fb_act:.2f} MPa")
-    if ok_flex: r1.success(f"✅ OK ({val_Fb})") 
-    else: r1.error("❌ No Aprobado")
+    if ok_flex: r1.success(f" OK ({val_Fb})") 
+    else: r1.error(" No Aprobado")
     
     r2.metric("f_v Actuante", f"{fv_act:.2f} MPa")
-    if ok_shear: r2.success(f"✅ OK ({val_Fv})") 
-    else: r2.error("❌ No Aprobado")
+    if ok_shear: r2.success(f" OK ({val_Fv})") 
+    else: r2.error(" No Aprobado")
     
     r3.metric("Δ Actuante", f"{Def_act:.1f} mm")
-    if ok_def: r3.success(f"✅ OK ({Def_max_adm:.1f})") 
-    else: r3.error("❌ No Aprobado")
+    if ok_def: r3.success(f" OK ({Def_max_adm:.1f})") 
+    else: r3.error(" No Aprobado")
     
     with r4:
         fig2, ax2 = plt.subplots(figsize=(6,2))
@@ -175,7 +175,7 @@ with st.expander(_t("🪵 2. Diseño de Vigas de Madera (Flexión y Cortante)", 
 # ─────────────────────────────────────────────
 # T3: COLUMNAS DE MADERA A COMPRESIÓN PURA
 # ─────────────────────────────────────────────
-with st.expander(_t("🌲 3. Diseño de Columnas de Madera (Compresión)", "🌲 3. Timber Column Design (Compression)"), expanded=False):
+with st.expander(_t(" 3. Diseño de Columnas de Madera (Compresión)", " 3. Timber Column Design (Compression)"), expanded=False):
     c1, c2, c3 = st.columns(3)
     with c1:
         P_ax = st.number_input("Carga Axial Actuante P [kN]", 5.0, 500.0, st.session_state.get("m_c_P", 20.0), 5.0, key="m_c_P")
@@ -189,7 +189,7 @@ with st.expander(_t("🌲 3. Diseño de Columnas de Madera (Compresión)", "🌲
         st.markdown(rf"**$\lambda = kL/d$:** {esbeltez_l:.2f}")
     
     if esbeltez_l > 50:
-        st.error(_t("❌ Columna muy esbelta (λ > 50). ¡Aumentar sección!", "❌ Column too slender (λ > 50)!"))
+        st.error(_t(" Columna muy esbelta (λ > 50). ¡Aumentar sección!", " Column too slender (λ > 50)!"))
     else:
         F_cE = (0.822 * val_E) / (esbeltez_l**2)
         ratio_alpha = F_cE / val_Fc; c_factor = 0.8
@@ -201,8 +201,8 @@ with st.expander(_t("🌲 3. Diseño de Columnas de Madera (Compresión)", "🌲
         tc1, tc2, tc3 = st.columns([1,1,2])
         tc1.metric("P Actuante", f"{P_ax:.1f} kN")
         tc2.metric("P Admisible", f"{P_admisible:.1f} kN")
-        if P_ax <= P_admisible: tc2.success("✅ OK") 
-        else: tc2.error("❌ No Aprobado")
+        if P_ax <= P_admisible: tc2.success(" OK") 
+        else: tc2.error(" No Aprobado")
         
         with tc3:
             fig3, ax3 = plt.subplots(figsize=(2,4))
@@ -220,7 +220,7 @@ with st.expander(_t("🌲 3. Diseño de Columnas de Madera (Compresión)", "🌲
 # ─────────────────────────────────────────────
 # T4: UNIONES CON CLAVOS (NDS)
 # ─────────────────────────────────────────────
-with st.expander(_t("🔨 4. Resistencia de Uniones con Clavos (Corte Lateral)", "🔨 4. Nail Connection (Lateral Shear)"), expanded=False):
+with st.expander(_t(" 4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4. Nail Connection (Lateral Shear)"), expanded=False):
     st.info(_t("Según NDS 2018, la resistencia de diseño lateral para clavos se ajusta por factores de duración de carga, humedad, temperatura y grupo.", "Based on NDS 2018, design lateral resistance for nails is adjusted by load duration, moisture, temperature and group factors."))
     uc1, uc2, uc3 = st.columns([1,1,2])
     with uc1:
@@ -254,7 +254,7 @@ with st.expander(_t("🔨 4. Resistencia de Uniones con Clavos (Corte Lateral)",
     D_req_full = 10.0 * diam_clavo; D_req_min = 6.0 * diam_clavo
     
     if penetracion_p < D_req_min:
-        st.error(_t("❌ Penetración < 6D. No cumple requerimiento mínimo.", "❌ Penetration < 6D. Minimum requirement not met."))
+        st.error(_t(" Penetración < 6D. No cumple requerimiento mínimo.", " Penetration < 6D. Minimum requirement not met."))
         Z_adm = 0.0
     else:
         Cd_factor = min(1.0, penetracion_p / D_req_full)
@@ -280,7 +280,7 @@ with st.expander(_t("🔨 4. Resistencia de Uniones con Clavos (Corte Lateral)",
 # EXPORTACIÓN INTEGRAL (DXF, DOCX, APU)
 # ─────────────────────────────────────────────
 st.markdown("---")
-st.subheader(_t("💾 Exportación Integral", "💾 Comprehensive Export"))
+st.subheader(_t(" Exportación Integral", " Comprehensive Export"))
 
 # Preparar datos comunes para despiece y APU
 pt_viga = (b_beam/25.4) * (h_beam/25.4) * (span_L * 3.28084) / 12.0
@@ -295,11 +295,11 @@ despiece = pd.DataFrame([
 ])
 
 tab_despiece, tab_3d, tab_dxf, tab_doc, tab_apu = st.tabs([
-    "📏 " + _t("Despiece de Madera", "Timber Cutting List"),
-    "🧊 " + _t("Visualización 3D", "3D Visualization"),
-    "📐 " + _t("Planos DXF", "DXF Drawings"),
-    "📄 " + _t("Memoria DOCX", "DOCX Report"),
-    "💰 " + _t("Presupuesto APU", "APU Budget")
+    " " + _t("Despiece de Madera", "Timber Cutting List"),
+    " " + _t("Visualización 3D", "3D Visualization"),
+    " " + _t("Planos DXF", "DXF Drawings"),
+    " " + _t("Memoria DOCX", "DOCX Report"),
+    " " + _t("Presupuesto APU", "APU Budget")
 ])
 
 with tab_despiece:
@@ -384,7 +384,7 @@ with tab_dxf:
         msp_v.add_text(f"h = {h_beam:.0f} mm", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(span_L+0.1, h_beam/2000)})
     _out_v = io.StringIO()
     doc_v.write(_out_v)
-    col_dxf1.download_button(_t("📥 DXF Viga", "📥 Beam DXF"),
+    col_dxf1.download_button(_t(" DXF Viga", " Beam DXF"),
                              data=_out_v.getvalue().encode("utf-8"),
                              file_name=f"Viga_Madera_{b_beam:.0f}x{h_beam:.0f}.dxf", mime="application/dxf")
 
@@ -408,7 +408,7 @@ with tab_dxf:
         msp_c.add_text(f"b = {b_col:.0f} mm", dxfattribs={'layer':'TEXTO','height':0.05,'insert':(b_col/1000+0.05, KL_col/2)})
     _out_c = io.StringIO()
     doc_c.write(_out_c)
-    col_dxf2.download_button(_t("📥 DXF Columna", "📥 Column DXF"),
+    col_dxf2.download_button(_t(" DXF Columna", " Column DXF"),
                              data=_out_c.getvalue().encode("utf-8"),
                              file_name=f"Columna_Madera_{b_col:.0f}x{h_col:.0f}.dxf", mime="application/dxf")
 
@@ -444,7 +444,7 @@ with tab_doc:
         buf = io.BytesIO()
         doc.save(buf)
         buf.seek(0)
-        st.download_button(_t("📥 Descargar Memoria", "📥 Download Report"), data=buf, file_name="Memoria_Madera.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(_t(" Descargar Memoria", " Download Report"), data=buf, file_name="Memoria_Madera.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_apu:
     if "apu_config" in st.session_state:
@@ -465,7 +465,7 @@ with tab_apu:
         iva = utilidad * apu.get("iva", 0.19)
         total_proyecto = costo_directo + herramienta + aiu + iva
         
-        st.markdown(_t("### 💰 Presupuesto Estimado", "### 💰 Estimated Budget"))
+        st.markdown(_t("###  Presupuesto Estimado", "###  Estimated Budget"))
         data_apu = {
             _t("Item", "Item"): [_t("Madera (pies tabulares)", "Timber (board feet)"),
                                  _t("Mano de Obra (días)", "Labor (days)"),
@@ -476,8 +476,8 @@ with tab_apu:
             f"Subtotal [{mon}]": [f"{costo_madera:,.2f}", f"{costo_mo:,.2f}", f"{herramienta:,.2f}", f"{aiu:,.2f}", f"{iva:,.2f}"]
         }
         st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
-        st.metric(f"💎 Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
-        st.info("ℹ️ Ve a **APU Mercado** para descargar los costos en tiempo real aquí mismo.")
+        st.metric(f" Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
+        st.info("ℹ Ve a **APU Mercado** para descargar los costos en tiempo real aquí mismo.")
         
         # Excel APU
         output_excel = io.BytesIO()
@@ -495,6 +495,6 @@ with tab_apu:
             worksheet.set_column('A:A', 25)
             worksheet.set_column('B:D', 15, money_fmt)
         output_excel.seek(0)
-        st.download_button(_t("📥 Descargar Presupuesto Excel", "📥 Download Budget Excel"), data=output_excel, file_name="APU_Madera.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(_t(" Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel, file_name="APU_Madera.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info(_t("💡 Ve a la página 'APU Mercado' para cargar los costos en vivo.", "💡 Go to the 'Market APU' page to load live costs."))
+        st.info(_t(" Ve a la página 'APU Mercado' para cargar los costos en vivo.", " Go to the 'Market APU' page to load live costs."))

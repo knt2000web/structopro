@@ -338,7 +338,7 @@ _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE
 _iso = _PAIS_ISO.get(norma_sel, "un")
 st.sidebar.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
 
-st.sidebar.header(_t("📊 Unidades de salida","📊 Output units"))
+st.sidebar.header(_t(" Unidades de salida"," Output units"))
 unidades_salida = st.sidebar.radio("Unidades de fuerza/momento:", ["kiloNewtons (kN, kN·m)", "Toneladas fuerza (tonf, tonf·m)"], key="pred_units")
 if unidades_salida == "Toneladas fuerza (tonf, tonf·m)":
     factor_fuerza = 0.1019716
@@ -349,7 +349,7 @@ else:
     unidad_fuerza = "kN"
     unidad_mom    = "kN·m"
 
-with st.sidebar.expander(_t("1️⃣ GEOMETRÍA DEL PROYECTO", "1️⃣ PROJECT GEOMETRY"), expanded=True):
+with st.sidebar.expander(_t("1⃣ GEOMETRÍA DEL PROYECTO", "1⃣ PROJECT GEOMETRY"), expanded=True):
     num_stories = st.number_input(_t("Número de Pisos", "Number of Stories"), 1, 40, 5, 1)
     h_story = st.number_input(_t("Altura típica de entrepiso (m)", "Typical story height (m)"), 2.0, 6.0, 3.0, 0.1)
     lx = st.number_input(_t("Luz entre ejes X (m)", "Clear span X (m)"), 2.0, 15.0, 6.0, 0.1)
@@ -357,7 +357,7 @@ with st.sidebar.expander(_t("1️⃣ GEOMETRÍA DEL PROYECTO", "1️⃣ PROJECT 
     nx_spans = int(st.number_input(_t("Vanos en dirección X (ejes-1)", "Bays in X direction"), 1, 8, 3, 1))
     ny_spans = int(st.number_input(_t("Vanos en dirección Y (ejes-1)", "Bays in Y direction"), 1, 8, 3, 1))
 
-with st.sidebar.expander(_t("2️⃣ MATERIALES Y ZONA SÍSMICA", "2️⃣ MATERIALS & SEISMIC"), expanded=True):
+with st.sidebar.expander(_t("2⃣ MATERIALES Y ZONA SÍSMICA", "2⃣ MATERIALS & SEISMIC"), expanded=True):
     fc_val = st.selectbox(_t("Resistencia f'c (kg/cm²)", "Concrete f'c (kg/cm²)"), [210, 240, 280, 350, 420], index=2)
     fy_val = st.selectbox(_t("Fluencia acero fy (kg/cm²)", "Steel fy (kg/cm²)"), [2800, 4200, 5000], index=1)
     if norma_sel in SEISMIC_DATA:
@@ -375,7 +375,7 @@ with st.sidebar.expander(_t("2️⃣ MATERIALES Y ZONA SÍSMICA", "2️⃣ MATER
     espectro_func = seismic["espectro"]
     st.info(f"**Parámetros sísmicos:** Z={Z:.3f}, U={U:.2f}, S={S:.2f}, R={R:.1f}, Tp={Tp:.2f}s, TL={TL:.2f}s")
 
-with st.sidebar.expander(_t("3️⃣ CARGAS Y USO", "3️⃣ LOADS AND OCCUPANCY"), expanded=True):
+with st.sidebar.expander(_t("3⃣ CARGAS Y USO", "3⃣ LOADS AND OCCUPANCY"), expanded=True):
     uso_edif_label = st.selectbox(_t("Uso Principal", "Main Occupancy"), 
                                   [_t("Residencial", "Residential"), _t("Oficinas", "Offices"), _t("Comercial", "Commercial"), _t("Almacenamiento", "Storage")], index=0)
     if "Residencial" in uso_edif_label:
@@ -388,7 +388,7 @@ with st.sidebar.expander(_t("3️⃣ CARGAS Y USO", "3️⃣ LOADS AND OCCUPANCY
         ll_estim = 600; dl_estim = 1000
     q_estimado = st.number_input(_t("Carga Total q_u (Tonf/m²)", "Total Approx Load q_u (Tonf/m²)"), 0.5, 3.0, (ll_estim + dl_estim)/1000.0, 0.1)
 
-with st.sidebar.expander(_t("4️⃣ APU – PRECIOS", "4️⃣ APU – PRICES"), expanded=False):
+with st.sidebar.expander(_t("4⃣ APU – PRECIOS", "4⃣ APU – PRICES"), expanded=False):
     moneda = st.text_input("Moneda (ej. COP, USD)", value=st.session_state.get("apu_moneda_pred", "COP"), key="apu_moneda_pred")
     col1a, col2a = st.columns(2)
     with col1a:
@@ -412,7 +412,7 @@ with st.sidebar.expander(_t("4️⃣ APU – PRECIOS", "4️⃣ APU – PRICES")
         st.success("Precios guardados")
         st.rerun()
 
-with st.sidebar.expander(_t("5️⃣ AJUSTE MANUAL DE DIMENSIONES", "5️⃣ MANUAL DIMENSION OVERRIDE"), expanded=False):
+with st.sidebar.expander(_t("5⃣ AJUSTE MANUAL DE DIMENSIONES", "5⃣ MANUAL DIMENSION OVERRIDE"), expanded=False):
     st.caption("Modifique las dimensiones calculadas para realizar verificación manual.")
     man_h_mac = st.number_input("Espesor Losa Maciza (cm)", 10, 50, 25, 1, key="man_h_mac") / 100.0
     man_h_ali = st.number_input("Espesor Losa Nervada (cm)", 10, 50, 30, 1, key="man_h_ali") / 100.0
@@ -425,7 +425,7 @@ with st.sidebar.expander(_t("5️⃣ AJUSTE MANUAL DE DIMENSIONES", "5️⃣ MAN
     man_col_e = st.number_input("Columna Esquina – Lado (cm)", 20, 80, 30, 5, key="man_col_e")
     usar_manual = st.checkbox("Usar estas dimensiones en Modelo 3D y Memoria", value=False, key="usar_manual")
 
-with st.sidebar.expander(_t("6️⃣ FORMA DEL PREDIO (OPCIONAL)", "6️⃣ PLOT SHAPE (OPTIONAL)"), expanded=False):
+with st.sidebar.expander(_t("6⃣ FORMA DEL PREDIO (OPCIONAL)", "6⃣ PLOT SHAPE (OPTIONAL)"), expanded=False):
     st.caption(_t("Dibuja el perímetro real del lote sobre la cuadrícula.", "Draw the real plot perimeter over the grid."))
     dibujar_predio = st.checkbox(_t("Activar límite de lote", "Enable plot boundary"), value=False, key="dib_predio")
     if dibujar_predio:
@@ -480,7 +480,7 @@ K_col_estim = 30000
 deriva_rel = V_basal_kN / (n_cols * K_col_estim) / h_story
 warning_deriva = None
 if deriva_rel > 0.01:
-    warning_deriva = f"⚠️ Deriva estimada {deriva_rel*100:.2f}% > 1% → considerar vigas más peraltadas"
+    warning_deriva = f"⚠ Deriva estimada {deriva_rel*100:.2f}% > 1% → considerar vigas más peraltadas"
 
 # Zapatas (con momento sísmico)
 q_adm = st.sidebar.number_input("Capacidad admisible del suelo (kg/cm²)", 1.0, 5.0, 2.0, 0.1, key="q_adm")
@@ -520,7 +520,7 @@ nudos, cols_df, vigas_x_df, vigas_z_df, zaps_df = generate_mesh(
 
 # Pestañas (se mantiene la misma estructura, pero con correcciones)
 tab_res, tab_3d, tab_2d, tab_sism, tab_cim, tab_exp = st.tabs([
-    "📊 Resultados", "🧊 Modelo 3D", "📐 Planta 2D", "🌍 Sísmico", "🏗️ Cimentación", "📤 Exportar"
+    " Resultados", " Modelo 3D", " Planta 2D", " Sísmico", " Cimentación", " Exportar"
 ])
 # Las subtabs de exportar se definen dentro del with tab_exp
 tab_dxf = tab_mem = tab_qty = tab_apu = None  # será redefinido dentro
@@ -529,15 +529,15 @@ with tab_res:
     st.subheader("Dimensiones Recomendadas")
     if warning_deriva:
         st.warning(warning_deriva)
-    st.markdown("### 🟠 Losas")
+    st.markdown("###  Losas")
     c1, c2 = st.columns(2)
     c1.metric("Espesor Losa Maciza", f"{h_mac*100:.0f} cm", "L/28")
     c2.metric("Espesor Losa Nervada", f"{h_ali*100:.0f} cm", "L/21")
-    st.markdown("### 🟡 Vigas")
+    st.markdown("###  Vigas")
     c3, c4 = st.columns(2)
     c3.metric(f"Viga X (Luz {lx}m)", f"{b_vx*100:.0f} × {h_vx*100:.0f} cm", "b × h")
     c4.metric(f"Viga Y (Luz {ly}m)", f"{b_vy*100:.0f} × {h_vy*100:.0f} cm", "b × h")
-    st.markdown("### 🏛️ Columnas")
+    st.markdown("###  Columnas")
     df_cols = pd.DataFrame({
         "Tipo": ["Central", "Borde", "Esquina"],
         "Área Trib. (m²)": [f"{A_central:.2f}", f"{A_borde:.2f}", f"{A_esquina:.2f}"],
@@ -546,7 +546,7 @@ with tab_res:
     })
     st.dataframe(df_cols, use_container_width=True, hide_index=True)
     
-    st.markdown("### 🔗 Acero de Refuerzo Aproximado (ρ ≈ 1.2%)")
+    st.markdown("###  Acero de Refuerzo Aproximado (ρ ≈ 1.2%)")
     ca1, ca2 = st.columns(2)
     # Cálculo para Columna Central (𝜌 = 1.2%)
     area_acero_c = (lado_c * lado_c) * 0.012  # cm2
@@ -678,7 +678,7 @@ with tab_cim:
     st.pyplot(fig_zap)
 
 with tab_exp:
-    _sub_dxf, _sub_mem, _sub_qty, _sub_apu = st.tabs(["📏 DXF", "📄 Memoria", "📦 Cantidades", "💰 APU"])
+    _sub_dxf, _sub_mem, _sub_qty, _sub_apu = st.tabs([" DXF", " Memoria", " Cantidades", " APU"])
 
 with _sub_dxf:
     st.subheader("Descargar Plano Estructural DXF")
@@ -725,11 +725,11 @@ with _sub_dxf:
         _cam_pr = dxf_rotulo_campos(f"Predimensionamiento {num_stories}P {norma_sel[:15]}", norma_sel, "001")
         dxf_rotulo(msp, _cam_pr, 0, -6, rot_w=nx*lx, rot_h=4, escala=100)
     _out_dxf = io.StringIO(); doc_dxf.write(_out_dxf)
-    st.download_button("📥 Descargar DXF Planta", data=_out_dxf.getvalue().encode('utf-8'), file_name=f"Predimensionamiento_{lx}x{ly}.dxf", mime="application/dxf")
+    st.download_button(" Descargar DXF Planta", data=_out_dxf.getvalue().encode('utf-8'), file_name=f"Predimensionamiento_{lx}x{ly}.dxf", mime="application/dxf")
 
 with _sub_mem:
     st.subheader("Generar Memoria de Cálculo")
-    if st.button("🖨️ Descargar Reporte DOCX"):
+    if st.button(" Descargar Reporte DOCX"):
         doc = Document()
         doc.add_heading(f"PREDIMENSIONAMIENTO ESTRUCTURAL — {norma_sel}", 0)
         doc.add_paragraph(f"Fecha: {datetime.now().strftime('%d/%m/%Y')}")
@@ -810,7 +810,7 @@ with _sub_mem:
         doc.add_picture(buf_est, width=Inches(3.5)); plt.close(fig_est)
         doc_mem = io.BytesIO()
         doc.save(doc_mem); doc_mem.seek(0)
-        st.download_button("📥 Descargar DOCX", data=doc_mem, file_name="Memoria_Predim.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(" Descargar DOCX", data=doc_mem, file_name="Memoria_Predim.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with _sub_qty:
     st.subheader("Estimación de Cantidades de Materiales")
@@ -888,7 +888,7 @@ with _sub_apu:
     utilidad = costo_directo * pct_util
     iva_util = utilidad * iva
     total_proyecto = costo_directo + herramienta + aiu + iva_util
-    st.markdown("### 💰 Presupuesto Estimado")
+    st.markdown("###  Presupuesto Estimado")
     df_apu = pd.DataFrame({
         "Item": ["Concreto (m³)", "Acero (kg)", "Excavación (m³)", "Mano de Obra (días)", "Herramienta Menor", "A.I.U.", "IVA s/Utilidad", "TOTAL"],
         "Cantidad": [f"{vol_conc_total:.2f}", f"{acero_estimado:,.0f}", f"{vol_excavacion:.2f}", f"{dias_mo:.1f}", f"{pct_h*100:.1f}% MO", f"{pct_aui*100:.1f}% CD", f"{iva*100:.1f}% Util", ""],
@@ -896,7 +896,7 @@ with _sub_apu:
                               f"{herramienta:,.0f}", f"{aiu:,.0f}", f"{iva_util:,.0f}", f"{total_proyecto:,.0f}"]
     })
     st.dataframe(df_apu, use_container_width=True, hide_index=True)
-    st.metric(f"💎 Gran Total Proyecto ({mon})", f"{total_proyecto:,.0f}")
+    st.metric(f" Gran Total Proyecto ({mon})", f"{total_proyecto:,.0f}")
     out_xl = io.BytesIO()
     with pd.ExcelWriter(out_xl, engine='xlsxwriter') as wr:
         df_apu.to_excel(wr, sheet_name='Presupuesto', index=False)
@@ -905,4 +905,4 @@ with _sub_apu:
         pd.DataFrame({"Material": ["Cemento (bultos)", "Arena (m³)", "Grava (m³)", "Agua (m³)", "Acero (kg)", "Excavación (m³)"],
                       "Cantidad": [bultos_cemento, arena_m3, grava_m3, agua_m3, acero_estimado, vol_excavacion]}).to_excel(wr, sheet_name='Cantidades', index=False)
     out_xl.seek(0)
-    st.download_button("📥 Descargar Excel", data=out_xl, file_name="Presupuesto_Predim.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.download_button(" Descargar Excel", data=out_xl, file_name="Presupuesto_Predim.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

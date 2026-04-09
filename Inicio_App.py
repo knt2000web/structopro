@@ -5,12 +5,16 @@ import datetime
 
 from auth import sign_up_user, sign_in_user, sign_out_user, get_current_user, save_project_to_db, get_projects_from_db, DummyUser
 from streamlit_cookies_controller import CookieController
+from utils.icons import GLOBAL_CSS
 
 st.set_page_config(
     page_title="Reinforced Concrete Suite",
-    page_icon="🏗️",
+    page_icon="",
     layout="wide",
 )
+
+# Inyectar CSS global de íconos SVG una sola vez
+st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 
 try:
     cookie_controller = CookieController()
@@ -114,11 +118,11 @@ st.sidebar.success(f"Sesión iniciada: {st.session_state.auth_user.email}")
 logout_button()
 
 # st.sidebar debe iniciar con el selector de modulos para que esté lo mas arriba posible
-st.sidebar.markdown("### 🗂️ Navegador de Módulos")
+st.sidebar.markdown("###  Navegador de Módulos")
 # Se instancia al final, pero reservamos el contenedor arriba
 menu_container = st.sidebar.container()
 
-st.sidebar.info("📍 Servidor ejecutándose desde: C:\\Users\\cagch\\Desktop\\Diagrama_NSR10")
+st.sidebar.info(" Servidor ejecutándose desde: C:\\Users\\cagch\\Desktop\\Diagrama_NSR10")
 
 def run_home():
     import datetime as _dt
@@ -312,7 +316,7 @@ header[data-testid="stHeader"]{background:transparent}
     if st.session_state.historial_disenos:
         df_hist = pd.DataFrame(st.session_state.historial_disenos)
         st.dataframe(df_hist, use_container_width=True, hide_index=True)
-        if st.button("🗑️ Limpiar Historial", key="btn_limpiar_home"):
+        if st.button(" Limpiar Historial", key="btn_limpiar_home"):
             st.session_state.historial_disenos = []
             st.rerun()
     else:
@@ -341,7 +345,7 @@ header[data-testid="stHeader"]{background:transparent}
 # ─────────────────────────────────────────────
 # ESTADO GLOBAL (SESIÓN)
 # ─────────────────────────────────────────────
-st.sidebar.header("🌎 Configuración Global del Proyecto")
+st.sidebar.header(" Configuración Global del Proyecto")
 
 # IMPORTANTE: Las llaves deben coincidir EXACTAMENTE con los diccionarios CODES de cada página
 # No incluir emojis de banderas en las llaves — se muestran solo en la UI
@@ -418,7 +422,7 @@ if "idioma" not in st.session_state:
 
 if "ACI 318" in st.session_state.norma_sel:
     st.session_state.idioma = st.sidebar.radio(
-        "🌎 Idioma / Language:",
+        " Idioma / Language:",
         ["Español", "English"],
         index=0 if st.session_state.idioma == "Español" else 1,
         horizontal=True
@@ -430,9 +434,9 @@ else:
 # GESTOR GLOBAL DE PROYECTOS (NUBE / LOCAL)
 # -----------------------------------------------------------------------------
 st.sidebar.markdown("---")
-st.sidebar.subheader("☁️ Menú Mis Proyectos")
+st.sidebar.subheader("☁ Menú Mis Proyectos")
 
-with st.sidebar.expander("📥 Cargar de la Nube", expanded=False):
+with st.sidebar.expander(" Cargar de la Nube", expanded=False):
     st.write("Selecciona tus cálculos previos:")
     if st.button("↻ Refrescar Lista", use_container_width=True):
         st.rerun()
@@ -445,7 +449,7 @@ with st.sidebar.expander("📥 Cargar de la Nube", expanded=False):
                     with st.container():
                         st.markdown(f"**{p['nombre_proyecto']}**")
                         st.caption(f"{p['created_at'][:10]} | Resp: {p.get('propietario', '')}")
-                        if st.button("Cargar ⬇️", key=f"load_{p['id']}", use_container_width=True):
+                        if st.button("Cargar ⬇", key=f"load_{p['id']}", use_container_width=True):
                             project_data = p.get('estado_json', {})
                             if isinstance(project_data, str):
                                 project_data = json.loads(project_data)
@@ -461,8 +465,8 @@ with st.sidebar.expander("📥 Cargar de la Nube", expanded=False):
     except Exception as e:
         err_str = str(e)
         if "404" in err_str and "proyectos" in err_str:
-            st.error("❌ La tabla 'proyectos' no existe en tu base de datos de Supabase.")
-            with st.expander("🛠️ ¿Cómo solucionar este error?"):
+            st.error(" La tabla 'proyectos' no existe en tu base de datos de Supabase.")
+            with st.expander(" ¿Cómo solucionar este error?"):
                 st.markdown("Ve a tu panel de **Supabase**, entra a **SQL Editor**, copia y ejecuta este código para crear la tabla necesaria:")
                 st.code('''CREATE TABLE proyectos (
   id uuid default uuid_generate_v4() primary key,
@@ -492,7 +496,7 @@ using ( auth.uid() = user_id );''', language='sql')
         else:
             st.error(f"Error nube: {e}")
 
-st.sidebar.subheader("📂 Guardar Estado Actual")
+st.sidebar.subheader(" Guardar Estado Actual")
 
 project_name = st.sidebar.text_input("Nombre del Proyecto:", value=st.session_state.get("project_name", "Mi_Edificio"), key="project_name")
 project_owner = st.sidebar.text_input("Propietario / Cliente:", value=st.session_state.get("project_owner", ""), key="project_owner")
@@ -513,7 +517,7 @@ def serialize_state_dict():
 if project_name and project_owner and project_address and project_phone:
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        if st.button("☁️ Nube", help="Guardar en Supabase", use_container_width=True):
+        if st.button("☁ Nube", help="Guardar en Supabase", use_container_width=True):
             try:
                 save_project_to_db(
                     st.session_state.auth_user,
@@ -525,7 +529,7 @@ if project_name and project_owner and project_address and project_phone:
                 st.error(f"Error al guardar: {e}")
     with col2:
         st.download_button(
-            label="💾 Local",
+            label=" Local",
             data=json.dumps(serialize_state_dict(), indent=4),
             file_name=f"{project_name}_{datetime.datetime.now().strftime('%Y%m%d')}.json",
             mime="application/json",
@@ -533,9 +537,9 @@ if project_name and project_owner and project_address and project_phone:
             help="Descargar archivo JSON a tu Equipo"
         )
 else:
-    st.sidebar.info("✍️ Llena los datos arriba para habilitar el guardado.")
+    st.sidebar.info(" Llena los datos arriba para habilitar el guardado.")
 
-uploaded_project = st.sidebar.file_uploader("📥 Cargar Archivo Local (.json)", type=['json'])
+uploaded_project = st.sidebar.file_uploader(" Cargar Archivo Local (.json)", type=['json'])
 if uploaded_project is not None:
     try:
         project_data = json.load(uploaded_project)
@@ -544,7 +548,7 @@ if uploaded_project is not None:
                 st.session_state[k] = pd.DataFrame(v["data"])
             else:
                 st.session_state[k] = v
-        st.sidebar.success(f"Archivo Local Cargado ✅")
+        st.sidebar.success(f"Archivo Local Cargado ")
     except Exception as e:
         st.sidebar.error(f"Error al cargar: {e}")
 
@@ -574,7 +578,7 @@ st.sidebar.markdown("""
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠️ Nota Legal: Herramienta de apoyo profesional.</i>
+    <i>⚠ Nota Legal: Herramienta de apoyo profesional.</i>
 </div>
 """, unsafe_allow_html=True)
 

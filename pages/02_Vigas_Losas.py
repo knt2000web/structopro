@@ -37,7 +37,7 @@ def guardar_proyecto_supabase_vigas(nombre, estado_dict):
                 with open(db_path, "r", encoding="utf-8") as f: db = json.load(f)
             db[f"[VIGAS] {nombre}"] = {"nombre_proyecto": f"[VIGAS] {nombre}", "estado_json": json.dumps(estado_dict)}
             with open(db_path, "w", encoding="utf-8") as f: json.dump(db, f)
-            return True, "✅ Proyecto guardado (Local)"
+            return True, " Proyecto guardado (Local)"
         except Exception as e:
             return False, f"? Error guardado local: {e}"
 
@@ -54,7 +54,7 @@ def guardar_proyecto_supabase_vigas(nombre, estado_dict):
         endpoint = f"{url}/rest/v1/proyectos?on_conflict=nombre_proyecto"
         res = requests.post(endpoint, headers=headers, json=payload)
         if res.status_code in [200, 201, 204]:
-            return True, "✅ Proyecto guardado en la nube"
+            return True, " Proyecto guardado en la nube"
         else:
             return False, f"? Error API: {res.text}"
     except Exception as e:
@@ -72,7 +72,7 @@ def cargar_proyecto_supabase_vigas(nombre):
                 if match:
                     estado = json.loads(match["estado_json"])
                     for k, v in estado.items(): st.session_state[k] = v
-                    return True, f"✅ Proyecto '{nombre}' cargado (Local)"
+                    return True, f" Proyecto '{nombre}' cargado (Local)"
             return False, f"? No se encontró el proyecto '{nombre}' localmente"
         except Exception as e:
             return False, f"? Excepción al cargar local: {e}"
@@ -87,7 +87,7 @@ def cargar_proyecto_supabase_vigas(nombre):
                 estado = json.loads(data[0]["estado_json"])
                 for k, v in estado.items():
                     st.session_state[k] = v
-                return True, f"✅ Proyecto '{nombre}' cargado"
+                return True, f" Proyecto '{nombre}' cargado"
             else:
                 return False, f"? No se encontró el proyecto '{nombre}'"
         else:
@@ -156,17 +156,17 @@ st.title(_t("Suite de Diseño — Vigas y Losas", "Design Suite — Beams & Slab
 
 # ── PERSISTENCIA DE MÓDULO VÍA URL (sobrevive F5) ──────────────────
 _modulos_disponibles = [
-    "🔩 Tabla de Secciones de Acero de Refuerzo",
-    "🏗️ Diseño Completo de Viga (Flujo Guiado)",
-    "📐 Diseño a Flexión — Viga Rectangular",
-    "📐 Diseño a Flexión — Viga T",
+    " Tabla de Secciones de Acero de Refuerzo",
+    " Diseño Completo de Viga (Flujo Guiado)",
+    " Diseño a Flexión — Viga Rectangular",
+    " Diseño a Flexión — Viga T",
     "⚡ Diseño a Cortante — Vigas de Concreto",
     "⚡ Resistencia a Cortante por Punzonamiento — Losas",
-    "📉 Inercia Fisurada y Deflexiones en Vigas",
-    "🔳 Diseño de Losa en Una Dirección",
-    "🔗 Longitud de Desarrollo y Empalmes",
-    "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)",
-    "📊 Cuadro de Mando General",
+    " Inercia Fisurada y Deflexiones en Vigas",
+    " Diseño de Losa en Una Dirección",
+    " Longitud de Desarrollo y Empalmes",
+    " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)",
+    " Cuadro de Mando General",
 ]
 
 _modulo_desde_url = st.query_params.get("modulo", None)
@@ -275,7 +275,7 @@ else:
 # ─────────────────────────────────────────────
 # APU CON ENTRADA DIRECTA (GLOBAL)
 # ─────────────────────────────────────────────
-with st.expander("💰 APU – Precios en vivo (materiales y mano de obra)", expanded=False):
+with st.expander(" APU – Precios en vivo (materiales y mano de obra)", expanded=False):
     st.markdown("Ingrese los precios unitarios de los materiales y mano de obra para calcular el costo total de las estructuras.")
     with st.form(key="apu_form_global"):
         moneda = st.text_input("Moneda (ej. COP, USD)", value=st.session_state.get("apu_moneda_global", "COP"))
@@ -491,14 +491,14 @@ def render_apu_breakdown(vol_m3, peso_kg, fc_m, num_bars_str=""):
     Renders APU detail given concrete volume, steel weight and concrete strength.
     """
     if "apu_config" not in st.session_state:
-        st.info("💡 Configure los precios en el menú lateral '⚙? Materiales Globales' para ver el presupuesto.")
+        st.info(" Configure los precios en el menú lateral '⚙? Materiales Globales' para ver el presupuesto.")
         return
         
     apu = st.session_state.apu_config
     mon = apu.get("moneda", "$")
     
     st.markdown("---")
-    st.success("✅ **Análisis de Precios Unitarios (APU) Aplicado.**")
+    st.success(" **Análisis de Precios Unitarios (APU) Aplicado.**")
     
     m = mix_for_fc(fc_m)
     bag_kg = st.session_state.get("cemento_kg", 50.0)
@@ -525,10 +525,10 @@ def render_apu_breakdown(vol_m3, peso_kg, fc_m, num_bars_str=""):
     
     c1, c2, c3 = st.columns(3)
     c1.metric(f" ? Costo Directo ({mon})", f"{costo_directo:,.2f}")
-    c2.metric(f"👷 Mano de Obra ({mon})", f"{costo_mo:,.2f}")
-    c3.metric(f"💎 Gran Total ({mon})", f"{gran_total:,.2f}")
+    c2.metric(f" Mano de Obra ({mon})", f"{costo_mo:,.2f}")
+    c3.metric(f" Gran Total ({mon})", f"{gran_total:,.2f}")
     
-    with st.expander("📊 Ver desglose detallado del APU"):
+    with st.expander(" Ver desglose detallado del APU"):
         st.markdown(f"**Volumen Concreto:** {vol_m3:.3f} m³ | **Acero:** {peso_kg:.1f} kg {num_bars_str}")
         df_apu = pd.DataFrame([
             ("Cemento (bultos)", c_cem),
@@ -560,7 +560,7 @@ def add_historial_diseno(modulo, elemento, estado, norma):
         "Hora": hora_str
     }
     st.session_state.historial_disenos.append(entry)
-    st.toast("✅ Elemento guardado en el Cuadro de Mando General")
+    st.toast(" Elemento guardado en el Cuadro de Mando General")
 
 # ??????????????????????????????????????????
 # GLOBAL SIDEBAR
@@ -582,7 +582,7 @@ code = CODES[norma_sel]
 nivel_sis = st.sidebar.selectbox(_t("Nivel Sísmico:", "Seismic Level:"), code["seismic_levels"],
                                  index=code["seismic_levels"].index(st.session_state.v_nivel_sis) if "v_nivel_sis" in st.session_state and st.session_state.v_nivel_sis in code["seismic_levels"] else 0,
                                  key="v_nivel_sis")
-st.sidebar.markdown(f"📖 `{code['ref']}`")
+st.sidebar.markdown(f" `{code['ref']}`")
 st.sidebar.markdown(f"**φ flex:** {code['phi_flex']} | **φ cort:** {code['phi_shear']}")
 
 st.sidebar.header(_t("⚙? Materiales Globales", "⚙? Global Materials"))
@@ -628,7 +628,7 @@ st.sidebar.caption(f"Ec = {Ec:.0f} MPa  |  β? = {beta1:.3f}  |  f'c = {fc:.2f} 
 # ??????????????????????????????????????????
 
 
-if modulo_sel == "🔩 Tabla de Secciones de Acero de Refuerzo":
+if modulo_sel == " Tabla de Secciones de Acero de Refuerzo":
     st.markdown(_t(f"**Referencia:** {code['ref']}", f"**Reference:** {code['ref']}"))
     rows_us, rows_mm = [], []
     for k,a in REBAR_US.items():
@@ -650,7 +650,7 @@ if modulo_sel == "🔩 Tabla de Secciones de Acero de Refuerzo":
 # ══════════════════════════════════════════
 # FLUJO MAESTRO: DISEÑO COMPLETO DE VIGA
 # ══════════════════════════════════════════
-if modulo_sel == "🏗️ Diseño Completo de Viga (Flujo Guiado)":
+if modulo_sel == " Diseño Completo de Viga (Flujo Guiado)":
     st.markdown("Este asistente unifica todos los cálculos (Flexión, Cortante, Deflexiones, Memoria y Planos) en un solo flujo.")
     
     vm_tabs = st.tabs([
@@ -667,7 +667,7 @@ if modulo_sel == "🏗️ Diseño Completo de Viga (Flujo Guiado)":
     # PASO 1 — GEOMETRÍA Y MATERIALES
     # ─────────────────────────────────────────────────────────────
     with vm_tabs[0]:
-        st.subheader("📐 Geometría y Materiales de la Viga")
+        st.subheader(" Geometría y Materiales de la Viga")
         c1p1, c2p1, c3p1 = st.columns(3)
         with c1p1:
             vm_b  = st.number_input("Ancho alma bw [cm]", 10.0, 150.0, st.session_state.get("vm_b", 30.0), 5.0, key="vm_b")
@@ -723,17 +723,17 @@ if modulo_sel == "🏗️ Diseño Completo de Viga (Flujo Guiado)":
         st.session_state["vr_bar"] = vm_bar
         st.session_state["vt_bar"] = vm_bar
 
-        st.success(f"✅ Datos propagados: bw={vm_b:.0f} cm | h={vm_h:.0f} cm | d'={vm_dp:.0f} cm | L={vm_L:.1f} m | Sección: {vm_tipo}")
+        st.success(f" Datos propagados: bw={vm_b:.0f} cm | h={vm_h:.0f} cm | d'={vm_dp:.0f} cm | L={vm_L:.1f} m | Sección: {vm_tipo}")
 
     # ─────────────────────────────────────────────────────────────
     # PASO 2 — CARGAS
     # ─────────────────────────────────────────────────────────────
     with vm_tabs[1]:
-        st.subheader("⬇️ Solicitaciones de Diseño")
+        st.subheader("⬇ Solicitaciones de Diseño")
 
         modo_carga = st.radio(
             "Modo de ingreso de cargas:",
-            ["⚙️ Automático (calcula Mu desde wD+wL)", "✏️ Manual (ingresar Mu directamente)"],
+            ["⚙ Automático (calcula Mu desde wD+wL)", " Manual (ingresar Mu directamente)"],
             horizontal=True, key="vm_modo_carga"
         )
 
@@ -785,7 +785,7 @@ if modulo_sel == "🏗️ Diseño Completo de Viga (Flujo Guiado)":
             mc2.metric(f"Mu⁺ Centro [{unidad_mom}]", f"{vm_mu_cen:.1f}")
             mc3.metric(f"Mu⁻ Der [{unidad_mom}]", f"{vm_mu_der:.1f}")
             mc4.metric(f"Vu máx [{unidad_fuerza}]", f"{vm_vu_max:.1f}")
-            st.caption("📖 **NSR-10 C.8.3.3** — Coeficientes de momentos para vigas continuas.")
+            st.caption(" **NSR-10 C.8.3.3** — Coeficientes de momentos para vigas continuas.")
 
         else:
             vm_wD      = st.session_state.get("vm_wD", 12.0)
@@ -821,7 +821,7 @@ if modulo_sel == "🏗️ Diseño Completo de Viga (Flujo Guiado)":
     with vm_tabs[5]:
         st.info("Para este paso, abre la sección '5. DEFLEXIONES' más abajo.")
     with vm_tabs[6]:
-        st.subheader("📄 Memoria Integrada de Viga")
+        st.subheader(" Memoria Integrada de Viga")
         st.info("Se recomienda revisar los resultados de los módulos de abajo antes de imprimir la memoria completa. Asegúrese de haber calculado correctamente:")
         st.markdown("- **Flexión** (Módulo 1 o 2)\n- **Cortante** (Módulo 4)\n- **D. Sísmico** (Módulo 6 si aplica)")
         
@@ -872,9 +872,9 @@ if modulo_sel == "🏗️ Diseño Completo de Viga (Flujo Guiado)":
 # ??????????????????????????????????????????
 # 2. VIGA RECTANGULAR — FLEXIÓN
 # ??????????????????????????????????????????
-if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
+if modulo_sel == " Diseño a Flexión — Viga Rectangular":
     st.markdown(_t(f"**Método (sección simplemente reforzada)** | Norma: `{code['ref']}`", f"**Method (singly reinforced section)** | Code: `{code['ref']}`"))
-    st.info(_t("📺 **Modo de uso:** Ingresa la base, altura y recubrimiento de la viga. Añade el momento flector (Mu) a soportar. Luego selecciona el diámetro de varilla y la App te dirá si cumple flexión, calculará la cantidad requerida de acero, y generará las cantidades y precios de todo el pórtico.", "📺 **How to use:** Enter beam base, height and cover. Add ultimate moment (Mu). Then select rebar diameter and the App will check flexure, calculate required steel, quantities and prices."))
+    st.info(_t(" **Modo de uso:** Ingresa la base, altura y recubrimiento de la viga. Añade el momento flector (Mu) a soportar. Luego selecciona el diámetro de varilla y la App te dirá si cumple flexión, calculará la cantidad requerida de acero, y generará las cantidades y precios de todo el pórtico.", " **How to use:** Enter beam base, height and cover. Add ultimate moment (Mu). Then select rebar diameter and the App will check flexure, calculate required steel, quantities and prices."))
     c1,c2 = st.columns(2)
     with c1:
         b_vr = st.number_input("Ancho b [cm]", 15.0, 150.0, st.session_state.get("vr_b", 30.0), 5.0, key="vr_b")
@@ -906,7 +906,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
         Rn = Mu_Nmm / (phi_f * b_mm * d_mm**2)
         disc = 1 - 2*Rn/(0.85*fc)
         if disc < 0:
-            st.error("?🚫 Sección insuficiente – aumente b o h")
+            st.error("? Sección insuficiente – aumente b o h")
         else:
             rho_calc = (0.85*fc/fy)*(1 - math.sqrt(disc))
             rho_use = max(rho_calc, rho_min)
@@ -955,7 +955,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                         n_f1_vr = n_bars
                         n_f2_vr = 0
                         d_eff_mm = d_mm  # volver al d original (1 fila)
-                        st.info("ℹ️ Tras iterar con d_efectivo, el acero requerido cabe en **1 fila** con el d' original.")
+                        st.info("ℹ Tras iterar con d_efectivo, el acero requerido cabe en **1 fila** con el d' original.")
                         break
                         
                 dos_filas_vr = True
@@ -974,31 +974,31 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
             ok_flex    = phi_Mn_kNm >= Mu_vr_kN
             ok_rho_min = rho_prov >= rho_min
             ok_rho_max = rho_prov <= rho_max
-            tab_r, tab_s, tab_3d, tab_q = st.tabs([f"📊 Resultados {'✅' if (ok_flex and ok_rho_min and ok_rho_max) else '?'}","🔲 Sección 2D","🧊 Visualización 3D","📦 Cantidades"])
+            tab_r, tab_s, tab_3d, tab_q = st.tabs([f" Resultados {'' if (ok_flex and ok_rho_min and ok_rho_max) else '?'}"," Sección 2D"," Visualización 3D"," Cantidades"])
             with tab_r:
                 st.markdown(f"**Factor de reducción φ = {phi_f}** (flexión) | Norma: `{code['ref']}`")
                 st.markdown("""**Verificación fundamental:** La resistencia a flexión provista **φMn** debe ser mayor o igual al momento último demandado **Mu**.
-> φMn ≥ Mu  ✔ (la viga resiste sin colapsar)""")
+> φMn ≥ Mu   (la viga resiste sin colapsar)""")
                 st.latex(r"\phi M_n = \phi \cdot A_s \cdot f_y \left(d - \frac{a}{2}\right)")
                 rows = [
-                    ("📏 b × h — Base y altura de la viga", f"{b_vr:.0f} × {h_vr:.0f} cm"),
-                    ("📐 d — Peralte efectivo real (centroide del acero)" + ("   2 filas" if dos_filas_vr else ""), f"{d_eff_mm/10:.2f} cm" + (f" (original: {d_vr:.1f} cm)" if dos_filas_vr else "")),
-                    ("🔢 Rn — Resistencia unitaria requerida (Mu / φ·b·d²)", f"{Rn:.3f} MPa"),
-                    ("📊 ρ calculado — Cuantía de acero que necesita la sección", f"{rho_calc*100:.4f}%"),
-                    ("⬇️ ρ mínimo — Cuantía mínima exigida por la norma (evita falla frágil)", f"{rho_min*100:.4f}%"),
-                    ("⬆️ ρ máximo — Cuantía máxima (garantiza falla dúctil con aviso)", f"{rho_max*100:.4f}%"),
+                    (" b × h — Base y altura de la viga", f"{b_vr:.0f} × {h_vr:.0f} cm"),
+                    (" d — Peralte efectivo real (centroide del acero)" + ("   2 filas" if dos_filas_vr else ""), f"{d_eff_mm/10:.2f} cm" + (f" (original: {d_vr:.1f} cm)" if dos_filas_vr else "")),
+                    (" Rn — Resistencia unitaria requerida (Mu / φ·b·d²)", f"{Rn:.3f} MPa"),
+                    (" ρ calculado — Cuantía de acero que necesita la sección", f"{rho_calc*100:.4f}%"),
+                    ("⬇ ρ mínimo — Cuantía mínima exigida por la norma (evita falla frágil)", f"{rho_min*100:.4f}%"),
+                    ("⬆ ρ máximo — Cuantía máxima (garantiza falla dúctil con aviso)", f"{rho_max*100:.4f}%"),
                     ("ρ provisto", f"{(As_prov/(b_vr*(d_eff_mm/10)))*100:.4f}%"),
-                    ("🔩 As requerido — Área de acero necesaria para resistir Mu", f"{As_req_cm2:.3f} cm²"),
-                    (f"🔩 Varillas seleccionadas ({bar_vr}) — Cantidad y área provista", f"{n_bars} barras → As provisto = {As_prov:.3f} cm²"),
-                    ("🧱 a — Profundidad del bloque de compresión equivalente (Whitney)", f"{a_mm:.1f} mm"),
-                    (f"✅ φMn — Momento resistente provisto [{unidad_mom}]", f"{phi_Mn_kNm*factor_fuerza:.2f}"),
-                    (f"🎯 Mu — Momento último demandado (carga de diseño) [{unidad_mom}]", f"{Mu_vr:.2f}"),
-                    ("📋 Verificación Flexión (φMn ≥ Mu)" if ok_flex else "? Verificación Flexión (φMn < Mu)",
-                     "✅ CUMPLE — La viga resiste el momento de diseño" if ok_flex else f"? DEFICIENTE — φMn={phi_Mn_kNm:.2f} < Mu={Mu_vr_kN:.2f} → Aumente sección o acero"),
-                    ("📋 Cuantía mínima (? ≥ ?_min)" if ok_rho_min else "? Cuantía mínima (? < ?_min)",
-                     "✅ CUMPLE" if ok_rho_min else "? NO CUMPLE — Aumente el área de acero"),
-                    ("📋 Cuantía máxima (? ≤ ?_max)" if ok_rho_max else "? Cuantía máxima (? > ?_max)",
-                     "✅ CUMPLE" if ok_rho_max else "? EXCEDE M?XIMO — Sección sobrearmada, amplíe la sección"),
+                    (" As requerido — Área de acero necesaria para resistir Mu", f"{As_req_cm2:.3f} cm²"),
+                    (f" Varillas seleccionadas ({bar_vr}) — Cantidad y área provista", f"{n_bars} barras → As provisto = {As_prov:.3f} cm²"),
+                    (" a — Profundidad del bloque de compresión equivalente (Whitney)", f"{a_mm:.1f} mm"),
+                    (f" φMn — Momento resistente provisto [{unidad_mom}]", f"{phi_Mn_kNm*factor_fuerza:.2f}"),
+                    (f" Mu — Momento último demandado (carga de diseño) [{unidad_mom}]", f"{Mu_vr:.2f}"),
+                    (" Verificación Flexión (φMn ≥ Mu)" if ok_flex else "? Verificación Flexión (φMn < Mu)",
+                     " CUMPLE — La viga resiste el momento de diseño" if ok_flex else f"? DEFICIENTE — φMn={phi_Mn_kNm:.2f} < Mu={Mu_vr_kN:.2f} → Aumente sección o acero"),
+                    (" Cuantía mínima (? ≥ ?_min)" if ok_rho_min else "? Cuantía mínima (? < ?_min)",
+                     " CUMPLE" if ok_rho_min else "? NO CUMPLE — Aumente el área de acero"),
+                    (" Cuantía máxima (? ≤ ?_max)" if ok_rho_max else "? Cuantía máxima (? > ?_max)",
+                     " CUMPLE" if ok_rho_max else "? EXCEDE M?XIMO — Sección sobrearmada, amplíe la sección"),
                 ]
                 qty_table(rows)
 
@@ -1013,11 +1013,11 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                     )
                 else:
                     _bw_min_req = (2*dp_vr*10 + n_f1_vr*db_vr + (n_f1_vr-1)*s_min_vr) / 10
-                    st.success(f"✅ 1 fila: {n_f1_vr} varillas {bar_vr} | d efectivo = {d_eff_mm/10:.2f} cm | bw mín = {_bw_min_req:.1f} cm")
+                    st.success(f" 1 fila: {n_f1_vr} varillas {bar_vr} | d efectivo = {d_eff_mm/10:.2f} cm | bw mín = {_bw_min_req:.1f} cm")
 
                 # ── Diagrama de Envolvente φMn(As(x)) vs Mu ────────────────────────────
                 st.markdown("---")
-                st.subheader("📈 Diagrama de Capacidad vs Demanda")
+                st.subheader(" Diagrama de Capacidad vs Demanda")
                 st.caption("Relación entre la capacidad de la sección (φMn) y el momento demandado (Mu)")
 
                 # Construir envolvente: variando As de 0 a As_prov (0..n_bars varillas)
@@ -1063,7 +1063,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                 st.plotly_chart(fig_env, use_container_width=True)
 
                 if ok_flex and ok_rho_min and ok_rho_max:
-                    st.success(f"✅ Diseño Aprobado: φMn = {phi_Mn_kNm*factor_fuerza:.2f} {unidad_mom}  ≥  Mu = {Mu_vr:.2f} {unidad_mom}")
+                    st.success(f" Diseño Aprobado: φMn = {phi_Mn_kNm*factor_fuerza:.2f} {unidad_mom}  ≥  Mu = {Mu_vr:.2f} {unidad_mom}")
                 else:
                     msg = []
                     if not ok_flex: msg.append(f"φMn={phi_Mn_kNm*factor_fuerza:.2f} < {Mu_vr:.2f}")
@@ -1071,7 +1071,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                     if not ok_rho_max: msg.append(f"?={rho:.5f} > ?_max={rho_max:.5f}")
                     _detalle = " | ".join(msg) if msg else "Cuantía fuera de rango"
                     st.error(f"? Diseño No Aprobado — {_detalle} → Aumente la sección o el acero")
-                st.info("💡 **¿El acero calculado es inferior o superior?** Si el Mu ingresado viene de una combinación con **momento positivo** (vano central), el acero corresponde al **refuerzo inferior** (zona en tensión debajo). Si Mu viene de un **momento negativo** (apoyo o empotramiento), el acero es el **refuerzo superior**.")
+                st.info(" **¿El acero calculado es inferior o superior?** Si el Mu ingresado viene de una combinación con **momento positivo** (vano central), el acero corresponde al **refuerzo inferior** (zona en tensión debajo). Si Mu viene de un **momento negativo** (apoyo o empotramiento), el acero es el **refuerzo superior**.")
 
             with tab_s:
                 _titulo_2d = f"Sección {b_vr:.0f}×{h_vr:.0f} cm"
@@ -1107,7 +1107,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                 st.caption(_cap)
 
             with tab_3d:
-                st.subheader("🧊 Visualización 3D de Viga Rectangular")
+                st.subheader(" Visualización 3D de Viga Rectangular")
                 fig3d = go.Figure()
                 L_mm_3d = L_vr * 100
                 x_c = [-b_vr/2, b_vr/2, b_vr/2, -b_vr/2, -b_vr/2, b_vr/2, b_vr/2, -b_vr/2]
@@ -1174,7 +1174,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
 
                 render_apu_breakdown(vol_horm, peso_long, fc, f"({n_bars} barras longitudinales)")
 
-                with st.expander("🎨 Dibujo de Figurado para Taller", expanded=False):
+                with st.expander(" Dibujo de Figurado para Taller", expanded=False):
                     st.markdown("A continuación se muestran las formas reales de las barras para facilitar el figurado.")
                     hook_len_cm = 12 * db_vr / 10
                     straight_len_cm = L_vr * 100 - 2 * hook_len_cm
@@ -1193,10 +1193,10 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                 # MEMORIA DOCX para Viga Rectangular
                 col_d1, col_d2, col_d3 = st.columns(3)
                 with col_d1:
-                    btn_docx_vr = st.button("📄 Generar Memoria DOCX (Viga Rectangular)")
+                    btn_docx_vr = st.button(" Generar Memoria DOCX (Viga Rectangular)")
                 with col_d2:
-                    if st.button("📥 Enviar a Cuadro de Mando", key="cmd_vr"):
-                        add_historial_diseno("Flexión Viga Rect.", f"b={b_vr:.0f} h={h_vr:.0f} cm", "✅ APROBADO" if (ok_flex and ok_rho_min and ok_rho_max) else "? NO CUMPLE", code['ref'])
+                    if st.button(" Enviar a Cuadro de Mando", key="cmd_vr"):
+                        add_historial_diseno("Flexión Viga Rect.", f"b={b_vr:.0f} h={h_vr:.0f} cm", " APROBADO" if (ok_flex and ok_rho_min and ok_rho_max) else "? NO CUMPLE", code['ref'])
                 with col_d3:
                     try:
                         n1 = n_f1_vr if dos_filas_vr else int(n_bars)
@@ -1206,7 +1206,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
                             db_vr, d_eff_mm/10., dp_vr, Mu_vr, phi_Mn_kNm,
                             dos_filas_vr, n1, n2, sep_filas_mm_vr, norma_sel, "Proyecto NSR-10"
                         )
-                        st.download_button("📦 Exportar IFC (BIM)", data=buf_ifc, file_name=f"Viga_Rect_{b_vr:.0f}x{h_vr:.0f}.ifc", mime="application/x-step", key="ifc_vr")
+                        st.download_button(" Exportar IFC (BIM)", data=buf_ifc, file_name=f"Viga_Rect_{b_vr:.0f}x{h_vr:.0f}.ifc", mime="application/x-step", key="ifc_vr")
                     except Exception as e:
                         st.error(f"Error IFC: {e}")
 
@@ -1331,9 +1331,9 @@ if modulo_sel == "📐 Diseño a Flexión — Viga Rectangular":
 # ??????????????????????????????????????????
 # 3. VIGA T — FLEXIÓN
 # ??????????????????????????????????????????
-if modulo_sel == "📐 Diseño a Flexión — Viga T":
+if modulo_sel == " Diseño a Flexión — Viga T":
     st.markdown(_t(f"**Viga T — Sección compuesta** | Norma: `{code['ref']}`", f"**T-Beam — Composite section** | Code: `{code['ref']}`"))
-    st.info(_t("📺 **Modo de uso:** Configura el ancho del ala (bf) y del alma (bw), más los espesores y el Momento Último (Mu). El algoritmo deducirá si la viga se comporta como Rectangular (compresión solo en el ala) o como Verdadera Viga T (eje neutro en el alma).", "📺 **How to use:** Set flange width (bf), web width (bw), thicknesses, and Ultimate Moment (Mu). The algorithm deduces if it behaves as a Rectangular or a True T-Beam."))
+    st.info(_t(" **Modo de uso:** Configura el ancho del ala (bf) y del alma (bw), más los espesores y el Momento Último (Mu). El algoritmo deducirá si la viga se comporta como Rectangular (compresión solo en el ala) o como Verdadera Viga T (eje neutro en el alma).", " **How to use:** Set flange width (bf), web width (bw), thicknesses, and Ultimate Moment (Mu). The algorithm deduces if it behaves as a Rectangular or a True T-Beam."))
     c1,c2 = st.columns(2)
     with c1:
         bf_vt = st.number_input("Ancho del ala bf [cm]", 20.0, 300.0, st.session_state.get("vt_bf", 80.0), 5.0, key="vt_bf", help="Ancho efectivo de la aleta de la viga T según NSR-10 C.8.12.")
@@ -1363,7 +1363,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
     L_cm = L_vt * 100
     limite_bf = min(L_cm / 4, bw_vt + 16 * hf_vt)
     if bf_vt > limite_bf:
-        st.warning(f"⚠️ **Atención Normativa (C.8.10.2):** El ancho de ala $b_f$ ({bf_vt} cm) excedía el límite normativo: min($L/4={L_cm/4:.0f}$, $b_w+16h_f={bw_vt+16*hf_vt:.0f}$) = {limite_bf:.0f} cm. Se calculó usando el límite estricto de {limite_bf:.0f} cm.")
+        st.warning(f"⚠ **Atención Normativa (C.8.10.2):** El ancho de ala $b_f$ ({bf_vt} cm) excedía el límite normativo: min($L/4={L_cm/4:.0f}$, $b_w+16h_f={bw_vt+16*hf_vt:.0f}$) = {limite_bf:.0f} cm. Se calculó usando el límite estricto de {limite_bf:.0f} cm.")
         bf_vt = limite_bf
         
     bf_mm = bf_vt*10; bw_mm = bw_vt*10; hf_mm = hf_vt*10; d_mm_vt = d_vt*10
@@ -1372,7 +1372,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
     disc_t = 1 - 2*Rn_t/(0.85*fc)
 
     if disc_t < 0:
-        st.error("?🚫 Sección insuficiente. Aumente bf o h.")
+        st.error("? Sección insuficiente. Aumente bf o h.")
     else:
         rho_bf = (0.85*fc/fy)*(1 - math.sqrt(max(disc_t,0)))
         As_rect = rho_bf * bf_vt * d_vt
@@ -1418,7 +1418,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
         limite_bf = min(L_cm / 4, bw_vt + 16 * hf_vt)
         
         if bf_vt > limite_bf:
-            st.warning(f"⚠️ **Atención Normativa (C.8.10.2):** El ancho de ala $b_f$ ({bf_vt} cm) es mayor que el límite normativo sin considerar separación entre vigas: min($L/4={L_cm/4:.0f}$, $b_w+16h_f={bw_vt+16*hf_vt:.0f}$) = {limite_bf:.0f} cm.")
+            st.warning(f"⚠ **Atención Normativa (C.8.10.2):** El ancho de ala $b_f$ ({bf_vt} cm) es mayor que el límite normativo sin considerar separación entre vigas: min($L/4={L_cm/4:.0f}$, $b_w+16h_f={bw_vt+16*hf_vt:.0f}$) = {limite_bf:.0f} cm.")
             # Aplicar límite al bus de datos y local
             st.session_state['vt_bf'] = float(limite_bf)
             # Reasignamos el bf usado en visualizaciones siguientes, pero el cálculo ya está hecho
@@ -1464,7 +1464,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
         Lo_min = max(2 * ht_vt, Ln_vt_cm / 4, 45.0)
         s_conf_max = min(d_vt / 4, 6 * db_vt_cm, 15.0)
 
-        tab_r,tab_s,tab_3d,tab_q = st.tabs([f"📊 Resultados {'✅' if (ok_vt and ok_bw_vt and ok_rho_max_T) else '?'}","🔲 Sección 2D","🧊 Visualización 3D","📦 Cantidades"])
+        tab_r,tab_s,tab_3d,tab_q = st.tabs([f" Resultados {'' if (ok_vt and ok_bw_vt and ok_rho_max_T) else '?'}"," Sección 2D"," Visualización 3D"," Cantidades"])
         with tab_r:
             st.markdown(f"**Tipo de sección:** {sec_type} | **φ={phi_f}**")
             rows_vt = [
@@ -1480,9 +1480,9 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
                 (f"Mu solicitado [{unidad_mom}]", f"{Mu_vt:.2f}"),
                 ("? provisto", f"{(As_prov_vt/(bw_vt*d_vt))*100:.4f}%"),
                 ("? máximo", f"{rho_max*100:.4f}%"),
-                ("Validación ?", "✅ CUMPLE" if ok_rho_max_T else "? EXCEDE (Sobrearmada)"),
-                ("Validación bw", "✅ CUMPLE" if ok_bw_vt else "? DEFICIENTE (Alma muy angosta)"),
-                ("Estado Global", "✅ CUMPLE" if (ok_vt and ok_bw_vt) else "? DEFICIENTE"),
+                ("Validación ?", " CUMPLE" if ok_rho_max_T else "? EXCEDE (Sobrearmada)"),
+                ("Validación bw", " CUMPLE" if ok_bw_vt else "? DEFICIENTE (Alma muy angosta)"),
+                ("Estado Global", " CUMPLE" if (ok_vt and ok_bw_vt) else "? DEFICIENTE"),
             ]
             qty_table(rows_vt)
 
@@ -1502,11 +1502,11 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
             else:
                 st.error(f"φMn = {phi_Mn_vt*factor_fuerza:.2f} {unidad_mom} < Mu = {Mu_vt:.2f} {unidad_mom}")
 
-            st.info("💡 **¿Acero Inferior o Superior?** Si ingresa un Momento **Positivo** (Mu), el área calculada corresponde al refuerzo en la zona traccionada (usualmente **acero inferior**). Para momento **Negativo** en un apoyo continuo, la tracción está arriba por lo que el resultado corresponde al **acero superior**.")
+            st.info(" **¿Acero Inferior o Superior?** Si ingresa un Momento **Positivo** (Mu), el área calculada corresponde al refuerzo en la zona traccionada (usualmente **acero inferior**). Para momento **Negativo** en un apoyo continuo, la tracción está arriba por lo que el resultado corresponde al **acero superior**.")
 
-            with st.expander("🔍 **Detallado Sísmico: Zonas de Rótula Plástica (DES/DMO)**", expanded=False):
+            with st.expander(" **Detallado Sísmico: Zonas de Rótula Plástica (DES/DMO)**", expanded=False):
                 st.markdown("> *Requisitos para elementos a flexión en sistemas de Resistencia Sísmica.*")
-                st.info("💡 **Nota Técnica (Lo_conf):** La Longitud de Confinamiento ($L_o$) es la zona adyacente a los nudos donde pueden formarse rótulas plásticas durante un sismo severo. En esta región se exige una mayor densidad de estribos cerrados de confinamiento para garantizar la ductilidad y evitar el pandeo de barras longitudinales (ref. NSR-10 C.21 / ACI 318 Cap.18).")
+                st.info(" **Nota Técnica (Lo_conf):** La Longitud de Confinamiento ($L_o$) es la zona adyacente a los nudos donde pueden formarse rótulas plásticas durante un sismo severo. En esta región se exige una mayor densidad de estribos cerrados de confinamiento para garantizar la ductilidad y evitar el pandeo de barras longitudinales (ref. NSR-10 C.21 / ACI 318 Cap.18).")
                 c_s1, c_s2 = st.columns(2)
                 with c_s1:
                     st.metric("Lo (Long. de confinamiento)", f"≥ {Lo_min:.0f} cm", delta="2h, Ln/4, 45cm", delta_color="off")
@@ -1548,7 +1548,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
             plt.close(fig)
 
         with tab_3d:
-            st.subheader("🧊 Visualización 3D de Viga T")
+            st.subheader(" Visualización 3D de Viga T")
             fig3d = go.Figure()
             L_mm_3d = L_vt * 100
             # Alma
@@ -1622,7 +1622,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
 
             render_apu_breakdown(vol_t, peso_t, fc, f"({n_bt} barras)")
 
-            with st.expander("🎨 Dibujo de Figurado para Taller (Viga T)", expanded=False):
+            with st.expander(" Dibujo de Figurado para Taller (Viga T)", expanded=False):
                 hook_len_cm = 12 * db_vt / 10
                 straight_len_cm = L_vt * 100 - 2 * hook_len_cm
                 fig_l1 = draw_longitudinal_bar(L_vt*100, straight_len_cm, hook_len_cm, db_vt)
@@ -1639,17 +1639,17 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
             # MEMORIA DOCX y EXPORTACIÓN IFC para Viga T
             col_t1, col_t2, col_t3 = st.columns(3)
             with col_t1:
-                btn_docx_t = st.button("📄 Generar Memoria DOCX (Viga T)")
+                btn_docx_t = st.button(" Generar Memoria DOCX (Viga T)")
             with col_t2:
-                if st.button("📥 Enviar a Cuadro de Mando", key="cmd_vt"):
-                    add_historial_diseno("Flexión Viga T", f"bf={bf_vt:.0f} bw={bw_vt:.0f} h={ht_vt:.0f} cm", "✅ APROBADO" if (ok_vt and ok_bw_vt and ok_rho_max_T) else "? NO CUMPLE", code['ref'])
+                if st.button(" Enviar a Cuadro de Mando", key="cmd_vt"):
+                    add_historial_diseno("Flexión Viga T", f"bf={bf_vt:.0f} bw={bw_vt:.0f} h={ht_vt:.0f} cm", " APROBADO" if (ok_vt and ok_bw_vt and ok_rho_max_T) else "? NO CUMPLE", code['ref'])
             with col_t3:
                 try:
                     buf_ifc_t = ifc_export.ifc_viga_t(
                         bf_vt, bw_vt, hf_vt, ht_vt, L_vt, fc, fy, int(n_bars_vt), bar_vt, db_vt,
                         As_prov_vt, d_vt, dp_vt, Mu_vt, phi_Mn_kNm_vt, norma_sel, "Proyecto NSR-10"
                     )
-                    st.download_button("📦 Exportar IFC (BIM)", data=buf_ifc_t, file_name=f"Viga_T_{bf_vt:.0f}x{ht_vt:.0f}.ifc", mime="application/x-step", key="ifc_vt")
+                    st.download_button(" Exportar IFC (BIM)", data=buf_ifc_t, file_name=f"Viga_T_{bf_vt:.0f}x{ht_vt:.0f}.ifc", mime="application/x-step", key="ifc_vt")
                 except Exception as e:
                     st.error(f"Error IFC: {e}")
                     
@@ -1745,7 +1745,7 @@ if modulo_sel == "📐 Diseño a Flexión — Viga T":
 # ??????????????????????????????????????????
 if modulo_sel == "⚡ Diseño a Cortante — Vigas de Concreto":
     st.markdown(_t(f"**Diseño de estribos a cortante** | Norma: `{code['ref']}`", f"**Shear stirrup design** | Code: `{code['ref']}`"))
-    st.info(_t("📺 **Modo de uso:** Ingresa la Fuerza Cortante Factorizada (Vu) para una sección de viga dada. La app determinará la contribución del concreto (φVc) y calculará el refuerzo transversal requerido en número de estribos y separación (s).", "📺 **How to use:** Enter Factored Shear Force (Vu). The app calculates concrete contribution (φVc) and required transverse reinforcement (stirrups spacing & amount)."))
+    st.info(_t(" **Modo de uso:** Ingresa la Fuerza Cortante Factorizada (Vu) para una sección de viga dada. La app determinará la contribución del concreto (φVc) y calculará el refuerzo transversal requerido en número de estribos y separación (s).", " **How to use:** Enter Factored Shear Force (Vu). The app calculates concrete contribution (φVc) and required transverse reinforcement (stirrups spacing & amount)."))
     c1,c2 = st.columns(2)
     with c1:
         bw_cv = st.number_input("bw [cm]", 10.0, 100.0, st.session_state.get("cv_bw", 25.0), 5.0, key="cv_bw")
@@ -1832,7 +1832,7 @@ if modulo_sel == "⚡ Diseño a Cortante — Vigas de Concreto":
     elif s_diseno_cm < 7.5:
         st.info("ℹ? La separación de estribos es menor a 7.5 cm. Verifique que sea constructivamente viable.")
 
-    tab_r,tab_s,tab_q = st.tabs([f"📊 Resultados {'✅' if ok_cv else '?'}","🔲 Sección","📦 Cantidades"])
+    tab_r,tab_s,tab_q = st.tabs([f" Resultados {'' if ok_cv else '?'}"," Sección"," Cantidades"])
     with tab_r:
         st.markdown(f"**φ cortante = {phi_v}** | Norma: `{code['ref']}`")
         st.markdown(r"**Verificación Normativa:** $\phi V_n = \phi (V_c + V_s) \ge V_u$")
@@ -1851,7 +1851,7 @@ if modulo_sel == "⚡ Diseño a Cortante — Vigas de Concreto":
             (f"Vs provisto [{unidad_fuerza}]", f"{Vs_prov_kN*factor_fuerza:.2f}"),
             (f"φVn = φ(Vc+Vs) [{unidad_fuerza}]", f"{phi_Vn_kN*factor_fuerza:.2f}"),
             (f"Vs máx permitido [{unidad_fuerza}]", f"{Vs_max_kN*factor_fuerza:.2f}"),
-            ("Estado", "✅ CUMPLE" if ok_cv else "? DEFICIENTE"),
+            ("Estado", " CUMPLE" if ok_cv else "? DEFICIENTE"),
         ]
         qty_table(rows_cv)
         if Vs_req_kN > Vs_max_kN:
@@ -1863,7 +1863,7 @@ if modulo_sel == "⚡ Diseño a Cortante — Vigas de Concreto":
                      f"2. Aumentar el peralte efectivo **d** o la altura total **h**.\n"
                      f"3. Aumentar la resistencia del concreto **f'c**.")
         elif ok_cv:
-            st.success(f"✅ Aprobado Cortante: $\\phi V_n = {phi_Vn_kN*factor_fuerza:.2f}$ {unidad_fuerza} $\\ge V_u = {Vu_cv_input:.2f}$ {unidad_fuerza} — Estribo {st_bar_cv} @ {s_diseno_cm:.1f} cm")
+            st.success(f" Aprobado Cortante: $\\phi V_n = {phi_Vn_kN*factor_fuerza:.2f}$ {unidad_fuerza} $\\ge V_u = {Vu_cv_input:.2f}$ {unidad_fuerza} — Estribo {st_bar_cv} @ {s_diseno_cm:.1f} cm")
         else:
             st.error(f"? No Aprobado por Cortante: $\\phi V_n = {phi_Vn_kN*factor_fuerza:.2f}$ {unidad_fuerza} $< V_u = {Vu_cv_input:.2f}$ {unidad_fuerza}")
 
@@ -1950,7 +1950,7 @@ if modulo_sel == "⚡ Diseño a Cortante — Vigas de Concreto":
 
         render_apu_breakdown(vol_beam_cv, peso_est_cv, fc, f"({n_estribos} estribos)")
 
-        with st.expander("📏 Dibujo de Estribo para Taller", expanded=False):
+        with st.expander(" Dibujo de Estribo para Taller", expanded=False):
             recub_est = max(recub_cv, 2.5)
             inside_b = bw_cv - 2*recub_est
             inside_h = h_cv - 2*recub_est
@@ -1961,7 +1961,7 @@ if modulo_sel == "⚡ Diseño a Cortante — Vigas de Concreto":
             st.caption("Estribo con ganchos de 135° (representación esquemática).")
 
         # MEMORIA DOCX para Cortante
-        if st.button("📄 Generar Memoria Cortante (DOCX)"):
+        if st.button(" Generar Memoria Cortante (DOCX)"):
             doc = Document()
             doc.add_heading("Memoria de Diseño a Cortante", 0)
             doc.add_paragraph(f"Generado el: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
@@ -2070,7 +2070,7 @@ if modulo_sel == "⚡ Resistencia a Cortante por Punzonamiento — Losas":
                 h_min_req = h_test
                 break
 
-    tab_r,tab_q = st.tabs([f"📊 Resultados {'✅' if ok_pz else '?'}","📦 Cantidades"])
+    tab_r,tab_q = st.tabs([f" Resultados {'' if ok_pz else '?'}"," Cantidades"])
     with tab_r:
         qty_table([
             ("d efectivo losa", f"{d_pz:.0f} mm = {d_pz/10:.1f} cm"),
@@ -2082,7 +2082,7 @@ if modulo_sel == "⚡ Resistencia a Cortante por Punzonamiento — Losas":
             (f"Vc diseño = min(Vc1,Vc2,Vc3) [{unidad_fuerza}]", f"{Vc_pz_N/1000*factor_fuerza:.2f}"),
             (f"φ Vc [{unidad_fuerza}]", f"{phi_Vc_pz*factor_fuerza:.2f}"),
             (f"Vu solicitado [{unidad_fuerza}]", f"{Vu_pz_input:.2f}"),
-            ("Estado", "✅ CUMPLE" if ok_pz else f"? REFORZAR / Aumentar h a {h_min_req} cm mín."),
+            ("Estado", " CUMPLE" if ok_pz else f"? REFORZAR / Aumentar h a {h_min_req} cm mín."),
         ])
         if ok_pz: st.success(f"φVc = {phi_Vc_pz*factor_fuerza:.2f} {unidad_fuerza} ≥ Vu = {Vu_pz_input:.2f} {unidad_fuerza} — Ref: {code['ref']}")
         else: st.error(f"φVc = {phi_Vc_pz*factor_fuerza:.2f} {unidad_fuerza} < Vu = {Vu_pz_input:.2f} {unidad_fuerza} — Ref: {code['ref']}")
@@ -2093,7 +2093,7 @@ if modulo_sel == "⚡ Resistencia a Cortante por Punzonamiento — Losas":
                      f"2. Aumentar la resistencia del concreto **f'c**.\n"
                      f"3. Aumentar las dimensiones de la columna o diseñar un ábaco / capitel.")
     with tab_q:
-        st.info("💡 **Nota Técnica (Msc):** Si existe **transferencia de momento** excéntrico (Msc) entre la losa y la columna (por ej. fuerzas sísmicas o desequilibrios), una fracción $\\gamma_v M_{sc}$ debe resistirse por excentricidad del cortante, lo que incrementa los esfuerzos $v_u$ en los extremos del perímetro crítico (ref. NSR-10 C.11.11.7 / ACI 318 22.6.4.3).")
+        st.info(" **Nota Técnica (Msc):** Si existe **transferencia de momento** excéntrico (Msc) entre la losa y la columna (por ej. fuerzas sísmicas o desequilibrios), una fracción $\\gamma_v M_{sc}$ debe resistirse por excentricidad del cortante, lo que incrementa los esfuerzos $v_u$ en los extremos del perímetro crítico (ref. NSR-10 C.11.11.7 / ACI 318 22.6.4.3).")
         qty_table([("Referencia ACI", "ACI 318-25 Tabla 22.6.5.2"),
                    ("Referencia Norma", code["ref"]),
                    ("Nota","Para casos con Mu en columna verificar momento excéntrico")])
@@ -2104,10 +2104,10 @@ if modulo_sel == "⚡ Resistencia a Cortante por Punzonamiento — Losas":
     # MEMORIA DOCX para Punzonamiento
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        btn_docx_pz = st.button("📄 Generar Memoria Punzonamiento (DOCX)")
+        btn_docx_pz = st.button(" Generar Memoria Punzonamiento (DOCX)")
     with col_p2:
-        if st.button("📥 Enviar a Cuadro de Mando", key="cmd_pz"):
-            add_historial_diseno("Punzonamiento", f"Col: {c1p:.0f}×{c2p:.0f} | h={h_pz:.0f} cm", "✅ APROBADO" if ok_pz else "? EXCEDE", code['ref'])
+        if st.button(" Enviar a Cuadro de Mando", key="cmd_pz"):
+            add_historial_diseno("Punzonamiento", f"Col: {c1p:.0f}×{c2p:.0f} | h={h_pz:.0f} cm", " APROBADO" if ok_pz else "? EXCEDE", code['ref'])
 
     if btn_docx_pz:
         doc = Document()
@@ -2179,7 +2179,7 @@ if modulo_sel == "⚡ Resistencia a Cortante por Punzonamiento — Losas":
 # ??????????????????????????????????????????
 # 6. INERCIA FISURADA + DEFLEXIONES
 # ??????????????????????????????????????????
-if modulo_sel == "📉 Inercia Fisurada y Deflexiones en Vigas":
+if modulo_sel == " Inercia Fisurada y Deflexiones en Vigas":
     st.markdown(f"**Branson (1965) — ACI 318** | {_t('Norma', 'Code')}: `{code['ref']}`")
     c1,c2 = st.columns(2)
     with c1:
@@ -2229,7 +2229,7 @@ if modulo_sel == "📉 Inercia Fisurada y Deflexiones en Vigas":
     ok_defl_L = defl_L_mm <= lim_L480
     ok_defl_total = defl_DL_mm <= lim_L240
 
-    tab_r,tab_q = st.tabs([f"📊 Resultados {'✅' if (ok_defl_total and ok_defl_L) else '?'}","📦 Cantidades"])
+    tab_r,tab_q = st.tabs([f" Resultados {'' if (ok_defl_total and ok_defl_L) else '?'}"," Cantidades"])
     with tab_r:
         st.markdown(f"**Ec = {Ec:.0f} MPa** | **n = {n_de:.2f}** | **fr = {fr:.3f} MPa**")
         qty_table([
@@ -2245,11 +2245,11 @@ if modulo_sel == "📉 Inercia Fisurada y Deflexiones en Vigas":
             ("Δ carga muerta D", f"{defl_D_mm:.2f} mm"),
             ("Δ carga viva L", f"{defl_L_mm:.2f} mm"),
             ("Límite L/480 (carga viva)", f"{lim_L480:.1f} mm"),
-            ("Δ_L vs L/480", "✅ CUMPLE" if ok_defl_L else "? EXCEDE"),
+            ("Δ_L vs L/480", " CUMPLE" if ok_defl_L else "? EXCEDE"),
             ("Límite L/240 (total)", f"{lim_L240:.1f} mm"),
-            ("Δ_DL vs L/240", "✅ CUMPLE" if ok_defl_total else "? EXCEDE"),
+            ("Δ_DL vs L/240", " CUMPLE" if ok_defl_total else "? EXCEDE"),
         ])
-        st.caption(f"📖 {code['ref']} | ACI 318-25 Tabla 24.2.2")
+        st.caption(f" {code['ref']} | ACI 318-25 Tabla 24.2.2")
     with tab_q:
         qty_table([("Referencia deflexiones","ACI 318-25 Sección 24.2"),
                    ("Norma aplicada", code["ref"])])
@@ -2257,10 +2257,10 @@ if modulo_sel == "📉 Inercia Fisurada y Deflexiones en Vigas":
     # MEMORIA DOCX para Deflexiones
     col_d1, col_d2 = st.columns(2)
     with col_d1:
-        btn_docx_d = st.button("📄 Generar Memoria Deflexiones (DOCX)")
+        btn_docx_d = st.button(" Generar Memoria Deflexiones (DOCX)")
     with col_d2:
-        if st.button("📥 Enviar a Cuadro de Mando", key="cmd_de"):
-            add_historial_diseno("Deflexiones", f"L={L_de:.2f} m | h={h_de:.0f} cm", "✅ APROBADO" if ok_defl_total else "? EXCEDE", code['ref'])
+        if st.button(" Enviar a Cuadro de Mando", key="cmd_de"):
+            add_historial_diseno("Deflexiones", f"L={L_de:.2f} m | h={h_de:.0f} cm", " APROBADO" if ok_defl_total else "? EXCEDE", code['ref'])
 
     if btn_docx_d:
         doc = Document()
@@ -2331,7 +2331,7 @@ if modulo_sel == "📉 Inercia Fisurada y Deflexiones en Vigas":
 # ??????????????????????????????????????????
 # 7. LOSA EN UNA DIRECCIÓN
 # ??????????????????????????????????????????
-if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
+if modulo_sel == " Diseño de Losa en Una Dirección":
     st.markdown(_t(f"**Diseño por franja de 1 metro** | Norma: `{code['ref']}`", f"**1-meter strip design** | Code: `{code['ref']}`"))
     c1,c2 = st.columns(2)
     with c1:
@@ -2380,7 +2380,7 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
         s_temp = min(Ab_ls/As_temp*100, 5*h_ls, 45)
 
         ok_ls = phi_Mn_ls >= Mu_ls_kNm
-        tab_r,tab_s,tab_g,tab_3d,tab_q = st.tabs([f"📊 Resultados {'✅' if ok_ls else '?'}","🔲 Sección 2D","📈 Gráficos M/V","🧊 3D","📦 Cantidades"])
+        tab_r,tab_s,tab_g,tab_3d,tab_q = st.tabs([f" Resultados {'' if ok_ls else '?'}"," Sección 2D"," Gráficos M/V"," 3D"," Cantidades"])
         with tab_r:
             qty_table([
                 ("wu factorizada", f"{wu_ls:.2f} kN/m²"),
@@ -2390,13 +2390,13 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
                 (f"Espaciado varilla {bar_ls}", f"{s_bar_ls:.1f} cm → usar **{s_use_ls:.1f} cm**"),
                 ("As provisto", f"{As_prov_ls:.3f} cm²/m"),
                 ("φMn / Mu", f"{phi_Mn_ls:.2f} / {Mu_ls_kNm:.2f} kN·m/m"),
-                ("Estado Flexión", "✅ CUMPLE" if ok_ls else "? DEFICIENTE"),
+                ("Estado Flexión", " CUMPLE" if ok_ls else "? DEFICIENTE"),
                 ("As temperatura/retracción", f"{As_temp:.3f} cm²/m"),
                 (f"Varilla temp {bar_ls}", f"@ {s_temp:.1f} cm"),
             ])
             if ok_ls: st.success(f"Losa OK — {bar_ls} @ {s_use_ls:.1f} cm (As principal)")
             else: st.error(f"Losa DEFICIENTE — {bar_ls} @ {s_use_ls:.1f} cm (As principal)")
-            st.info("💡 **Acero Inferior vs. Superior:** Este diseño automático a partir de la luz libre (L) estima el máximo momento positivo de la franja. El resultado `As principal` mostrado es el **acero inferior**. Para el **acero superior** necesario en los nudos continuos, considere diseñar a flexión una viga de b=100m ingresando el Mu- de los apoyos.")
+            st.info(" **Acero Inferior vs. Superior:** Este diseño automático a partir de la luz libre (L) estima el máximo momento positivo de la franja. El resultado `As principal` mostrado es el **acero inferior**. Para el **acero superior** necesario en los nudos continuos, considere diseñar a flexión una viga de b=100m ingresando el Mu- de los apoyos.")
         
         with tab_s:
             SCALE = 2.5  # Factor: eje Y va de 0 a h_ls*2.5, eje X va de 0 a 40 (=100cm/2.5)
@@ -2452,7 +2452,7 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
             plt.close(fig_mv)
 
         with tab_3d:
-            st.subheader("🧊 Losa 3D (Franja de 1m)")
+            st.subheader(" Losa 3D (Franja de 1m)")
             fig3_ls = go.Figure()
             L_ls_cm = ln_ls * 100
             x_l = [-50, 50, 50, -50, -50, 50, 50, -50]
@@ -2505,7 +2505,7 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
 
             render_apu_breakdown(vol_ls, peso_flex_ls + peso_temp_ls, fc, "(Refuerzo principal y temp.)")
 
-            with st.expander("🎨 Dibujo de Figurado para Taller (Varillas de losa)", expanded=False):
+            with st.expander(" Dibujo de Figurado para Taller (Varillas de losa)", expanded=False):
                 hook_len_cm = 12 * db_ls / 10
                 straight_len_cm = ln_ls * 100 - 2 * hook_len_cm
                 fig_l1 = draw_longitudinal_bar(ln_ls*100, straight_len_cm, hook_len_cm, db_ls)
@@ -2516,17 +2516,17 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
             # MEMORIA DOCX para Losa
             col_l1, col_l2, col_l3 = st.columns(3)
             with col_l1:
-                btn_docx_ls = st.button("📄 Generar Memoria Losa (DOCX)")
+                btn_docx_ls = st.button(" Generar Memoria Losa (DOCX)")
             with col_l2:
-                if st.button("📥 Enviar a Cuadro de Mando", key="cmd_ls"):
-                    add_historial_diseno("Losa Aligerada", f"{ancho_nerv_ls}×{h_ls} cm (s={separa_ls} cm)", "✅ APROBADO" if ok_ls else "? NO CUMPLE", code['ref'])
+                if st.button(" Enviar a Cuadro de Mando", key="cmd_ls"):
+                    add_historial_diseno("Losa Aligerada", f"{ancho_nerv_ls}×{h_ls} cm (s={separa_ls} cm)", " APROBADO" if ok_ls else "? NO CUMPLE", code['ref'])
             with col_l3:
                 try:
                     buf_ifc_ls = ifc_export.ifc_losa(
                         h_ls, ln_ls, 1.0, fc, fy, bar_ls, db_ls, min(As_req_m_ls, As_prov_m_ls),
                         s_fin_ls, cov_ls, norma_sel, "Proyecto NSR-10"
                     )
-                    st.download_button("📦 Exportar IFC (BIM)", data=buf_ifc_ls, file_name=f"Losa_{h_ls:.0f}cm.ifc", mime="application/x-step", key="ifc_losa")
+                    st.download_button(" Exportar IFC (BIM)", data=buf_ifc_ls, file_name=f"Losa_{h_ls:.0f}cm.ifc", mime="application/x-step", key="ifc_losa")
                 except Exception as e:
                     st.error(f"Error IFC: {e}")
                     
@@ -2623,7 +2623,7 @@ if modulo_sel == "🔳 Diseño de Losa en Una Dirección":
 # ??????????????????????????????????????????
 # 8. LONGITUD DE DESARROLLO (sin cambios)
 # ??????????????????????????????????????????
-if modulo_sel == "🔗 Longitud de Desarrollo y Empalmes":
+if modulo_sel == " Longitud de Desarrollo y Empalmes":
     st.markdown(f"**Barras rectas a tracción** | Norma: `{code['ref']}`")
     c1,c2 = st.columns(2)
     with c1:
@@ -2666,15 +2666,15 @@ if modulo_sel == "🔗 Longitud de Desarrollo y Empalmes":
     ls_B = 1.3*ld_mm
     ldh_mm = max((0.02*1*1*1*1*fy)/(lam*math.sqrt(fc))*db_ld, 8*db_ld, 150)
 
-    tab_r, = st.tabs(["📊 Resultados"])
+    tab_r, = st.tabs([" Resultados"])
     with tab_r:
         st.markdown(f"**φ no aplica para longitud de desarrollo** | Ref: `{code['ref']}`")
         qty_table([
             ("Varilla", f"{bar_ld} — db = {db_ld:.2f} mm"),
             ("f'c / fy", f"{fc:.1f} MPa / {fy:.0f} MPa"),
-            ("(cb+Ktr)/db", f"{cb_ktr_db:.3f} {'✅ ≤2.5' if cb_ktr_db<=2.5 else '→ limitado a 2.5'}"),
+            ("(cb+Ktr)/db", f"{cb_ktr_db:.3f} {' ≤2.5' if cb_ktr_db<=2.5 else '→ limitado a 2.5'}"),
             ("ψt × ψe × ψs × ψg", f"{psit_v}×{psie_v}×{psis_v}×{psig_v} = {psit_v*psie_v*psis_v*psig_v:.3f}"),
-            ("✅ Nota: ψt×ψe ≤ 1.7", "✅" if psit_v*psie_v<=1.7 else " ? Limitar a 1.7"),
+            (" Nota: ψt×ψe ≤ 1.7", "" if psit_v*psie_v<=1.7 else " ? Limitar a 1.7"),
             ("ld (barra recta en tensión)", f"**{ld_mm:.0f} mm = {ld_mm/10:.1f} cm**"),
             ("Empalme Clase A (ld×1.0)", f"{ls_A:.0f} mm = {ls_A/10:.1f} cm"),
             ("Empalme Clase B (ld×1.3)", f"{ls_B:.0f} mm = {ls_B/10:.1f} cm"),
@@ -2683,12 +2683,12 @@ if modulo_sel == "🔗 Longitud de Desarrollo y Empalmes":
         ])
         if psit_v*psie_v > 1.7:
             st.warning(" ? El producto ψt×ψe no puede exceder 1.7 (ACI 318-25 25.4.2.5)")
-        st.success(f"✅ ld = {ld_mm:.0f} mm | Empalme B = {ls_B:.0f} mm")
+        st.success(f" ld = {ld_mm:.0f} mm | Empalme B = {ls_B:.0f} mm")
 
 # ??????????????????????????????????????????
 # 9. DISEÑO S?SMICO Y DXF VIGA CONTINUA
 # ??????????????????????????????????????????
-if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
+if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
     st.markdown(_t(f"**Diseño completo de un vano con rótulas plásticas y detallado CAD** | Norma: `{code['ref']}`", f"**Full span design with plastic hinges & CAD detail** | Code: `{code['ref']}`"))
     
     # Reconocer nivel de disipación
@@ -2699,7 +2699,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
     if not es_sismico:
         st.info("ℹ? El nivel de amenaza seleccionado corresponde a **Disipación Mínima u Ordinaria**. Las reglas especiales de nudos, cortante Vp y confinamiento C.21.5 no son estrictamente obligatorias, pero el módulo diseñará basándose en el estándar de pórticos de momento.")
     else:
-        st.warning(f"🚨 **Nivel {nivel_sis} Activado:** Se evaluarán todas las reglas estrictas de geometría, nudos y capacidad ($V_p$) aplicables a zonas sísmicas.")
+        st.warning(f" **Nivel {nivel_sis} Activado:** Se evaluarán todas las reglas estrictas de geometría, nudos y capacidad ($V_p$) aplicables a zonas sísmicas.")
 
     # ─── BLOQUE 4: TABLA DE PAR?METROS Y β? EXPL?CITO ────────────────────────────
     beta1_tab = 0.85 if fc <= 28 else max(0.65, 0.85 - 0.05*(fc - 28)/7)
@@ -2716,7 +2716,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
     else:
         beta1_texto = f"f'c ≥ 55 MPa → β? = 0.65"
 
-    st.markdown("#### 📋 Parámetros de Diseño")
+    st.markdown("####  Parámetros de Diseño")
     col_p1, col_p2 = st.columns(2)
 
     with col_p1:
@@ -2770,7 +2770,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
 
     # ─── BLOQUE 1: DIAGRAMA ENVOLVENTE DE MOMENTOS ───────────────────────────────
     st.markdown("---")
-    st.subheader("📊 Diagrama de Envolvente de Momentos")
+    st.subheader(" Diagrama de Envolvente de Momentos")
     st.caption("Distribución esquemática de momentos últimos a lo largo del vano")
 
     fig_env, ax_env = plt.subplots(figsize=(9, 3.2))
@@ -2971,29 +2971,29 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
     if s_diseno_conf_cm < 5: s_diseno_conf_cm = 5
 
     st.markdown("---")
-    st.subheader("📊 Reporte de Verificaciones (NSR-10 / ACI 318)")
+    st.subheader(" Reporte de Verificaciones (NSR-10 / ACI 318)")
     
-    t1, t2, t3 = st.tabs(["✅ Chequeos Sísmicos", "💥 Momentos y Flexión", "⚡ Cortante Plástico ($V_p$)"])
+    t1, t2, t3 = st.tabs([" Chequeos Sísmicos", " Momentos y Flexión", "⚡ Cortante Plástico ($V_p$)"])
     with t1:
         st.markdown("**(A) Geometría**")
-        st.write(f"- $b_w \ge 25$ cm: {'✅ CUMPLE' if chk_b_min else f'? ({b_vc} cm)'}")
-        st.write(f"- $b_w / h \ge 0.3$: {'✅ CUMPLE' if chk_bh_ratio else f'? ({b_vc/h_vc:.2f})'}")
-        st.write(f"- $b_w \le b_{{col}} + 3h$: {'✅ CUMPLE' if chk_b_max else f'? ({bcol_vc+3*h_vc} cm)'}")
+        st.write(f"- $b_w \ge 25$ cm: {' CUMPLE' if chk_b_min else f'? ({b_vc} cm)'}")
+        st.write(f"- $b_w / h \ge 0.3$: {' CUMPLE' if chk_bh_ratio else f'? ({b_vc/h_vc:.2f})'}")
+        st.write(f"- $b_w \le b_{{col}} + 3h$: {' CUMPLE' if chk_b_max else f'? ({bcol_vc+3*h_vc} cm)'}")
         
         st.markdown(f"**(B) Requisitos Cuantía Longitudinal ({'DMO/DES' if es_sismico else 'General'})**")
         if es_sismico:
-            st.write(f"- $A_{{s,inf}} \ge 0.50 A_{{s,sup}}$ (Nudo Izquierdo): {'✅ CUMPLE' if chk_izq_inf_50 else f'? ({As_izq_inf:.2f} < {0.5*As_izq_sup:.2f})'}")
-            st.write(f"- $A_{{s,inf}} \ge 0.50 A_{{s,sup}}$ (Nudo Derecho): {'✅ CUMPLE' if chk_der_inf_50 else f'? ({As_der_inf:.2f} < {0.5*As_der_sup:.2f})'}")
-            st.write(f"- Min 2 barras continuas cara a cara: {'✅ CUMPLE' if chk_2_continuas else '? Faltan barras continuas'}")
-            st.write(f"- $\\rho_{{max}} \le 0.025$ (DES): {'✅ CUMPLE' if chk_rho_des else '? EXCEDE'}")
+            st.write(f"- $A_{{s,inf}} \ge 0.50 A_{{s,sup}}$ (Nudo Izquierdo): {' CUMPLE' if chk_izq_inf_50 else f'? ({As_izq_inf:.2f} < {0.5*As_izq_sup:.2f})'}")
+            st.write(f"- $A_{{s,inf}} \ge 0.50 A_{{s,sup}}$ (Nudo Derecho): {' CUMPLE' if chk_der_inf_50 else f'? ({As_der_inf:.2f} < {0.5*As_der_sup:.2f})'}")
+            st.write(f"- Min 2 barras continuas cara a cara: {' CUMPLE' if chk_2_continuas else '? Faltan barras continuas'}")
+            st.write(f"- $\\rho_{{max}} \le 0.025$ (DES): {' CUMPLE' if chk_rho_des else '? EXCEDE'}")
         else:
             st.info("No aplican reglas estrictas C.21.5 de pórticos.")
 
     with t2:
         rows_flex = [
-            ("Nudo Izquierdo (-)", f"φMn = {phiMn_izq_neg*factor_fuerza:.2f}", f"Mu = {Mu_izq_neg*factor_fuerza:.2f}", "✅ OK" if phiMn_izq_neg>=Mu_izq_neg else "? FALLA"),
-            ("Centro Vano (+)",   f"φMn = {phiMn_cen_pos*factor_fuerza:.2f}", f"Mu = {Mu_cen_pos*factor_fuerza:.2f}", "✅ OK" if phiMn_cen_pos>=Mu_cen_pos else "? FALLA"),
-            ("Nudo Derecho (-)",  f"φMn = {phiMn_der_neg*factor_fuerza:.2f}", f"Mu = {Mu_der_neg*factor_fuerza:.2f}", "✅ OK" if phiMn_der_neg>=Mu_der_neg else "? FALLA"),
+            ("Nudo Izquierdo (-)", f"φMn = {phiMn_izq_neg*factor_fuerza:.2f}", f"Mu = {Mu_izq_neg*factor_fuerza:.2f}", " OK" if phiMn_izq_neg>=Mu_izq_neg else "? FALLA"),
+            ("Centro Vano (+)",   f"φMn = {phiMn_cen_pos*factor_fuerza:.2f}", f"Mu = {Mu_cen_pos*factor_fuerza:.2f}", " OK" if phiMn_cen_pos>=Mu_cen_pos else "? FALLA"),
+            ("Nudo Derecho (-)",  f"φMn = {phiMn_der_neg*factor_fuerza:.2f}", f"Mu = {Mu_der_neg*factor_fuerza:.2f}", " OK" if phiMn_der_neg>=Mu_der_neg else "? FALLA"),
         ]
         st.dataframe(pd.DataFrame(rows_flex, columns=["Zona", f"Capacidad [{unidad_mom}]", f"Demanda [{unidad_mom}]", "Estado"]), use_container_width=True, hide_index=True)
 
@@ -3020,7 +3020,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
                 _As_req_aprox = mu_d * 1e6 / (phi_f * fy * (_d_mm - _a_actual / 2) * 100)  # cm²
                 _As_actual    = (As_izq_sup if "Izq" in zona else (As_der_sup if "Der" in zona else As_cen_inf))
 
-                with st.expander(f"🔴 **{zona}** — φMn = {phi_mn*factor_fuerza:.2f} < Mu = {mu_d*factor_fuerza:.2f} {unidad_mom} (déficit: {_deficit:.2f})", expanded=True):
+                with st.expander(f" **{zona}** — φMn = {phi_mn*factor_fuerza:.2f} < Mu = {mu_d*factor_fuerza:.2f} {unidad_mom} (déficit: {_deficit:.2f})", expanded=True):
                     st.error(
                         f"**La capacidad es insuficiente en {zona}.**  \n"
                         f"Necesitas **{_ratio:.2f}× más momento resistente** en {desc_zona}."
@@ -3148,15 +3148,15 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
         a_max    = beta1_vc * c_max  # cm
 
         def chk_doble_arm(Mu_kNm, etiqueta):
-            if Mu_kNm <= 0: return etiqueta, "—", "—", "✅ No aplica"
+            if Mu_kNm <= 0: return etiqueta, "—", "—", " No aplica"
             b_mm = b_vc_cm * 10
             d_mm = d_vc_cm * 10
             Mu_Nmm = abs(Mu_kNm) * 1e6
             disc = d_mm**2 - (2 * Mu_Nmm) / (0.85 * fc * 0.9 * b_mm)
-            if disc < 0: return etiqueta, "∞", f"{a_max:.2f}", "🔴 REQUIERE A's compresión"
+            if disc < 0: return etiqueta, "∞", f"{a_max:.2f}", " REQUIERE A's compresión"
             a_calc = (d_mm - math.sqrt(disc)) / 10  # cm
-            if a_calc > a_max: return etiqueta, f"{a_calc:.2f}", f"{a_max:.2f}", "🔴 REQUIERE A's compresión"
-            else: return etiqueta, f"{a_calc:.2f}", f"{a_max:.2f}", "✅ Simplemente reforzada"
+            if a_calc > a_max: return etiqueta, f"{a_calc:.2f}", f"{a_max:.2f}", " REQUIERE A's compresión"
+            else: return etiqueta, f"{a_calc:.2f}", f"{a_max:.2f}", " Simplemente reforzada"
 
         filas_doble = [
             chk_doble_arm(Mu_izq_neg,  "Sup. Izquierda"),
@@ -3167,7 +3167,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
         ]
 
         filas_html = [f'''
-            <tr style="background:{'#1a3a1a' if '✅' in f[3] else '#3a1a1a'}; color:white; border-bottom:1px solid #444;">
+            <tr style="background:{'#1a3a1a' if '' in f[3] else '#3a1a1a'}; color:white; border-bottom:1px solid #444;">
               <td style="padding:7px;">{f[0]}</td>
               <td style="padding:7px; text-align:center;">{f[1]}</td>
               <td style="padding:7px; text-align:center;">{f[2]}</td>
@@ -3196,9 +3196,9 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
 
         hay_doble = any("REQUIERE" in f[3] for f in filas_doble)
         if hay_doble:
-            st.error("🔴 Una o más zonas requieren acero en compresión (doble armadura). Agregue barras superiores adicionales en esas zonas o aumente la sección.")
+            st.error(" Una o más zonas requieren acero en compresión (doble armadura). Agregue barras superiores adicionales en esas zonas o aumente la sección.")
         else:
-            st.success("✅ Todas las zonas son simplemente reforzadas. No se requiere A's en compresión.")
+            st.success(" Todas las zonas son simplemente reforzadas. No se requiere A's en compresión.")
 
         st.markdown("---")
         st.markdown("#### ⚡ Verificación de Cortante Plástico")
@@ -3208,18 +3208,18 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
         st.markdown(f"- Cortante Plástico $(M_{{pr,izq}} + M_{{pr,der}})/L_n$ = **{V_plastico*factor_fuerza:.2f}** {unidad_fuerza}")
         st.markdown(f"- **Cortante de Diseño $V_e$** = **{Ve_cortante_diseno*factor_fuerza:.2f}** {unidad_fuerza}")
         if aplica_Vc_cero:
-            st.error("🚨 **ALERTA S?SMICA:** El cortante inducido por el sismo supera el 50% del cortante total de diseño $V_e$. La normativa exige penalizar al concreto asumiendo **Vc = 0** en la zona de confinamiento de la rótula plástica.")
+            st.error(" **ALERTA S?SMICA:** El cortante inducido por el sismo supera el 50% del cortante total de diseño $V_e$. La normativa exige penalizar al concreto asumiendo **Vc = 0** en la zona de confinamiento de la rótula plástica.")
         else:
-            st.success(f"✅ Vc = {Vc_vc*factor_fuerza:.2f} {unidad_fuerza}. No se exige Vc=0.")
+            st.success(f" Vc = {Vc_vc*factor_fuerza:.2f} {unidad_fuerza}. No se exige Vc=0.")
             
         st.markdown(f"**Diseño de Estribos en Zona Confinamiento (2h = {2*h_vc:.0f} cm)**")
         st.write(f"Separación máxima por norma ($s_{{max}}$) = {s_max_conf/10:.1f} cm")
         st.write(f"Separación requerida por $V_e$ = {s_calc_vc/10:.1f} cm")
-        st.info(f"👉 Se usarán **Estribos {st_bar_vc} ({n_ramas_vc} ramas) @ {s_diseno_conf_cm:.0f} cm** en zona confinada.")
+        st.info(f" Se usarán **Estribos {st_bar_vc} ({n_ramas_vc} ramas) @ {s_diseno_conf_cm:.0f} cm** en zona confinada.")
 
     # --- RESULTADOS ADICIONALES (3D, APU, Memoria) ---
     st.markdown("---")
-    res_t1, res_t2, res_t3 = st.tabs(["🧊 Visualización 3D", "📦 Cantidades y APU", "📄 Memoria de Cálculo"])
+    res_t1, res_t2, res_t3 = st.tabs([" Visualización 3D", " Cantidades y APU", " Memoria de Cálculo"])
     
     with res_t1:
         fig3d = go.Figure()
@@ -3294,7 +3294,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
 
     with res_t3:
         st.info("La memoria de cálculo consolida las verificaciones sísmicas y chequeos normativos DMO/DES.")
-        if st.button("📄 Generar Memoria Sísmica (DOCX)"):
+        if st.button(" Generar Memoria Sísmica (DOCX)"):
             from datetime import datetime
             import io
             doc = Document()
@@ -3319,7 +3319,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
 
     # --- GENERADOR DXF PARA VIGAS ---
     st.markdown("---")
-    st.subheader("🖨? Exportación de Planos DXF (Viga DMO/DES)")
+    st.subheader("? Exportación de Planos DXF (Viga DMO/DES)")
     
     col_d1, col_d2, col_d3 = st.columns(3)
     with col_d1:
@@ -3333,7 +3333,7 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
         dxf_aprobo = st.text_input("APROBÓ", "DIRECTOR PROYECTO", key="vg_apr")
 
     tipo_viga_dxf = st.selectbox("Sección para Despiece DXF:", ["Viga Rectangular", "Viga T (con aletas)"])
-    if st.button("🚀 Generar Plano DXF (ICONTEC) - Viga", use_container_width=True):
+    if st.button(" Generar Plano DXF (ICONTEC) - Viga", use_container_width=True):
         import ezdxf
         from ezdxf.enums import TextEntityAlignment
         doc_dxf = ezdxf.new('R2010')
@@ -3593,9 +3593,9 @@ if modulo_sel == "🏗️ Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)
             dxf_bytes = f.read()
         _os.unlink(tmp_path)
         
-        st.success("✅ Plano DXF generado correctamente en memoria.")
+        st.success(" Plano DXF generado correctamente en memoria.")
         st.download_button(
-            label=_t("📥 Descargar DXF (Viga - ICONTEC)", "📥 Download DXF (Viga - ICONTEC)"),
+            label=_t(" Descargar DXF (Viga - ICONTEC)", " Download DXF (Viga - ICONTEC)"),
             data=dxf_bytes,
             file_name=f"Viga_{b_vc:.0f}x{h_vc:.0f}_ICONTEC.dxf",
             mime="application/dxf")
@@ -3628,7 +3628,7 @@ nombre_producido_v = st.session_state.get("nombre_proyecto_vigas", "")
 st.sidebar.markdown("**Nuevo Proyecto / Guardar**")
 nombre_proy_v = st.sidebar.text_input("Nombre para guardar", value=nombre_producido_v, key="input_guardar_proy_v")
 
-if st.sidebar.button("💾 Guardar Proyecto Vigas", use_container_width=True):
+if st.sidebar.button(" Guardar Proyecto Vigas", use_container_width=True):
     if nombre_proy_v:
         ok, msg = guardar_proyecto_supabase_vigas(nombre_proy_v, capturar_estado_vigas())
         if ok:
@@ -3652,7 +3652,7 @@ if lista_proy_v:
     nombre_proy_cargar_v = st.sidebar.selectbox(
         "Selecciona un proyecto", lista_proy_v, index=idx_default_v, key="select_cargar_proy_v"
     )
-    if st.sidebar.button("📂 Cargar Proyecto Vigas", use_container_width=True):
+    if st.sidebar.button(" Cargar Proyecto Vigas", use_container_width=True):
         ok, msg = cargar_proyecto_supabase_vigas(nombre_proy_cargar_v)
         if ok:
             st.session_state["nombre_proyecto_vigas"] = nombre_proy_cargar_v
@@ -3667,30 +3667,30 @@ else:
 # ══════════════════════════════════════════════════════════
 # MÓDULO: CUADRO DE MANDO GENERAL (M3 — Historial Diseños)
 # ══════════════════════════════════════════════════════════
-if modulo_sel == "📊 Cuadro de Mando General":
-    st.subheader("📊 Cuadro de Mando General — Historial de Diseños")
+if modulo_sel == " Cuadro de Mando General":
+    st.subheader(" Cuadro de Mando General — Historial de Diseños")
     historial = st.session_state.get("historial_disenos", [])
 
     if not historial:
-        st.info("ℹ️ No hay diseños registrados aún. Usa el botón **📥 Enviar a Cuadro de Mando** en cada módulo para guardar resultados.")
+        st.info("ℹ No hay diseños registrados aún. Usa el botón ** Enviar a Cuadro de Mando** en cada módulo para guardar resultados.")
     else:
         df_hist = pd.DataFrame(historial)
 
         # Métricas resumen
         total = len(df_hist)
-        aprobados  = len(df_hist[df_hist["Estado"].str.contains("APROBADO|✅", na=False)])
+        aprobados  = len(df_hist[df_hist["Estado"].str.contains("APROBADO|", na=False)])
         rechazados = total - aprobados
         col_m1, col_m2, col_m3 = st.columns(3)
         col_m1.metric("Total Diseños", total)
-        col_m2.metric("✅ Aprobados", aprobados, delta=f"{aprobados/total*100:.0f}%")
-        col_m3.metric("❌ No Cumplen", rechazados, delta=f"-{rechazados/total*100:.0f}%", delta_color="inverse")
+        col_m2.metric(" Aprobados", aprobados, delta=f"{aprobados/total*100:.0f}%")
+        col_m3.metric(" No Cumplen", rechazados, delta=f"-{rechazados/total*100:.0f}%", delta_color="inverse")
 
         st.markdown("---")
 
         # Tabla principal con colores de estado
-        st.markdown("#### 📋 Registro de Diseños")
+        st.markdown("####  Registro de Diseños")
         def _color_estado(val):
-            if "APROBADO" in str(val) or "✅" in str(val):
+            if "APROBADO" in str(val) or "" in str(val):
                 return "background-color:#1a4a2e; color:#4ade80"
             elif "NO CUMPLE" in str(val) or "EXCEDE" in str(val):
                 return "background-color:#4a1a1a; color:#f87171"
@@ -3708,7 +3708,7 @@ if modulo_sel == "📊 Cuadro de Mando General":
         with col_g1:
             import plotly.graph_objects as go_cmd
             fig_pie = go_cmd.Figure(go_cmd.Pie(
-                labels=["✅ Aprobados", "❌ No Cumplen"],
+                labels=[" Aprobados", " No Cumplen"],
                 values=[aprobados, rechazados],
                 marker=dict(colors=["#22c55e", "#ef4444"]),
                 hole=0.4,
@@ -3747,10 +3747,10 @@ if modulo_sel == "📊 Cuadro de Mando General":
         col_exp1, col_exp2 = st.columns(2)
         with col_exp1:
             csv_hist = df_hist.to_csv(index=False).encode("utf-8")
-            st.download_button("📥 Exportar Historial CSV", data=csv_hist,
+            st.download_button(" Exportar Historial CSV", data=csv_hist,
                                file_name=f"historial_disenos_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                                mime="text/csv")
         with col_exp2:
-            if st.button("🗑️ Limpiar Historial", type="secondary"):
+            if st.button(" Limpiar Historial", type="secondary"):
                 st.session_state.historial_disenos = []
                 st.rerun()

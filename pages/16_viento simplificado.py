@@ -478,7 +478,7 @@ def generate_memory():
         p.add_run(f"{v['item']} – {v['referencia']}\n").bold = True
         p.add_run(f"Requerido: {v['requerido']}\n")
         p.add_run(f"Calculado: {v['calculado']}\n")
-        p.add_run(f"Estado: {'✅ CUMPLE' if v['cumple'] else '❌ NO CUMPLE'} – {v['observacion']}\n")
+        p.add_run(f"Estado: {' CUMPLE' if v['cumple'] else ' NO CUMPLE'} – {v['observacion']}\n")
     
     doc.add_heading("3. Cantidades de materiales", level=1)
     doc.add_paragraph(f"Área de placa: {area_total:.2f} m²")
@@ -505,7 +505,7 @@ def generate_memory():
 # INTERFAZ PRINCIPAL (PESTAÑAS)
 # ─────────────────────────────────────────────
 tab_res, tab_3d, tab_dxf, tab_mem, tab_qty, tab_apu = st.tabs([
-    "📊 Resultados", "🧊 Modelo 3D", "📏 DXF", "📄 Memoria", "📦 Cantidades", "💰 APU"
+    " Resultados", " Modelo 3D", " DXF", " Memoria", " Cantidades", " APU"
 ])
 
 with tab_res:
@@ -522,9 +522,9 @@ with tab_res:
     st.markdown("### Verificaciones normativas")
     for v in verificaciones:
         if v['cumple']:
-            st.success(f"✅ {v['item']}: {v['calculado']} – {v['observacion']}")
+            st.success(f" {v['item']}: {v['calculado']} – {v['observacion']}")
         else:
-            st.error(f"❌ {v['item']}: {v['calculado']} – {v['observacion']}")
+            st.error(f" {v['item']}: {v['calculado']} – {v['observacion']}")
         st.caption(f"Referencia: {v['referencia']}")
 
 with tab_3d:
@@ -540,7 +540,7 @@ with tab_dxf:
     if st.button("Generar archivo DXF"):
         dxf_data = generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo, 
                                 block_length, incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente)
-        st.download_button("📥 Descargar DXF", data=dxf_data, file_name=f"PlacaFacil_{proyecto_nombre}.dxf", mime="application/dxf")
+        st.download_button(" Descargar DXF", data=dxf_data, file_name=f"PlacaFacil_{proyecto_nombre}.dxf", mime="application/dxf")
 
 with tab_mem:
     st.subheader("Memoria de cálculo")
@@ -549,7 +549,7 @@ with tab_mem:
         buf = io.BytesIO()
         doc.save(buf)
         buf.seek(0)
-        st.download_button("📥 Descargar Memoria", data=buf, file_name=f"Memoria_PlacaFacil_{proyecto_nombre}.docx", 
+        st.download_button(" Descargar Memoria", data=buf, file_name=f"Memoria_PlacaFacil_{proyecto_nombre}.docx", 
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_qty:
@@ -590,7 +590,7 @@ with tab_apu:
         use_container_width=True,
         hide_index=True
     )
-    st.metric(f"💎 Gran Total Proyecto ({moneda})", f"{total_proyecto:,.0f}")
+    st.metric(f" Gran Total Proyecto ({moneda})", f"{total_proyecto:,.0f}")
     
     if st.button("Exportar presupuesto a Excel"):
         output = io.BytesIO()
@@ -598,7 +598,7 @@ with tab_apu:
             df_costo.to_excel(writer, sheet_name="Presupuesto", index=False)
             df_qty.to_excel(writer, sheet_name="Cantidades", index=False)
         output.seek(0)
-        st.download_button("📥 Descargar Excel", data=output, file_name=f"Presupuesto_PlacaFacil_{proyecto_nombre}.xlsx", 
+        st.download_button(" Descargar Excel", data=output, file_name=f"Presupuesto_PlacaFacil_{proyecto_nombre}.xlsx", 
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ─────────────────────────────────────────────
@@ -611,5 +611,5 @@ st.markdown(f"""
 > f'c = {fc_concreto:.1f} MPa | Espesor torta = {espesor_torta*100:.1f} cm | Altura total = {altura_total*100:.1f} cm  
 > Bloques de arcilla: {block_length*100:.0f}×{block_width*100:.0f}×{block_height*100:.0f} cm, {BLOCK_DATA['unidades_por_m2']:.2f} ud/m²  
 > **Referencia:** {norma['ref']}  
-> ⚠️ *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
+> ⚠ *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
 """)

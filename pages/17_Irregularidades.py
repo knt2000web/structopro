@@ -15,7 +15,7 @@ def _t(es, en): return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
 st.set_page_config(page_title=_t("Irregularidades Estructurales", "Structural Irregularities"), layout="wide")
-st.title("📐 " + _t("Verificación de Irregularidades Estructurales", "Structural Irregularities Check"))
+st.title(" " + _t("Verificación de Irregularidades Estructurales", "Structural Irregularities Check"))
 st.markdown(_t(
     "Evaluación de irregularidades en altura y planta según las principales normas sísmicas (E.030, NSR-10, ACI 318, etc.).\n\n"
     "**Nota:** Los factores Ia e Ip reducen el coeficiente de reducción de fuerza sísmica R. Valores <1 indican presencia de irregularidades.",
@@ -164,7 +164,7 @@ update_data()
 
 # Pestañas
 tab_data, tab_altura, tab_planta, tab_resumen = st.tabs([
-    "📋 Datos por piso", "📐 Auto-cálculo", "🏢 Datos planta", "📊 Verificación"
+    " Datos por piso", " Auto-cálculo", " Datos planta", " Verificación"
 ])
 
 with tab_data:
@@ -505,5 +505,5 @@ st.markdown("---")
 st.markdown(f"""
 > **{_t('Módulo de Irregularidades', 'Irregularities Module')}**  
 > {_t('Norma activa:', 'Active code:')} `{norma_disp}`  
-> ⚠️ *Los resultados deben ser verificados por un ingeniero estructural calificado.*
+> ⚠ *Los resultados deben ser verificados por un ingeniero estructural calificado.*
 """)

@@ -579,7 +579,7 @@ with st.sidebar:
     st.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
     st.markdown("---")
 
-    st.header(_t("📏 Geometría", "📏 Geometry"))
+    st.header(_t(" Geometría", " Geometry"))
     L_x = st.number_input("Frente Lote X (m)", value=12.0, min_value=2.0, step=0.5, key="g3d_lx")
     L_z = st.number_input("Fondo Lote Z (m)", value=15.0, min_value=2.0, step=0.5, key="g3d_lz")
     n_x = st.number_input("N° Columnas en X", value=4, min_value=2, step=1, key="g3d_nx")
@@ -609,7 +609,7 @@ with st.sidebar:
     cm = st.number_input("Carga Muerta (CM)", value=4.5, step=0.5, key="g3d_cm")
     cv = st.number_input("Carga Viva (CV)", value=2.0, step=0.5, key="g3d_cv")
 
-    st.subheader(_t("🌍 Parámetros Sísmicos", "🌍 Seismic Parameters"))
+    st.subheader(_t(" Parámetros Sísmicos", " Seismic Parameters"))
     # Selección de ciudad según norma
     ciudades = list(seismic_info["ciudades"].keys())
     ciudad_sel = st.selectbox(_t("Ciudad / Localidad", "City / Location"), ciudades, key="g3d_ciudad")
@@ -639,7 +639,7 @@ with st.sidebar:
         seismic_params = {"S_DS": 0.6, "S_D1": 0.4, "TL": 4.0, "R": 6.0, "U": 1.0}
     st.caption(f"R = {seismic_params.get('R', 6.0)} (coeficiente de reducción sísmica)")
 
-    if st.button("🏗️ Generar / Actualizar Malla 3D", type="primary", use_container_width=True):
+    if st.button(" Generar / Actualizar Malla 3D", type="primary", use_container_width=True):
         nudos, cols, vigx, vigz, zaps = generate_mesh(L_x, L_z, n_x, n_z, alturas_list, col_b, col_h, vig_b, vig_h)
         st.session_state.update({
             "g3d_nudos": nudos, "g3d_cols": cols, "g3d_vx": vigx, "g3d_vz": vigz, "g3d_zaps": zaps,
@@ -661,7 +661,7 @@ if st.session_state.get("g3d_ready", False):
         st.plotly_chart(fig, use_container_width=True, height=600)
 
     with col_data:
-        if st.button("📐 Ejecutar Diseño Estructural", type="primary", use_container_width=True):
+        if st.button(" Ejecutar Diseño Estructural", type="primary", use_container_width=True):
             area_planta = (max(nudos['X']) - min(nudos['X'])) * (max(nudos['Z']) - min(nudos['Z']))
             df_cols, df_beams, df_zaps, vol_losa, peso_acero_losa, h_losa, As_losa, Sa, T_aprox, V_basal, V_piso = design_all_elements(
                 nudos, cols, vigas_x, vigas_z, zaps,
@@ -682,7 +682,7 @@ if st.session_state.get("g3d_ready", False):
                 "V_piso": V_piso,
                 "seismic_params": seismic_params
             }
-            st.success("✅ Diseño completado.")
+            st.success(" Diseño completado.")
             st.rerun()
 
         if st.session_state.get("g3d_design") is not None:
@@ -697,7 +697,7 @@ if st.session_state.get("g3d_ready", False):
             col3.metric("Cuantía de acero", f"{peso_acero/vol_conc:.1f} kg/m³" if vol_conc>0 else "N/A")
 
             # Mostrar información sísmica
-            with st.expander("📊 Resultados del análisis sísmico"):
+            with st.expander(" Resultados del análisis sísmico"):
                 st.write(f"Período fundamental aproximado: T = {des['T_aprox']:.3f} s")
                 st.write(f"Aceleración espectral: Sa = {des['Sa']:.3f} g")
                 st.write(f"Cortante basal: V = {des['V_basal']:.1f} kN")
@@ -719,19 +719,19 @@ if st.session_state.get("g3d_ready", False):
 
             # Exportaciones
             st.markdown("---")
-            st.subheader("📥 Exportar")
+            st.subheader(" Exportar")
             col_e1, col_e2, col_e3 = st.columns(3)
             with col_e1:
-                if st.button("📊 Exportar a Excel"):
+                if st.button(" Exportar a Excel"):
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         des["columnas"].to_excel(writer, sheet_name="Columnas", index=False)
                         des["vigas"].to_excel(writer, sheet_name="Vigas", index=False)
                         des["zapatas"].to_excel(writer, sheet_name="Zapatas", index=False)
                         pd.DataFrame({"Item": ["Volumen concreto", "Peso acero"], "Valor": [vol_conc, peso_acero]}).to_excel(writer, sheet_name="Resumen", index=False)
-                    st.download_button("📥 Descargar Excel", data=output.getvalue(), file_name="Generador_3D_Resultados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    st.download_button(" Descargar Excel", data=output.getvalue(), file_name="Generador_3D_Resultados.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             with col_e2:
-                if st.button("📄 Memoria DOCX"):
+                if st.button(" Memoria DOCX"):
                     doc = Document()
                     doc.add_heading(f"Memoria de Cálculo - Edificio Paramétrico ({norma_sel})", 0)
                     doc.add_paragraph(f"Fecha: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}")
@@ -757,7 +757,7 @@ if st.session_state.get("g3d_ready", False):
                         cells[1].text = f"{row['b (cm)']:.0f}"
                         cells[2].text = f"{row['h (cm)']:.0f}"
                         cells[3].text = f"{row['As (cm²)']:.1f}"
-                        cells[4].text = "✅" if row["Cumple"] else "❌"
+                        cells[4].text = "" if row["Cumple"] else ""
                         cells[5].text = row["Observación"]
                     doc.add_paragraph("Vigas (primeras 5):")
                     table_vig = doc.add_table(rows=1+min(5, len(des["vigas"])), cols=6)
@@ -775,9 +775,9 @@ if st.session_state.get("g3d_ready", False):
                     buf = io.BytesIO()
                     doc.save(buf)
                     buf.seek(0)
-                    st.download_button("📥 Descargar Memoria DOCX", data=buf, file_name="Memoria_Generador_3D.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                    st.download_button(" Descargar Memoria DOCX", data=buf, file_name="Memoria_Generador_3D.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
             with col_e3:
-                if st.button("🏗️ Exportar DXF"):
+                if st.button(" Exportar DXF"):
                     try:
                         from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
                                                  dxf_rotulo, dxf_rotulo_campos)
@@ -816,7 +816,7 @@ if st.session_state.get("g3d_ready", False):
                     dwg.saveas(tmp_path_out16)
                     with open(tmp_path_out16, 'rb') as f_out16:
                         bytes_out16 = f_out16.read()
-                    os.unlink(tmp_path_out16)                    st.download_button("📥 Descargar DXF", data=bytes_out16, file_name="Edificio_3D.dxf")
+                    os.unlink(tmp_path_out16)                    st.download_button(" Descargar DXF", data=bytes_out16, file_name="Edificio_3D.dxf")
 
             # APU (presupuesto)
             if "apu_config" in st.session_state:
@@ -841,12 +841,12 @@ if st.session_state.get("g3d_ready", False):
                 total = costo_directo + herramienta + aiu + iva
 
                 st.markdown("---")
-                st.subheader("💰 Presupuesto estimado")
+                st.subheader(" Presupuesto estimado")
                 st.write(f"**Volumen concreto:** {vol_conc:.2f} m³")
                 st.write(f"**Acero:** {peso_acero:.1f} kg")
                 st.write(f"**Costo materiales:** {mon} {total_mat:,.2f}")
                 st.write(f"**Costo total (incl. MO e indirectos):** {mon} {total:,.2f}")
             else:
-                st.info("💡 Ve a la página 'APU Mercado' para configurar precios.")
+                st.info(" Ve a la página 'APU Mercado' para configurar precios.")
 else:
-    st.info("👈 Configure los parámetros en la barra lateral y presione **Generar Malla 3D**.")
+    st.info(" Configure los parámetros en la barra lateral y presione **Generar Malla 3D**.")

@@ -121,8 +121,8 @@ sistema_estructural = st.sidebar.selectbox(_t("Sistema estructural","Structural 
     ["DMO (Desempeño Mínimo)","DES (Desempeño Especial)","DMI (Desempeño Intermedio)"], index=0)
 is_high_seismic = ("IV" in zona_sismica) or ("III" in zona_sismica)
 if is_high_seismic and "DMO" in sistema_estructural:
-    st.sidebar.warning(_t("⚠️ Zona alta: DMO no permitido según NSR-10 C.21. Use DES o DMI.",
-                          "⚠️ High seismic zone: DMO not allowed per NSR-10 C.21. Use DES or DMI."))
+    st.sidebar.warning(_t("⚠ Zona alta: DMO no permitido según NSR-10 C.21. Use DES o DMI.",
+                          "⚠ High seismic zone: DMO not allowed per NSR-10 C.21. Use DES or DMI."))
 
 st.sidebar.header(_t("Factores de desperdicio","Waste factors"))
 desp_bloques  = st.sidebar.number_input(_t("Bloques (%)","Blocks (%)"), 0.0, 20.0, 5.0, 1.0) / 100.0
@@ -186,9 +186,9 @@ total_cemento_kg = CONCRETE_DATA["cemento_por_m3"] * vol_concreto_total_desp
 bultos_cemento   = math.ceil(total_cemento_kg / 50)
 
 if perfil_largo > 3.5 and perfil_largo <= 4.2:
-    st.warning(f"⚠️ La luz de los perfiles es {perfil_largo:.2f} m. Está cerca del máximo de {norma['luz_max']} m.")
+    st.warning(f"⚠ La luz de los perfiles es {perfil_largo:.2f} m. Está cerca del máximo de {norma['luz_max']} m.")
 elif perfil_largo > norma["luz_max"]:
-    st.error(f"❌ La luz de los perfiles ({perfil_largo:.2f} m) excede el máximo permitido ({norma['luz_max']} m). Se requiere viga intermedia.")
+    st.error(f" La luz de los perfiles ({perfil_largo:.2f} m) excede el máximo permitido ({norma['luz_max']} m). Se requiere viga intermedia.")
 
 # ─────────────────────────────────────────────
 # CÁLCULOS ESTRUCTURALES
@@ -325,7 +325,7 @@ verificaciones.append({"item":"Zona sísmica y confinamiento","referencia":"NSR-
     "requerido":f"Estribos {'d/4' if is_high_seismic and 'DMO' not in sistema_estructural else 'd/2'} @ {s_beam*100:.0f} cm",
     "calculado":f"Zona {zona_sismica} | Sistema {sistema_estructural}",
     "cumple": not (is_high_seismic and "DMO" in sistema_estructural),
-    "obs":"Confinamiento requerido" if is_high_seismic and "DMO" not in sistema_estructural else ("⚠️ Cambiar sistema" if is_high_seismic and "DMO" in sistema_estructural else "Ok")})
+    "obs":"Confinamiento requerido" if is_high_seismic and "DMO" not in sistema_estructural else ("⚠ Cambiar sistema" if is_high_seismic and "DMO" in sistema_estructural else "Ok")})
 
 # ─────────────────────────────────────────────
 # PRESUPUESTO APU
@@ -559,7 +559,7 @@ def generate_memory():
         doc.add_paragraph(f"Zona de confinamiento: {confinement_zone_length*100:.0f} cm desde el apoyo (NSR-10 C.21)")
     doc.add_heading("7. Verificaciones normativas",level=1)
     for v in verificaciones:
-        estado="✅ CUMPLE" if v['cumple'] else "❌ NO CUMPLE"
+        estado=" CUMPLE" if v['cumple'] else " NO CUMPLE"
         doc.add_paragraph(f"{estado} – {v['item']}: {v['calculado']} ({v['referencia']})")
     buf=io.BytesIO()
     doc.save(buf)
@@ -592,7 +592,7 @@ def generate_pdf():
     story.append(Paragraph("2. Verificaciones normativas", styles['Heading1']))
     data_pdf = [["Verificación", "Estado"]]
     for v in verificaciones:
-        data_pdf.append([v['item'], "✔" if v['cumple'] else "✘"])
+        data_pdf.append([v['item'], "" if v['cumple'] else ""])
     table_pdf = Table(data_pdf, colWidths=[10*cm, 3*cm])
     table_pdf.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), rl_colors.grey),
@@ -613,7 +613,7 @@ def generate_pdf():
 # INTERFAZ PRINCIPAL – PESTAÑAS
 # ─────────────────────────────────────────────
 tab_res, tab_3d, tab_dxf, tab_mem, tab_qty, tab_apu, tab_resumen = st.tabs([
-    "📊 Resultados", "🧊 Modelo 3D", "📏 DXF", "📄 Memoria", "📦 Cantidades", "💰 APU", "📑 Resumen Ejecutivo"
+    " Resultados", " Modelo 3D", " DXF", " Memoria", " Cantidades", " APU", " Resumen Ejecutivo"
 ])
 
 with tab_res:
@@ -641,7 +641,7 @@ with tab_res:
     st.write(f"**Refuerzo:** {ref_beam}, estribos @ {s_beam*100:.0f} cm")
     st.write(f"**Zona sísmica:** {zona_sismica} | **Sistema:** {sistema_estructural}")
     if confinement_zone_length > 0:
-        st.info(f"🔒 Zona de confinamiento: {confinement_zone_length*100:.0f} cm desde apoyo | Estribos @ {s_beam*100:.0f} cm (NSR-10 C.21)")
+        st.info(f" Zona de confinamiento: {confinement_zone_length*100:.0f} cm desde apoyo | Estribos @ {s_beam*100:.0f} cm (NSR-10 C.21)")
 
     st.markdown("### Sección compuesta y longitud de desarrollo")
     col_sc1, col_sc2, col_sc3 = st.columns(3)
@@ -672,9 +672,9 @@ with tab_res:
     st.markdown("### Verificaciones normativas")
     for v in verificaciones:
         if v['cumple']:
-            st.success(f"✅ {v['item']}: {v['calculado']} – {v['obs']}")
+            st.success(f" {v['item']}: {v['calculado']} – {v['obs']}")
         else:
-            st.error(f"❌ {v['item']}: {v['calculado']} – {v['obs']}")
+            st.error(f" {v['item']}: {v['calculado']} – {v['obs']}")
         st.caption(f"Referencia: {v['referencia']}")
 
 with tab_3d:
@@ -691,14 +691,14 @@ with tab_dxf:
                                 incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente,
                                 plano_numero, escala_plano, elaboro, revisado, aprobado, ref_beam,
                                 zona_sismica, sistema_estructural, s_beam, confinement_zone_length)
-        st.download_button("📥 Descargar DXF", data=dxf_data,
+        st.download_button(" Descargar DXF", data=dxf_data,
                           file_name=f"PlacaFacil_{proyecto_nombre}.dxf", mime="application/dxf")
 
 with tab_mem:
     st.subheader("Memoria de cálculo")
     if st.button("Generar memoria DOCX"):
         buf = generate_memory()
-        st.download_button("📥 Descargar Memoria", data=buf,
+        st.download_button(" Descargar Memoria", data=buf,
                           file_name=f"Memoria_PlacaFacil_{proyecto_nombre}.docx",
                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
@@ -755,13 +755,13 @@ with tab_resumen:
         st.metric("Verificaciones cumplidas", f"{cumplidas}/{len(verificaciones)}")
     with col_r2:
         if sobrecosto > 0:
-            st.warning(f"⚠️ Sobrecosto vs placa maciza: {moneda} {sobrecosto:,.0f}")
+            st.warning(f"⚠ Sobrecosto vs placa maciza: {moneda} {sobrecosto:,.0f}")
         else:
-            st.success(f"✅ Ahorro vs placa maciza: {moneda} {ahorro:,.0f}")
-        st.metric("Deflexión", f"{'✅ OK' if cumple_deflexion else '❌ EXCEDE'} — {delta_calc*1000:.1f} mm")
+            st.success(f" Ahorro vs placa maciza: {moneda} {ahorro:,.0f}")
+        st.metric("Deflexión", f"{' OK' if cumple_deflexion else ' EXCEDE'} — {delta_calc*1000:.1f} mm")
         st.metric("Zona sísmica", f"{zona_sismica}")
     if st.button("Generar PDF Resumen"):
         pdf_data = generate_pdf()
-        st.download_button("📥 Descargar PDF Resumen", data=pdf_data,
+        st.download_button(" Descargar PDF Resumen", data=pdf_data,
                           file_name=f"Resumen_PlacaFacil_{proyecto_nombre}.pdf",
                           mime="application/pdf")

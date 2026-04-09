@@ -38,7 +38,7 @@ st.sidebar.markdown("""
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
@@ -138,7 +138,7 @@ def compute_spectrum(norma, params):
 # =============================================================================
 # 2. INTERFAZ DE PARÁMETROS
 # =============================================================================
-st.header(_t("📊 2. Espectro Sísmico de Diseño", "📊 2. Seismic Design Response Spectrum"))
+st.header(_t(" 2. Espectro Sísmico de Diseño", " 2. Seismic Design Response Spectrum"))
 
 with st.container():
     col_left, col_right = st.columns([1, 2])
@@ -179,7 +179,7 @@ with st.container():
                                    opciones_col, index=idx_ciudad, key="s_ciudad", on_change=city_changed)
             
             if ciudad == "Otra / Custom":
-                with st.expander("➕ Insertar Nueva Ciudad (Guardar en Memoria)", expanded=True):
+                with st.expander(" Insertar Nueva Ciudad (Guardar en Memoria)", expanded=True):
                     _nc = st.text_input("Nombre de la nueva ciudad / microzona", key="new_custom_c")
                     _naa = st.number_input("Aa (Nueva ciudad)", 0.05, 0.50, 0.20, 0.05, key="new_custom_aa")
                     _nav = st.number_input("Av (Nueva ciudad)", 0.05, 0.50, 0.20, 0.05, key="new_custom_av")
@@ -251,7 +251,7 @@ with st.container():
 
         # Estructura (1 GDL)
         st.markdown("---")
-        st.subheader(_t("🏢 Estructura (1 GDL)", "🏢 Structure (1 DOF)"))
+        st.subheader(_t(" Estructura (1 GDL)", " Structure (1 DOF)"))
         peso_W = st.number_input(_t("Peso de la estructura W [kN]", "Structure Weight W [kN]"), 10.0, 50000.0, st.session_state.get("s_W", 1000.0), 10.0, key="s_W")
         rigidez_k = st.number_input(_t("Rigidez Lateral k [kN/m]", "Lateral Stiffness k [kN/m]"), 100.0, 500000.0, st.session_state.get("s_k", 15000.0), 100.0, key="s_k")
         masa_m = peso_W / 9.81
@@ -309,7 +309,7 @@ with st.container():
         col_b.metric(_t("Cortante Basal V", "Base Shear V"), f"{V_base:.1f} kN")
 
         # Tabla de parámetros
-        with st.expander(_t("📋 Parámetros adoptados", "📋 Adopted Parameters")):
+        with st.expander(_t(" Parámetros adoptados", " Adopted Parameters")):
             df_params = pd.DataFrame(params_texto, columns=["Descripción"])
             st.dataframe(df_params, use_container_width=True, hide_index=True)
 
@@ -317,12 +317,12 @@ with st.container():
 # 3. EXPORTACIONES
 # =============================================================================
 st.markdown("---")
-st.subheader(_t("💾 Exportación Integral", "💾 Comprehensive Export"))
+st.subheader(_t(" Exportación Integral", " Comprehensive Export"))
 
 tab_dxf, tab_doc, tab_xls = st.tabs([
-    "📐 " + _t("Exportar Gráfico a DXF", "Export Graph to DXF"),
-    "📄 " + _t("Memoria DOCX", "DOCX Report"),
-    "💰 " + _t("Curva XLSX / Presupuesto APU", "XLSX Curve / APU Budget")
+    " " + _t("Exportar Gráfico a DXF", "Export Graph to DXF"),
+    " " + _t("Memoria DOCX", "DOCX Report"),
+    " " + _t("Curva XLSX / Presupuesto APU", "XLSX Curve / APU Budget")
 ])
 
 with tab_dxf:
@@ -372,7 +372,7 @@ with tab_dxf:
                 dxf_rotulo(msp, _cam, 0, -4.5, rot_w=9, rot_h=3, escala=50)
             _out_dxf = io.StringIO()
             doc_dxf.write(_out_dxf)
-            st.download_button(_t("📥 Descargar Espectro.dxf", "📥 Download Spectrum.dxf"),
+            st.download_button(_t(" Descargar Espectro.dxf", " Download Spectrum.dxf"),
                                data=_out_dxf.getvalue().encode("utf-8"),
                                file_name=f"Espectro_{norma_sel[:5]}.dxf", mime="application/dxf")
 
@@ -406,7 +406,7 @@ with tab_doc:
         buf = io.BytesIO()
         doc.save(buf)
         buf.seek(0)
-        st.download_button(_t("📥 Descargar Memoria DOCX", "📥 Download DOCX Report"), data=buf,
+        st.download_button(_t(" Descargar Memoria DOCX", " Download DOCX Report"), data=buf,
                            file_name="Estudio_Sismico.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_xls:
@@ -424,7 +424,7 @@ with tab_xls:
         # Display Table and Gran Total
         _aiu_cost = honorarios * apu.get("pct_aui", 0.30)
         _total_ds = honorarios + _aiu_cost
-        st.markdown(_t("### 💰 Presupuesto Estimado", "### 💰 Estimated Budget"))
+        st.markdown(_t("###  Presupuesto Estimado", "###  Estimated Budget"))
         df_apu = pd.DataFrame({
             "Item": [_t("Estudio de Vulnerabilidad Sísmica y Espectro", "Seismic Vulnerability Study and Spectrum"),
                      _t("A.I.U. (Administración, Imprevistos, Utilidad)", "A.I.U. (Management, Contingency, Profit)")],
@@ -433,7 +433,7 @@ with tab_xls:
         })
         df_apu["Subtotal"] = df_apu["Cantidad"] * df_apu["Costo Unitario"]
         st.dataframe(df_apu, use_container_width=True, hide_index=True)
-        st.metric(f"💎 Gran Total Proyecto [{mon}]", f"{_total_ds:,.0f}")
+        st.metric(f" Gran Total Proyecto [{mon}]", f"{_total_ds:,.0f}")
         
         output_excel = io.BytesIO()
         with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
@@ -445,8 +445,8 @@ with tab_xls:
             worksheet.set_column('A:A', 40)
             worksheet.set_column('B:D', 15, money_fmt)
         output_excel.seek(0)
-        st.download_button(_t("📥 Descargar Archivo Excel", "📥 Download Excel File"), data=output_excel,
+        st.download_button(_t(" Descargar Archivo Excel", " Download Excel File"), data=output_excel,
                            file_name="Espectro_Sismico.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info(_t("💡 Ve a la página 'APU Mercado' para cargar los costos en vivo y activar el presupuesto.", 
-                   "💡 Go to the 'Market APU' page to load live costs and enable the budget."))
+        st.info(_t(" Ve a la página 'APU Mercado' para cargar los costos en vivo y activar el presupuesto.", 
+                   " Go to the 'Market APU' page to load live costs and enable the budget."))

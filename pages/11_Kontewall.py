@@ -24,10 +24,10 @@ if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = True
 _c1, _c2 = st.sidebar.columns([1, 3])
 with _c1:
-    if st.button("🌙" if st.session_state.dark_mode else "☀️", key="kw_dm"):
+    if st.button("" if st.session_state.dark_mode else "☀", key="kw_dm"):
         st.session_state.dark_mode = not st.session_state.dark_mode
 with _c2:
-    st.caption("Modo oscuro 🌙" if st.session_state.dark_mode else "Modo claro ☀️")
+    st.caption("Modo oscuro " if st.session_state.dark_mode else "Modo claro ☀")
 
 _BG     = "#0e1117" if st.session_state.dark_mode else "#FFFFFF"
 _FG     = "#FFFFFF" if st.session_state.dark_mode else "#111111"
@@ -63,7 +63,7 @@ st.caption(
     "COVENIN 1753 · NB 1225001 · CIRSOC 201"
 )
 
-with st.expander("📘 KonteWall — Solución Integral para el Análisis y Diseño de Muros de Contención", expanded=False):
+with st.expander(" KonteWall — Solución Integral para el Análisis y Diseño de Muros de Contención", expanded=False):
     st.markdown(
         "## ¿Qué es KonteWall?\n\n"
         "**KonteWall** es una plataforma avanzada de ingeniería para el **diseño, análisis y "
@@ -73,7 +73,7 @@ with st.expander("📘 KonteWall — Solución Integral para el Análisis y Dise
         "Desarrollado por **Konte — Construcción, Consultoría y Tecnología**. "
         "Autor: **** — Duitama, Boyacá, Colombia.\n\n"
         "---\n"
-        "## 🎯 Funcionalidades Clave\n\n"
+        "##  Funcionalidades Clave\n\n"
         "| # | Funcionalidad | Descripción |\n"
         "|---|---|---|\n"
         "| 1 | **Modelado Geotécnico** | Cohesión, fricción interna, pesos específicos |\n"
@@ -85,15 +85,15 @@ with st.expander("📘 KonteWall — Solución Integral para el Análisis y Dise
         "| 7 | **Exportación Profesional** | Memoria DOCX, hoja XLSX, plano DXF 3D |\n"
         "| 8 | **Visualización** | 2D + Planta + 3D interactivo + Isométrico |\n\n"
         "---\n"
-        "## 🔑 Colores de Armadura\n\n"
+        "##  Colores de Armadura\n\n"
         "| Color | Elemento |\n"
         "|---|---|\n"
-        "| 🔵 Azul sólido | Acero interior pantalla (tracción) |\n"
-        "| 🔴 Rojo punteado | Acero exterior (temperatura) |\n"
-        "| 🔴 Rojo sólido | Acero horizontal (distribución) |\n"
-        "| 🟢 Verde | Acero talón posterior |\n"
-        "| 🟠 Naranja | Acero punta (voladizo frontal) |\n"
-        "| 🟣 Morado | Acero dentellón |\n"
+        "|  Azul sólido | Acero interior pantalla (tracción) |\n"
+        "|  Rojo punteado | Acero exterior (temperatura) |\n"
+        "|  Rojo sólido | Acero horizontal (distribución) |\n"
+        "|  Verde | Acero talón posterior |\n"
+        "|  Naranja | Acero punta (voladizo frontal) |\n"
+        "|  Morado | Acero dentellón |\n"
     )
     st.caption("KonteWall v4.0 · 2026 · Konte — Construcción, Consultoría y Tecnología ·  · Duitama, Boyacá")
 
@@ -125,7 +125,7 @@ def tabla_barras(As, bw=100.0):
 
 def badge(ok, etq="", det=""):
     w = ("PASSES" if en_usa else "CUMPLE") if ok else ("FAILS" if en_usa else "NO CUMPLE")
-    icon = "✅" if ok else "❌"
+    icon = "" if ok else ""
     msg = f"{icon} **{w}**"
     if etq: msg += f" — {etq}"
     if det: msg += f" _{det}_"
@@ -135,7 +135,7 @@ def badge(ok, etq="", det=""):
         st.error(msg)
 
 def recbox(msg):
-    st.info(f"💡 {msg}")
+    st.info(f" {msg}")
 
 # ── Funciones de recomendación ───────────────────────────────────
 def recomendar_volteo(FS, FS_min, B, b, ct, Bp, xbr, MrW1, MrW2, MrW3, MrW4, MrEav, MrEscv, sumMa, gr, Hp, SC):
@@ -246,9 +246,9 @@ def recomendar_deslizamiento(FS, FS_min, B, muct, sumFv, Ccoh, Ep, sumFh):
 # ══════════════════════════════════════════════════════════════════
 # SIDEBAR — PARÁMETROS DE ENTRADA (con descripciones)
 # ══════════════════════════════════════════════════════════════════
-st.sidebar.markdown("## ⚙️ Parámetros de Diseño")
+st.sidebar.markdown("## ⚙ Parámetros de Diseño")
 
-with st.sidebar.expander("🌐 Norma y Idioma", expanded=False):
+with st.sidebar.expander(" Norma y Idioma", expanded=False):
     c1, c2 = st.columns([2, 1])
     with c1:
         norma_sel = st.selectbox("Norma de diseño", [
@@ -264,7 +264,7 @@ with st.sidebar.expander("🌐 Norma y Idioma", expanded=False):
     with c2:
         st.caption("Lenguaje")
 
-with st.sidebar.expander("🧱 Materiales", expanded=True):
+with st.sidebar.expander(" Materiales", expanded=True):
     c1, c2 = st.columns([2, 1])
     with c1:
         fc = st.number_input("f'c [kg/cm²]", 140.0, 420.0, 210.0, 5.0)
@@ -296,7 +296,7 @@ with st.sidebar.expander("🧱 Materiales", expanded=True):
     with c2:
         st.caption("Recub. concreto")
 
-with st.sidebar.expander("🌍 Suelo de Relleno", expanded=True):
+with st.sidebar.expander(" Suelo de Relleno", expanded=True):
     c1, c2 = st.columns([2, 1])
     with c1:
         gr = st.number_input("γr [kg/m³]", 1400.0, 2200.0, 1800.0, 50.0)
@@ -328,7 +328,7 @@ with st.sidebar.expander("🌍 Suelo de Relleno", expanded=True):
     with c2:
         st.caption("Altura equivalente")
 
-with st.sidebar.expander("🏗️ Suelo de Fundación", expanded=True):
+with st.sidebar.expander(" Suelo de Fundación", expanded=True):
     c1, c2 = st.columns([2, 1])
     with c1:
         gf = st.number_input("γf [kg/m³]", 1400.0, 2200.0, 1900.0, 50.0)
@@ -355,7 +355,7 @@ with st.sidebar.expander("🏗️ Suelo de Fundación", expanded=True):
     with c2:
         st.caption("Coef. fricción")
 
-with st.sidebar.expander("📐 Geometría", expanded=True):
+with st.sidebar.expander(" Geometría", expanded=True):
     c1, c2 = st.columns([2, 1])
     with c1:
         Ht = st.number_input("Ht total muro [m]", 1.0, 12.0, 4.90, 0.10)
@@ -394,7 +394,7 @@ with st.sidebar.expander("📐 Geometría", expanded=True):
     with c2:
         st.caption("Profundidad dentellón")
 
-with st.sidebar.expander("🌊 Sismicidad", expanded=False):
+with st.sidebar.expander(" Sismicidad", expanded=False):
     c1, c2 = st.columns([2, 1])
     with c1:
         sismo = st.checkbox("Incluir sismo (Mononobe-Okabe)", value=True)
@@ -415,7 +415,7 @@ with st.sidebar.expander("🌊 Sismicidad", expanded=False):
         Kh = 0.0
         Kv = 0.0
 
-with st.sidebar.expander("📏 Longitud del Muro", expanded=False):
+with st.sidebar.expander(" Longitud del Muro", expanded=False):
     c1, c2 = st.columns([2, 1])
     with c1:
         Lmuro = st.number_input("Longitud L [m]", 0.5, 50.0, 10.0, 0.5)
@@ -425,7 +425,7 @@ with st.sidebar.expander("📏 Longitud del Muro", expanded=False):
 # ══ Copyright sidebar ══
 st.sidebar.markdown("---")
 st.sidebar.markdown(
-    "🏛️ **KonteWall v4.0** © 2026  \n"
+    " **KonteWall v4.0** © 2026  \n"
     "Todos los derechos reservados  \n"
     "**Konte** — Construcción, Consultoría y Tecnología  \n"
     "**  \n"
@@ -435,12 +435,12 @@ st.sidebar.markdown(
 # ══════════════════════════════════════════════════════════════════
 # CÁLCULO
 # ══════════════════════════════════════════════════════════════════
-if st.sidebar.button(_t("🧮 Calcular Muro", "🧮 Design Wall"), type="primary"):
+if st.sidebar.button(_t(" Calcular Muro", " Design Wall"), type="primary"):
     st.session_state["calculado"] = True
 
 if not st.session_state.get("calculado", False):
-    st.info(_t("👈 Configure los parámetros y pulse **Calcular Muro**",
-               "👈 Set parameters and press **Design Wall**"))
+    st.info(_t(" Configure los parámetros y pulse **Calcular Muro**",
+               " Set parameters and press **Design Wall**"))
     st.stop()
 
 # ── Variables globales auxiliares ──
@@ -681,11 +681,11 @@ with st.expander("01. Datos Generales y Predimensionamiento", expanded=True):
         st.write(f"Diámetro asumido: 5/8\" (d_b = {db_supuesto:.2f} cm)")
         st.write(f"Longitud de anclaje requerida Ldh = {Ldh_supuesto*100:.2f} cm")
         st.write(f"Altura necesaria de zapata: hz_necesaria = Ldh + rec = {hz_necesaria*100:.2f} cm")
-        st.write(f"Altura adoptada: hz = {hz*100:.2f} cm → {'✅ OK' if hz >= hz_necesaria else '⚠️ Aumentar'}")
+        st.write(f"Altura adoptada: hz = {hz*100:.2f} cm → {' OK' if hz >= hz_necesaria else '⚠ Aumentar'}")
     with colB:
         st.markdown("**Longitud de la base**")
         st.write(f"Rango recomendado: H/2 = {Ht/2:.2f} m  a  2H/3 = {2*Ht/3:.2f} m")
-        st.write(f"Valor adoptado: B = {B:.2f} m → {'✅ OK' if Ht/2 <= B <= 2*Ht/3 else '⚠️ Revisar'}")
+        st.write(f"Valor adoptado: B = {B:.2f} m → {' OK' if Ht/2 <= B <= 2*Ht/3 else '⚠ Revisar'}")
 
     st.markdown("---")
     st.markdown("### Verificación de dimensiones")
@@ -702,7 +702,7 @@ with st.expander("01. Datos Generales y Predimensionamiento", expanded=True):
             "Mín": f"{vmin:.2f} m",
             "Máx": f"{vmax:.2f} m" if vmax else "—",
             "Adoptado": f"{vadp:.2f} m",
-            "Estado": "✅ OK" if okv else "⚠️ Revisar"
+            "Estado": " OK" if okv else "⚠ Revisar"
         })
     st.table(pd.DataFrame(rowspre))
 
@@ -744,7 +744,7 @@ with st.expander("03. Verificación de Estabilidad" + (" + Sismo Mononobe-Okabe"
     okq1 = q1 <= qadm
     okq2 = q2 >= 0
 
-    st.markdown(f"**1. 🔄 Volcamiento** — ΣMr/ΣMa = {sumMr:.2f}/{sumMa:.2f}")
+    st.markdown(f"**1.  Volcamiento** — ΣMr/ΣMa = {sumMr:.2f}/{sumMa:.2f}")
     badge(okvFS, f"FS={FSvolt:.3f}", "≥ 2.00")
     if not okvFS:
         sugg = recomendar_volteo(FSvolt, 2.0, B, b, ct, Bp, xbr, MrW1, MrW2, MrW3, MrW4, MrEav, MrEscv, sumMa, gr, Hp, SC)
@@ -758,7 +758,7 @@ with st.expander("03. Verificación de Estabilidad" + (" + Sismo Mononobe-Okabe"
         if sugg:
             recbox(sugg)
 
-    st.markdown(f"**3. 📍 Excentricidad** — e = {eexc:.4f}m  |  B/6 = {elim:.4f}m")
+    st.markdown(f"**3.  Excentricidad** — e = {eexc:.4f}m  |  B/6 = {elim:.4f}m")
     badge(okee, f"e={eexc:.4f}m", f"< {elim:.4f}m")
     if not okee:
         sugg = recomendar_excentricidad(eexc, elim, B, b, ct, Bp, xbr, MrW1, MrW2, MrW3, MrW4, MrEav, MrEscv, sumMa, gr, Hp, SC, W1+W2+W3+W4, Eav, Escv)
@@ -767,7 +767,7 @@ with st.expander("03. Verificación de Estabilidad" + (" + Sismo Mononobe-Okabe"
         else:
             recbox("Aumentar la base total B para reducir la excentricidad.")
 
-    st.markdown(f"**4. 🏗️ Cap. portante** — q₁ = {q1:.4f} kg/cm²  |  qadm = {qadm:.2f} kg/cm²")
+    st.markdown(f"**4.  Cap. portante** — q₁ = {q1:.4f} kg/cm²  |  qadm = {qadm:.2f} kg/cm²")
     badge(okq1, f"q₁={q1:.4f}", f"qadm={qadm:.2f}")
     if not okq1:
         sugg = recomendar_q1(q1, qadm, B, b, ct, Bp, xbr, MrW1, MrW2, MrW3, MrW4, MrEav, MrEscv, sumMa, gr, Hp, SC, W1+W2+W3+W4, Eav, Escv)
@@ -819,11 +819,11 @@ with st.expander("03. Verificación de Estabilidad" + (" + Sismo Mononobe-Okabe"
         "Valor": [f"FS={FSvolt:.3f}", f"FS={FSdesl:.3f}", f"e={eexc:.4f}m", f"q₁={q1:.4f}", f"q₂={q2:.4f}"],
         "Límite": ["≥2.00", "≥1.50", f"<{elim:.4f}m", f"≤{qadm:.2f}", "≥0"],
         "Estado": [
-            "✅ Cumple" if okvFS else "❌ No cumple",
-            "✅ Cumple" if okdFS else "❌ No cumple",
-            "✅ Cumple" if okee else "❌ No cumple",
-            "✅ Cumple" if okq1 else "❌ No cumple",
-            "✅ Cumple" if okq2 else "❌ No cumple"
+            " Cumple" if okvFS else " No cumple",
+            " Cumple" if okdFS else " No cumple",
+            " Cumple" if okee else " No cumple",
+            " Cumple" if okq1 else " No cumple",
+            " Cumple" if okq2 else " No cumple"
         ]
     })
     st.table(resumen)
@@ -832,7 +832,7 @@ with st.expander("04. Verificación Sin Sobrecarga", expanded=False):
     st.table(pd.DataFrame({
         "Verificación": ["FS volteo", "FS desl.", "Excentr.", "q₁", "q₂"],
         "Valor": [f"FS={FSvns:.3f}", f"FS={FSdns:.3f}", f"e={ens:.4f}m", f"q₁={q1ns:.4f} kg/cm²", f"q₂={q2ns:.4f} kg/cm²"],
-        "Estado": ["✅ OK" if x else "⚠️ Revisar" for x in [FSvns >= 2.0, FSdns >= 1.5, ens < B/6, q1ns <= qadm, q2ns >= 0]]
+        "Estado": [" OK" if x else "⚠ Revisar" for x in [FSvns >= 2.0, FSdns >= 1.5, ens < B/6, q1ns <= qadm, q2ns >= 0]]
     }))
 
 with st.expander(f"05. Diseño Pantalla — Sección Crítica Base", expanded=False):
@@ -870,7 +870,7 @@ with st.expander(f"05. Diseño Pantalla — Sección Crítica Base", expanded=Fa
     if Vupant > phiVcp:
         d_needed = Vupant / (phic * 0.53 * math.sqrt(fc) * bw)
         ct_new = math.ceil((d_needed + rec) / 5) * 5 / 100
-        recbox(f"💡 Aumentar ct a {ct_new:.2f} m")
+        recbox(f" Aumentar ct a {ct_new:.2f} m")
     st.markdown(f"**Longitud de anclaje Ldh = {Ldh:.2f}m  |  Disponible hz={hz:.2f}m**")
     badge(Ldh <= hz, f"Ldh={Ldh:.2f}m", f"hz={hz:.2f}m")
     if not (Ldh <= hz):
@@ -878,10 +878,10 @@ with st.expander(f"05. Diseño Pantalla — Sección Crítica Base", expanded=Fa
         if sugg:
             recbox(sugg)
     if dc > 0.05:
-        st.markdown(f"**✂️ Corte de acero exterior a dc = {dc:.2f} m desde la corona**")
+        st.markdown(f"** Corte de acero exterior a dc = {dc:.2f} m desde la corona**")
         st.markdown("El acero vertical exterior se cortará a esa distancia, según el análisis de equilibrio.")
     else:
-        st.markdown("**✂️ No se requiere corte de acero**")
+        st.markdown("** No se requiere corte de acero**")
 
 with st.expander(f"06. Diseño Talón Posterior — Bp={Bp:.2f}m", expanded=False):
     c1, c2 = st.columns(2)
@@ -1129,8 +1129,8 @@ with st.expander("10. Cubicación de Materiales", expanded=False):
 # ══════════════════════════════════════════════════════════════════
 with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
     tab2d, tabpl, tab3d, tabiso, tabexp = st.tabs([
-        "📐 Sección 2D", "🗺️ Vista en Planta",
-        "🧊 Modelo 3D", "📦 Isométrico", "📤 Exportar"
+        " Sección 2D", " Vista en Planta",
+        " Modelo 3D", " Isométrico", " Exportar"
     ])
 
     # ── TAB 2D ───────────────────────────────────────────────────
@@ -1703,12 +1703,12 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
 
     # ── TAB EXPORTAR (DXF 2D mejorado) ────────────────────────────
     with tabexp:
-        st.markdown("### 📤 Exportar Documentación Profesional")
+        st.markdown("###  Exportar Documentación Profesional")
         col_exp1, col_exp2, col_exp3 = st.columns(3)
 
         with col_exp1:
-            st.markdown("#### 📐 Plano DXF 2D")
-            if st.button("🗂️ Generar DXF", key="btn_dxf"):
+            st.markdown("####  Plano DXF 2D")
+            if st.button(" Generar DXF", key="btn_dxf"):
                 try:
                     import ezdxf
                     try:
@@ -1859,18 +1859,18 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     doc.saveas(buf)
                     buf.seek(0)
                     st.download_button(
-                        "⬇️ Descargar DXF 2D",
+                        "⬇ Descargar DXF 2D",
                         buf,
                         file_name=f"KonteWall_{Ht:.1f}m.dxf",
                         mime="application/octet-stream")
-                    st.success("✅ DXF 2D generado con capas mejoradas y cotas completas")
+                    st.success(" DXF 2D generado con capas mejoradas y cotas completas")
                 except Exception as e:
                     st.error(f"Error DXF: {e}")
 
         # DOCX y XLSX (se mantienen igual que antes, no se repiten por brevedad)
         with col_exp2:
-            st.markdown("#### 📄 Memoria Técnica DOCX")
-            if st.button("📝 Generar DOCX", key="btn_docx"):
+            st.markdown("####  Memoria Técnica DOCX")
+            if st.button(" Generar DOCX", key="btn_docx"):
                 try:
                     from docx import Document as DocxDoc
                     from docx.shared import Pt
@@ -1972,7 +1972,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                         row[0].text = ver
                         row[1].text = val
                         row[2].text = lim
-                        row[3].text = "✅ CUMPLE" if ok else "❌ NO CUMPLE"
+                        row[3].text = " CUMPLE" if ok else " NO CUMPLE"
 
                     h1("4. DISEÑO DE ARMADURA")
                     h2("4.1 Pantalla — Sección Crítica Base")
@@ -2024,17 +2024,17 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     doc.save(buf_docx)
                     buf_docx.seek(0)
                     st.download_button(
-                        "⬇️ Descargar Memoria DOCX",
+                        "⬇ Descargar Memoria DOCX",
                         buf_docx,
                         file_name=f"KonteWall_Memoria_Ht{Ht:.1f}m.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                    st.success("✅ Memoria técnica generada")
+                    st.success(" Memoria técnica generada")
                 except Exception as edocx:
                     st.error(f"Error DOCX: {edocx}")
 
         with col_exp3:
-            st.markdown("#### 📊 Hoja de Cálculo XLSX")
-            if st.button("📈 Generar XLSX", key="btn_xlsx"):
+            st.markdown("####  Hoja de Cálculo XLSX")
+            if st.button(" Generar XLSX", key="btn_xlsx"):
                 try:
                     import openpyxl
                     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -2157,11 +2157,11 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     wb.save(buf_xlsx)
                     buf_xlsx.seek(0)
                     st.download_button(
-                        "⬇️ Descargar XLSX",
+                        "⬇ Descargar XLSX",
                         buf_xlsx,
                         file_name=f"KonteWall_Calculo_Ht{Ht:.1f}m.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    st.success("✅ Hoja de cálculo generada")
+                    st.success(" Hoja de cálculo generada")
                 except Exception as exlsx:
                     st.error(f"Error XLSX: {exlsx}")
 
@@ -2171,7 +2171,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
 st.markdown("---")
 st.markdown(
     "<div style='text-align:center;font-size:12px;opacity:0.65;padding:8px;'>"
-    "🏛️ <b>KonteWall v4.0</b> © 2026 · Todos los derechos reservados · "
+    " <b>KonteWall v4.0</b> © 2026 · Todos los derechos reservados · "
     "<b>Konte</b> — Construcción, Consultoría y Tecnología · "
     " · Duitama, Boyacá, Colombia"
     "</div>",

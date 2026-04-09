@@ -32,14 +32,14 @@ st.sidebar.markdown("""
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠️ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # CONFIGURACIÓN GENERAL
 # ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙️ Configuración Global", "⚙️ Global Settings"))
+st.sidebar.header(_t("⚙ Configuración Global", "⚙ Global Settings"))
 if "norma_sel" not in st.session_state:
     st.session_state.norma_sel = "NSR-10 (Colombia)"
 
@@ -128,9 +128,9 @@ def mix_for_fc(fc):
 # ─────────────────────────────────────────────
 # T1: CÁLCULO DE TABIQUE Y MAMPOSTERÍA
 # ─────────────────────────────────────────────
-with st.expander(_t("🧱 1. Cantidades de Mampostería (Ladrillos y Juntas)", "🧱 1. Masonry Wall Quantities (Bricks and Joints)"), expanded=True):
-    st.info(_t("📺 **Modo de uso:** Ingresa las dimensiones del muro a construir y el tipo de aparejo/ladrillo (filtrado automáticamente por la norma de tu país). El sistema calculará el número exacto de ladrillos por metro cuadrado, el total, y el volumen de mortero requerido para las juntas.", 
-               "📺 **How to use:** Enter wall dimensions and brick type (filtered by active country code). The system will calculate bricks per square meter, total bricks, and joint mortar volume."))
+with st.expander(_t(" 1. Cantidades de Mampostería (Ladrillos y Juntas)", " 1. Masonry Wall Quantities (Bricks and Joints)"), expanded=True):
+    st.info(_t(" **Modo de uso:** Ingresa las dimensiones del muro a construir y el tipo de aparejo/ladrillo (filtrado automáticamente por la norma de tu país). El sistema calculará el número exacto de ladrillos por metro cuadrado, el total, y el volumen de mortero requerido para las juntas.", 
+               " **How to use:** Enter wall dimensions and brick type (filtered by active country code). The system will calculate bricks per square meter, total bricks, and joint mortar volume."))
     
     col1, col2, col3 = st.columns([1, 1.2, 1])
     
@@ -235,9 +235,9 @@ with st.expander(_t("🧱 1. Cantidades de Mampostería (Ladrillos y Juntas)", "
 # ─────────────────────────────────────────────
 # T2: DOSIFICACIÓN DE MORTEROS
 # ─────────────────────────────────────────────
-with st.expander(_t("💧 2. Dosificación y Diseño de Morteros (Cemento, Arena, Agua)", "💧 2. Mortar Dosing (Cement, Sand, Water)"), expanded=True):
-    st.info(_t("📺 **Modo de uso:** Ingresa la proporción volumétrica deseada del mortero (ej. 1:3 para pegue muy resistente, o 1:4 para pegue estándar) y el volumen a producir. El sistema usa equivalencias teóricas empíricas para entregar bultos de cemento, m³ de arena y litros de agua.", 
-               "📺 **How to use:** Enter mortar volumetric ratio (e.g. 1:3 for high strength, 1:4 for standard masonry) and volume. Returns bags of cement, sand volume, and water in liters."))
+with st.expander(_t(" 2. Dosificación y Diseño de Morteros (Cemento, Arena, Agua)", " 2. Mortar Dosing (Cement, Sand, Water)"), expanded=True):
+    st.info(_t(" **Modo de uso:** Ingresa la proporción volumétrica deseada del mortero (ej. 1:3 para pegue muy resistente, o 1:4 para pegue estándar) y el volumen a producir. El sistema usa equivalencias teóricas empíricas para entregar bultos de cemento, m³ de arena y litros de agua.", 
+               " **How to use:** Enter mortar volumetric ratio (e.g. 1:3 for high strength, 1:4 for standard masonry) and volume. Returns bags of cement, sand volume, and water in liters."))
     
     # Datos empíricos para 1 m³ de mortero (cemento kg, arena m³, agua L)
     DOSIFICACIONES = {
@@ -301,9 +301,9 @@ with st.expander(_t("💧 2. Dosificación y Diseño de Morteros (Cemento, Arena
 # ─────────────────────────────────────────────
 # T3: PESO SUPERFICIAL DEL MURO
 # ─────────────────────────────────────────────
-with st.expander(_t("⚖️ 3. Peso Superficial de Muros de Mampostería", "⚖️ 3. Surface Weight of Masonry Walls"), expanded=False):
-    st.info(_t("📺 **Modo de uso:** Calcula el peso real de 1 m² de muro (kg/m²) tomando en cuenta la densidad del material, el porcentaje de vacíos o huecos de la pieza, y el peso de las juntas de mortero.", 
-               "📺 **How to use:** Calculates the actual weight of 1 m² of wall (kg/m²) accounting for material density, void percentage of the brick, and mortar joints weight."))
+with st.expander(_t("⚖ 3. Peso Superficial de Muros de Mampostería", "⚖ 3. Surface Weight of Masonry Walls"), expanded=False):
+    st.info(_t(" **Modo de uso:** Calcula el peso real de 1 m² de muro (kg/m²) tomando en cuenta la densidad del material, el porcentaje de vacíos o huecos de la pieza, y el peso de las juntas de mortero.", 
+               " **How to use:** Calculates the actual weight of 1 m² of wall (kg/m²) accounting for material density, void percentage of the brick, and mortar joints weight."))
     
     col_w1, col_w2, col_w3 = st.columns(3)
     
@@ -352,11 +352,11 @@ with st.expander(_t("⚖️ 3. Peso Superficial de Muros de Mampostería", "⚖�
 # ─────────────────────────────────────────────
 st.markdown("---")
 tab_diag, tab_3d, tab_dxf, tab_mem, tab_apu = st.tabs([
-    "📐 " + _t("Diagrama Ladrillo 2D", "2D Brick Diagram"),
-    "🧊 " + _t("Muro 3D", "3D Wall"),
-    "📏 " + _t("DXF (Planta/Elevación)", "DXF (Plan/Elevation)"),
-    "📄 " + _t("Memoria DOCX", "DOCX Report"),
-    "💰 " + _t("Presupuesto APU", "APU Budget")
+    " " + _t("Diagrama Ladrillo 2D", "2D Brick Diagram"),
+    " " + _t("Muro 3D", "3D Wall"),
+    " " + _t("DXF (Planta/Elevación)", "DXF (Plan/Elevation)"),
+    " " + _t("Memoria DOCX", "DOCX Report"),
+    " " + _t("Presupuesto APU", "APU Budget")
 ])
 
 with tab_diag:
@@ -409,7 +409,7 @@ with tab_3d:
     st.plotly_chart(fig3d, use_container_width=True)
 
 with tab_dxf:
-    st.markdown(_t("#### 💾 Exportar plano AutoCAD (DXF)", "#### 💾 Export AutoCAD drawing (DXF)"))
+    st.markdown(_t("####  Exportar plano AutoCAD (DXF)", "####  Export AutoCAD drawing (DXF)"))
     try:
         from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
                                  dxf_dim_horiz, dxf_dim_vert, dxf_rotulo,
@@ -462,11 +462,11 @@ with tab_dxf:
         msp.add_text(f"H = {H_muro:.2f} m", dxfattribs={'layer':'TEXTO','height':0.1,'insert':(off_x-0.5, H_muro/2)})
     _out = io.StringIO()
     doc_dxf.write(_out)
-    st.download_button(_t("📥 Descargar DXF", "📥 Download DXF"), data=_out.getvalue().encode('utf-8'),
+    st.download_button(_t(" Descargar DXF", " Download DXF"), data=_out.getvalue().encode('utf-8'),
                        file_name=f"Muro_{L_muro}x{H_muro}.dxf", mime="application/dxf")
 
 with tab_mem:
-    st.markdown(_t("#### 📄 Generar Memoria de Cálculo (DOCX)", "#### 📄 Generate Calculation Report (DOCX)"))
+    st.markdown(_t("####  Generar Memoria de Cálculo (DOCX)", "####  Generate Calculation Report (DOCX)"))
     if st.button(_t("Generar Memoria", "Generate Report")):
         doc = Document()
         doc.add_heading(_t(f"Memoria de Cálculo – Muro de Mampostería {L_muro:.2f} x {H_muro:.2f} m", 
@@ -498,14 +498,14 @@ with tab_mem:
         buf_doc = io.BytesIO()
         doc.save(buf_doc)
         buf_doc.seek(0)
-        st.download_button(_t("📥 Descargar Memoria DOCX", "📥 Download DOCX Report"), data=buf_doc, 
+        st.download_button(_t(" Descargar Memoria DOCX", " Download DOCX Report"), data=buf_doc, 
                            file_name=f"Memoria_Muro_{L_muro}x{H_muro}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_apu:
     st.write(_t("Basado en el cálculo de Muro de Mampostería y la mezcla de Mortero seleccionada.", 
                 "Based on the Masonry Wall calculation and selected Mortar mixture."))
     # Inputs APU
-    st.markdown(_t("### 🏷️ Precios y Rendimientos", "### 🏷️ Prices and Yields"))
+    st.markdown(_t("###  Precios y Rendimientos", "###  Prices and Yields"))
     col_a1, col_a2 = st.columns(2)
     with col_a1:
         precio_ladrillo = st.number_input(_t("Precio por unidad de ladrillo [moneda local]", "Price per brick [local currency]"), 
@@ -550,7 +550,7 @@ with tab_apu:
     total_proyecto = costo_directo + herramienta + aiu + iva_total
     
     # Gráfico de cantidades (barras)
-    st.markdown(_t("#### 📊 Cantidades de materiales", "#### 📊 Material quantities"))
+    st.markdown(_t("####  Cantidades de materiales", "####  Material quantities"))
     fig_q, ax_q = plt.subplots(figsize=(6, 3))
     ax_q.bar([_t("Ladrillos (uds)", "Bricks (units)"), _t("Cemento (bultos)", "Cement (bags)"), _t("Arena (m³)", "Sand (m³)")],
              [ladrillos_pedidos, bultos_cemento, arena_m3_total], color=['#e2725b', '#4caf50', '#ff9800'])
@@ -559,7 +559,7 @@ with tab_apu:
     st.pyplot(fig_q)
     
     # Tabla de costos
-    st.markdown(_t("#### 💰 Resumen de costos", "#### 💰 Cost summary"))
+    st.markdown(_t("####  Resumen de costos", "####  Cost summary"))
     data_apu = {
         _t("Item", "Item"): [
             _t("Ladrillos (uds)", "Bricks (units)"), 
@@ -593,7 +593,7 @@ with tab_apu:
         ]
     }
     st.dataframe(pd.DataFrame(data_apu), use_container_width=True, hide_index=True)
-    st.metric(f"💎 Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
+    st.metric(f" Gran Total Proyecto [{mon}]", f"{total_proyecto:,.0f}")
     
     # Exportar Excel
     output_excel = io.BytesIO()
@@ -617,5 +617,5 @@ with tab_apu:
         worksheet.set_column('A:A', 25)
         worksheet.set_column('B:D', 15, money_fmt)
     output_excel.seek(0)
-    st.download_button(_t("📥 Descargar Presupuesto Excel", "📥 Download Excel Budget"), data=output_excel, 
+    st.download_button(_t(" Descargar Presupuesto Excel", " Download Excel Budget"), data=output_excel, 
                        file_name=f"APU_Muro_{L_muro}x{H_muro}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
