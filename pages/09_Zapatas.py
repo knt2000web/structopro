@@ -1706,10 +1706,9 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         x_vals = np.linspace(x_corte_b, lv_b, 50)
         dx = (lv_b - x_corte_b) / 50
         dy = L_use / 50
-        for xi in x_vals:
-            for yi in y_vals:
-                q_xy = q_at(xi, yi)
-                if q_xy > 0: Vu_1way_B += q_xy * dx * dy
+        XV, YV = np.meshgrid(x_vals, y_vals)
+        Q_xy = q_at(XV, YV)
+        Vu_1way_B = np.sum(np.where(Q_xy > 0, Q_xy, 0)) * dx * dy
 
     phi_Vc_1way_B = phi_v * 0.17 * 1.0 * math.sqrt(fc_basico) * (L_use * 1000) * (d_z * 10) / 1000.0  # kN
     ok_1way_B = phi_Vc_1way_B >= Vu_1way_B
@@ -1722,10 +1721,9 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         y_vals = np.linspace(y_corte_l, lv_l, 50)
         dx = B_use / 50
         dy = (lv_l - y_corte_l) / 50
-        for xi in x_vals:
-            for yi in y_vals:
-                q_xy = q_at(xi, yi)
-                if q_xy > 0: Vu_1way_L += q_xy * dx * dy
+        XV, YV = np.meshgrid(x_vals, y_vals)
+        Q_xy = q_at(XV, YV)
+        Vu_1way_L = np.sum(np.where(Q_xy > 0, Q_xy, 0)) * dx * dy
 
     phi_Vc_1way_L = phi_v * 0.17 * 1.0 * math.sqrt(fc_basico) * (B_use * 1000) * (d_z * 10) / 1000.0  # kN
     ok_1way_L = phi_Vc_1way_L >= Vu_1way_L
@@ -1736,16 +1734,25 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     if pos_col_iso == "Interior":
         bo_perim = 2 * (bo_1 + bo_2)
         alpha_s = 40
+        Area_punz = bo_1 * bo_2
     elif pos_col_iso == "Borde (eje X)":
-        bo_perim = 2*bo_1 + (c2_col/100.0 + d_z_m/2.0)
+        # Columna en el borde X: d_z_m/2 en c2
+        _bo2_eff = c2_col/100.0 + d_z_m/2.0
+        bo_perim = 2*bo_1 + _bo2_eff
         alpha_s = 30
+        Area_punz = bo_1 * _bo2_eff
     elif pos_col_iso == "Borde (eje Y)":
-        bo_perim = 2*bo_2 + (c1_col/100.0 + d_z_m/2.0)
+        # Columna en el borde Y: d_z_m/2 en c1
+        _bo1_eff = c1_col/100.0 + d_z_m/2.0
+        bo_perim = 2*bo_2 + _bo1_eff
         alpha_s = 30
+        Area_punz = _bo1_eff * bo_2
     else: # Esquina
-        bo_perim = (c1_col/100.0 + d_z_m/2.0) + (c2_col/100.0 + d_z_m/2.0)
+        _bo1_eff = c1_col/100.0 + d_z_m/2.0
+        _bo2_eff = c2_col/100.0 + d_z_m/2.0
+        bo_perim = _bo1_eff + _bo2_eff
         alpha_s = 20
-    Area_punz = bo_1 * bo_2
+        Area_punz = _bo1_eff * _bo2_eff
     # Presión promedio en el área crítica (se usa qu_avg)
     Vu_punz = P_ult - qu_avg * Area_punz
 
@@ -2142,10 +2149,9 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                         _yv = np.linspace(-L_use/2, L_use/2, 50)
                         _xv = np.linspace(_xc_b, lv_b, 50)
                         _dx = (lv_b - _xc_b) / 50; _dy = L_use / 50
-                        for _xi in _xv:
-                            for _yi in _yv:
-                                _qxy = q_at(_xi, _yi)
-                                if _qxy > 0: _Vu_b += _qxy * _dx * _dy
+                        _XV, _YV = np.meshgrid(_xv, _yv)
+                        _Q_xy = q_at(_XV, _YV)
+                        _Vu_b = np.sum(np.where(_Q_xy > 0, _Q_xy, 0)) * _dx * _dy
                     _phiVc_b = phi_v * 0.17 * math.sqrt(fc_basico) * (L_use*1000) * (_di*10) / 1000.0
 
                     # Cortante 1D Dir.L
@@ -2155,23 +2161,29 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                         _xv2 = np.linspace(-B_use/2, B_use/2, 50)
                         _yv2 = np.linspace(_yc_l, lv_l, 50)
                         _dx2 = B_use / 50; _dy2 = (_yc_l and (lv_l - _yc_l) / 50)
-                        for _xi in _xv2:
-                            for _yi in _yv2:
-                                _qxy = q_at(_xi, _yi)
-                                if _qxy > 0: _Vu_l += _qxy * _dx2 * _dy2
+                        _XV2, _YV2 = np.meshgrid(_xv2, _yv2)
+                        _Q_xy2 = q_at(_XV2, _YV2)
+                        _Vu_l = np.sum(np.where(_Q_xy2 > 0, _Q_xy2, 0)) * _dx2 * _dy2
                     _phiVc_l = phi_v * 0.17 * math.sqrt(fc_basico) * (B_use*1000) * (_di*10) / 1000.0
 
                     # Punzonamiento
                     _bo1 = c1_col/100.0 + _dim; _bo2 = c2_col/100.0 + _dim
                     if pos_col_iso == "Interior":
                         _bo = 2*(_bo1 + _bo2); _alphas = 40
+                        _Ap = _bo1 * _bo2
                     elif pos_col_iso == "Borde (eje X)":
-                        _bo = 2*_bo1 + _bo2 - _dim/2.0; _alphas = 30
+                        _bo2_eff = c2_col/100.0 + _dim/2.0
+                        _bo = 2*_bo1 + _bo2_eff; _alphas = 30
+                        _Ap = _bo1 * _bo2_eff
                     elif pos_col_iso == "Borde (eje Y)":
-                        _bo = 2*_bo2 + _bo1 - _dim/2.0; _alphas = 30
+                        _bo1_eff = c1_col/100.0 + _dim/2.0
+                        _bo = 2*_bo2 + _bo1_eff; _alphas = 30
+                        _Ap = _bo1_eff * _bo2
                     else: # Esquina
-                        _bo = _bo1 - _dim/2.0 + _bo2 - _dim/2.0; _alphas = 20
-                    _Ap  = _bo1 * _bo2
+                        _bo1_eff = c1_col/100.0 + _dim/2.0
+                        _bo2_eff = c2_col/100.0 + _dim/2.0
+                        _bo = _bo1_eff + _bo2_eff; _alphas = 20
+                        _Ap = _bo1_eff * _bo2_eff
                     _Vup = P_ult - qu_avg * _Ap
                     _betac = max(c1_col, c2_col) / max(min(c1_col, c2_col), 1e-3)
                     _Vc3p = 0.083*(2 + _alphas*(_di*10)/(_bo*1000))*math.sqrt(fc_basico)
