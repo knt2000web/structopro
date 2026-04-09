@@ -254,7 +254,7 @@ with st.expander(_t("4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4.
     D_req_full = 10.0 * diam_clavo; D_req_min = 6.0 * diam_clavo
     
     if penetracion_p < D_req_min:
-        st.error(_t("Penetración < 6D. No cumple requerimiento mínimo.", " Penetration < 6D. Minimum requirement not met."))
+        st.error(_t("Penetración < 6D. No cumple requerimiento mínimo.", "Penetration < 6D. Minimum requirement not met."))
         Z_adm = 0.0
     else:
         Cd_factor = min(1.0, penetracion_p / D_req_full)
@@ -280,7 +280,7 @@ with st.expander(_t("4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4.
 # EXPORTACIÓN INTEGRAL (DXF, DOCX, APU)
 # ─────────────────────────────────────────────
 st.markdown("---")
-st.subheader(_t("Exportación Integral", " Comprehensive Export"))
+st.subheader(_t("Exportación Integral", "Comprehensive Export"))
 
 # Preparar datos comunes para despiece y APU
 pt_viga = (b_beam/25.4) * (h_beam/25.4) * (span_L * 3.28084) / 12.0
@@ -444,7 +444,7 @@ with tab_doc:
         buf = io.BytesIO()
         doc.save(buf)
         buf.seek(0)
-        st.download_button(_t("Descargar Memoria", " Download Report"), data=buf, file_name="Memoria_Madera.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(_t("Descargar Memoria", "Download Report"), data=buf, file_name="Memoria_Madera.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_apu:
     if "apu_config" in st.session_state:
@@ -495,6 +495,6 @@ with tab_apu:
             worksheet.set_column('A:A', 25)
             worksheet.set_column('B:D', 15, money_fmt)
         output_excel.seek(0)
-        st.download_button(_t("Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel, file_name="APU_Madera.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(_t("Descargar Presupuesto Excel", "Download Budget Excel"), data=output_excel, file_name="APU_Madera.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info(_t("Ve a la página 'APU Mercado' para cargar los costos en vivo.", " Go to the 'Market APU' page to load live costs."))
+        st.info(_t("Ve a la página 'APU Mercado'para cargar los costos en vivo.", " Go to the 'Market APU' page to load live costs."))

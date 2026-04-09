@@ -465,7 +465,7 @@ with st.sidebar.expander(" Cargar de la Nube", expanded=False):
     except Exception as e:
         err_str = str(e)
         if "404" in err_str and "proyectos" in err_str:
-            st.error("La tabla 'proyectos' no existe en tu base de datos de Supabase.")
+            st.error("La tabla 'proyectos'no existe en tu base de datos de Supabase.")
             with st.expander(" ¿Cómo solucionar este error?"):
                 st.markdown("Ve a tu panel de **Supabase**, entra a **SQL Editor**, copia y ejecuta este código para crear la tabla necesaria:")
                 st.code('''CREATE TABLE proyectos (

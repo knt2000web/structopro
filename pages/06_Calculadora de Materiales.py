@@ -998,7 +998,7 @@ with tabs[0]:
     st.caption(f"Dosificaciones CM-V3.0 | Norma: {norma_sel}")
     geo_col, elem_col = st.columns([2, 3])
     with geo_col:
-        geo_mode = st.radio("Tipo de geometría:", ["Cubo", " Cilindro", " Volumen"],
+        geo_mode = st.radio("Tipo de geometría:", ["Cubo", "Cilindro", " Volumen"],
                             horizontal=True, key="kc_geo_mode")
     with elem_col:
         elemento_conc = st.selectbox("Elemento estructural:",
@@ -3642,7 +3642,7 @@ with tabs[15]:
     ]))
 
     # ── 13 CONFIG SUB-TABS ──
-    cfg_tabs = st.tabs(["Concreto"," Mortero"," Cemento/Afinado"," Unidades"," Aproximaciones",
+    cfg_tabs = st.tabs(["Concreto","Mortero"," Cemento/Afinado"," Unidades"," Aproximaciones",
                          f" Costos ({moneda})"," Mampostería"," Acero"," Losa"," Perfiles",
                          " Panel Yeso"," Techo"," Piso"])
 

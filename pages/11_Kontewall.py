@@ -681,11 +681,11 @@ with st.expander("01. Datos Generales y Predimensionamiento", expanded=True):
         st.write(f"Diámetro asumido: 5/8\" (d_b = {db_supuesto:.2f} cm)")
         st.write(f"Longitud de anclaje requerida Ldh = {Ldh_supuesto*100:.2f} cm")
         st.write(f"Altura necesaria de zapata: hz_necesaria = Ldh + rec = {hz_necesaria*100:.2f} cm")
-        st.write(f"Altura adoptada: hz = {hz*100:.2f} cm → {'OK' if hz >= hz_necesaria else '⚠ Aumentar'}")
+        st.write(f"Altura adoptada: hz = {hz*100:.2f} cm → {'OK'if hz >= hz_necesaria else '⚠ Aumentar'}")
     with colB:
         st.markdown("**Longitud de la base**")
         st.write(f"Rango recomendado: H/2 = {Ht/2:.2f} m  a  2H/3 = {2*Ht/3:.2f} m")
-        st.write(f"Valor adoptado: B = {B:.2f} m → {'OK' if Ht/2 <= B <= 2*Ht/3 else '⚠ Revisar'}")
+        st.write(f"Valor adoptado: B = {B:.2f} m → {'OK'if Ht/2 <= B <= 2*Ht/3 else '⚠ Revisar'}")
 
     st.markdown("---")
     st.markdown("### Verificación de dimensiones")

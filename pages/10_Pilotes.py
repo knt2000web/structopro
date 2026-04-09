@@ -642,246 +642,246 @@ with tab_est:
             st.warning(f"No se pudo cargar generador P-M: {e}")
             
     with tab_apu:
-    st.subheader(_t("4.1 Cantidades de Obra y Análisis de Precios Unitarios", "4.1 Quantities & Unit Price Analysis"))
+        st.subheader(_t("4.1 Cantidades de Obra y Análisis de Precios Unitarios", "4.1 Quantities & Unit Price Analysis"))
 
-    # ── Geometría base heredada de tabs anteriores ──────────────────────────
-    Ag_m2_apu = (math.pi * D_pilote**2 / 4) if tipo_seccion == "Circular" else D_pilote**2
-    n_pil_apu = m_filas * n_cols
+        # ── Geometría base heredada de tabs anteriores ──────────────────────────
+        Ag_m2_apu = (math.pi * D_pilote**2 / 4) if tipo_seccion == "Circular" else D_pilote**2
+        n_pil_apu = m_filas * n_cols
 
-    # Metrado pilotes
-    vol_exc_pil   = round(Ag_m2_apu * L_pilote * n_pil_apu, 3)
-    vol_conc_pil  = round(vol_exc_pil * 1.05, 3)            # +5% desperdicios
-    long_total_pil = L_pilote * n_pil_apu                   # m lineales totales
+        # Metrado pilotes
+        vol_exc_pil   = round(Ag_m2_apu * L_pilote * n_pil_apu, 3)
+        vol_conc_pil  = round(vol_exc_pil * 1.05, 3)            # +5% desperdicios
+        long_total_pil = L_pilote * n_pil_apu                   # m lineales totales
 
-    # Metrado encepado (dado)
-    vol_exc_dado   = round(B_dado * L_dado * H_dado, 3)
-    vol_conc_dado  = round(vol_exc_dado * 1.05, 3)
-    perim_dado_apu = 2 * (B_dado + L_dado)
-    area_form_dado = round(perim_dado_apu * H_dado, 2)
+        # Metrado encepado (dado)
+        vol_exc_dado   = round(B_dado * L_dado * H_dado, 3)
+        vol_conc_dado  = round(vol_exc_dado * 1.05, 3)
+        perim_dado_apu = 2 * (B_dado + L_dado)
+        area_form_dado = round(perim_dado_apu * H_dado, 2)
 
-    # Metrado acero pilotes
-    kg_m_long_apu  = ab_long * 0.785          # kg/m barra longitudinal
-    long_barra_m   = L_pilote + max(0.40, H_dado - 0.15)   # anclaje en dado
-    peso_long_total = round(long_barra_m * n_barras_p * kg_m_long_apu * n_pil_apu * 1.05, 1)
+        # Metrado acero pilotes
+        kg_m_long_apu  = ab_long * 0.785          # kg/m barra longitudinal
+        long_barra_m   = L_pilote + max(0.40, H_dado - 0.15)   # anclaje en dado
+        peso_long_total = round(long_barra_m * n_barras_p * kg_m_long_apu * n_pil_apu * 1.05, 1)
 
-    kg_m_trans_apu = _dict_ab[barras_trans] * 0.785
-    if tipo_seccion == "Circular" and tipo_trans == "Espiral Continua":
-        long_esp_1pil = (math.pi * (D_pilote - (2 * recub_pil / 100)) / (s_trans_cm / 100)) * L_pilote
-        peso_trans_total = round(long_esp_1pil * kg_m_trans_apu * n_pil_apu * 1.05, 1)
-    else:
-        # Recalcular perímetro interior (independiente del scope del Tab 3)
-        if tipo_seccion == "Circular":
-            _perim_int_cm_apu = math.pi * ((D_pilote * 100) - 2 * recub_pil - 2 * _dict_db[barras_trans])
+        kg_m_trans_apu = _dict_ab[barras_trans] * 0.785
+        if tipo_seccion == "Circular" and tipo_trans == "Espiral Continua":
+            long_esp_1pil = (math.pi * (D_pilote - (2 * recub_pil / 100)) / (s_trans_cm / 100)) * L_pilote
+            peso_trans_total = round(long_esp_1pil * kg_m_trans_apu * n_pil_apu * 1.05, 1)
         else:
-            _perim_int_cm_apu = 4 * ((D_pilote * 100) - 2 * recub_pil - 2 * _dict_db[barras_trans])
-        perim_int_m_apu = _perim_int_cm_apu / 100.0
-        n_estribos_apu = int(L_pilote / (s_trans_cm / 100.0)) + 1
-        peso_trans_total = round(n_estribos_apu * perim_int_m_apu * kg_m_trans_apu * n_pil_apu * 1.05, 1)
+            # Recalcular perímetro interior (independiente del scope del Tab 3)
+            if tipo_seccion == "Circular":
+                _perim_int_cm_apu = math.pi * ((D_pilote * 100) - 2 * recub_pil - 2 * _dict_db[barras_trans])
+            else:
+                _perim_int_cm_apu = 4 * ((D_pilote * 100) - 2 * recub_pil - 2 * _dict_db[barras_trans])
+            perim_int_m_apu = _perim_int_cm_apu / 100.0
+            n_estribos_apu = int(L_pilote / (s_trans_cm / 100.0)) + 1
+            peso_trans_total = round(n_estribos_apu * perim_int_m_apu * kg_m_trans_apu * n_pil_apu * 1.05, 1)
 
-    peso_acero_pilotes = round(peso_long_total + peso_trans_total, 1)
+        peso_acero_pilotes = round(peso_long_total + peso_trans_total, 1)
 
-    # ── 4.1 Cuadro de Cantidades ─────────────────────────────────────────────
-    st.markdown("#####  Cuadro de Cantidades de Obra")
+        # ── 4.1 Cuadro de Cantidades ─────────────────────────────────────────────
+        st.markdown("#####  Cuadro de Cantidades de Obra")
 
-    filas_cant = [
-        {"Nº": 1, "Descripción": "Excavación pilotes (broca/hélice)",      "Unidad": "m³",  "Cantidad": vol_exc_pil},
-        {"Nº": 2, "Descripción": "Estabilización / Lodos Bentoníticos",     "Unidad": "m³",  "Cantidad": vol_exc_pil},
-        {"Nº": 3, "Descripción": f"Concreto pilotes f′c={fc_pilote:.0f} MPa","Unidad": "m³", "Cantidad": vol_conc_pil},
-        {"Nº": 4, "Descripción": "Acero Refuerzo pilotes (Long.+Trans.)",   "Unidad": "kg",  "Cantidad": peso_acero_pilotes},
-        {"Nº": 5, "Descripción": "Excavación mecánica encepado",            "Unidad": "m³",  "Cantidad": vol_exc_dado},
-        {"Nº": 6, "Descripción": f"Concreto encepado f′c={fc_pilote:.0f} MPa","Unidad": "m³","Cantidad": vol_conc_dado},
-        {"Nº": 7, "Descripción": "Formaleta encepado (tableros metálicos)", "Unidad": "m²",  "Cantidad": area_form_dado},
-    ]
-    df_cant = pd.DataFrame(filas_cant)
+        filas_cant = [
+            {"Nº": 1, "Descripción": "Excavación pilotes (broca/hélice)",      "Unidad": "m³",  "Cantidad": vol_exc_pil},
+            {"Nº": 2, "Descripción": "Estabilización / Lodos Bentoníticos",     "Unidad": "m³",  "Cantidad": vol_exc_pil},
+            {"Nº": 3, "Descripción": f"Concreto pilotes f′c={fc_pilote:.0f} MPa","Unidad": "m³", "Cantidad": vol_conc_pil},
+            {"Nº": 4, "Descripción": "Acero Refuerzo pilotes (Long.+Trans.)",   "Unidad": "kg",  "Cantidad": peso_acero_pilotes},
+            {"Nº": 5, "Descripción": "Excavación mecánica encepado",            "Unidad": "m³",  "Cantidad": vol_exc_dado},
+            {"Nº": 6, "Descripción": f"Concreto encepado f′c={fc_pilote:.0f} MPa","Unidad": "m³","Cantidad": vol_conc_dado},
+            {"Nº": 7, "Descripción": "Formaleta encepado (tableros metálicos)", "Unidad": "m²",  "Cantidad": area_form_dado},
+        ]
+        df_cant = pd.DataFrame(filas_cant)
 
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("Pilotes en Grupo",       f"{n_pil_apu} ({m_filas}×{n_cols})")
-    col_m2.metric("Vol. Excavación Total",  f"{vol_exc_pil + vol_exc_dado:.2f} m³")
-    col_m3.metric("Ml Totales Hincados",    f"{long_total_pil:.1f} ml")
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("Pilotes en Grupo",       f"{n_pil_apu} ({m_filas}×{n_cols})")
+        col_m2.metric("Vol. Excavación Total",  f"{vol_exc_pil + vol_exc_dado:.2f} m³")
+        col_m3.metric("Ml Totales Hincados",    f"{long_total_pil:.1f} ml")
 
-    st.dataframe(df_cant.style.format({"Cantidad": "{:,.2f}"}),
-                 use_container_width=True, hide_index=True)
+        st.dataframe(df_cant.style.format({"Cantidad": "{:,.2f}"}),
+                     use_container_width=True, hide_index=True)
 
-    st.divider()
+        st.divider()
 
-    # ── 4.2 Precios Unitarios (Editables) ────────────────────────────────────
-    st.markdown("#####  Base de Precios Unitarios (COP) — Editable")
-    st.caption("Los precios son paramétricos. Ajusta según la región y el mercado local.")
+        # ── 4.2 Precios Unitarios (Editables) ────────────────────────────────────
+        st.markdown("#####  Base de Precios Unitarios (COP) — Editable")
+        st.caption("Los precios son paramétricos. Ajusta según la región y el mercado local.")
 
-    precios_default = pd.DataFrame([
-        {"Nº": 1, "Descripción": "Excavación pilotes (broca/hélice)",       "Unidad": "m³",  "Precio Unitario (COP)": 78_000},
-        {"Nº": 2, "Descripción": "Estabilización / Lodos Bentoníticos",      "Unidad": "m³",  "Precio Unitario (COP)": 48_000},
-        {"Nº": 3, "Descripción": f"Concreto pilotes f′c={fc_pilote:.0f} MPa","Unidad": "m³",  "Precio Unitario (COP)": 490_000},
-        {"Nº": 4, "Descripción": "Acero Refuerzo pilotes (Long.+Trans.)",    "Unidad": "kg",  "Precio Unitario (COP)": 5_600},
-        {"Nº": 5, "Descripción": "Excavación mecánica encepado",             "Unidad": "m³",  "Precio Unitario (COP)": 36_000},
-        {"Nº": 6, "Descripción": f"Concreto encepado f′c={fc_pilote:.0f} MPa","Unidad": "m³", "Precio Unitario (COP)": 460_000},
-        {"Nº": 7, "Descripción": "Formaleta encepado (tableros metálicos)",  "Unidad": "m²",  "Precio Unitario (COP)": 40_000},
-    ])
+        precios_default = pd.DataFrame([
+            {"Nº": 1, "Descripción": "Excavación pilotes (broca/hélice)",       "Unidad": "m³",  "Precio Unitario (COP)": 78_000},
+            {"Nº": 2, "Descripción": "Estabilización / Lodos Bentoníticos",      "Unidad": "m³",  "Precio Unitario (COP)": 48_000},
+            {"Nº": 3, "Descripción": f"Concreto pilotes f′c={fc_pilote:.0f} MPa","Unidad": "m³",  "Precio Unitario (COP)": 490_000},
+            {"Nº": 4, "Descripción": "Acero Refuerzo pilotes (Long.+Trans.)",    "Unidad": "kg",  "Precio Unitario (COP)": 5_600},
+            {"Nº": 5, "Descripción": "Excavación mecánica encepado",             "Unidad": "m³",  "Precio Unitario (COP)": 36_000},
+            {"Nº": 6, "Descripción": f"Concreto encepado f′c={fc_pilote:.0f} MPa","Unidad": "m³", "Precio Unitario (COP)": 460_000},
+            {"Nº": 7, "Descripción": "Formaleta encepado (tableros metálicos)",  "Unidad": "m²",  "Precio Unitario (COP)": 40_000},
+        ])
 
-    df_precios = st.data_editor(
-        precios_default,
-        column_config={
-            "Precio Unitario (COP)": st.column_config.NumberColumn(
-                "Precio Unitario (COP)", min_value=0, format="$ %d", required=True
-            )
-        },
-        num_rows="fixed",
-        use_container_width=True,
-        hide_index=True,
-        key="editor_precios_pilotes"
-    )
-
-    # Merge cantidades + precios
-    df_pres = df_cant.copy()
-    df_pres["Precio Unitario (COP)"] = df_precios["Precio Unitario (COP)"].values
-    df_pres["Subtotal (COP)"]        = df_pres["Cantidad"] * df_pres["Precio Unitario (COP)"]
-
-    costo_directo = df_pres["Subtotal (COP)"].sum()
-
-    st.divider()
-
-    # ── 4.3 Configuración de AIU ──────────────────────────────────────────────
-    st.markdown("##### ⚙ Administración, Imprevistos y Utilidad (A.I.U.)")
-    col_aiu1, col_aiu2, col_aiu3 = st.columns(3)
-    with col_aiu1:
-        pct_admin = st.slider("Administración (%)", 5, 25, 15, 1, key="aiu_admin_pil")
-    with col_aiu2:
-        pct_impr  = st.slider("Imprevistos (%)",    2, 10, 5,  1, key="aiu_impr_pil")
-    with col_aiu3:
-        pct_util  = st.slider("Utilidad (%)",       5, 20, 10, 1, key="aiu_util_pil")
-
-    pct_aiu_total = pct_admin + pct_impr + pct_util
-    v_admin = costo_directo * pct_admin / 100
-    v_impr  = costo_directo * pct_impr  / 100
-    v_util  = costo_directo * pct_util  / 100
-    v_aiu   = v_admin + v_impr + v_util
-    costo_total = costo_directo + v_aiu
-
-    st.divider()
-
-    # ── 4.4 Presupuesto Consolidado ───────────────────────────────────────────
-    st.markdown("#####  Presupuesto Consolidado")
-
-    # KPI cards
-    ka, kb, kc, kd, ke = st.columns(5)
-    ka.metric("Costo Directo",          f"${costo_directo:,.0f}")
-    kb.metric(f"Administración ({pct_admin}%)", f"${v_admin:,.0f}")
-    kc.metric(f"Imprevistos ({pct_impr}%)",     f"${v_impr:,.0f}")
-    kd.metric(f"Utilidad ({pct_util}%)",         f"${v_util:,.0f}")
-    ke.metric(f"TOTAL (A.I.U.={pct_aiu_total}%)",f"${costo_total:,.0f}",
-              delta=f"${costo_total/n_pil_apu:,.0f} / pilote")
-
-    # Tabla detallada
-    df_final = df_pres[["Nº","Descripción","Unidad","Cantidad","Precio Unitario (COP)","Subtotal (COP)"]].copy()
-
-    # Agregar fila resumen AIU al final
-    resumen_rows = pd.DataFrame([
-        {"Nº": "", "Descripción": "── SUBTOTAL COSTO DIRECTO",     "Unidad": "",   "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": costo_directo},
-        {"Nº": "", "Descripción": f"  Administración ({pct_admin}%)","Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_admin},
-        {"Nº": "", "Descripción": f"  Imprevistos ({pct_impr}%)",   "Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_impr},
-        {"Nº": "", "Descripción": f"  Utilidad ({pct_util}%)",      "Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_util},
-        {"Nº": "", "Descripción": "★ TOTAL PRESUPUESTO",            "Unidad": "",   "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": costo_total},
-    ])
-    df_tabla_final = pd.concat([df_final, resumen_rows], ignore_index=True)
-
-    st.dataframe(
-        df_tabla_final.style.format({
-            "Cantidad":              lambda x: f"{x:,.2f}" if pd.notna(x) else "—",
-            "Precio Unitario (COP)": lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
-            "Subtotal (COP)":        lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
-        }).apply(lambda row: [
-            "background-color: #1e3a5f; font-weight:bold; color:#29b6f6"
-            if row["Descripción"].startswith("★") else
-            "background-color: #1a2a3a; font-weight:bold"
-            if row["Descripción"].startswith("──") else ""
-        ] * len(row), axis=1),
-        use_container_width=True, hide_index=True
-    )
-
-    st.divider()
-
-    # ── 4.5 Indicadores de Costo Técnico ─────────────────────────────────────
-    st.markdown("#####  Indicadores de Eficiencia de Costo")
-    try:
-        _Q_grupo_safe = Q_grupo
-    except NameError:
-        _Q_grupo_safe = 1.0
-    costo_por_kN   = costo_total / max(_Q_grupo_safe, 1.0)            # COP/kN capacidad
-    costo_ml_pil   = costo_directo / max(long_total_pil, 0.01) # COP/ml pilote
-    costo_m3_conc  = (df_pres[df_pres["Descripción"].str.contains("pilotes", case=False)]["Subtotal (COP)"].sum()) / max(vol_conc_pil, 0.01)
-
-    ic1, ic2, ic3 = st.columns(3)
-    ic1.metric("Costo por kN de Capacidad",  f"${costo_por_kN:,.0f} COP/kN",
-               help=f"Costo Total / Q_grupo ({_Q_grupo_safe:.1f} kN)")
-    ic2.metric("Costo por ml de Pilote",     f"${costo_ml_pil:,.0f} COP/ml",
-               help=f"Costo Directo / {long_total_pil:.1f} ml totales")
-    ic3.metric("Costo Directo / m³ Concreto Pilote", f"${costo_m3_conc:,.0f} COP/m³" if vol_conc_pil > 0 else "—")
-
-    # ── 4.6 Gráficas ─────────────────────────────────────────────────────────
-    if _PLOTLY_AVAILABLE:
-        col_pie1, col_pie2 = st.columns(2)
-
-        with col_pie1:
-            st.markdown("**Distribución por Actividad**")
-            fig_pie = go.Figure(go.Pie(
-                labels=df_pres["Descripción"].str[:32],
-                values=df_pres["Subtotal (COP)"],
-                hole=0.45,
-                textinfo="percent",
-                hovertemplate="%{label}<br>$%{value:,.0f}<extra></extra>",
-                marker=dict(colors=[
-                    "#29b6f6","#0288d1","#01579b","#80d8ff","#4fc3f7","#b3e5fc","#e1f5fe"
-                ])
-            ))
-            fig_pie.update_layout(
-                paper_bgcolor="#0f1117", font=dict(color="white"),
-                height=350, margin=dict(t=20, b=10, l=10, r=10),
-                legend=dict(font=dict(size=10))
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-        with col_pie2:
-            st.markdown("**Desglose Costo Total**")
-            fig_donut = go.Figure(go.Pie(
-                labels=["Costo Directo", f"Admin ({pct_admin}%)", f"Imprevistos ({pct_impr}%)", f"Utilidad ({pct_util}%)"],
-                values=[costo_directo, v_admin, v_impr, v_util],
-                hole=0.55,
-                textinfo="percent",
-                hovertemplate="%{label}<br>$%{value:,.0f}<extra></extra>",
-                marker=dict(colors=["#29b6f6","#ff9800","#ef5350","#66bb6a"])
-            ))
-            fig_donut.add_annotation(
-                text=f"${costo_total/1_000_000:.1f}M",
-                x=0.5, y=0.5, showarrow=False,
-                font=dict(size=18, color="white"), xanchor="center"
-            )
-            fig_donut.update_layout(
-                paper_bgcolor="#0f1117", font=dict(color="white"),
-                height=350, margin=dict(t=20, b=10, l=10, r=10),
-                legend=dict(font=dict(size=10))
-            )
-            st.plotly_chart(fig_donut, use_container_width=True)
-
-    # ── 4.7 Export CSV ───────────────────────────────────────────────────────
-    st.divider()
-    st.markdown("#####  Exportar Presupuesto")
-    col_exp1, col_exp2 = st.columns([1, 3])
-    with col_exp1:
-        csv_out = df_tabla_final.to_csv(index=False).encode("utf-8-sig")
-        st.download_button(
-            label="⬇ Descargar CSV",
-            data=csv_out,
-            file_name=f"APU_Pilotes_{n_pil_apu}u_D{D_pilote}m_L{L_pilote}m.csv",
-            mime="text/csv",
-            key="btn_csv_apu_pil"
+        df_precios = st.data_editor(
+            precios_default,
+            column_config={
+                "Precio Unitario (COP)": st.column_config.NumberColumn(
+                    "Precio Unitario (COP)", min_value=0, format="$ %d", required=True
+                )
+            },
+            num_rows="fixed",
+            use_container_width=True,
+            hide_index=True,
+            key="editor_precios_pilotes"
         )
-    with col_exp2:
-        st.info(
-            f" **Resumen:** Grupo de **{n_pil_apu} pilotes** {tipo_seccion.lower()}s "
-            f"Ø{D_pilote}m × {L_pilote}m. "
-            f"Presupuesto total: **${costo_total:,.0f} COP** "
-            f"(A.I.U. = {pct_aiu_total}%)."
+
+        # Merge cantidades + precios
+        df_pres = df_cant.copy()
+        df_pres["Precio Unitario (COP)"] = df_precios["Precio Unitario (COP)"].values
+        df_pres["Subtotal (COP)"]        = df_pres["Cantidad"] * df_pres["Precio Unitario (COP)"]
+
+        costo_directo = df_pres["Subtotal (COP)"].sum()
+
+        st.divider()
+
+        # ── 4.3 Configuración de AIU ──────────────────────────────────────────────
+        st.markdown("##### ⚙ Administración, Imprevistos y Utilidad (A.I.U.)")
+        col_aiu1, col_aiu2, col_aiu3 = st.columns(3)
+        with col_aiu1:
+            pct_admin = st.slider("Administración (%)", 5, 25, 15, 1, key="aiu_admin_pil")
+        with col_aiu2:
+            pct_impr  = st.slider("Imprevistos (%)",    2, 10, 5,  1, key="aiu_impr_pil")
+        with col_aiu3:
+            pct_util  = st.slider("Utilidad (%)",       5, 20, 10, 1, key="aiu_util_pil")
+
+        pct_aiu_total = pct_admin + pct_impr + pct_util
+        v_admin = costo_directo * pct_admin / 100
+        v_impr  = costo_directo * pct_impr  / 100
+        v_util  = costo_directo * pct_util  / 100
+        v_aiu   = v_admin + v_impr + v_util
+        costo_total = costo_directo + v_aiu
+
+        st.divider()
+
+        # ── 4.4 Presupuesto Consolidado ───────────────────────────────────────────
+        st.markdown("#####  Presupuesto Consolidado")
+
+        # KPI cards
+        ka, kb, kc, kd, ke = st.columns(5)
+        ka.metric("Costo Directo",          f"${costo_directo:,.0f}")
+        kb.metric(f"Administración ({pct_admin}%)", f"${v_admin:,.0f}")
+        kc.metric(f"Imprevistos ({pct_impr}%)",     f"${v_impr:,.0f}")
+        kd.metric(f"Utilidad ({pct_util}%)",         f"${v_util:,.0f}")
+        ke.metric(f"TOTAL (A.I.U.={pct_aiu_total}%)",f"${costo_total:,.0f}",
+                  delta=f"${costo_total/n_pil_apu:,.0f} / pilote")
+
+        # Tabla detallada
+        df_final = df_pres[["Nº","Descripción","Unidad","Cantidad","Precio Unitario (COP)","Subtotal (COP)"]].copy()
+
+        # Agregar fila resumen AIU al final
+        resumen_rows = pd.DataFrame([
+            {"Nº": "", "Descripción": "── SUBTOTAL COSTO DIRECTO",     "Unidad": "",   "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": costo_directo},
+            {"Nº": "", "Descripción": f"  Administración ({pct_admin}%)","Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_admin},
+            {"Nº": "", "Descripción": f"  Imprevistos ({pct_impr}%)",   "Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_impr},
+            {"Nº": "", "Descripción": f"  Utilidad ({pct_util}%)",      "Unidad": "%", "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": v_util},
+            {"Nº": "", "Descripción": "★ TOTAL PRESUPUESTO",            "Unidad": "",   "Cantidad": None, "Precio Unitario (COP)": None, "Subtotal (COP)": costo_total},
+        ])
+        df_tabla_final = pd.concat([df_final, resumen_rows], ignore_index=True)
+
+        st.dataframe(
+            df_tabla_final.style.format({
+                "Cantidad":              lambda x: f"{x:,.2f}" if pd.notna(x) else "—",
+                "Precio Unitario (COP)": lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
+                "Subtotal (COP)":        lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
+            }).apply(lambda row: [
+                "background-color: #1e3a5f; font-weight:bold; color:#29b6f6"
+                if row["Descripción"].startswith("★") else
+                "background-color: #1a2a3a; font-weight:bold"
+                if row["Descripción"].startswith("──") else ""
+            ] * len(row), axis=1),
+            use_container_width=True, hide_index=True
         )
+
+        st.divider()
+
+        # ── 4.5 Indicadores de Costo Técnico ─────────────────────────────────────
+        st.markdown("#####  Indicadores de Eficiencia de Costo")
+        try:
+            _Q_grupo_safe = Q_grupo
+        except NameError:
+            _Q_grupo_safe = 1.0
+        costo_por_kN   = costo_total / max(_Q_grupo_safe, 1.0)            # COP/kN capacidad
+        costo_ml_pil   = costo_directo / max(long_total_pil, 0.01) # COP/ml pilote
+        costo_m3_conc  = (df_pres[df_pres["Descripción"].str.contains("pilotes", case=False)]["Subtotal (COP)"].sum()) / max(vol_conc_pil, 0.01)
+
+        ic1, ic2, ic3 = st.columns(3)
+        ic1.metric("Costo por kN de Capacidad",  f"${costo_por_kN:,.0f} COP/kN",
+                   help=f"Costo Total / Q_grupo ({_Q_grupo_safe:.1f} kN)")
+        ic2.metric("Costo por ml de Pilote",     f"${costo_ml_pil:,.0f} COP/ml",
+                   help=f"Costo Directo / {long_total_pil:.1f} ml totales")
+        ic3.metric("Costo Directo / m³ Concreto Pilote", f"${costo_m3_conc:,.0f} COP/m³" if vol_conc_pil > 0 else "—")
+
+        # ── 4.6 Gráficas ─────────────────────────────────────────────────────────
+        if _PLOTLY_AVAILABLE:
+            col_pie1, col_pie2 = st.columns(2)
+
+            with col_pie1:
+                st.markdown("**Distribución por Actividad**")
+                fig_pie = go.Figure(go.Pie(
+                    labels=df_pres["Descripción"].str[:32],
+                    values=df_pres["Subtotal (COP)"],
+                    hole=0.45,
+                    textinfo="percent",
+                    hovertemplate="%{label}<br>$%{value:,.0f}<extra></extra>",
+                    marker=dict(colors=[
+                        "#29b6f6","#0288d1","#01579b","#80d8ff","#4fc3f7","#b3e5fc","#e1f5fe"
+                    ])
+                ))
+                fig_pie.update_layout(
+                    paper_bgcolor="#0f1117", font=dict(color="white"),
+                    height=350, margin=dict(t=20, b=10, l=10, r=10),
+                    legend=dict(font=dict(size=10))
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+            with col_pie2:
+                st.markdown("**Desglose Costo Total**")
+                fig_donut = go.Figure(go.Pie(
+                    labels=["Costo Directo", f"Admin ({pct_admin}%)", f"Imprevistos ({pct_impr}%)", f"Utilidad ({pct_util}%)"],
+                    values=[costo_directo, v_admin, v_impr, v_util],
+                    hole=0.55,
+                    textinfo="percent",
+                    hovertemplate="%{label}<br>$%{value:,.0f}<extra></extra>",
+                    marker=dict(colors=["#29b6f6","#ff9800","#ef5350","#66bb6a"])
+                ))
+                fig_donut.add_annotation(
+                    text=f"${costo_total/1_000_000:.1f}M",
+                    x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=18, color="white"), xanchor="center"
+                )
+                fig_donut.update_layout(
+                    paper_bgcolor="#0f1117", font=dict(color="white"),
+                    height=350, margin=dict(t=20, b=10, l=10, r=10),
+                    legend=dict(font=dict(size=10))
+                )
+                st.plotly_chart(fig_donut, use_container_width=True)
+
+        # ── 4.7 Export CSV ───────────────────────────────────────────────────────
+        st.divider()
+        st.markdown("#####  Exportar Presupuesto")
+        col_exp1, col_exp2 = st.columns([1, 3])
+        with col_exp1:
+            csv_out = df_tabla_final.to_csv(index=False).encode("utf-8-sig")
+            st.download_button(
+                label="⬇ Descargar CSV",
+                data=csv_out,
+                file_name=f"APU_Pilotes_{n_pil_apu}u_D{D_pilote}m_L{L_pilote}m.csv",
+                mime="text/csv",
+                key="btn_csv_apu_pil"
+            )
+        with col_exp2:
+            st.info(
+                f" **Resumen:** Grupo de **{n_pil_apu} pilotes** {tipo_seccion.lower()}s "
+                f"Ø{D_pilote}m × {L_pilote}m. "
+                f"Presupuesto total: **${costo_total:,.0f} COP** "
+                f"(A.I.U. = {pct_aiu_total}%)."
+            )
 
 
 with tab_mem:

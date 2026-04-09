@@ -491,7 +491,7 @@ def render_apu_breakdown(vol_m3, peso_kg, fc_m, num_bars_str=""):
     Renders APU detail given concrete volume, steel weight and concrete strength.
     """
     if "apu_config" not in st.session_state:
-        st.info("Configure los precios en el menú lateral '⚙? Materiales Globales' para ver el presupuesto.")
+        st.info("Configure los precios en el menú lateral '⚙? Materiales Globales'para ver el presupuesto.")
         return
         
     apu = st.session_state.apu_config
@@ -974,7 +974,7 @@ if modulo_sel == " Diseño a Flexión — Viga Rectangular":
             ok_flex    = phi_Mn_kNm >= Mu_vr_kN
             ok_rho_min = rho_prov >= rho_min
             ok_rho_max = rho_prov <= rho_max
-            tab_r, tab_s, tab_3d, tab_q = st.tabs([f"Resultados {'' if (ok_flex and ok_rho_min and ok_rho_max) else '?'}"," Sección 2D"," Visualización 3D"," Cantidades"])
+            tab_r, tab_s, tab_3d, tab_q = st.tabs([f"Resultados {''if (ok_flex and ok_rho_min and ok_rho_max) else '?'}"," Sección 2D"," Visualización 3D"," Cantidades"])
             with tab_r:
                 st.markdown(f"**Factor de reducción φ = {phi_f}** (flexión) | Norma: `{code['ref']}`")
                 st.markdown("""**Verificación fundamental:** La resistencia a flexión provista **φMn** debe ser mayor o igual al momento último demandado **Mu**.
@@ -1464,7 +1464,7 @@ if modulo_sel == " Diseño a Flexión — Viga T":
         Lo_min = max(2 * ht_vt, Ln_vt_cm / 4, 45.0)
         s_conf_max = min(d_vt / 4, 6 * db_vt_cm, 15.0)
 
-        tab_r,tab_s,tab_3d,tab_q = st.tabs([f"Resultados {'' if (ok_vt and ok_bw_vt and ok_rho_max_T) else '?'}"," Sección 2D"," Visualización 3D"," Cantidades"])
+        tab_r,tab_s,tab_3d,tab_q = st.tabs([f"Resultados {''if (ok_vt and ok_bw_vt and ok_rho_max_T) else '?'}"," Sección 2D"," Visualización 3D"," Cantidades"])
         with tab_r:
             st.markdown(f"**Tipo de sección:** {sec_type} | **φ={phi_f}**")
             rows_vt = [
@@ -1832,7 +1832,7 @@ if modulo_sel == "⚡ Diseño a Cortante — Vigas de Concreto":
     elif s_diseno_cm < 7.5:
         st.info("ℹ? La separación de estribos es menor a 7.5 cm. Verifique que sea constructivamente viable.")
 
-    tab_r,tab_s,tab_q = st.tabs([f"Resultados {'' if ok_cv else '?'}"," Sección"," Cantidades"])
+    tab_r,tab_s,tab_q = st.tabs([f"Resultados {''if ok_cv else '?'}"," Sección"," Cantidades"])
     with tab_r:
         st.markdown(f"**φ cortante = {phi_v}** | Norma: `{code['ref']}`")
         st.markdown(r"**Verificación Normativa:** $\phi V_n = \phi (V_c + V_s) \ge V_u$")
@@ -2070,7 +2070,7 @@ if modulo_sel == "⚡ Resistencia a Cortante por Punzonamiento — Losas":
                 h_min_req = h_test
                 break
 
-    tab_r,tab_q = st.tabs([f"Resultados {'' if ok_pz else '?'}"," Cantidades"])
+    tab_r,tab_q = st.tabs([f"Resultados {''if ok_pz else '?'}"," Cantidades"])
     with tab_r:
         qty_table([
             ("d efectivo losa", f"{d_pz:.0f} mm = {d_pz/10:.1f} cm"),
@@ -2229,7 +2229,7 @@ if modulo_sel == " Inercia Fisurada y Deflexiones en Vigas":
     ok_defl_L = defl_L_mm <= lim_L480
     ok_defl_total = defl_DL_mm <= lim_L240
 
-    tab_r,tab_q = st.tabs([f"Resultados {'' if (ok_defl_total and ok_defl_L) else '?'}"," Cantidades"])
+    tab_r,tab_q = st.tabs([f"Resultados {''if (ok_defl_total and ok_defl_L) else '?'}"," Cantidades"])
     with tab_r:
         st.markdown(f"**Ec = {Ec:.0f} MPa** | **n = {n_de:.2f}** | **fr = {fr:.3f} MPa**")
         qty_table([
@@ -2380,7 +2380,7 @@ if modulo_sel == " Diseño de Losa en Una Dirección":
         s_temp = min(Ab_ls/As_temp*100, 5*h_ls, 45)
 
         ok_ls = phi_Mn_ls >= Mu_ls_kNm
-        tab_r,tab_s,tab_g,tab_3d,tab_q = st.tabs([f"Resultados {'' if ok_ls else '?'}"," Sección 2D"," Gráficos M/V"," 3D"," Cantidades"])
+        tab_r,tab_s,tab_g,tab_3d,tab_q = st.tabs([f"Resultados {''if ok_ls else '?'}"," Sección 2D"," Gráficos M/V"," 3D"," Cantidades"])
         with tab_r:
             qty_table([
                 ("wu factorizada", f"{wu_ls:.2f} kN/m²"),
@@ -2973,18 +2973,18 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
     st.markdown("---")
     st.subheader("Reporte de Verificaciones (NSR-10 / ACI 318)")
     
-    t1, t2, t3 = st.tabs(["Chequeos Sísmicos", " Momentos y Flexión", "⚡ Cortante Plástico ($V_p$)"])
+    t1, t2, t3 = st.tabs(["Chequeos Sísmicos", "Momentos y Flexión", "⚡ Cortante Plástico ($V_p$)"])
     with t1:
         st.markdown("**(A) Geometría**")
-        st.write(f"- $b_w \ge 25$ cm: {'CUMPLE' if chk_b_min else f'? ({b_vc} cm)'}")
-        st.write(f"- $b_w / h \ge 0.3$: {'CUMPLE' if chk_bh_ratio else f'? ({b_vc/h_vc:.2f})'}")
-        st.write(f"- $b_w \le b_{{col}} + 3h$: {'CUMPLE' if chk_b_max else f'? ({bcol_vc+3*h_vc} cm)'}")
+        st.write(f"- $b_w \ge 25$ cm: {'CUMPLE'if chk_b_min else f'? ({b_vc} cm)'}")
+        st.write(f"- $b_w / h \ge 0.3$: {'CUMPLE'if chk_bh_ratio else f'? ({b_vc/h_vc:.2f})'}")
+        st.write(f"- $b_w \le b_{{col}} + 3h$: {'CUMPLE'if chk_b_max else f'? ({bcol_vc+3*h_vc} cm)'}")
         
         st.markdown(f"**(B) Requisitos Cuantía Longitudinal ({'DMO/DES' if es_sismico else 'General'})**")
         if es_sismico:
             st.write(f"- $A_{{s,inf}} \ge 0.50 A_{{s,sup}}$ (Nudo Izquierdo): {' CUMPLE' if chk_izq_inf_50 else f'? ({As_izq_inf:.2f} < {0.5*As_izq_sup:.2f})'}")
             st.write(f"- $A_{{s,inf}} \ge 0.50 A_{{s,sup}}$ (Nudo Derecho): {' CUMPLE' if chk_der_inf_50 else f'? ({As_der_inf:.2f} < {0.5*As_der_sup:.2f})'}")
-            st.write(f"- Min 2 barras continuas cara a cara: {'CUMPLE' if chk_2_continuas else '? Faltan barras continuas'}")
+            st.write(f"- Min 2 barras continuas cara a cara: {'CUMPLE'if chk_2_continuas else '? Faltan barras continuas'}")
             st.write(f"- $\\rho_{{max}} \le 0.025$ (DES): {' CUMPLE' if chk_rho_des else '? EXCEDE'}")
         else:
             st.info("No aplican reglas estrictas C.21.5 de pórticos.")
@@ -3219,7 +3219,7 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
 
     # --- RESULTADOS ADICIONALES (3D, APU, Memoria) ---
     st.markdown("---")
-    res_t1, res_t2, res_t3 = st.tabs(["Visualización 3D", " Cantidades y APU", " Memoria de Cálculo"])
+    res_t1, res_t2, res_t3 = st.tabs(["Visualización 3D", "Cantidades y APU", " Memoria de Cálculo"])
     
     with res_t1:
         fig3d = go.Figure()

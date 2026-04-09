@@ -599,12 +599,12 @@ if st.session_state.resultados3d is not None:
 
     # Exportaciones
     st.markdown("---")
-    st.subheader(_t("Exportaciones", " Exports"))
+    st.subheader(_t("Exportaciones", "Exports"))
     col_e1, col_e2, col_e3, col_e4 = st.columns(4)
 
     # Excel
     with col_e1:
-        if st.button(_t("Exportar a Excel", " Export to Excel")):
+        if st.button(_t("Exportar a Excel", "Export to Excel")):
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 pd.DataFrame(desp_data).to_excel(writer, sheet_name="Desplazamientos", index=False)
@@ -620,11 +620,11 @@ if st.session_state.resultados3d is not None:
                 st.session_state.apoyos3d_df.to_excel(writer, sheet_name="Apoyos", index=False)
                 st.session_state.cargas3d_df.to_excel(writer, sheet_name="Cargas", index=False)
             output.seek(0)
-            st.download_button(_t("Descargar Excel", " Download Excel"), data=output, file_name="estructura_3d.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            st.download_button(_t("Descargar Excel", "Download Excel"), data=output, file_name="estructura_3d.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     # DXF (planos 2D)
     with col_e2:
-        if st.button(_t("Exportar a DXF", " Export to DXF")):
+        if st.button(_t("Exportar a DXF", "Export to DXF")):
             try:
                 from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
                                          dxf_rotulo, dxf_rotulo_campos)
@@ -660,11 +660,11 @@ if st.session_state.resultados3d is not None:
                 dxf_rotulo(msp, _cam15, _x0_15, _z015-4, rot_w=max(_xw_15,10), rot_h=3, escala=50)
             out_dxf = io.StringIO()
             doc_dxf.write(out_dxf)
-            st.download_button(_t("Descargar DXF"," Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_3d.dxf", mime="application/dxf")
+            st.download_button(_t("Descargar DXF","Download DXF"), data=out_dxf.getvalue().encode('utf-8'), file_name="estructura_3d.dxf", mime="application/dxf")
 
     # Memoria DOCX
     with col_e3:
-        if st.button(_t("Memoria DOCX", " DOCX Report")):
+        if st.button(_t("Memoria DOCX", "DOCX Report")):
             doc = Document()
             doc.add_heading(_t("Análisis estructural 3D", "3D Structural Analysis"), 0)
             doc.add_paragraph(_t(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}", f"Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}"))
@@ -728,7 +728,7 @@ if st.session_state.resultados3d is not None:
             buf_doc = io.BytesIO()
             doc.save(buf_doc)
             buf_doc.seek(0)
-            st.download_button(_t("Descargar Memoria", " Download Report"), data=buf_doc, file_name="memoria_estructura_3d.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            st.download_button(_t("Descargar Memoria", "Download Report"), data=buf_doc, file_name="memoria_estructura_3d.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
     # APU
     with col_e4:

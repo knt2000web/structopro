@@ -758,7 +758,7 @@ with tab_resumen:
             st.warning(f"⚠ Sobrecosto vs placa maciza: {moneda} {sobrecosto:,.0f}")
         else:
             st.success(f"Ahorro vs placa maciza: {moneda} {ahorro:,.0f}")
-        st.metric("Deflexión", f"{'OK' if cumple_deflexion else ' EXCEDE'} — {delta_calc*1000:.1f} mm")
+        st.metric("Deflexión", f"{'OK'if cumple_deflexion else ' EXCEDE'} — {delta_calc*1000:.1f} mm")
         st.metric("Zona sísmica", f"{zona_sismica}")
     if st.button("Generar PDF Resumen"):
         pdf_data = generate_pdf()

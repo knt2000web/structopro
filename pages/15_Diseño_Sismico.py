@@ -138,7 +138,7 @@ def compute_spectrum(norma, params):
 # =============================================================================
 # 2. INTERFAZ DE PARÁMETROS
 # =============================================================================
-st.header(_t("2. Espectro Sísmico de Diseño", " 2. Seismic Design Response Spectrum"))
+st.header(_t("2. Espectro Sísmico de Diseño", "2. Seismic Design Response Spectrum"))
 
 with st.container():
     col_left, col_right = st.columns([1, 2])
@@ -309,7 +309,7 @@ with st.container():
         col_b.metric(_t("Cortante Basal V", "Base Shear V"), f"{V_base:.1f} kN")
 
         # Tabla de parámetros
-        with st.expander(_t("Parámetros adoptados", " Adopted Parameters")):
+        with st.expander(_t("Parámetros adoptados", "Adopted Parameters")):
             df_params = pd.DataFrame(params_texto, columns=["Descripción"])
             st.dataframe(df_params, use_container_width=True, hide_index=True)
 
@@ -317,7 +317,7 @@ with st.container():
 # 3. EXPORTACIONES
 # =============================================================================
 st.markdown("---")
-st.subheader(_t("Exportación Integral", " Comprehensive Export"))
+st.subheader(_t("Exportación Integral", "Comprehensive Export"))
 
 tab_dxf, tab_doc, tab_xls = st.tabs([
     " " + _t("Exportar Gráfico a DXF", "Export Graph to DXF"),
@@ -372,7 +372,7 @@ with tab_dxf:
                 dxf_rotulo(msp, _cam, 0, -4.5, rot_w=9, rot_h=3, escala=50)
             _out_dxf = io.StringIO()
             doc_dxf.write(_out_dxf)
-            st.download_button(_t("Descargar Espectro.dxf", " Download Spectrum.dxf"),
+            st.download_button(_t("Descargar Espectro.dxf", "Download Spectrum.dxf"),
                                data=_out_dxf.getvalue().encode("utf-8"),
                                file_name=f"Espectro_{norma_sel[:5]}.dxf", mime="application/dxf")
 
@@ -406,7 +406,7 @@ with tab_doc:
         buf = io.BytesIO()
         doc.save(buf)
         buf.seek(0)
-        st.download_button(_t("Descargar Memoria DOCX", " Download DOCX Report"), data=buf,
+        st.download_button(_t("Descargar Memoria DOCX", "Download DOCX Report"), data=buf,
                            file_name="Estudio_Sismico.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_xls:
@@ -445,8 +445,8 @@ with tab_xls:
             worksheet.set_column('A:A', 40)
             worksheet.set_column('B:D', 15, money_fmt)
         output_excel.seek(0)
-        st.download_button(_t("Descargar Archivo Excel", " Download Excel File"), data=output_excel,
+        st.download_button(_t("Descargar Archivo Excel", "Download Excel File"), data=output_excel,
                            file_name="Espectro_Sismico.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info(_t("Ve a la página 'APU Mercado' para cargar los costos en vivo y activar el presupuesto.", 
+        st.info(_t("Ve a la página 'APU Mercado'para cargar los costos en vivo y activar el presupuesto.", 
                    " Go to the 'Market APU' page to load live costs and enable the budget."))

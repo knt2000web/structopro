@@ -1406,7 +1406,7 @@ with tab1:
     with col1:
         st.subheader(_t("Diagrama P-M 2D (Eje X)", " P-M 2D Diagram (X-Axis)"))
         st.pyplot(fig_pm_2d)
-        st.subheader(_t("Superficie de Interacción Biaxial 3D", " Biaxial Interaction Surface 3D"))
+        st.subheader(_t("Superficie de Interacción Biaxial 3D", "Biaxial Interaction Surface 3D"))
         st.plotly_chart(fig_3d, use_container_width=True)
     with col2:
         st.subheader(_t("Verificación Biaxial (Bresler)", " Biaxial Verification (Bresler)"))
@@ -1450,7 +1450,7 @@ with tab1:
             if ratio > 5:
                 st.error("⚠ **Relación > 5x:** La sección es muy insuficiente. Se recomienda rediseñar completamente la geometría.")
         st.markdown("---")
-        st.subheader(_t("Verificación de Esbeltez", " Slenderness Verification"))
+        st.subheader(_t("Verificación de Esbeltez", "Slenderness Verification"))
         st.markdown(f"""
         | Parámetro | Valor | Estado |
         |-----------|-------|--------|
@@ -1463,7 +1463,7 @@ with tab1:
         if slenderness['kl_r'] > 100:
             st.warning("⚠ **kl/r > 100** — Se requiere análisis no lineal según NSR-10 C.10.10.7")
         st.markdown("---")
-        st.subheader(_t("Verificación de Estribos / Espiral", " Tie / Spiral Verification"))
+        st.subheader(_t("Verificación de Estribos / Espiral", "Tie / Spiral Verification"))
         if not es_circular:
             req_1_str = f"0.3 \\times {s_conf:.1f} \\times {bc:.1f} \\times ({fc:.1f}/{fyt:.0f}) \\times ({Ag:.1f}/{Ach:.1f} - 1) = {Ash_req_1:.2f} \\text{{ cm}}^2"
             req_2_str = f"0.09 \\times {s_conf:.1f} \\times {bc:.1f} \\times ({fc:.1f}/{fyt:.0f}) = {Ash_req_2:.2f} \\text{{ cm}}^2"
@@ -1510,7 +1510,7 @@ with tab1:
 # TAB 2: SECCIÓN Y ESTRIBOS (con DXF y RÓTULO ICONTEC)
 # =============================================================================
 with tab2:
-    st.subheader(_t("Visualización 3D de la Columna", " 3D Column Visualization"))
+    st.subheader(_t("Visualización 3D de la Columna", "3D Column Visualization"))
     fig3d_col = go.Figure()
     if es_circular:
         theta = np.linspace(0, 2*np.pi, 50)
@@ -1597,7 +1597,7 @@ with tab2:
                             height=450, margin=dict(l=0, r=0, b=0, t=0))
     st.plotly_chart(fig3d_col, use_container_width=True)
     st.markdown("---")
-    st.subheader(_t("Sección Transversal", " Cross Section"))
+    st.subheader(_t("Sección Transversal", "Cross Section"))
     col_s1, col_s2 = st.columns(2)
     with col_s1:
         fig_sec, ax_s = plt.subplots(figsize=(5, 5))
@@ -1639,7 +1639,7 @@ with tab2:
         ax_s.set_title(f"Sección {'Circular' if es_circular else 'Rectangular'} — {n_barras} varillas Ø{rebar_diam:.0f}mm", color='white', fontsize=9)
         st.pyplot(fig_sec)
     with col_s2:
-        st.subheader(_t("Resumen de Verificaciones", " Verification Summary"))
+        st.subheader(_t("Resumen de Verificaciones", "Verification Summary"))
         checks_data = {
             "Verificación": ["Cuantía longitudinal", "Verificación biaxial", "Esbeltez (kl/r ≤ 22)",
                              f"Ash {'espiral' if es_circular else 'estribos'}", "Longitud confinamiento Lo", "Separación máxima"],
@@ -2020,14 +2020,14 @@ with tab2:
 # TAB 3: CANTIDADES, DESPIECE Y APU
 # =============================================================================
 with tab3:
-    st.subheader(f"Cantidades de Materiales — {'Circular' if es_circular else 'Rectangular'}, L={L_col:.0f} cm")
+    st.subheader(f"Cantidades de Materiales — {'Circular'if es_circular else 'Rectangular'}, L={L_col:.0f} cm")
     col_c1, col_c2, col_c3, col_c4 = st.columns(4)
     col_c1.metric(_t("Concreto", "Concrete"), f"{vol_concreto_m3:.4f} m³")
     col_c2.metric(_t("Acero Total", "Total Steel"), f"{peso_total_acero_kg:.2f} kg")
     col_c3.metric(_t("Acero Longitudinal", "Long. Steel"), f"{peso_acero_long_kg:.2f} kg")
     col_c4.metric(_t("Acero Estribos", "Tie Steel"), f"{peso_total_estribos_kg:.2f} kg")
     st.markdown("---")
-    st.subheader(_t("Despiece de Acero", " Bar Bending Schedule"))
+    st.subheader(_t("Despiece de Acero", "Bar Bending Schedule"))
     
     if es_circular:
         long_bar = (L_col + 2 * (ld_mm/10) + 2 * (12*rebar_diam/10)) / 100
@@ -2069,7 +2069,7 @@ with tab3:
     ax_bars.grid(True, alpha=0.3)
     st.pyplot(fig_bars)
     
-    with st.expander(_t("Dibujo de Figurado para Taller", " Shop Drawing Details"), expanded=False):
+    with st.expander(_t("Dibujo de Figurado para Taller", "Shop Drawing Details"), expanded=False):
         st.markdown(_t("Formas reales de las barras con ganchos y dimensiones.", "Actual bar shapes with hooks and dimensions."))
         hook_len_cm = 12 * rebar_diam / 10
         if es_circular:
@@ -2088,7 +2088,7 @@ with tab3:
             fig_e1 = draw_stirrup(inside_b, inside_h, hook_len_est, stirrup_diam, _bar_label(stirrup_diam))
             st.pyplot(fig_e1)
     
-    with st.expander(_t("Presupuesto APU", " APU Budget"), expanded=False):
+    with st.expander(_t("Presupuesto APU", "APU Budget"), expanded=False):
         st.markdown(_t("Ingrese precios unitarios para calcular el costo total.", "Enter unit prices to calculate total cost."))
         with st.form(key="apu_form"):
             if "apu_moneda" not in st.session_state: st.session_state["apu_moneda"] = "COP"
@@ -2220,7 +2220,7 @@ with tab3:
                 money_fmt = workbook.add_format({'num_format': '#,##0.00'})
                 worksheet.set_column('D:D', 15, money_fmt)
             output_excel.seek(0)
-            st.download_button(_t("Descargar Presupuesto Excel", " Download Budget Excel"), 
+            st.download_button(_t("Descargar Presupuesto Excel", "Download Budget Excel"), 
                                data=output_excel, file_name=f"APU_Columna_{b:.0f}x{h:.0f}.xlsx",
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
@@ -2228,10 +2228,10 @@ with tab3:
 # TAB 4: MEMORIA DE CÁLCULO COMPLETA
 # =============================================================================
 with tab4:
-    st.subheader(_t("Generar Memoria de Cálculo Completa", " Generate Complete Calculation Report"))
+    st.subheader(_t("Generar Memoria de Cálculo Completa", "Generate Complete Calculation Report"))
     col_d1, col_d2 = st.columns(2)
     with col_d1:
-        btn_docx_col = st.button(_t("Generar Memoria DOCX", " Generate DOCX Report"), type="primary")
+        btn_docx_col = st.button(_t("Generar Memoria DOCX", "Generate DOCX Report"), type="primary")
     with col_d2:
         try:
             if es_circular:
@@ -2511,14 +2511,14 @@ with tab4:
         doc_mem = io.BytesIO()
         doc.save(doc_mem)
         doc_mem.seek(0)
-        st.success(_t("Memoria generada exitosamente.", " Report generated successfully."))
-        st.download_button(label=_t("Descargar Memoria DOCX", " Download DOCX Report"),
+        st.success(_t("Memoria generada exitosamente.", "Report generated successfully."))
+        st.download_button(label=_t("Descargar Memoria DOCX", "Download DOCX Report"),
                            data=doc_mem, file_name=f"Memoria_Columna_{b:.0f}x{h:.0f}_{datetime.datetime.now().strftime('%Y%m%d')}.docx",
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     
     st.markdown("---")
-    st.subheader(_t("Exportar Verificaciones a Excel", " Export Verifications to Excel"))
-    if st.button(_t("Exportar a Excel", " Export to Excel")):
+    st.subheader(_t("Exportar Verificaciones a Excel", "Export Verifications to Excel"))
+    if st.button(_t("Exportar a Excel", "Export to Excel")):
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
             df_verif = pd.DataFrame({
@@ -2553,6 +2553,6 @@ with tab4:
             })
             df_cant.to_excel(writer, sheet_name='Cantidades', index=False)
         excel_buffer.seek(0)
-        st.download_button(label=_t("Descargar Excel", " Download Excel"),
+        st.download_button(label=_t("Descargar Excel", "Download Excel"),
                            data=excel_buffer, file_name=f"Verificaciones_Columna_{b:.0f}x{h:.0f}.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

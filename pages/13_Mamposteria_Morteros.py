@@ -462,7 +462,7 @@ with tab_dxf:
         msp.add_text(f"H = {H_muro:.2f} m", dxfattribs={'layer':'TEXTO','height':0.1,'insert':(off_x-0.5, H_muro/2)})
     _out = io.StringIO()
     doc_dxf.write(_out)
-    st.download_button(_t("Descargar DXF", " Download DXF"), data=_out.getvalue().encode('utf-8'),
+    st.download_button(_t("Descargar DXF", "Download DXF"), data=_out.getvalue().encode('utf-8'),
                        file_name=f"Muro_{L_muro}x{H_muro}.dxf", mime="application/dxf")
 
 with tab_mem:
@@ -498,7 +498,7 @@ with tab_mem:
         buf_doc = io.BytesIO()
         doc.save(buf_doc)
         buf_doc.seek(0)
-        st.download_button(_t("Descargar Memoria DOCX", " Download DOCX Report"), data=buf_doc, 
+        st.download_button(_t("Descargar Memoria DOCX", "Download DOCX Report"), data=buf_doc, 
                            file_name=f"Memoria_Muro_{L_muro}x{H_muro}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab_apu:
@@ -617,5 +617,5 @@ with tab_apu:
         worksheet.set_column('A:A', 25)
         worksheet.set_column('B:D', 15, money_fmt)
     output_excel.seek(0)
-    st.download_button(_t("Descargar Presupuesto Excel", " Download Excel Budget"), data=output_excel, 
+    st.download_button(_t("Descargar Presupuesto Excel", "Download Excel Budget"), data=output_excel, 
                        file_name=f"APU_Muro_{L_muro}x{H_muro}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

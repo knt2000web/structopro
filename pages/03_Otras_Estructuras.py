@@ -196,7 +196,7 @@ st.sidebar.caption(f"Ec = {Ec:.0f} MPa  |  β₁ = {beta1:.3f}  |  f'c = {fc:.2f
 # 1. CORTANTE A UNA DISTANCIA X (VIGAS) + DISEÑO DE ESTRIBOS
 # =============================================================================
 with st.expander(_t("Cortante a una Distancia X del Apoyo (Vigas)", " Shear at a Distance X from Support (Beams)")):
-    st.info(_t("**Modo de uso:** Ingresa la carga distribuida Wu, la longitud de la viga y la distancia X. La app calculará el cortante Vu en ese punto y el espaciamiento requerido de estribos.", " **How to use:** Enter load Wu, span L and distance X. Shows required shear at that section and stirrup spacing."))
+    st.info(_t("**Modo de uso:** Ingresa la carga distribuida Wu, la longitud de la viga y la distancia X. La app calculará el cortante Vu en ese punto y el espaciamiento requerido de estribos.", "**How to use:** Enter load Wu, span L and distance X. Shows required shear at that section and stirrup spacing."))
     c1, c2 = st.columns(2)
     with c1:
         L_vga = st.number_input(_t("Longitud luz libre [m]", "Clear span (m)"), 1.0, 20.0, 5.0, 0.5, key="o_cx_L")
@@ -236,7 +236,7 @@ with st.expander(_t("Cortante a una Distancia X del Apoyo (Vigas)", " Shear at a
     phi_Vn = phi_v * (Vc_kN + Vs_prov)
     ok_cx = phi_Vn >= Vu_x
 
-    tab_res, tab_q, tab_apu, tab_mem, tab_dxf = st.tabs(["Resultados"," Cantidades"," APU"," Memoria"," DXF"])
+    tab_res, tab_q, tab_apu, tab_mem, tab_dxf = st.tabs(["Resultados","Cantidades"," APU"," Memoria"," DXF"])
     with tab_res:
         st.markdown(f"**φ cortante = {phi_v}** | Norma: `{code['ref']}`")
         rows_cx = [
@@ -356,7 +356,7 @@ with st.expander(_t("Cortante a una Distancia X del Apoyo (Vigas)", " Shear at a
 # 2. MÉNSULAS (CORBELS) – ACI 318
 # =============================================================================
 with st.expander(_t("Diseño de Ménsulas (Corbels / ACI 318)", " Corbel Design (ACI 318)")):
-    st.info(_t("**Modo de uso:** Ingresa la carga vertical Vu, la fuerza horizontal Nuc y la geometría. Se calculará el acero principal, estribos horizontales cerrados y el acero de colgado.", " **How to use:** Enter vertical load Vu, horizontal Nuc and geometry. Calculates main steel and closed ties."))
+    st.info(_t("**Modo de uso:** Ingresa la carga vertical Vu, la fuerza horizontal Nuc y la geometría. Se calculará el acero principal, estribos horizontales cerrados y el acero de colgado.", "**How to use:** Enter vertical load Vu, horizontal Nuc and geometry. Calculates main steel and closed ties."))
     c1,c2 = st.columns(2)
     with c1:
         Vu_men = st.number_input(_t("Carga Vertical Vu [kN]", "Vertical Load Vu [kN]"), 50.0, 2000.0, 300.0, 50.0, key="o_men_vu")
@@ -394,7 +394,7 @@ with st.expander(_t("Diseño de Ménsulas (Corbels / ACI 318)", " Corbel Design 
         n_bars = math.ceil(As_req_men / Ab_men)
         As_prov_men = n_bars * Ab_men
 
-        tab_res, tab_q, tab_apu, tab_mem, tab_dxf = st.tabs(["Resultados"," Cantidades"," APU"," Memoria"," DXF"])
+        tab_res, tab_q, tab_apu, tab_mem, tab_dxf = st.tabs(["Resultados","Cantidades"," APU"," Memoria"," DXF"])
         with tab_res:
             rows_men = [
                 ("a/d", f"{a_d_ratio:.2f}"),
@@ -539,8 +539,8 @@ with st.expander(_t("Diseño de Ménsulas (Corbels / ACI 318)", " Corbel Design 
 # =============================================================================
 # 3. PREDIMENSIONAMIENTO DE COLUMNAS
 # =============================================================================
-with st.expander(_t("Predimensionamiento de Columnas", " Column Preliminary Sizing")):
-    st.info(_t("**Modo de uso:** Ingresa la carga viva y muerta estimada por piso, el número de pisos y el área tributaria. Te recomendaré dimensiones de columna base.", " **How to use:** Enter estimated load per floor, number of floors, and tributary area. Predicts base column section."))
+with st.expander(_t("Predimensionamiento de Columnas", "Column Preliminary Sizing")):
+    st.info(_t("**Modo de uso:** Ingresa la carga viva y muerta estimada por piso, el número de pisos y el área tributaria. Te recomendaré dimensiones de columna base.", "**How to use:** Enter estimated load per floor, number of floors, and tributary area. Predicts base column section."))
     c1,c2 = st.columns(2)
     with c1:
         area_trib = st.number_input(_t("Área Tributaria [m²]", "Tributary Area [m²]"), 5.0, 100.0, 20.0, 5.0, key="o_pre_a")
@@ -645,7 +645,7 @@ with st.expander(_t("Predimensionamiento de Columnas", " Column Preliminary Sizi
 # 4. CAPACIDAD AXIAL COLUMNAS CORTAS
 # =============================================================================
 with st.expander(_t("Capacidad Axial Pn,max (Columnas Cortas)", " Axial Capacity Pn,max (Short Columns)")):
-    st.info(_t("**Modo de uso:** Ingresa la sección transversal probada y su armadura. El sistema calculará la carga axial máxima que soporta, ignorando el pandeo.", " **How to use:** Enter section and steel. Calculates max axial capacity (ignoring slenderness)."))
+    st.info(_t("**Modo de uso:** Ingresa la sección transversal probada y su armadura. El sistema calculará la carga axial máxima que soporta, ignorando el pandeo.", "**How to use:** Enter section and steel. Calculates max axial capacity (ignoring slenderness)."))
     c1,c2 = st.columns(2)
     with c1:
         b_c = st.number_input("b [cm]", 20.0, 150.0, 40.0, 5.0, key="o_cap_b")
@@ -678,7 +678,7 @@ with st.expander(_t("Capacidad Axial Pn,max (Columnas Cortas)", " Axial Capacity
 # 5. LOSAS BIDIRECCIONALES (Método Coeficientes ACI)
 # =============================================================================
 with st.expander(_t("Momentos en Losas 2D (Método ACI Coeficientes)", " 2D Slab Moments (ACI Coefficients Method)")):
-    st.info(_t("**Modo de uso:** Ingresa las luces la y lb del tablero. Sirve para diseñar losas apoyadas perimetralmente en vigas. Calcula los momentos en ambas direcciones.", " **How to use:** Enter short and long spans. Useful for edge-supported slabs. Calculates moments in both directions."))
+    st.info(_t("**Modo de uso:** Ingresa las luces la y lb del tablero. Sirve para diseñar losas apoyadas perimetralmente en vigas. Calcula los momentos en ambas direcciones.", "**How to use:** Enter short and long spans. Useful for edge-supported slabs. Calculates moments in both directions."))
     c1,c2 = st.columns(2)
     with c1:
         la_losa = st.number_input(_t("Luz corta La [m]", "Short span La [m]"), 2.0, 15.0, 4.0, 0.5, key="lo2_la")

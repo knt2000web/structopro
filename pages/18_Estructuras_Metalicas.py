@@ -542,10 +542,10 @@ with tab_CF:
 # TAB 5: EXPORTACIONES GLOBALES
 # ─────────────────────────────────────────────
 with tab_E:
-    st.header(_t("Exportaciones Globales", " Global Exports"))
+    st.header(_t("Exportaciones Globales", "Global Exports"))
 
     # Mostrar despiece acumulado
-    st.subheader(_t("Despiece de Acero", " Steel Cutting List"))
+    st.subheader(_t("Despiece de Acero", "Steel Cutting List"))
     if st.session_state.steel_despiece:
         df_desp = pd.DataFrame(st.session_state.steel_despiece)
         st.dataframe(df_desp.style.format({"Longitud (m)": "{:.2f}", "Peso (kg)": "{:.2f}"}), use_container_width=True, hide_index=False)
@@ -610,10 +610,10 @@ with tab_E:
         doc_mem = io.BytesIO()
         doc.save(doc_mem)
         doc_mem.seek(0)
-        st.download_button(_t("Descargar Memoria", " Download Report"), data=doc_mem, file_name="Memoria_Acero.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        st.download_button(_t("Descargar Memoria", "Download Report"), data=doc_mem, file_name="Memoria_Acero.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
     st.markdown("---")
-    st.subheader(_t("Presupuesto APU", " APU Budget"))
+    st.subheader(_t("Presupuesto APU", "APU Budget"))
     apu = st.session_state.get("apu_config", {
         "moneda": "COP$",
         "costo_dia_mo": 69333.33,
@@ -680,11 +680,11 @@ with tab_E:
         worksheet.write(row, 0, "TOTAL PRESUPUESTO", workbook.add_format({'bold': True}))
         worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
     output_excel.seek(0)
-    st.download_button(_t("Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel,
+    st.download_button(_t("Descargar Presupuesto Excel", "Download Budget Excel"), data=output_excel,
                        file_name="APU_Acero.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
     st.markdown("---")
-    st.subheader(_t("DXF de Sección", " Section DXF"))
+    st.subheader(_t("DXF de Sección", "Section DXF"))
     st.write(_t("Genera un archivo DXF con la sección transversal del último perfil W definido en la pestaña de propiedades.", "Generates a DXF file with the cross-section of the last W-shape defined in the properties tab."))
     try:
         from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
@@ -726,7 +726,7 @@ with tab_E:
                 dxf_rotulo(msp_st, _cam_m, -bfw/2*sc, -dw/2*sc - 0.25, rot_w=max(bfw*sc*2, 0.2), rot_h=0.15, escala=20)
             out_dxf = io.StringIO()
             doc_dxf.write(out_dxf)
-            st.download_button(_t("Descargar Perfil_W.dxf", " Download Perfil_W.dxf"),
+            st.download_button(_t("Descargar Perfil_W.dxf", "Download Perfil_W.dxf"),
                                data=out_dxf.getvalue().encode('utf-8'),
                                file_name=f"Perfil_W_{show_mm(dw):.0f}x{show_mm(bfw):.0f}.dxf", mime="application/dxf")
         else:

@@ -579,7 +579,7 @@ with st.sidebar:
     st.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagpedia.net/data/flags/mini/{_iso}.png"style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
     st.markdown("---")
 
-    st.header(_t("Geometría", " Geometry"))
+    st.header(_t("Geometría", "Geometry"))
     L_x = st.number_input("Frente Lote X (m)", value=12.0, min_value=2.0, step=0.5, key="g3d_lx")
     L_z = st.number_input("Fondo Lote Z (m)", value=15.0, min_value=2.0, step=0.5, key="g3d_lz")
     n_x = st.number_input("N° Columnas en X", value=4, min_value=2, step=1, key="g3d_nx")
@@ -609,7 +609,7 @@ with st.sidebar:
     cm = st.number_input("Carga Muerta (CM)", value=4.5, step=0.5, key="g3d_cm")
     cv = st.number_input("Carga Viva (CV)", value=2.0, step=0.5, key="g3d_cv")
 
-    st.subheader(_t("Parámetros Sísmicos", " Seismic Parameters"))
+    st.subheader(_t("Parámetros Sísmicos", "Seismic Parameters"))
     # Selección de ciudad según norma
     ciudades = list(seismic_info["ciudades"].keys())
     ciudad_sel = st.selectbox(_t("Ciudad / Localidad", "City / Location"), ciudades, key="g3d_ciudad")
@@ -847,6 +847,6 @@ if st.session_state.get("g3d_ready", False):
                 st.write(f"**Costo materiales:** {mon} {total_mat:,.2f}")
                 st.write(f"**Costo total (incl. MO e indirectos):** {mon} {total:,.2f}")
             else:
-                st.info("Ve a la página 'APU Mercado' para configurar precios.")
+                st.info("Ve a la página 'APU Mercado'para configurar precios.")
 else:
     st.info("Configure los parámetros en la barra lateral y presione **Generar Malla 3D**.")

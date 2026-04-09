@@ -678,7 +678,7 @@ with tab_cim:
     st.pyplot(fig_zap)
 
 with tab_exp:
-    _sub_dxf, _sub_mem, _sub_qty, _sub_apu = st.tabs(["DXF", " Memoria", " Cantidades", " APU"])
+    _sub_dxf, _sub_mem, _sub_qty, _sub_apu = st.tabs(["DXF", "Memoria", " Cantidades", " APU"])
 
 with _sub_dxf:
     st.subheader("Descargar Plano Estructural DXF")

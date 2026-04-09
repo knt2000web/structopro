@@ -473,7 +473,7 @@ df_despiece = pd.DataFrame(despiece)
 # =============================================================================
 # INTERFAZ
 # =============================================================================
-tab1, tab2, tab3, tab4 = st.tabs(["Estabilidad y Estructura", " Sección y DXF", " Visualización 3D", " Cantidades, APU y Despiece"])
+tab1, tab2, tab3, tab4 = st.tabs(["Estabilidad y Estructura", "Sección y DXF", " Visualización 3D", " Cantidades, APU y Despiece"])
 
 with tab1:
     col1, col2 = st.columns(2)
@@ -519,7 +519,7 @@ with tab1:
     st.markdown("---")
     col_mem1, col_mem2 = st.columns(2)
     with col_mem1:
-        if st.button(_t("Generar Memoria DOCX", " Generate DOCX Report")):
+        if st.button(_t("Generar Memoria DOCX", "Generate DOCX Report")):
             # Crear figura de la sección para incrustar
             fig_mem, ax_mem = plt.subplots(figsize=(6, 4))
             ax_mem.set_facecolor('#1a1a2e'); fig_mem.patch.set_facecolor('#1a1a2e')
@@ -576,7 +576,7 @@ with tab1:
             st.download_button("Descargar Memoria DOCX", data=buf_doc, file_name=f"Muro_{H_muro:.1f}m.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 with tab2:
-    st.subheader(_t("Sección Transversal y DXF", " Cross Section and DXF"))
+    st.subheader(_t("Sección Transversal y DXF", "Cross Section and DXF"))
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.set_facecolor('#1a1a2e'); fig.patch.set_facecolor('#1a1a2e')
     # Base
@@ -675,7 +675,7 @@ with tab2:
     os.unlink(tmp_path__out)    st.download_button("Descargar DXF", data=bytes__out, file_name=f"Muro_{H_muro:.1f}m.dxf")
 
 with tab3:
-    st.subheader(_t("Visualización 3D", " 3D Visualization"))
+    st.subheader(_t("Visualización 3D", "3D Visualization"))
     fig3d = go.Figure()
     # Base
     x_base = [0, B_base, B_base, 0, 0, B_base, B_base, 0]
@@ -697,7 +697,7 @@ with tab3:
     st.plotly_chart(fig3d, use_container_width=True)
 
 with tab4:
-    st.subheader(_t("Cantidades Totales y Despiece", " Total Quantities and Bending Schedule"))
+    st.subheader(_t("Cantidades Totales y Despiece", "Total Quantities and Bending Schedule"))
     col1, col2, col3 = st.columns(3)
     col1.metric(_t("Volumen Concreto", "Concrete Volume"), f"{vol_conc_total:.3f} m³")
     col2.metric(_t("Acero Total", "Total Steel"), f"{peso_total_acero:.1f} kg")
@@ -820,7 +820,7 @@ with tab4:
             worksheet.write(row, 0, "TOTAL PRESUPUESTO", bold)
             worksheet.write_formula(row, 3, f'=D{row-3}+D{row-2}+D{row-1}+D{row}', money_fmt)
         output_excel_apu.seek(0)
-        st.download_button(_t("Descargar Presupuesto Excel", " Download Budget Excel"), data=output_excel_apu, 
+        st.download_button(_t("Descargar Presupuesto Excel", "Download Budget Excel"), data=output_excel_apu, 
                            file_name=f"APU_Muro_{H_muro:.1f}m.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info(_t("Ve a la página 'APU Mercado' para cargar los costos en vivo.", " Go to the 'Market APU' page to load live costs."))
+        st.info(_t("Ve a la página 'APU Mercado'para cargar los costos en vivo.", " Go to the 'Market APU' page to load live costs."))

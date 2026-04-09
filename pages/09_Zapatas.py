@@ -916,7 +916,7 @@ def generar_docx_ampliado(zap_ext_d, zap_int_d, viga_d, dis_d, dist_d, norma, fi
 # ─────────────────────────────────────────────
 # T1: ESFUERZOS EN EL SUELO (BOUSSINESQ)
 # ─────────────────────────────────────────────
-with st.expander(_t("1. Esfuerzos en masa de suelo debajo de zapata", " 1. Soil Stresses under Footing (Boussinesq)"), expanded=False):
+with st.expander(_t("1. Esfuerzos en masa de suelo debajo de zapata", "1. Soil Stresses under Footing (Boussinesq)"), expanded=False):
     st.info(_t("**Modo de uso:** Ingresa las dimensiones de la zapata y la carga aplicada. El programa usa la solución de Boussinesq (integración de carga rectangular) para encontrar el incremento de esfuerzo vertical a cierta profundidad Z debajo del centro de la zapata.", " **How to use:** Enter footing dimensions and load. Uses Boussinesq method to find vertical stress increment at depth Z."))
     c1, c2 = st.columns(2)
     with c1:
@@ -1520,7 +1520,7 @@ with st.expander(_t("4. Profundidad Mínima de Exploración de Subsuelo (NSR-10)
 # ─────────────────────────────────────────────
 # T3: DISEÑO ESTRUCTURAL DE ZAPATA + DIBUJADOR 3000 (con biaxialidad)
 # ─────────────────────────────────────────────
-with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 3000", " 3. Footing Structural Design & DXF Drafter"), expanded=True):
+with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 3000", "3. Footing Structural Design & DXF Drafter"), expanded=True):
     st.markdown(f"**Norma Estructural activa:** `{norma_sel}`")
 
     # ─── SELECTOR DE TIPO DE ZAPATA (Opción B) ───────────────────────────────
@@ -1888,7 +1888,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     L_gancho_real_cm = min(h_gancho_disp, L_ext_gancho_cm + radio_doblez_cm + db_mm/10.0) # Lo que cabe en la zapata
 
 
-    tab_res, tab_dwg, tab_apu = st.tabs(["Resultados del Diseño", " Plano 3000 (DXF)", " Cantidades APU"])
+    tab_res, tab_dwg, tab_apu = st.tabs(["Resultados del Diseño", "Plano 3000 (DXF)", " Cantidades APU"])
     
     with tab_res:
         st.markdown(f"**Revisión Estructural: f'c = {fc_basico} MPa | fy = {fy_basico} MPa**")
@@ -3010,7 +3010,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             st.download_button(label="Descargar Presupuesto Excel (.xlsx)", data=output_excel, 
                                file_name=f"APU_Zapata_{B_use}x{L_use}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         else:
-            st.info("Ve a la página 'APU Mercado' para cargar los costos base de agregados, acero y cemento y que tu presupuesto se genere automáticamente.")
+            st.info("Ve a la página 'APU Mercado'para cargar los costos base de agregados, acero y cemento y que tu presupuesto se genere automáticamente.")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # B5 — CUADRO DE MANDO MULTI-ZAPATA + C6 ASENTAMIENTO DIFERENCIAL
