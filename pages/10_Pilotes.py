@@ -311,7 +311,9 @@ with tab_geo:
                 K0 = 1 - math.sin(math.radians(row["φ (°)"]))
                 beta = K0 * math.tan(math.radians(row["φ (°)"]))
                 beta = max(0.15, min(beta, 0.40))
-                sv_mid = row["σv' base (kPa)"] - row["γ (kN/m³)"] * espesor_activo / 2
+                # EC-2 fix: σv' en el centroide = σv'_base - γ_ef * (espesor/2)
+                # La tabla ya debe contener γ efectivo (γ' subm.) cuando hay NF
+                sv_mid = max(0.0, row["σv' base (kPa)"] - row["γ (kN/m³)"] * espesor_activo / 2)
                 qs = beta * sv_mid
             else:  # Roca
                 qs = 0.1 * row["c (kPa)"]
@@ -327,7 +329,9 @@ with tab_geo:
 
         # 4. Resistencia de punta — Meyerhof
         # Nq de Meyerhof para pilote
-        fila_punta = df[df["z_bot"] >= L_pilote].iloc[0]
+        # EC-3 fix: filtro >= puede devolver vacío si L_pilote == z_bot exacto de última capa
+        _df_punta = df[df["z_bot"] > L_pilote - 1e-6]  # tolerancia numérica
+        fila_punta = _df_punta.iloc[0] if not _df_punta.empty else df.iloc[-1]
         phi_p = fila_punta["φ (°)"]
         c_p   = fila_punta["c (kPa)"]
         sv_p  = fila_punta["σv' base (kPa)"]
@@ -337,7 +341,7 @@ with tab_geo:
         elif phi_p > 0:
             Nq_m = (math.exp(math.pi * math.tan(math.radians(phi_p))) *
                     math.tan(math.radians(45 + phi_p/2))**2)
-            Nq_m = min(Nq_m, 60)  # límite Meyerhof
+            Nq_m = min(Nq_m, 60)  # límite práctico Meyerhof (1976) — ver NSR-10 C.9 / Das 2011
             qp = sv_p * Nq_m
             qp = min(qp, 11000)  # límite Meyerhof kPa
             Qp = qp * A_punta
@@ -625,18 +629,24 @@ with tab_est:
             # The point
             P_pil_act = P_ult_grupo / max(1, n_cols * m_filas)
             ok_pm = False
+            _interp_warn = ""
             try:
                 p_cap = float(pm_calc.interp_pm_curve(Mu_req, res_pm['phi_M_n'], res_pm['phi_P_n']))
                 ok_pm = P_pil_act <= p_cap and p_cap > 0
-            except: pass
+            except Exception as _e_interp:
+                _interp_warn = f"Error en interpolación P-M: {_e_interp}"
             
             fig_pm.add_trace(go.Scatter(x=[Mu_req], y=[P_pil_act], mode='markers', name='Carga Actuante (Pu, Mu)', marker=dict(symbol='x', color='red', size=12)))
             
             fig_pm.update_layout(title="Diagrama P-M del Pilote Individual", xaxis_title="Momento (kN·m)", yaxis_title="Carga Axial (kN)", paper_bgcolor="#0f1117", plot_bgcolor="#0f1117", font=dict(color="white"))
             st.plotly_chart(fig_pm, use_container_width=True)
             
-            if ok_pm: st.success("**CUMPLE.** La combinación Pu-Mu reside dentro de la envolvente segura.")
-            else: st.error("**NO CUMPLE.** La combinación Pu-Mu excede la capacidad estructural del pilote.")
+            if _interp_warn:
+                st.warning(f"⚠ {_interp_warn} — verifique que Mu esté dentro del rango del diagrama.")
+            elif ok_pm:
+                st.success("**CUMPLE.** La combinación Pu-Mu reside dentro de la envolvente segura.")
+            else:
+                st.error("**NO CUMPLE.** La combinación Pu-Mu excede la capacidad estructural del pilote.")
             
         except Exception as e:
             st.warning(f"No se pudo cargar generador P-M: {e}")
@@ -996,8 +1006,11 @@ with tab_mem:
                                 ], dxfattribs={'layer': 'PILOTES', 'color': 4})
                     
                     # Textos Informativos
-                    msp.add_text(f"GRUPO DE {n_pilotes} PILOTES", dxfattribs={'height': 0.15}).set_pos((-B_dado/2, L_dado/2 + 0.3))
-                    msp.add_text(f"DADO: {B_dado:.2f}x{L_dado:.2f}x{H_dado:.2f}m", dxfattribs={'height': 0.15}).set_pos((-B_dado/2, L_dado/2 + 0.1))
+                    # DXF fix: API ezdxf >=0.17 usa set_placement() en vez de set_pos()
+                    _t1 = msp.add_text(f"GRUPO DE {n_pilotes} PILOTES", dxfattribs={'height': 0.15, 'layer': 'TEXTOS'})
+                    _t1.set_placement((-B_dado/2, L_dado/2 + 0.3))
+                    _t2 = msp.add_text(f"DADO: {B_dado:.2f}x{L_dado:.2f}x{H_dado:.2f}m", dxfattribs={'height': 0.15, 'layer': 'TEXTOS'})
+                    _t2.set_placement((-B_dado/2, L_dado/2 + 0.1))
 
                     dxf_io = io.StringIO()
                     doc_dxf.write(dxf_io)
