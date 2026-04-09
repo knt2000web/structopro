@@ -190,15 +190,35 @@ st.markdown(_t(
     "Interactive **biaxial** flexure-compression capacity generator for **Square, Rectangular and Circular Columns**."
 ))
 
-with st.expander("📺 ¿Cómo usar esta herramienta?"):
+with st.expander("📖 Guía Rápida — Flujo de trabajo recomendado", expanded=False):
     st.markdown("""
-    **Modo de Uso:**
-    1. **📍 Sidebar:** Selecciona Norma, nivel sísmico, f'c, fy, geometría (cuadrada, rectangular o circular)
-    2. **🏗️ Armadura:** Define varillas longitudinales y estribos (o espiral)
-    3. **🚦 Solicitaciones:** Ingresa Momentos (Mux, Muy) y Carga Axial (Pu)
-    4. **📊 Resultados:** Diagrama P-M biaxial 3D + verificación Bresler
-    5. **📦 Exportar:** Memoria DOCX completa, DXF con rótulo ICONTEC, Excel, etc.
+    ### Flujo de trabajo recomendado
+
+    **Paso 1 — Materiales y sección**  
+    Seleccione la norma (NSR-10 / ACI 318), f'c y fy en el panel lateral.  
+    Ingrese las dimensiones **b** y **h** de la sección transversal (o diámetro **D** para circular).
+
+    **Paso 2 — Armado longitudinal y confinamiento**  
+    Defina el número de barras, diámetro y recubrimiento libre.  
+    La cuantía **ρ** se calcula automáticamente.  
+    Rango admisible: `1% ≤ ρ ≤ 4%` (NSR-10 DES/DMO) · `1% ≤ ρ ≤ 8%` (ACI • DMI).  
+    Configure el tipo de confinamiento: **Estribos rectangulares** o **Espiral continua**.
+
+    **Paso 3 — Cargas de diseño**  
+    Ingrese **Pu** [kN], **Mux** [kN·m] y **Muy** [kN·m] mayorados (combinaciones LRFD/CCR).  
+    Si hay carga horizontal, revise también la **esbeltez** (factor k y longitud libre).
+
+    **Paso 4 — Verificación biaxial**  
+    El punto de demanda **(Pu, Mu)** debe quedar **dentro** del diagrama de interacción.  
+    Se usa el método de Bresler reciproco:  
+    `1/φPni = 1/φPnx + 1/φPny − 1/φP₀`  
+    El índice de capacidad **IFC = Pu / φPni ≤ 1.0** confirma el cumplimiento.
+
+    **Paso 5 — Exportar entregables**  
+    Descargue la **Memoria de Cálculo DOCX**, el **Plano DXF** con rótulo ICONTEC,  
+    el **modelo BIM (IFC4)**, o el **presupuesto en Excel** desde las pestañas correspondientes.
     """)
+    st.info("📚 Referencia: **NSR-10 Título C §C.10 / ACI 318-19 §22** — Flexocompresión biaxial")
 
 # ─────────────────────────────────────────────
 # DICCIONARIOS DE BARRAS
@@ -993,16 +1013,9 @@ else:
 
 st.sidebar.markdown(f"Cargas últimas en **{unidad_fuerza}** y **{unidad_mom}**:")
 
-if "c_pm_mux" not in st.session_state:
-    st.session_state["c_pm_mux"] = round(45.0 * factor_fuerza, 2)
-if "c_pm_muy" not in st.session_state:
-    st.session_state["c_pm_muy"] = round(25.0 * factor_fuerza, 2)
-if "c_pm_pu" not in st.session_state:
-    st.session_state["c_pm_pu"] = round(2700.0 * factor_fuerza, 2)
-
-Mux_input = st.sidebar.number_input(f"Momento Último Mux [{unidad_mom}]", value=st.session_state["c_pm_mux"], step=round(10.0 * factor_fuerza, 2), key="c_pm_mux")
-Muy_input = st.sidebar.number_input(f"Momento Último Muy [{unidad_mom}]", value=st.session_state["c_pm_muy"], step=round(10.0 * factor_fuerza, 2), key="c_pm_muy")
-Pu_input = st.sidebar.number_input(f"Carga Axial Última (Pu) [{unidad_fuerza}]", value=st.session_state["c_pm_pu"], step=round(50.0 * factor_fuerza, 2), key="c_pm_pu")
+Mux_input = st.sidebar.number_input(f"Momento Último Mux [{unidad_mom}]", value=round(45.0 * factor_fuerza, 2), step=round(10.0 * factor_fuerza, 2), key="c_pm_mux")
+Muy_input = st.sidebar.number_input(f"Momento Último Muy [{unidad_mom}]", value=round(25.0 * factor_fuerza, 2), step=round(10.0 * factor_fuerza, 2), key="c_pm_muy")
+Pu_input  = st.sidebar.number_input(f"Carga Axial Última (Pu) [{unidad_fuerza}]", value=round(2700.0 * factor_fuerza, 2), step=round(50.0 * factor_fuerza, 2), key="c_pm_pu")
 
 st.sidebar.header(_t("6. Esbeltez", "6. Slenderness"))
 k_factor = st.sidebar.selectbox(_t("Factor de longitud efectiva (k)", "Effective length factor (k)"),

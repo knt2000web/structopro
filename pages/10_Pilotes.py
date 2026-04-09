@@ -184,43 +184,43 @@ st.sidebar.header(_t("⚙️ Configuración Global", "⚙️ Global Settings"))
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 st.sidebar.success(f"{_t('Norma Activa:', 'Active Code:')} {norma_sel}")
 
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("💾 Guardar / Cargar Proyecto")
-    nombre_producido = st.session_state.get(f"np_{"pilotes"}", "")
-    
-    st.sidebar.markdown("**Nuevo Proyecto / Guardar**")
-    nombre_proy_guardar = st.sidebar.text_input("Nombre para guardar", value=nombre_producido, key=f"input_guardar_{"pilotes"}")
-    
-    if st.sidebar.button("💾 Guardar Proyecto", use_container_width=True, key=f"btn_save_{"pilotes"}"):
-        if nombre_proy_guardar:
-            ok, msg = guardar_proyecto_supabase(nombre_proy_guardar, capturar_estado_module("pilotes"), "pilotes")
-            if ok:
-                st.session_state[f"np_{"pilotes"}"] = nombre_proy_guardar
-                st.sidebar.success(msg)
-            else:
-                st.sidebar.error(msg)
+st.sidebar.markdown("---")
+st.sidebar.subheader("💾 Guardar / Cargar Proyecto")
+nombre_producido = st.session_state.get(f"np_{"pilotes"}", "")
+
+st.sidebar.markdown("**Nuevo Proyecto / Guardar**")
+nombre_proy_guardar = st.sidebar.text_input("Nombre para guardar", value=nombre_producido, key=f"input_guardar_{"pilotes"}")
+
+if st.sidebar.button("💾 Guardar Proyecto", use_container_width=True, key=f"btn_save_{"pilotes"}"):
+    if nombre_proy_guardar:
+        ok, msg = guardar_proyecto_supabase(nombre_proy_guardar, capturar_estado_module("pilotes"), "pilotes")
+        if ok:
+            st.session_state[f"np_{"pilotes"}"] = nombre_proy_guardar
+            st.sidebar.success(msg)
         else:
-            st.sidebar.warning("Escribe un nombre de proyecto")
+            st.sidebar.error(msg)
+    else:
+        st.sidebar.warning("Escribe un nombre de proyecto")
 
-    st.sidebar.markdown("**Cargar Proyecto Existente**")
-    lista_proyectos = listar_proyectos_supabase("pilotes")
-    if lista_proyectos:
-        idx_def = lista_proyectos.index(nombre_producido) if nombre_producido in lista_proyectos else 0
-        nombre_proy_cargar = st.sidebar.selectbox("Selecciona un proyecto", lista_proyectos, index=idx_def, key=f"sel_load_{"pilotes"}")
-        
-        def on_cargar_click():
-            proy = st.session_state[f"sel_load_{"pilotes"}"]
-            if proy:
-                ok, msg = cargar_proyecto_supabase(proy, "pilotes")
-                st.session_state[f"__msg_cargar_{"pilotes"}"] = (ok, msg)
-                if ok: st.session_state[f"np_{"pilotes"}"] = proy
+st.sidebar.markdown("**Cargar Proyecto Existente**")
+lista_proyectos = listar_proyectos_supabase("pilotes")
+if lista_proyectos:
+    idx_def = lista_proyectos.index(nombre_producido) if nombre_producido in lista_proyectos else 0
+    nombre_proy_cargar = st.sidebar.selectbox("Selecciona un proyecto", lista_proyectos, index=idx_def, key=f"sel_load_{"pilotes"}")
+    
+    def on_cargar_click():
+        proy = st.session_state[f"sel_load_{"pilotes"}"]
+        if proy:
+            ok, msg = cargar_proyecto_supabase(proy, "pilotes")
+            st.session_state[f"__msg_cargar_{"pilotes"}"] = (ok, msg)
+            if ok: st.session_state[f"np_{"pilotes"}"] = proy
 
-        st.sidebar.button("📂 Cargar", on_click=on_cargar_click, use_container_width=True, key=f"btn_load_{"pilotes"}")
+    st.sidebar.button("📂 Cargar", on_click=on_cargar_click, use_container_width=True, key=f"btn_load_{"pilotes"}")
 
-        if f"__msg_cargar_{"pilotes"}" in st.session_state:
-            ok, msg = st.session_state.pop(f"__msg_cargar_{"pilotes"}")
-            if ok: st.sidebar.success(msg)
-            else: st.sidebar.error(msg)
+    if f"__msg_cargar_{"pilotes"}" in st.session_state:
+        ok, msg = st.session_state.pop(f"__msg_cargar_{"pilotes"}")
+        if ok: st.sidebar.success(msg)
+        else: st.sidebar.error(msg)
 
 
 # Tabla de estratigrafía base (perfil por capas)
