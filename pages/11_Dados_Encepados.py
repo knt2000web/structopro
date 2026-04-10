@@ -908,7 +908,7 @@ with tab_bim:
             msp.add_line((_rx0,_ry0+_dy),(_rx0+_rw,_ry0+_dy), dxfattribs={"layer":"ROTULO","lineweight":25})
         msp.add_line((_rx0+_rw*0.55,_ry0+1.2),(_rx0+_rw*0.55,_ry0+4.2), dxfattribs={"layer":"ROTULO","lineweight":15})
         # Textos del rótulo
-        _bar_txt = f"#{bar_num_x}@{sep_x_calc:.0f}cm (ejeX) / #{bar_num_y}@{sep_y_calc:.0f}cm (ejeY)"
+        _bar_txt = f"{bar_num_x}@{sep_x_calc:.0f}cm (ejeX) / {bar_num_y}@{sep_y_calc:.0f}cm (ejeY)"
         _items = [
             # (x_offset, y_from_bottom, height, text)
             (0.15, 5.70, 0.22, "ESTRUCTURAS DE CIMENTACION PROFUNDA"),

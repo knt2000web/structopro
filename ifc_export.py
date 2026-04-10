@@ -952,7 +952,7 @@ def ifc_dado_parametrico(
         pds_p = ifc.createIfcProductDefinitionShape(None, None, [rep_p])
         pil = ifc.createIfcPile(
             ifcopenshell.guid.new(), None, str(row["ID"]), "Pilote", None,
-            _placement_local(ifc, 0., 0., 0.), pds_p, None, "CAST_IN_PLACE"
+            _placement_local(ifc, 0., 0., 0.), pds_p, None, "BORED"
         )
         _material(ifc, pil, "Concreto Pilote")
         elementos.append(pil)
@@ -995,10 +995,12 @@ def ifc_dado_parametrico(
         csg_union2 = ifc.createIfcBooleanResult("UNION", csg_union, sol_h2)
         rep_bar = ifc.createIfcShapeRepresentation(ctx, "Body", "CSG", [csg_union2])
         pds_bar = ifc.createIfcProductDefinitionShape(None, None, [rep_bar])
+        _bar_area_mm2 = math.pi * (db/2.)**2
         rebar = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None, f"Barra X {bar_idx+1}",
             None, None, _placement_local(ifc, 0., 0., 0.), pds_bar,
-            None, f"#{int(db/25.4*8)+1}", db, bar_len, "BOTTOM"
+            f"BX{bar_idx+1}", "B500S", float(db), float(_bar_area_mm2),
+            float(bar_len), "MAIN", "TEXTURED"
         )
         _material(ifc, rebar, "Acero fy=420MPa")
         elementos.append(rebar)
@@ -1023,7 +1025,8 @@ def ifc_dado_parametrico(
         rebar_y = ifc.createIfcReinforcingBar(
             ifcopenshell.guid.new(), None, f"Barra Y {bar_idx_y+1}",
             None, None, _placement_local(ifc, 0., 0., 0.), pds_by,
-            None, f"#{int(db/25.4*8)+1}", db, bar_len_y, "BOTTOM"
+            f"BY{bar_idx_y+1}", "B500S", float(db), float(math.pi*(db/2.)**2),
+            float(bar_len_y), "MAIN", "TEXTURED"
         )
         _material(ifc, rebar_y, "Acero fy=420MPa")
         elementos.append(rebar_y)
