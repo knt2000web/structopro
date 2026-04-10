@@ -40,6 +40,83 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 # ─────────────────────────────────────────────
 
+# ─────────────────────────────────────────────
+# PERSISTENCIA SUPABASE
+# ─────────────────────────────────────────────
+import requests
+import json
+
+def get_supabase_rest_info():
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return url, key
+    except Exception as e:
+        return None, None
+
+def guardar_proyecto_supabase(nombre, estado_dict, ref):
+    url, key = get_supabase_rest_info()
+    if not url or not key:
+        db_path = f"db_proyectos_{ref.lower()}.json"
+        db = {}
+        if os.path.exists(db_path):
+            with open(db_path, "r", encoding="utf-8") as f: db = json.load(f)
+        db[f"[{ref.upper()}] {nombre}"] = {"nombre_proyecto": f"[{ref.upper()}] {nombre}", "estado_json": json.dumps(estado_dict)}
+        with open(db_path, "w", encoding="utf-8") as f: json.dump(db, f)
+        return True, " Proyecto guardado (Local)"
+    headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}
+    payload = {"nombre_proyecto": f"[{ref.upper()}] {nombre}", "user_id": st.session_state.get("user_id", "anonimo"), "estado_json": json.dumps(estado_dict)}
+    try:
+        res = requests.post(f"{url}/rest/v1/proyectos?on_conflict=nombre_proyecto", headers=headers, json=payload)
+        if res.status_code in [200, 201, 204]: return True, " Proyecto en la nube"
+        return False, f" Error API: {res.text}"
+    except Exception as e: return False, f" Error API: {e}"
+
+def cargar_proyecto_supabase(nombre, ref):
+    url, key = get_supabase_rest_info()
+    full_name = f"[{ref.upper()}] {nombre}" if not nombre.startswith("[") else nombre
+    if not url or not key:
+        db_path = f"db_proyectos_{ref.lower()}.json"
+        if os.path.exists(db_path):
+            with open(db_path, "r", encoding="utf-8") as f: db = json.load(f)
+            match = db.get(full_name) or db.get(nombre)
+            if match:
+                estado = json.loads(match["estado_json"])
+                for k, v in estado.items(): st.session_state[k] = v
+                return True, " Proyecto cargado (Local)"
+        return False, " No encontrado"
+    headers = {"apikey": key, "Authorization": f"Bearer {key}", "Accept": "application/json"}
+    try:
+        res = requests.get(f"{url}/rest/v1/proyectos?nombre_proyecto=eq.{full_name}&select=*", headers=headers)
+        if res.status_code == 200 and res.json():
+            estado = json.loads(res.json()[0]["estado_json"])
+            for k, v in estado.items(): st.session_state[k] = v
+            return True, " Proyecto cargado"
+        return False, " No encontrado"
+    except Exception as e: return False, str(e)
+
+def listar_proyectos_supabase(ref):
+    url, key = get_supabase_rest_info()
+    if not url or not key:
+        db_path = f"db_proyectos_{ref.lower()}.json"
+        if os.path.exists(db_path):
+            with open(db_path, "r", encoding="utf-8") as f: db = json.load(f)
+            return sorted([k.replace(f"[{ref.upper()}] ", "") for k in db.keys()])
+        return []
+    headers = {"apikey": key, "Authorization": f"Bearer {key}", "Accept": "application/json"}
+    try:
+        res = requests.get(f"{url}/rest/v1/proyectos?select=nombre_proyecto", headers=headers)
+        if res.status_code == 200:
+            return sorted([i["nombre_proyecto"].replace(f"[{ref.upper()}] ", "") for i in res.json() if f"[{ref.upper()}]" in i.get("nombre_proyecto","")])
+        return []
+    except: return []
+
+def capturar_estado_module(ref):
+    match = ["fc_dado", "fy_acero", "peso_conc", "recub_dado", "db_dado", "plantilla", "Pu_", "Mux_", "Muy_"]
+    return {k: st.session_state[k] for k in st.session_state if any(k.startswith(m) for m in match) or k == "registro_dados"}
+
+# ─────────────────────────────────────────────
+
 st.set_page_config(page_title=_t("Dados de Pilotes (Encepados)", "Pile Caps"), layout="wide")
 
 st.title(_t("Diseño de Dados (Encepados) - ACI 318 / NSR-10", "Pile Cap Design - ACI 318 / NSR-10"))
@@ -53,6 +130,42 @@ st.markdown(_t(
 # ─────────────────────────────────────────────
 with st.sidebar:
     st.header(_t("Configuración Global", "Global Settings"))
+    
+    st.markdown("---")
+    st.subheader(" Guardar / Cargar Proyecto")
+    nombre_producido = st.session_state.get(f"np_dados", "")
+    st.markdown("**Nuevo Proyecto / Guardar**")
+    nombre_proy_guardar = st.text_input("Nombre para guardar", value=nombre_producido, key="input_guardar_dados")
+    if st.button(" Guardar Proyecto", use_container_width=True, key="btn_save_dados"):
+        if nombre_proy_guardar:
+            ok, msg = guardar_proyecto_supabase(nombre_proy_guardar, capturar_estado_module("dados"), "dados")
+            if ok:
+                st.session_state["np_dados"] = nombre_proy_guardar
+                st.success(msg)
+            else:
+                st.error(msg)
+        else:
+            st.warning("Escribe un nombre")
+
+    st.markdown("**Cargar Proyecto Existente**")
+    lista_proyectos = listar_proyectos_supabase("dados")
+    if lista_proyectos:
+        idx_def = lista_proyectos.index(nombre_producido) if nombre_producido in lista_proyectos else 0
+        nombre_proy_cargar = st.selectbox("Selecciona un proyecto", lista_proyectos, index=idx_def, key="sel_load_dados")
+        
+        def on_cargar_click():
+            proy = st.session_state.get("sel_load_dados")
+            if proy:
+                ok, msg = cargar_proyecto_supabase(proy, "dados")
+                st.session_state["__msg_cargar_dados"] = (ok, msg)
+                st.session_state["np_dados"] = proy
+
+        st.button(" Cargar", on_click=on_cargar_click, use_container_width=True, key="btn_load_dados")
+        if "__msg_cargar_dados" in st.session_state:
+            ok, msg = st.session_state.pop("__msg_cargar_dados")
+            if ok: st.success(msg)
+            else: st.error(msg)
+    st.markdown("---")
     
     # 1. Configuración de Materiales
     with st.expander(_t("1. Materiales", "1. Materials"), expanded=True):
