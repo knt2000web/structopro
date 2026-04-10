@@ -839,7 +839,7 @@ with tab_bim:
 
         # ═══ CORTE TRANSVERSAL (Vista A-A) desplazado en Y negativo ══════════
         _off_y = _ymin_p - H_dado - 1.5  # debajo de la planta
-        _off_x = -B_sugerido/2            # alineado a la planta
+        _off_x = min(_xs_c)              # alineado al borde izq del contorno
 
         # Contorno del dado en corte
         _corte_pts = [(_off_x,_off_y),(_off_x+B_sugerido,_off_y),
@@ -853,13 +853,21 @@ with tab_bim:
                             (_col_x1,_off_y+H_dado+1.0),(_col_x0,_off_y+H_dado+1.0)],
                            close=True, dxfattribs={"layer":"COLUMNA","lineweight":40})
         # Pilotes en corte (rectángulos bajo el dado)
-        _pilotes_sorted = sorted(df_pilotes["X [m]"].unique())
-        for _ppx in _pilotes_sorted:
-            _px0 = _off_x + _ppx + B_sugerido/2 - D_pilote/2
-            _px1 = _off_x + _ppx + B_sugerido/2 + D_pilote/2
-            msp.add_lwpolyline([(_px0,_off_y-3.0),(_px1,_off_y-3.0),
-                                (_px1,_off_y),(_px0,_off_y)],
+        # Pilotes en corte: cada columna X unica del array
+        _pilotes_x_sorted = sorted(df_pilotes["X [m]"].unique())
+        for _ppx in _pilotes_x_sorted:
+            # _ppx en m relativo al centro del dado (ya centrado en x=0)
+            # en el corte, el dado va de _off_x a _off_x+B_sugerido
+            # centro del corte = _off_x + B_sugerido/2 = 0
+            _px_c = _ppx  # en plano corte X == plano planta X
+            _px0 = _px_c - D_pilote/2
+            _px1 = _px_c + D_pilote/2
+            msp.add_lwpolyline([(_px0, _off_y - 3.0), (_px1, _off_y - 3.0),
+                                (_px1, _off_y), (_px0, _off_y)],
                                close=True, dxfattribs={"layer":"PILOTES","lineweight":30})
+            # Linea de eje pilote
+            msp.add_line((_px_c, _off_y-3.0),(_px_c, _off_y),
+                         dxfattribs={"layer":"PILOTES","linetype":"DASHED" if "DASHED" in [l.dxf.name for l in doc_dxf.linetypes] else "CONTINUOUS"})
         # Armadura inferior en corte
         _z_inf_c = _off_y + recub_dado/100 + 0.02
         _lh_c = max(0.15, 12*(db_dado/100))
@@ -886,7 +894,7 @@ with tab_bim:
         # Cotas corte
         msp.add_text(f"H = {H_dado:.2f} m", dxfattribs={"height":_th,"layer":"COTAS"}).set_placement((_off_x+B_sugerido+0.10, _off_y+H_dado/2))
         msp.add_text(f"B = {B_sugerido:.2f} m", dxfattribs={"height":_th,"layer":"COTAS"}).set_placement((_off_x+B_sugerido/2-0.3, _off_y+H_dado+0.10))
-        msp.add_text(f"Rec. = {recub_dado} cm", dxfattribs={"height":_th*0.8,"layer":"COTAS"}).set_placement((_off_x+0.05, _z_inf_c+0.03))
+        msp.add_text(f"Rec. = {recub_dado if recub_dado >= 1 else recub_dado*100:.1f} cm", dxfattribs={"height":_th*0.8,"layer":"COTAS"}).set_placement((_off_x+0.05, _z_inf_c+0.03))
         msp.add_text("CORTE A-A", dxfattribs={"height":0.12,"layer":"TEXTO"}).set_placement((_off_x+B_sugerido/2-0.3, _off_y-0.3))
         msp.add_text("A", dxfattribs={"height":0.10,"layer":"TEXTO"}).set_placement((_xmin_p-0.25, _cy_p))
         msp.add_text("A", dxfattribs={"height":0.10,"layer":"TEXTO"}).set_placement((_xmax_p+0.15, _cy_p))
