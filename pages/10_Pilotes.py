@@ -395,7 +395,10 @@ with tab_geo:
         with col_opt2:
             if _PLOTLY_AVAILABLE and Pu_req > 0:
                 Lp_vals = np.arange(3.0, prof_total + 0.1, 0.5)
-                Qa_vals = [calcular_capacidad(lv, df, D_pilote, tipo_seccion, NF_prof, FS_global)[3] for lv in Lp_vals]
+                Qa_vals = []
+                for lv in Lp_vals:
+                    out_qp, out_qs, out_qu, out_qa, out_fil, out_fp = calcular_capacidad(lv, df, D_pilote, tipo_seccion, NF_prof, FS_global)
+                    Qa_vals.append(out_qa)
                 
                 fig_opt = go.Figure()
                 fig_opt.add_trace(go.Scatter(x=Lp_vals, y=Qa_vals, mode='lines+markers', name='Capacidad Q_adm', line=dict(color='#00e676', width=3)))
