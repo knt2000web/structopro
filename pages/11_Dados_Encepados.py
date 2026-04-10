@@ -215,15 +215,22 @@ with tab_geo:
             "6 Pilotes (Rectangular 3x2)"
         ], index=2)
         S_pilote = st.number_input(_t("Separación entre centros S (m)", "Center Spacing S (m)"), min_value=D_pilote*2, value=max(D_pilote*3, 1.0), step=0.1)
+        # Selector de forma solo activo para 3 pilotes
+        if plantilla.startswith("3"):
+            forma_3p = st.radio(_t("Forma del Dado (3 Pilotes)", "Cap Shape (3 Piles)"),
+                [_t("Triangular (Geometría real)", "Triangular (True geometry)"),
+                 _t("Rectangular (Formaleta estandar)", "Rectangular (Standard formwork)")],
+                index=0, horizontal=True, key="forma_3p")
+            usar_triangular = forma_3p.startswith("T") or forma_3p.startswith("Tri")
+        else:
+            usar_triangular = False
 
     with col_d2:
         H_dado = st.number_input(_t("Espesor del Dado H (m)", "Cap Thickness H (m)"), min_value=0.4, value=1.0, step=0.1)
-        # B y L dependerán de la plantilla + voladizo
         voladizo = st.number_input(_t("Voladizo del Borde a centro de Pilote (m)", "Edge Overhang from Pile center (m)"), min_value=0.3, value=max(0.5, D_pilote/2 + 0.15), step=0.05)
     
     tipo_dado = plantilla.split(" ")[0]
     
-    pilotes = []
     if tipo_dado == "2":
         pilotes = [(-S_pilote/2, 0), (S_pilote/2, 0)]
     elif tipo_dado == "3":
@@ -247,15 +254,17 @@ with tab_geo:
     B_sugerido = (max(xs) - min(xs)) + 2 * voladizo
     L_sugerido = (max(ys) - min(ys)) + 2 * voladizo
     
-    # Construir contorno geometrico preciso
-    if tipo_dado == "3":
+    # Contorno geométrico preciso del dado
+    if tipo_dado == "3" and usar_triangular:
         dy = voladizo / math.cos(math.pi/6)
         v1 = (0, R + dy)
         v2 = (S_pilote/2 + dy*math.cos(math.pi/6), -h_ap - dy*math.sin(math.pi/6))
         v3 = (-v2[0], v2[1])
         contorno_dado = [v1, v2, v3]
+        es_triangular = True
     else:
         contorno_dado = [(-B_sugerido/2, -L_sugerido/2), (B_sugerido/2, -L_sugerido/2), (B_sugerido/2, L_sugerido/2), (-B_sugerido/2, L_sugerido/2)]
+        es_triangular = False
 
     
     st.markdown("---")
@@ -523,86 +532,102 @@ with tab_bim:
         c1x = c1_m / 2; c2y = c2_m / 2; hc = 1.0
         x_col = [-c1x, c1x, c1x, -c1x, -c1x, c1x, c1x, -c1x]
         y_col = [-c2y, -c2y, c2y, c2y, -c2y, -c2y, c2y, c2y]
-        z_col = [hc, hc, hc, hc, 0, 0, 0, 0]
-        fig3d.add_trace(go.Mesh3d(
-            x=x_col, y=y_col, z=z_col,
-            i=[7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2],
-            j=[3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3],
-            k=[0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6],
-            color='gray', opacity=1.0, name='Columna'
-        ))
-        
-        # 3. Pilotes
-        L_render = 3.0 # Longitud visual demostrativa
-        for idx, r in df_pilotes.iterrows():
-            px = r["X [m]"]
-            py = r["Y [m]"]
-            z_top_pil = -(H_dado - embeb_pilote)
-            
-            theta = np.linspace(0, 2*np.pi, 16)
-            z_cil = np.linspace(z_top_pil, z_top_pil - L_render, 2)
-            Tc, Zc = np.meshgrid(theta, z_cil)
-            Xc = px + (D_pilote/2) * np.cos(Tc)
-            Yc = py + (D_pilote/2) * np.sin(Tc)
-            
-            fig3d.add_trace(go.Surface(
-                x=Xc, y=Yc, z=Zc, 
-                colorscale=[[0, '#8d6e63'], [1, '#8d6e63']], 
-                showscale=False, opacity=0.9, name=f'Pilote {r["ID"]}'
-            ))
-            
-        # 4. Canasta de Acero (Parrilla Inferior y Superior con DOBLECES)
-        z_inf = -H_dado + embeb_pilote + 0.03  
+        z_col = [hc, hc, hc, hc, 0, 0, 0, 0]        z_inf = -H_dado + embeb_pilote + 0.03
         z_sup = -0.07
-        espacio_barras = 0.25
+        espacio_barras = 0.20  # una barra cada 20cm para mejor densidad visual
         color_acero = '#b0bec5'
-        L_gancho = max(0.30, H_dado - 0.15) # Gancho estructural
         
-        y_bars = np.arange(min([p[1] for p in contorno_dado]) + 0.15, max([p[1] for p in contorno_dado]) - 0.15 + espacio_barras, espacio_barras)
-        x_bars = np.arange(min([p[0] for p in contorno_dado]) + 0.15, max([p[0] for p in contorno_dado]) - 0.15 + espacio_barras, espacio_barras)
-        
-        # --- Parrilla Horizontal (eje X cortando en Y) ---
-        for yp in y_bars:
-            x_inter = [p[0] for p in contorno_dado] if tipo_dado != "3" else []
-            if tipo_dado == "3":
-                for i in range(len(contorno_dado)):
-                    p1 = contorno_dado[i]
-                    p2 = contorno_dado[(i+1)%len(contorno_dado)]
-                    if min(p1[1], p2[1]) <= yp <= max(p1[1], p2[1]):
-                        if p1[1] != p2[1]: x_inter.append(p1[0] + (yp - p1[1]) * (p2[0] - p1[0]) / (p2[1] - p1[1]))
-            xmin, xmax = (min(x_inter)+0.10, max(x_inter)-0.10) if x_inter else (min([p[0] for p in contorno_dado])+0.1, max([p[0] for p in contorno_dado])-0.1)
-            
-            if xmin < xmax:
-                # Inferior con gancho arriba
-                fig3d.add_trace(go.Scatter3d(x=[xmin, xmin, xmax, xmax], y=[yp, yp, yp, yp], z=[z_inf+L_gancho, z_inf, z_inf, z_inf+L_gancho], mode='lines', line=dict(color=color_acero, width=3), showlegend=False, hoverinfo='skip'))
-                # Superior con gancho abajo
-                fig3d.add_trace(go.Scatter3d(x=[xmin, xmin, xmax, xmax], y=[yp, yp, yp, yp], z=[z_sup-L_gancho, z_sup, z_sup, z_sup-L_gancho], mode='lines', line=dict(color=color_acero, width=3), showlegend=False, hoverinfo='skip'))
+        # Longitud de gancho segun ACI 318 §25.3: lhb = 12 * db (min 150mm)
+        lh = max(0.15, 12.0 * (db_dado / 100.0))
 
-        # --- Parrilla Vertical (eje Y cortando en X) ---
-        for xp in x_bars:
-            y_inter = [p[1] for p in contorno_dado] if tipo_dado != "3" else []
-            if tipo_dado == "3":
-                for i in range(len(contorno_dado)):
-                    p1 = contorno_dado[i]
-                    p2 = contorno_dado[(i+1)%len(contorno_dado)]
-                    if min(p1[0], p2[0]) <= xp <= max(p1[0], p2[0]):
-                        if p1[0] != p2[0]: y_inter.append(p1[1] + (xp - p1[0]) * (p2[1] - p1[1]) / (p2[0] - p1[0]))
-            ymin, ymax = (min(y_inter)+0.10, max(y_inter)-0.10) if y_inter else (min([p[1] for p in contorno_dado])+0.1, max([p[1] for p in contorno_dado])-0.1)
-            
-            if ymin < ymax:
-                fig3d.add_trace(go.Scatter3d(x=[xp, xp, xp, xp], y=[ymin, ymin, ymax, ymax], z=[z_inf+L_gancho, z_inf+0.02, z_inf+0.02, z_inf+L_gancho], mode='lines', line=dict(color=color_acero, width=3), showlegend=False, hoverinfo='skip'))
-                fig3d.add_trace(go.Scatter3d(x=[xp, xp, xp, xp], y=[ymin, ymin, ymax, ymax], z=[z_sup-L_gancho, z_sup-0.02, z_sup-0.02, z_sup-L_gancho], mode='lines', line=dict(color=color_acero, width=3), showlegend=False, hoverinfo='skip'))
+        # Limites del contorno para generar rangos de barras
+        xs_c = [p[0] for p in contorno_dado]
+        ys_c = [p[1] for p in contorno_dado]
+        xmin_c = min(xs_c) + recub_dado/100
+        xmax_c = max(xs_c) - recub_dado/100
+        ymin_c = min(ys_c) + recub_dado/100
+        ymax_c = max(ys_c) - recub_dado/100
 
-        # --- Acero Intermedio (Retracción Perimetral) ---
+        def clip_bar_x(yp):
+            """Retorna (xmin_bar, xmax_bar) para una barra horizontal en y=yp dentro del contorno"""
+            if not es_triangular:
+                return xmin_c, xmax_c
+            xi = []
+            for k in range(len(contorno_dado)):
+                a = contorno_dado[k]
+                b = contorno_dado[(k+1) % len(contorno_dado)]
+                if min(a[1], b[1]) <= yp <= max(a[1], b[1]) and a[1] != b[1]:
+                    xi.append(a[0] + (yp - a[1]) * (b[0] - a[0]) / (b[1] - a[1]))
+            if len(xi) >= 2:
+                return min(xi) + recub_dado/100, max(xi) - recub_dado/100
+            return None, None
+
+        def clip_bar_y(xp):
+            """Retorna (ymin_bar, ymax_bar) para una barra transversal en x=xp dentro del contorno"""
+            if not es_triangular:
+                return ymin_c, ymax_c
+            yi = []
+            for k in range(len(contorno_dado)):
+                a = contorno_dado[k]
+                b = contorno_dado[(k+1) % len(contorno_dado)]
+                if min(a[0], b[0]) <= xp <= max(a[0], b[0]) and a[0] != b[0]:
+                    yi.append(a[1] + (xp - a[0]) * (b[1] - a[1]) / (b[0] - a[0]))
+            if len(yi) >= 2:
+                return min(yi) + recub_dado/100, max(yi) - recub_dado/100
+            return None, None
+
+        # --- Parrilla eje X (barras a lo largo de X, distribuidas en Y) ---
+        for yp in np.arange(ymin_c + espacio_barras/2, ymax_c, espacio_barras):
+            x0, x1 = clip_bar_x(yp)
+            if x0 is None or x1 <= x0: continue
+            # Inferior: barra horizontal con bastones 90° en cada extremo apuntando hacia ARRIBA
+            fig3d.add_trace(go.Scatter3d(
+                x=[x0, x0, x1, x1],
+                y=[yp, yp, yp, yp],
+                z=[z_inf + lh, z_inf, z_inf, z_inf + lh],
+                mode='lines', line=dict(color=color_acero, width=3),
+                showlegend=False, hoverinfo='skip'))
+            # Superior: barra horizontal con bastones 90° apuntando hacia ABAJO
+            fig3d.add_trace(go.Scatter3d(
+                x=[x0, x0, x1, x1],
+                y=[yp, yp, yp, yp],
+                z=[z_sup - lh, z_sup, z_sup, z_sup - lh],
+                mode='lines', line=dict(color=color_acero, width=3),
+                showlegend=False, hoverinfo='skip'))
+
+        # --- Parrilla eje Y (barras a lo largo de Y, distribuidas en X) ---
+        dz_y = 0.025  # Las barras Y van por encima de las X
+        for xp in np.arange(xmin_c + espacio_barras/2, xmax_c, espacio_barras):
+            y0, y1 = clip_bar_y(xp)
+            if y0 is None or y1 <= y0: continue
+            # Inferior
+            fig3d.add_trace(go.Scatter3d(
+                x=[xp, xp, xp, xp],
+                y=[y0, y0, y1, y1],
+                z=[z_inf + dz_y + lh, z_inf + dz_y, z_inf + dz_y, z_inf + dz_y + lh],
+                showlegend=False, hoverinfo='skip'))
+            # Superior
+            fig3d.add_trace(go.Scatter3d(
+                x=[xp, xp, xp, xp],
+                y=[y0, y0, y1, y1],
+                z=[z_sup - dz_y - lh, z_sup - dz_y, z_sup - dz_y, z_sup - dz_y - lh],
+                mode='lines', line=dict(color=color_acero, width=3),
+                showlegend=False, hoverinfo='skip'))
+
+        # --- Acero de Retraccion Perimetral (NSR-10 piel cada 30cm si H>60cm) ---
         if H_dado > 0.60:
             num_capas = int((H_dado - 0.20) / 0.30)
             if num_capas > 0:
-                px = [p[0] * 0.95 for p in contorno_dado] + [contorno_dado[0][0] * 0.95]
-                py = [p[1] * 0.95 for p in contorno_dado] + [contorno_dado[0][1] * 0.95]
+                px_p = [p[0] * 0.93 for p in contorno_dado] + [contorno_dado[0][0] * 0.93]
+                py_p = [p[1] * 0.93 for p in contorno_dado] + [contorno_dado[0][1] * 0.93]
                 for c in range(1, num_capas + 1):
-                    z_capa = [-H_dado + 0.10 + c * 0.30] * len(px)
-                    fig3d.add_trace(go.Scatter3d(x=px, y=py, z=z_capa, mode='lines', line=dict(color='#4dd0e1', width=3), name=f"Ref. Temperatura" if c==1 else "", showlegend=(c==1), hoverinfo='skip'))
-                    
+                    z_c = -H_dado + 0.10 + c * 0.30
+                    fig3d.add_trace(go.Scatter3d(
+                        x=px_p, y=py_p, z=[z_c]*len(px_p),
+                        mode='lines', line=dict(color='#26c6da', width=2),
+                        name="Ref. Perimetral Piel" if c == 1 else "",
+                        showlegend=(c == 1), hoverinfo='skip'))
+
         fig3d.update_layout(
             scene=dict(
                 xaxis=dict(title="X [m]", range=[-B_sugerido*1.2, B_sugerido*1.2]),
