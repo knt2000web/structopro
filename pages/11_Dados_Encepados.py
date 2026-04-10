@@ -42,7 +42,7 @@ def _t(es, en): return en if lang == "English" else es
 
 st.set_page_config(page_title=_t("Dados de Pilotes (Encepados)", "Pile Caps"), layout="wide")
 
-st.title(_t("🏗️ Diseño de Dados (Encepados) - ACI 318 / NSR-10", "🏗️ Pile Cap Design - ACI 318 / NSR-10"))
+st.title(_t("Diseño de Dados (Encepados) - ACI 318 / NSR-10", "Pile Cap Design - ACI 318 / NSR-10"))
 st.markdown(_t(
     "<p style='margin:0; padding:0; color:#aaa; font-size:14px;'>Módulo integral ACI-318 (Flexión, Punzonamiento Columna, Punzonamiento Pilote, Bielas y Tirantes).</p><hr>",
     "<p style='margin:0; padding:0; color:#aaa; font-size:14px;'>Comprehensive ACI-318 module (Flexure, Column Punching, Pile Punching, Strut and Tie).</p><hr>"
@@ -52,7 +52,7 @@ st.markdown(_t(
 # SIDEBAR
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.header(_t("⚙️ Configuración Global", "⚙️ Global Settings"))
+    st.header(_t("Configuración Global", "Global Settings"))
     
     # 1. Configuración de Materiales
     with st.expander(_t("1. Materiales", "1. Materials"), expanded=True):
@@ -185,9 +185,95 @@ with tab_geo:
             st.plotly_chart(fig_geo, use_container_width=True)
 
 with tab_des:
-    st.subheader(_t("Análisis ACI 318 Seccional", "ACI 318 Sectional Analysis"))
-    st.info(_t("Próximamente: Chequeos de Punzonamiento de Columna, Punzonamiento de Pilote y Momentos de Flexión...", "Coming soon: Column Punching, Pile Punching, and Bending Moments..."))
+    st.subheader(_t("Análisis ACI 318 Seccional (Cortante y Flexión)", "ACI 318 Sectional Analysis (Shear and Flexure)"))
+    
+    d_m = H_dado - 0.10 # Asumiendo ~10cm al baricentro inferior del acero
+    c1_m = c1_col / 100.0
+    c2_m = c2_col / 100.0
+    
+    c_des1, c_des2, c_des3 = st.columns(3)
+    
+    # ─── 1. PUNZONAMIENTO COLUMNA CENTRAL ──────────────────────────
+    b_o = 2 * ((c1_m + d_m) + (c2_m + d_m))
+    Vu_punz = Pu
+    # Reducción por pilotes dentro del perímetro crítico
+    for idx, r in df_pilotes.iterrows():
+        if abs(r["X [m]"]) <= (c1_m/2 + d_m/2) and abs(r["Y [m]"]) <= (c2_m/2 + d_m/2):
+            Vu_punz -= r["Carga Axial P_ui [kN]"]
+            
+    beta_c = max(c1_col, c2_col) / max(min(c1_col, c2_col), 1)
+    alpha_s = 40 # Columna Interior
+    vc1 = 0.33 * math.sqrt(fc_dado)
+    vc2 = 0.17 * (1 + 2/beta_c) * math.sqrt(fc_dado)
+    vc3 = 0.083 * (2 + alpha_s * d_m / b_o) * math.sqrt(fc_dado)
+    
+    phiVc_punz = 0.75 * min(vc1, vc2, vc3) * 1000 * b_o * d_m
+    ok_punz = phiVc_punz >= Vu_punz
+    
+    with c_des1:
+        st.write("### Punzonamiento Columna")
+        st.metric("Vu actuante", f"{Vu_punz:.1f} kN")
+        st.metric("φVc resistente", f"{phiVc_punz:.1f} kN")
+        if ok_punz: st.success("CUMPLE (Vu ≤ φVc)")
+        else: st.error("FALLA EL PERALTE")
+        
+    # ─── 2. CORTANTE UNIDIRECCIONAL (VIGA) ─────────────────────────
+    Vu_vx = 0; Vu_vy = 0
+    for idx, r in df_pilotes.iterrows():
+        # Pilotes ubicados a una distancia mayor a "d" desde la cara de la columna
+        if r["X [m]"] > (c1_m/2 + d_m): Vu_vx += r["Carga Axial P_ui [kN]"]
+        if r["Y [m]"] > (c2_m/2 + d_m): Vu_vy += r["Carga Axial P_ui [kN]"]
+        
+    phiVc_vx = 0.75 * 0.17 * math.sqrt(fc_dado) * 1000 * L_sugerido * d_m
+    phiVc_vy = 0.75 * 0.17 * math.sqrt(fc_dado) * 1000 * B_sugerido * d_m
+    ok_vx = phiVc_vx >= Vu_vx
+    ok_vy = phiVc_vy >= Vu_vy
+    
+    with c_des2:
+        st.write("### Cortante Unidireccional")
+        st.metric("Vu (Cara X) a distr. d", f"{Vu_vx:.1f} kN")
+        st.write(f"φVc Resistencia = {phiVc_vx:.1f} kN {'✅' if ok_vx else '❌'}")
+        st.metric("Vu (Cara Y) a distr. d", f"{Vu_vy:.1f} kN")
+        st.write(f"φVc Resistencia = {phiVc_vy:.1f} kN {'✅' if ok_vy else '❌'}")
+
+    # ─── 3. FLEXIÓN Y ACERO DE REFUERZO ────────────────────────────
+    Mu_flex_x = 0; Mu_flex_y = 0
+    for idx, r in df_pilotes.iterrows():
+        # Extremos en X e Y evaluados en la cara de la columna
+        if r["X [m]"] > c1_m/2: Mu_flex_x += r["Carga Axial P_ui [kN]"] * (r["X [m]"] - c1_m/2)
+        if r["Y [m]"] > c2_m/2: Mu_flex_y += r["Carga Axial P_ui [kN]"] * (r["Y [m]"] - c2_m/2)
+        
+    def req_as(Mu_kNm, b_m, d_mf):
+        if Mu_kNm <= 0: return 0.0
+        Mn = Mu_kNm / 0.90
+        R = Mn / (b_m * d_mf**2 * 1000)
+        val = 1 - 2*R/(0.85*fc_dado)
+        if val < 0: return 9999.9 # Compresión falla
+        rho = (0.85 * fc_dado / fy_acero) * (1 - math.sqrt(val))
+        rho_min = max(0.25*math.sqrt(fc_dado)/fy_acero, 1.4/fy_acero)
+        rho_use = max(rho, rho_min)
+        return rho_use * (b_m*100) * (d_mf*100)
+        
+    As_x = req_as(Mu_flex_x, L_sugerido, d_m)
+    As_y = req_as(Mu_flex_y, B_sugerido, d_m)
+    
+    with c_des3:
+        st.write("### Flexión y Acero (As)")
+        st.metric("Momento Mu,x (Cara Y)", f"{Mu_flex_x:.1f} kN.m")
+        st.write(f"**As Requerido en X:** {As_x:.1f} cm²")
+        st.metric("Momento Mu,y (Cara X)", f"{Mu_flex_y:.1f} kN.m")
+        st.write(f"**As Requerido en Y:** {As_y:.1f} cm²")
+        
+    # Método Puntal y Tensor (Alerta)
+    st.markdown("---")
+    st.write("#### ⚠️ Revisión Básica de Bielas y Tirantes (STM - ACI 318 Cap 23)")
+    # Si la relación entre la distancia eje-pilar y peralte es menor a 2, rige STM
+    max_dist = max([math.sqrt(r["X [m]"]**2 + r["Y [m]"]**2) for _, r in df_pilotes.iterrows()]) if n_pil > 0 else 0
+    if max_dist < 2 * d_m:
+        st.warning("La distancia desde los pilotes a la columna es menor a 2d. Este dado es rígido/profundo. ACI 318 exige diseño predominante usando **Bielas y Tirantes (STM)** en lugar de flexión plana clásica.")
+    else:
+        st.success("La distancia supera los 2d. El diseño convencional de vigas/losas (Flexión/Cortante) rige de manera precisa.")
 
 with tab_bim:
     st.subheader(_t("Salidas Gráficas y BIM", "Graphical and BIM Outputs"))
-    st.info(_t("Próximamente: DXF y visor 3D paramétrico.", "Coming soon: DXF and parametric 3D viewer."))
+    st.info(_t("Próximamente: Exportación a DXF con detalles y Encepado en geometría de Modelo IFC3D...", "Coming soon: DXF export with details and IFC3D model geometry..."))
