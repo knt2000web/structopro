@@ -796,52 +796,64 @@ with tab_bim:
             doc_dxf.layers.add(_lyr, color=_col)
         msp = doc_dxf.modelspace()
 
-        # ═══ VISTA EN PLANTA (origen 0,0) ════════════════════════════════════
-        # Contorno dado
+        # ═══ VISTA EN PLANTA ════════════════════════════════════════════════
         msp.add_lwpolyline(contorno_dado, close=True,
                            dxfattribs={"layer":"DADO","lineweight":50})
-        # Columna
         _cm2 = [(-c1_m/2,-c2_m/2),(c1_m/2,-c2_m/2),(c1_m/2,c2_m/2),(-c1_m/2,c2_m/2)]
-        msp.add_lwpolyline(_cm2, close=True, dxfattribs={"layer":"COLUMNA","lineweight":40})
-        # Pilotes: círculo + cruz
+        msp.add_lwpolyline(_cm2, close=True,
+                           dxfattribs={"layer":"COLUMNA","lineweight":40})
         for _, _rr in df_pilotes.iterrows():
             _px, _py = _rr["X [m]"], _rr["Y [m]"]
-            msp.add_circle((_px,_py), radius=D_pilote/2, dxfattribs={"layer":"PILOTES","lineweight":30})
-            msp.add_line((_px-D_pilote/2*0.7,_py),(_px+D_pilote/2*0.7,_py), dxfattribs={"layer":"PILOTES"})
-            msp.add_line((_px,_py-D_pilote/2*0.7),(_px,_py+D_pilote/2*0.7), dxfattribs={"layer":"PILOTES"})
-            msp.add_text(str(_rr["ID"]), dxfattribs={"height":0.06,"layer":"TEXTO"}).set_placement((_px+D_pilote/2+0.04,_py))
+            msp.add_circle((_px,_py), radius=D_pilote/2,
+                           dxfattribs={"layer":"PILOTES","lineweight":30})
+            msp.add_line((_px-D_pilote/2*0.7,_py),(_px+D_pilote/2*0.7,_py),
+                         dxfattribs={"layer":"PILOTES"})
+            msp.add_line((_px,_py-D_pilote/2*0.7),(_px,_py+D_pilote/2*0.7),
+                         dxfattribs={"layer":"PILOTES"})
+            msp.add_text(str(_rr["ID"]),
+                         dxfattribs={"height":0.06,"layer":"TEXTO"}).set_placement(
+                (_px+D_pilote/2+0.04,_py))
 
-        # Parrilla inferior en planta (barras eje X cada 20cm)
+        # Parrilla de acero en planta
         _xs_c = [_p[0] for _p in contorno_dado]
         _ys_c = [_p[1] for _p in contorno_dado]
         _xmin_p = min(_xs_c) + recub_dado/100
         _xmax_p = max(_xs_c) - recub_dado/100
         _ymin_p = min(_ys_c) + recub_dado/100
         _ymax_p = max(_ys_c) - recub_dado/100
-        _dy_bar = 0.20
-        _y_cur = _ymin_p + _dy_bar/2
+        _y_cur = _ymin_p + 0.10
         while _y_cur < _ymax_p:
-            msp.add_line((_xmin_p, _y_cur),(_xmax_p, _y_cur), dxfattribs={"layer":"ACERO"})
-            _y_cur += _dy_bar
-        _dx_bar = 0.20
-        _x_cur = _xmin_p + _dx_bar/2
+            msp.add_line((_xmin_p, _y_cur),(_xmax_p, _y_cur),
+                         dxfattribs={"layer":"ACERO"})
+            _y_cur += sep_y_calc / 100
+        _x_cur = _xmin_p + 0.10
         while _x_cur < _xmax_p:
-            msp.add_line((_x_cur, _ymin_p),(_x_cur, _ymax_p), dxfattribs={"layer":"ACERO"})
-            _x_cur += _dx_bar
+            msp.add_line((_x_cur, _ymin_p),(_x_cur, _ymax_p),
+                         dxfattribs={"layer":"ACERO"})
+            _x_cur += sep_x_calc / 100
 
         # Cotas planta
         _th = 0.08
         _cx_p = (_xmin_p+_xmax_p)/2
         _cy_p = (_ymin_p+_ymax_p)/2
-        msp.add_text(f"B = {B_sugerido:.2f} m", dxfattribs={"height":_th,"layer":"COTAS"}).set_placement((_cx_p-0.4, _ymax_p+0.15))
-        msp.add_text(f"L = {L_sugerido:.2f} m", dxfattribs={"height":_th,"layer":"COTAS"}).set_placement((_xmax_p+0.10, _cy_p))
-        msp.add_text("PLANTA ENCEPADO", dxfattribs={"height":0.12,"layer":"TEXTO"}).set_placement((_cx_p-0.5, _ymin_p-0.35))
+        msp.add_text(f"B = {B_sugerido:.2f} m",
+                     dxfattribs={"height":_th,"layer":"COTAS"}).set_placement(
+            (_cx_p-0.4, _ymax_p+0.12))
+        msp.add_text(f"L = {L_sugerido:.2f} m",
+                     dxfattribs={"height":_th,"layer":"COTAS"}).set_placement(
+            (_xmax_p+0.10, _cy_p))
+        msp.add_text("A", dxfattribs={"height":0.10,"layer":"TEXTO"}).set_placement(
+            (_xmin_p-0.20, _cy_p))
+        msp.add_text("A", dxfattribs={"height":0.10,"layer":"TEXTO"}).set_placement(
+            (_xmax_p+0.08, _cy_p))
+        msp.add_text("PLANTA ENCEPADO",
+                     dxfattribs={"height":0.12,"layer":"TEXTO"}).set_placement(
+            (_cx_p-0.50, _ymin_p-0.35))
 
-        # ═══ CORTE TRANSVERSAL (Vista A-A) desplazado en Y negativo ══════════
-        _off_y = _ymin_p - H_dado - 1.5  # debajo de la planta
-        _off_x = min(_xs_c)              # alineado al borde izq del contorno
+        # ═══ CORTE A-A  ══════════════════════════════════════════════════════
+        _off_y = _ymin_p - H_dado - 1.5
+        _off_x = min(_xs_c)       # borde izquierdo alineado con planta
 
-        # Contorno del dado en corte
         _corte_pts = [(_off_x,_off_y),(_off_x+B_sugerido,_off_y),
                       (_off_x+B_sugerido,_off_y+H_dado),(_off_x,_off_y+H_dado)]
         msp.add_lwpolyline(_corte_pts, close=True,
@@ -849,108 +861,213 @@ with tab_bim:
         # Columna en corte
         _col_x0 = _off_x + B_sugerido/2 - c1_m/2
         _col_x1 = _off_x + B_sugerido/2 + c1_m/2
-        msp.add_lwpolyline([(_col_x0,_off_y+H_dado),(_col_x1,_off_y+H_dado),
-                            (_col_x1,_off_y+H_dado+1.0),(_col_x0,_off_y+H_dado+1.0)],
-                           close=True, dxfattribs={"layer":"COLUMNA","lineweight":40})
-        # Pilotes en corte (rectángulos bajo el dado)
-        # Pilotes en corte: cada columna X unica del array
-        _pilotes_x_sorted = sorted(df_pilotes["X [m]"].unique())
-        for _ppx in _pilotes_x_sorted:
-            # _ppx en m relativo al centro del dado (ya centrado en x=0)
-            # en el corte, el dado va de _off_x a _off_x+B_sugerido
-            # centro del corte = _off_x + B_sugerido/2 = 0
-            _px_c = _ppx  # en plano corte X == plano planta X
+        msp.add_lwpolyline(
+            [(_col_x0,_off_y+H_dado),(_col_x1,_off_y+H_dado),
+             (_col_x1,_off_y+H_dado+1.0),(_col_x0,_off_y+H_dado+1.0)],
+            close=True, dxfattribs={"layer":"COLUMNA","lineweight":40})
+
+        # Pilotes en corte (grupos por X distinta)
+        for _ppx in sorted(df_pilotes["X [m]"].unique()):
+            _px_c = _off_x + B_sugerido/2 + _ppx
             _px0 = _px_c - D_pilote/2
             _px1 = _px_c + D_pilote/2
-            msp.add_lwpolyline([(_px0, _off_y - 3.0), (_px1, _off_y - 3.0),
-                                (_px1, _off_y), (_px0, _off_y)],
-                               close=True, dxfattribs={"layer":"PILOTES","lineweight":30})
-            # Linea de eje pilote
-            msp.add_line((_px_c, _off_y-3.0),(_px_c, _off_y),
-                         dxfattribs={"layer":"PILOTES","linetype":"DASHED" if "DASHED" in [l.dxf.name for l in doc_dxf.linetypes] else "CONTINUOUS"})
-        # Armadura inferior en corte
-        _z_inf_c = _off_y + recub_dado/100 + 0.02
-        _lh_c = max(0.15, 12*(db_dado/100))
-        msp.add_line((_off_x+recub_dado/100, _z_inf_c),
-                     (_off_x+B_sugerido-recub_dado/100, _z_inf_c), dxfattribs={"layer":"ACERO","lineweight":30})
-        # Bastones gancho inferior
-        for _bx in [_off_x+recub_dado/100, _off_x+B_sugerido-recub_dado/100]:
-            msp.add_line((_bx,_z_inf_c),(_bx,_z_inf_c+_lh_c), dxfattribs={"layer":"ACERO"})
-        # Armadura superior en corte
-        _z_sup_c = _off_y + H_dado - recub_dado/100 - 0.02
-        msp.add_line((_off_x+recub_dado/100, _z_sup_c),
-                     (_off_x+B_sugerido-recub_dado/100, _z_sup_c), dxfattribs={"layer":"ACERO","lineweight":30})
-        # Bastones gancho superior
-        for _bx in [_off_x+recub_dado/100, _off_x+B_sugerido-recub_dado/100]:
-            msp.add_line((_bx,_z_sup_c),(_bx,_z_sup_c-_lh_c), dxfattribs={"layer":"ACERO"})
-        # Acero intermedio si H > 60cm
+            msp.add_lwpolyline(
+                [(_px0,_off_y-3.0),(_px1,_off_y-3.0),
+                 (_px1,_off_y),(_px0,_off_y)],
+                close=True, dxfattribs={"layer":"PILOTES","lineweight":30})
+
+        # Armadura inferior (linea + cota de nro de barras)
+        _rec_m = (recub_dado if recub_dado >= 1 else recub_dado*100) / 100
+        _lh_dxf = max(0.15, 12*(db_dado/100))
+        _z_inf_c = _off_y + _rec_m + 0.02
+        msp.add_line((_off_x+_rec_m, _z_inf_c),
+                     (_off_x+B_sugerido-_rec_m, _z_inf_c),
+                     dxfattribs={"layer":"ACERO","lineweight":30})
+        # Ganchos inf
+        for _bx in [_off_x+_rec_m, _off_x+B_sugerido-_rec_m]:
+            msp.add_line((_bx, _z_inf_c),(_bx, _z_inf_c+_lh_dxf),
+                         dxfattribs={"layer":"ACERO","lineweight":30})
+        # Flecha de acero inferior con cantidad
+        _as_label = f"{n_bar_x}{bar_num_x}@{sep_x_calc:.0f}cm"
+        msp.add_text(_as_label, dxfattribs={"height":0.08,"layer":"ACERO"}).set_placement(
+            (_off_x+B_sugerido+0.08, _z_inf_c))
+        msp.add_line((_off_x+B_sugerido+0.06, _z_inf_c),
+                     (_off_x+B_sugerido-0.05, _z_inf_c),
+                     dxfattribs={"layer":"ACERO"})
+        # Armadura superior
+        _z_sup_c = _off_y + H_dado - _rec_m - 0.02
+        msp.add_line((_off_x+_rec_m, _z_sup_c),
+                     (_off_x+B_sugerido-_rec_m, _z_sup_c),
+                     dxfattribs={"layer":"ACERO","lineweight":30})
+        for _bx in [_off_x+_rec_m, _off_x+B_sugerido-_rec_m]:
+            msp.add_line((_bx, _z_sup_c),(_bx, _z_sup_c-_lh_dxf),
+                         dxfattribs={"layer":"ACERO","lineweight":30})
+        _as_sup_lbl = f"{n_bar_x}{bar_num_x}@{sep_x_calc:.0f}cm (sup)"
+        msp.add_text(_as_sup_lbl, dxfattribs={"height":0.08,"layer":"ACERO"}).set_placement(
+            (_off_x+B_sugerido+0.08, _z_sup_c))
+        # Acero intermedio (piel) si H>60cm
         if H_dado > 0.60:
             _n_int = int((H_dado-0.20)/0.30)
             for _ci in range(1, _n_int+1):
                 _zz = _off_y + 0.10 + _ci*0.30
-                msp.add_line((_off_x+recub_dado/100,_zz),
-                             (_off_x+B_sugerido-recub_dado/100,_zz),
+                msp.add_line((_off_x+_rec_m, _zz),
+                             (_off_x+B_sugerido-_rec_m, _zz),
                              dxfattribs={"layer":"ACERO"})
-        # Cotas corte
-        msp.add_text(f"H = {H_dado:.2f} m", dxfattribs={"height":_th,"layer":"COTAS"}).set_placement((_off_x+B_sugerido+0.10, _off_y+H_dado/2))
-        msp.add_text(f"B = {B_sugerido:.2f} m", dxfattribs={"height":_th,"layer":"COTAS"}).set_placement((_off_x+B_sugerido/2-0.3, _off_y+H_dado+0.10))
-        msp.add_text(f"Rec. = {recub_dado if recub_dado >= 1 else recub_dado*100:.1f} cm", dxfattribs={"height":_th*0.8,"layer":"COTAS"}).set_placement((_off_x+0.05, _z_inf_c+0.03))
-        msp.add_text("CORTE A-A", dxfattribs={"height":0.12,"layer":"TEXTO"}).set_placement((_off_x+B_sugerido/2-0.3, _off_y-0.3))
-        msp.add_text("A", dxfattribs={"height":0.10,"layer":"TEXTO"}).set_placement((_xmin_p-0.25, _cy_p))
-        msp.add_text("A", dxfattribs={"height":0.10,"layer":"TEXTO"}).set_placement((_xmax_p+0.15, _cy_p))
+            msp.add_text(f"Acero piel: #3@30cm",
+                         dxfattribs={"height":0.07,"layer":"ACERO"}).set_placement(
+                (_off_x+B_sugerido+0.08, _off_y+H_dado/2))
 
-        # ═══ ROTULO ICONTEC NTC 1579 ══════════════════════════════════════════
-        _rx0 = _xmax_p + 1.2
+        # Cotas corte
+        msp.add_text(f"H = {H_dado:.2f} m",
+                     dxfattribs={"height":_th,"layer":"COTAS"}).set_placement(
+            (_off_x+B_sugerido+0.08, _off_y+H_dado/2+0.3))
+        msp.add_text(f"B = {B_sugerido:.2f} m",
+                     dxfattribs={"height":_th,"layer":"COTAS"}).set_placement(
+            (_off_x+B_sugerido/2-0.3, _off_y+H_dado+0.10))
+        _rec_cm_val = recub_dado if recub_dado >= 1 else recub_dado*100
+        msp.add_text(f"Rec. = {_rec_cm_val:.1f} cm",
+                     dxfattribs={"height":_th*0.8,"layer":"COTAS"}).set_placement(
+            (_off_x+0.05, _z_inf_c+0.04))
+        msp.add_text("CORTE A-A",
+                     dxfattribs={"height":0.12,"layer":"TEXTO"}).set_placement(
+            (_off_x+B_sugerido/2-0.25, _off_y-0.30))
+
+        # ═══ CUADRO DE CANTIDADES (Ferretería) ══════════════════════════════
+        # Calcular cantidades
+        _vol_conc = B_sugerido * L_sugerido * H_dado  # m3 bruto
+        _long_bx   = (B_sugerido - 2*_rec_m + _lh_dxf*2) / 1.0  # m/barra c/ganchos
+        _long_by   = (L_sugerido - 2*_rec_m + _lh_dxf*2) / 1.0
+        _total_bx  = n_bar_x * 2 * _long_bx   # inf + sup
+        _total_by  = n_bar_y * 2 * _long_by
+        _kg_bx     = _total_bx * (db_dado**2 * 0.00785)  # kg = L(m) * d^2(cm^2) * 0.00785
+        _kg_by     = _total_by * (db_dado**2 * 0.00785)
+        _kg_total  = _kg_bx + _kg_by
+        _form_m2   = 2*(B_sugerido + L_sugerido) * H_dado   # m2 formaleta
+
+        _cq_x0 = _off_x
+        _cq_y0 = _off_y - 4.5
+        _cw    = B_sugerido + 3.0
+        _ch    = 3.2
+        # Marco del cuadro
+        msp.add_lwpolyline(
+            [(_cq_x0,_cq_y0),(_cq_x0+_cw,_cq_y0),
+             (_cq_x0+_cw,_cq_y0+_ch),(_cq_x0,_cq_y0+_ch)],
+            close=True, dxfattribs={"layer":"MARCO","lineweight":40})
+        # Encabezado
+        msp.add_line((_cq_x0,_cq_y0+_ch-0.40),(_cq_x0+_cw,_cq_y0+_ch-0.40),
+                     dxfattribs={"layer":"MARCO","lineweight":25})
+        msp.add_text("CUADRO DE CANTIDADES — ACERO Y MATERIALES",
+                     dxfattribs={"height":0.15,"layer":"ROTULO"}).set_placement(
+            (_cq_x0+0.10, _cq_y0+_ch-0.28))
+        # Columnas internas
+        _cols_w = [_cw*0.35, _cw*0.20, _cw*0.15, _cw*0.15, _cw*0.15]
+        _cx = _cq_x0
+        for _cw_i in _cols_w[:-1]:
+            _cx += _cw_i
+            msp.add_line((_cx,_cq_y0),(_cx,_cq_y0+_ch-0.40),
+                         dxfattribs={"layer":"MARCO","lineweight":15})
+        # Header fila
+        _row_h = 0.30
+        msp.add_line((_cq_x0,_cq_y0+_ch-0.40-_row_h),(_cq_x0+_cw,_cq_y0+_ch-0.40-_row_h),
+                     dxfattribs={"layer":"MARCO","lineweight":15})
+        _hdrs = ["MATERIAL / ELEMENTO","CANTIDAD","UNIDAD","PESO (kg)","OBSERVACION"]
+        _cx_acc = _cq_x0
+        for _hdr, _cw_i in zip(_hdrs, _cols_w):
+            msp.add_text(_hdr, dxfattribs={"height":0.08,"layer":"TEXTO"}).set_placement(
+                (_cx_acc+0.05, _cq_y0+_ch-0.40-_row_h+0.08))
+            _cx_acc += _cw_i
+        # Filas de datos
+        _rows_data = [
+            (f"Concreto f'c={fc_dado:.0f}MPa",
+             f"{_vol_conc:.2f}", "m3", "-", f"1.05 factor desperdicio"),
+            (f"Acero {bar_num_x} Eje X (inf+sup)",
+             f"{n_bar_x*2}", "barras", f"{_kg_bx:.1f}",
+             f"L={_long_bx:.2f}m/barra"),
+            (f"Acero {bar_num_y} Eje Y (inf+sup)",
+             f"{n_bar_y*2}", "barras", f"{_kg_by:.1f}",
+             f"L={_long_by:.2f}m/barra"),
+            ("TOTAL ACERO", "-", "-", f"{_kg_total:.1f}",
+             "Incluir 5% desperdicio y empalmes"),
+            (f"Formaleta lateral", f"{_form_m2:.2f}", "m2", "-", "Panel fenolico 1 uso"),
+        ]
+        _ry = _cq_y0 + _ch - 0.40 - _row_h - 0.05
+        for _rd in _rows_data:
+            _ry -= 0.28
+            _cx_acc = _cq_x0
+            for _cell, _cw_i in zip(_rd, _cols_w):
+                msp.add_text(str(_cell), dxfattribs={"height":0.08,"layer":"TEXTO"}).set_placement(
+                    (_cx_acc+0.05, _ry))
+                _cx_acc += _cw_i
+
+        # ═══ ROTULO ICONTEC (posiciones ajustadas para NO coincidir con líneas) ═
+        # Rótulo a la derecha: líneas divisorias en dy = 1.2, 2.0, 3.0, 4.2
+        # Los textos deben estar AL MENOS 0.15 separados de las líneas
+        _rx0 = _off_x + B_sugerido + 2.5
         _ry0 = _off_y - 0.5
         _rw  = 9.0
         _rh  = 6.0
-        # Marco doble
-        msp.add_lwpolyline([(_rx0,_ry0),(_rx0+_rw,_ry0),
-                            (_rx0+_rw,_ry0+_rh),(_rx0,_ry0+_rh)],
-                           close=True, dxfattribs={"layer":"MARCO","lineweight":70})
-        msp.add_lwpolyline([(_rx0+0.06,_ry0+0.06),(_rx0+_rw-0.06,_ry0+0.06),
-                            (_rx0+_rw-0.06,_ry0+_rh-0.06),(_rx0+0.06,_ry0+_rh-0.06)],
-                           close=True, dxfattribs={"layer":"MARCO","lineweight":25})
-        # Divisiones
-        for _dy in [1.2, 2.0, 3.0, 4.2]:
-            msp.add_line((_rx0,_ry0+_dy),(_rx0+_rw,_ry0+_dy), dxfattribs={"layer":"ROTULO","lineweight":25})
-        msp.add_line((_rx0+_rw*0.55,_ry0+1.2),(_rx0+_rw*0.55,_ry0+4.2), dxfattribs={"layer":"ROTULO","lineweight":15})
-        # Textos del rótulo
-        _bar_txt = f"{bar_num_x}@{sep_x_calc:.0f}cm (ejeX) / {bar_num_y}@{sep_y_calc:.0f}cm (ejeY)"
-        _items = [
-            # (x_offset, y_from_bottom, height, text)
-            (0.15, 5.70, 0.22, "ESTRUCTURAS DE CIMENTACION PROFUNDA"),
-            (0.15, 5.35, 0.14, f"ENCEPADO DE PILOTES   N = {n_pil} Pilotes"),
-            (0.15, 3.75, 0.11, "DESCRIPCION DEL ELEMENTO:"),
-            (0.15, 3.50, 0.10, f"Dado: {B_sugerido:.2f}m x {L_sugerido:.2f}m x H={H_dado:.2f}m"),
-            (0.15, 3.25, 0.10, f"Pilotes: D={D_pilote*100:.0f}cm  S={S_pilote:.2f}m  Voladizo={voladizo:.2f}m"),
-            (0.15, 3.00, 0.10, f"Acero: {_bar_txt}"),
-            (0.15, 2.75, 0.10, f"As,x={As_x:.1f}cm2  As,y={As_y:.1f}cm2"),
-            (0.15, 2.35, 0.10, "MATERIALES:"),
-            (0.15, 2.15, 0.10, f"Concreto: f'c = {fc_dado:.0f} MPa"),
-            (0.15, 1.95, 0.10, f"Acero: fy = {fy_acero:.0f} MPa   NSR-10 / ACI 318-19"),
-            (0.15, 1.55, 0.10, "VERIFICACIONES:"),
-            (0.15, 1.35, 0.09, f"  Punz.Col: {'CUMPLE' if ok_punz else 'FALLA'}   Punz.Pil: {'CUMPLE' if ok_pilz else 'FALLA'}"),
-            (0.15, 1.18, 0.09, f"  Cortante X: {'CUMPLE' if ok_vx else 'FALLA'}   Cortante Y: {'CUMPLE' if ok_vy else 'FALLA'}"),
-            # Col derecha
-            (_rw*0.55+0.10, 3.75, 0.10, "ESCALA: 1:50"),
-            (_rw*0.55+0.10, 3.55, 0.10, "LÁMINA:  E-01"),
-            (_rw*0.55+0.10, 3.30, 0.10, f"PLANO No.: {n_pil:02d}P"),
-            (_rw*0.55+0.10, 3.05, 0.10, "REVISO: _____________"),
-            (_rw*0.55+0.10, 2.80, 0.10, "CALCULO: ____________"),
-            (_rw*0.55+0.10, 2.55, 0.10, "FECHA: ______________"),
-            (_rw*0.55+0.10, 2.20, 0.10, "APRUEBA: ____________"),
-            (0.15, 0.75, 0.09, "NOTAS: Barras segun ASTM A615 Gr60."),
-            (0.15, 0.55, 0.09, "Recubrimiento minimo segun tabla NSR-10 C.7.7."),
-            (0.15, 0.35, 0.09, "Concreto fluido con asentamiento 10-15cm."),
+        # Marcos
+        msp.add_lwpolyline(
+            [(_rx0,_ry0),(_rx0+_rw,_ry0),(_rx0+_rw,_ry0+_rh),(_rx0,_ry0+_rh)],
+            close=True, dxfattribs={"layer":"MARCO","lineweight":70})
+        msp.add_lwpolyline(
+            [(_rx0+0.06,_ry0+0.06),(_rx0+_rw-0.06,_ry0+0.06),
+             (_rx0+_rw-0.06,_ry0+_rh-0.06),(_rx0+0.06,_ry0+_rh-0.06)],
+            close=True, dxfattribs={"layer":"MARCO","lineweight":25})
+        # Divisiones: dy=4.2, 3.0, 2.0, 1.2 desde _ry0
+        _div_ys = [4.2, 3.0, 2.0, 1.2]
+        for _dvy in _div_ys:
+            msp.add_line((_rx0,_ry0+_dvy),(_rx0+_rw,_ry0+_dvy),
+                         dxfattribs={"layer":"ROTULO","lineweight":25})
+        # Divisor vertical columna derecha
+        msp.add_line((_rx0+_rw*0.55,_ry0+1.2),(_rx0+_rw*0.55,_ry0+3.0),
+                     dxfattribs={"layer":"ROTULO","lineweight":15})
+
+        # Textos — separados ≥0.15m de cada línea divisoria
+        # Zona superior (4.2 a 6.0): encabezados
+        _items_rotulo = [
+            # [x_off, y_off(desde_ry0), height, text]
+            # Encabezado: 4.45 a 5.90 (libre)
+            (0.15, 5.65, 0.22, "ESTRUCTURAS DE CIMENTACION PROFUNDA"),
+            (0.15, 5.25, 0.14, f"ENCEPADO DE PILOTES   N = {n_pil} Pilotes"),
+            # Descripcion: 3.15 a 4.0 (libres entre lineas 3.0 y 4.2)
+            (0.15, 3.90, 0.10, "DESCRIPCION DEL ELEMENTO:"),
+            (0.15, 3.68, 0.10, f"Dado: {B_sugerido:.2f}m x {L_sugerido:.2f}m x H={H_dado:.2f}m"),
+            (0.15, 3.48, 0.10, f"Pilotes: D={D_pilote*100:.0f}cm  S={S_pilote:.2f}m  Voladizo={voladizo:.2f}m"),
+            (0.15, 3.18, 0.10, f"Acero: {bar_num_x}@{sep_x_calc:.0f}cm (ejeX) / {bar_num_y}@{sep_y_calc:.0f}cm (ejeY)"),
+            # As: 2.15 a 2.85 (entre lineas 2.0 y 3.0)
+            (0.15, 2.80, 0.10, f"As,x={As_x:.1f}cm2 prov={As_prov_x:.1f}cm2  /  As,y={As_y:.1f}cm2 prov={As_prov_y:.1f}cm2"),
+            (0.15, 2.55, 0.10, "MATERIALES:"),
+            (0.15, 2.35, 0.10, f"Concreto: f'c = {fc_dado:.0f} MPa"),
+            (0.15, 2.15, 0.10, f"Acero: fy = {fy_acero:.0f} MPa   NSR-10 / ACI 318-19"),
+            # Verificaciones: 1.35 a 1.85 (entre lineas 1.2 y 2.0)
+            (0.15, 1.85, 0.10, "VERIFICACIONES:"),
+            (0.15, 1.60, 0.09, f"  Punz.Col: {'CUMPLE' if ok_punz else 'FALLA'}    Punz.Pil: {'CUMPLE' if ok_pilz else 'FALLA'}"),
+            (0.15, 1.40, 0.09, f"  Cortante X: {'CUMPLE' if ok_vx else 'FALLA'}    Cortante Y: {'CUMPLE' if ok_vy else 'FALLA'}"),
+            # Notas: 0.10 a 1.05 (entre base y linea 1.2)
+            (0.15, 0.90, 0.10, "NOTAS: Barras segun ASTM A615 Gr60."),
+            (0.15, 0.70, 0.10, "Recubrimiento minimo segun tabla NSR-10 C.7.7."),
+            (0.15, 0.52, 0.10, "Concreto fluido, asentamiento 10-15cm."),
+            # Columna derecha (3.15 a 2.15 entre divisores)
+            (_rw*0.55+0.10, 2.80, 0.10, "ESCALA: 1:50"),
+            (_rw*0.55+0.10, 2.55, 0.10, "LAMINA:  E-01"),
+            (_rw*0.55+0.10, 2.30, 0.10, f"PLANO No.: {n_pil:02d}P"),
+            # Firmas: 1.40 a 1.85
+            (_rw*0.55+0.10, 1.85, 0.10, "REVISO: _____________"),
+            (_rw*0.55+0.10, 1.60, 0.10, "CALCULO: ____________"),
+            (_rw*0.55+0.10, 1.40, 0.10, "FECHA: ______________"),
+            # Aprueba: bajo linea 1.2
+            (0.15, 0.35, 0.10, "APRUEBA: ___________________"),
         ]
-        for _tx, _ty, _th2, _tt in _items:
-            msp.add_text(_tt, dxfattribs={"height":_th2,"layer":"ROTULO"}).set_placement((_rx0+_tx, _ry0+_ty))
+        for _tx, _ty, _th2, _tt in _items_rotulo:
+            msp.add_text(_tt, dxfattribs={"height":_th2,"layer":"ROTULO"}).set_placement(
+                (_rx0+_tx, _ry0+_ty))
 
         bio_dxf = io.StringIO()
         doc_dxf.write(bio_dxf)
         col_exp2.download_button(_t("Descargar DXF", "Download DXF"),
-                                 data=bio_dxf.getvalue(), file_name="Planta_Encepado.dxf")
+                                 data=bio_dxf.getvalue(),
+                                 file_name="Planta_Encepado.dxf")
 
     if _IFC_AVAILABLE:
         try:
