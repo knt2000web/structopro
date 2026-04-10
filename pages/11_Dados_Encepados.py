@@ -196,10 +196,11 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 # CUERPO PRINCIPAL (TABS)
 # ─────────────────────────────────────────────
-tab_geo, tab_des, tab_bim = st.tabs([
+tab_geo, tab_des, tab_apu, tab_bim = st.tabs([
     _t("1. Configuración de Grupo", "1. Group Configuration"),
     _t("2. Punzonamiento y Flexión", "2. Punching & Flexure"),
-    _t("3. Planos y BIM", "3. Drawings & BIM")
+    _t("3. Presupuesto (APU)", "3. Budget (APU)"),
+    _t("4. Planos y BIM", "4. Drawings & BIM")
 ])
 
 with tab_geo:
@@ -412,6 +413,81 @@ with tab_des:
         st.warning("La distancia desde los pilotes a la columna es menor a 2d. Este dado es rígido/profundo. ACI 318 exige diseño predominante usando **Bielas y Tirantes (STM)** en lugar de flexión plana clásica.")
     else:
         st.success("La distancia supera los 2d. El diseño convencional de vigas/losas (Flexión/Cortante) rige de manera precisa.")
+
+    with tab_apu:
+        st.subheader(_t("Presupuesto y Cantidades de Obra (APU)", "Budget and Bill of Quantities (APU)"))
+        
+        # 1. Cantidades
+        vol_exc_dado = B_sugerido * L_sugerido * H_dado * 1.10 # 10% desperdicio lateral
+        vol_conc_dado = B_sugerido * L_sugerido * H_dado
+        area_form_dado = 2 * (B_sugerido + L_sugerido) * H_dado
+        
+        peso_acero_x = (As_x / 10000.0) * B_sugerido * 7850 * 1.05 # Area x long X density
+        peso_acero_y = (As_y / 10000.0) * L_sugerido * 7850 * 1.05
+        peso_acero_total = round(peso_acero_x + peso_acero_y, 1)
+
+        st.markdown("##### Cuadro de Cantidades de Obra - Encepado")
+        filas_cant = [
+            {"Nº": 1, "Descripción": "Excavación mecánica encepado", "Unidad": "m³", "Cantidad": vol_exc_dado},
+            {"Nº": 2, "Descripción": f"Concreto encepado f'c={fc_dado:.0f} MPa", "Unidad": "m³", "Cantidad": vol_conc_dado},
+            {"Nº": 3, "Descripción": "Acero Refuerzo (Parrilla Inferior + Superior)", "Unidad": "kg", "Cantidad": peso_acero_total},
+            {"Nº": 4, "Descripción": "Formaleta tableros metálicos", "Unidad": "m²", "Cantidad": area_form_dado},
+        ]
+        df_cant = pd.DataFrame(filas_cant)
+        
+        c_m1, c_m2, c_m3 = st.columns(3)
+        c_m1.metric("Vol. Concreto Total", f"{vol_conc_dado:.2f} m³")
+        c_m2.metric("Acero Requerido", f"{peso_acero_total:.1f} kg")
+        c_m3.metric("Ratio Acero/Concreto", f"{peso_acero_total/(vol_conc_dado+0.001):.1f} kg/m³")
+        
+        st.dataframe(df_cant.style.format({"Cantidad": "{:,.2f}"}), use_container_width=True, hide_index=True)
+        st.divider()
+
+        # 2. Precios Unitarios
+        st.markdown("##### Base de Precios Unitarios (COP) — Editable")
+        precios_default = pd.DataFrame([
+            {"Nº": 1, "Descripción": "Excavación mecánica encepado", "Unidad": "m³", "Precio Unitario (COP)": 36_000},
+            {"Nº": 2, "Descripción": f"Concreto encepado f'c={fc_dado:.0f} MPa", "Unidad": "m³", "Precio Unitario (COP)": 460_000},
+            {"Nº": 3, "Descripción": "Acero Refuerzo (Parrilla Inferior + Superior)", "Unidad": "kg", "Precio Unitario (COP)": 5_600},
+            {"Nº": 4, "Descripción": "Formaleta tableros metálicos", "Unidad": "m²", "Precio Unitario (COP)": 40_000},
+        ])
+        
+        df_precios = st.data_editor(
+            precios_default,
+            column_config={"Precio Unitario (COP)": st.column_config.NumberColumn("Precio Unitario (COP)", min_value=0, format="$ %d", required=True)},
+            num_rows="fixed", use_container_width=True, hide_index=True, key="editor_precios_dados"
+        )
+        
+        df_pres = df_cant.copy()
+        df_pres["Precio Unitario (COP)"] = df_precios["Precio Unitario (COP)"].values
+        df_pres["Subtotal (COP)"] = df_pres["Cantidad"] * df_pres["Precio Unitario (COP)"]
+        costo_directo = df_pres["Subtotal (COP)"].sum()
+        
+        st.divider()
+        st.markdown("##### ⚙ Administración, Imprevistos y Utilidad (A.I.U.)")
+        c_aiu1, c_aiu2, c_aiu3 = st.columns(3)
+        with c_aiu1: pct_admin = st.slider("Administración (%)", 5, 25, 15, 1, key="aiu_adj_a")
+        with c_aiu2: pct_impr = st.slider("Imprevistos (%)", 2, 10, 5, 1, key="aiu_adj_i")
+        with c_aiu3: pct_util = st.slider("Utilidad (%)", 5, 20, 10, 1, key="aiu_adj_u")
+        
+        costo_total = costo_directo * (1 + (pct_admin + pct_impr + pct_util) / 100.0)
+        
+        st.markdown(f"""
+        <div style="background:#1e3a5f;border:1px solid #1f6feb;border-radius:8px;padding:14px 16px; margin-top:15px">
+            <div style="font-size:14px;color:#79c0ff;margin-bottom:4px">TOTAL DADO (A.I.U.={pct_admin + pct_impr + pct_util}%)</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#79c0ff">${costo_total:,.0f} COP</div>
+            <div style="font-size:12px;color:#58a6ff;margin-top:4px">${costo_total/Pu:.0f} / kN transmitido</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if _PLOTLY_AVAILABLE:
+            fig_donut = go.Figure(go.Pie(
+                labels=["Costo Directo", "A.I.U."],
+                values=[costo_directo, costo_total - costo_directo],
+                hole=0.55, marker=dict(colors=["#29b6f6", "#ef5350"])
+            ))
+            fig_donut.update_layout(paper_bgcolor="#1e2530", font=dict(color="white"), height=300, margin=dict(t=10, b=10, l=10, r=10))
+            st.plotly_chart(fig_donut, use_container_width=True)
 
 with tab_bim:
     st.subheader(_t("Integración BIM 3D", "BIM 3D Integration"))
