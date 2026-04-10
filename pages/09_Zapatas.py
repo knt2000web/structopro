@@ -1737,19 +1737,19 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         Area_punz = bo_1 * bo_2
     elif pos_col_iso == "Borde (eje X)":
         # Columna en el borde X: d_z_m/2 en c2
-        _bo2_eff = c2_col/100.0 + d_z_m/2.0
+        _bo2_eff = bo_2 - d_z_m/2.0
         bo_perim = 2*bo_1 + _bo2_eff
         alpha_s = 30
         Area_punz = bo_1 * _bo2_eff
     elif pos_col_iso == "Borde (eje Y)":
         # Columna en el borde Y: d_z_m/2 en c1
-        _bo1_eff = c1_col/100.0 + d_z_m/2.0
+        _bo1_eff = bo_1 - d_z_m/2.0
         bo_perim = 2*bo_2 + _bo1_eff
         alpha_s = 30
         Area_punz = _bo1_eff * bo_2
     else: # Esquina
-        _bo1_eff = c1_col/100.0 + d_z_m/2.0
-        _bo2_eff = c2_col/100.0 + d_z_m/2.0
+        _bo1_eff = bo_1 - d_z_m/2.0
+        _bo2_eff = bo_2 - d_z_m/2.0
         bo_perim = _bo1_eff + _bo2_eff
         alpha_s = 20
         Area_punz = _bo1_eff * _bo2_eff
@@ -2172,16 +2172,16 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                         _bo = 2*(_bo1 + _bo2); _alphas = 40
                         _Ap = _bo1 * _bo2
                     elif pos_col_iso == "Borde (eje X)":
-                        _bo2_eff = c2_col/100.0 + _dim/2.0
+                        _bo2_eff = _bo2 - _dim/2.0
                         _bo = 2*_bo1 + _bo2_eff; _alphas = 30
                         _Ap = _bo1 * _bo2_eff
                     elif pos_col_iso == "Borde (eje Y)":
-                        _bo1_eff = c1_col/100.0 + _dim/2.0
+                        _bo1_eff = _bo1 - _dim/2.0
                         _bo = 2*_bo2 + _bo1_eff; _alphas = 30
                         _Ap = _bo1_eff * _bo2
                     else: # Esquina
-                        _bo1_eff = c1_col/100.0 + _dim/2.0
-                        _bo2_eff = c2_col/100.0 + _dim/2.0
+                        _bo1_eff = _bo1 - _dim/2.0
+                        _bo2_eff = _bo2 - _dim/2.0
                         _bo = _bo1_eff + _bo2_eff; _alphas = 20
                         _Ap = _bo1_eff * _bo2_eff
                     _Vup = P_ult - qu_avg * _Ap
