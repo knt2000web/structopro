@@ -275,5 +275,78 @@ with tab_des:
         st.success("La distancia supera los 2d. El diseño convencional de vigas/losas (Flexión/Cortante) rige de manera precisa.")
 
 with tab_bim:
-    st.subheader(_t("Salidas Gráficas y BIM", "Graphical and BIM Outputs"))
-    st.info(_t("Próximamente: Exportación a DXF con detalles y Encepado en geometría de Modelo IFC3D...", "Coming soon: DXF export with details and IFC3D model geometry..."))
+    st.subheader(_t("Integración BIM 3D", "BIM 3D Integration"))
+    
+    if _PLOTLY_AVAILABLE:
+        fig3d = go.Figure()
+        
+        # 1. Dado (Pile Cap) - Caja Semitransparente
+        Bx2 = B_sugerido / 2
+        Ly2 = L_sugerido / 2
+        hd = H_dado
+        
+        x_dado = [-Bx2, Bx2, Bx2, -Bx2, -Bx2, Bx2, Bx2, -Bx2]
+        y_dado = [-Ly2, -Ly2, Ly2, Ly2, -Ly2, -Ly2, Ly2, Ly2]
+        z_dado = [0, 0, 0, 0, -hd, -hd, -hd, -hd]
+        
+        fig3d.add_trace(go.Mesh3d(
+            x=x_dado, y=y_dado, z=z_dado,
+            i=[7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2],
+            j=[3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3],
+            k=[0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6],
+            color='lightblue', opacity=0.3, name='Concreto Encepado'
+        ))
+        
+        # 2. Columna
+        c1x = c1_m / 2; c2y = c2_m / 2; hc = 1.0
+        x_col = [-c1x, c1x, c1x, -c1x, -c1x, c1x, c1x, -c1x]
+        y_col = [-c2y, -c2y, c2y, c2y, -c2y, -c2y, c2y, c2y]
+        z_col = [hc, hc, hc, hc, 0, 0, 0, 0]
+        fig3d.add_trace(go.Mesh3d(
+            x=x_col, y=y_col, z=z_col,
+            i=[7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2],
+            j=[3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3],
+            k=[0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6],
+            color='gray', opacity=1.0, name='Columna'
+        ))
+        
+        # 3. Pilotes
+        L_render = 3.0 # Longitud visual demostrativa
+        for idx, r in df_pilotes.iterrows():
+            px = r["X [m]"]
+            py = r["Y [m]"]
+            z_top_pil = -(H_dado - embeb_pilote)
+            
+            theta = np.linspace(0, 2*np.pi, 16)
+            z_cil = np.linspace(z_top_pil, z_top_pil - L_render, 2)
+            Tc, Zc = np.meshgrid(theta, z_cil)
+            Xc = px + (D_pilote/2) * np.cos(Tc)
+            Yc = py + (D_pilote/2) * np.sin(Tc)
+            
+            fig3d.add_trace(go.Surface(
+                x=Xc, y=Yc, z=Zc, 
+                colorscale=[[0, '#8d6e63'], [1, '#8d6e63']], 
+                showscale=False, opacity=0.9, name=f'Pilote {r["ID"]}'
+            ))
+            
+        # 4. Malla Inferior de Acero Simbólica
+        z_malla = -H_dado + 0.10
+        for yp in np.linspace(-Ly2 + 0.15, Ly2 - 0.15, 6):
+            fig3d.add_trace(go.Scatter3d(x=[-Bx2+0.1, Bx2-0.1], y=[yp, yp], z=[z_malla, z_malla], mode='lines', line=dict(color='orange', width=4), showlegend=False))
+        for xp in np.linspace(-Bx2 + 0.15, Bx2 - 0.15, 6):
+            fig3d.add_trace(go.Scatter3d(x=[xp, xp], y=[-Ly2+0.1, Ly2-0.1], z=[z_malla, z_malla], mode='lines', line=dict(color='orange', width=4), showlegend=False))
+            
+        fig3d.update_layout(
+            scene=dict(
+                xaxis=dict(title="X [m]", range=[-B_sugerido*1.2, B_sugerido*1.2]),
+                yaxis=dict(title="Y [m]", range=[-L_sugerido*1.2, L_sugerido*1.2]),
+                zaxis=dict(title="Z [m]"),
+                aspectmode='data'
+            ),
+            height=600, margin=dict(l=0, r=0, t=0, b=0),
+            paper_bgcolor="#1e2530", font=dict(color="white")
+        )
+        st.plotly_chart(fig3d, use_container_width=True)
+        
+    else:
+        st.error("Plotly no disponible.")
