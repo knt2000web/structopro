@@ -850,77 +850,196 @@ def ifc_grupo_pilotes(
 # 8. ENCEPADO PARAMÉTRICO CON PILOTES
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def ifc_dado_parametrico(
     B_dado_m: float, L_dado_m: float, H_dado_m: float,
-    df_pilotes, D_pilote_m: float, embeb_m: float, fc_dado: float,
-    c1_cm: float, c2_cm: float, nombre_proyecto: str = "Encepado Parametrico"
-) -> io.BytesIO:
-    """Exporta un encepado arbitrario usando un DataFrame de pilotes."""
+    df_pilotes, D_pilote_m: float, embeb_m: float,
+    fc_dado: float, c1_cm: float, c2_cm: float,
+    As_x_cm2: float = 0.0, As_y_cm2: float = 0.0,
+    db_mm: float = 16.0, recub_cm: float = 7.5,
+    sep_x_cm: float = 20.0, sep_y_cm: float = 20.0,
+    nombre_proyecto: str = "Encepado Parametrico"
+) -> "io.BytesIO":
+    """
+    Exporta encepado IFC4 sin referencias compartidas entre pilotes.
+    Incluye dado, columna de arranque, pilotes y armadura inferior visible.
+    """
     if not IFC_DISPONIBLE:
-        raise ImportError("ifcopenshell no está instalado.")
+        raise ImportError("ifcopenshell no disponible.")
 
-    import ifcopenshell
-    import ifcopenshell.guid
     ifc = ifcopenshell.file(schema="IFC4")
     planta, ctx = _nueva_jerarquia(ifc, nombre_proyecto)
 
-    Bd = B_dado_m * 1000.
-    Ld = L_dado_m * 1000.
-    Hd = H_dado_m * 1000.
-    Dp = D_pilote_m * 1000.
-    emb = embeb_m * 1000.
+    # Unidades: mm
+    Bd  = B_dado_m   * 1000.
+    Ld  = L_dado_m   * 1000.
+    Hd  = H_dado_m   * 1000.
+    Dp  = D_pilote_m * 1000.
+    emb = embeb_m    * 1000.
+    rec = recub_cm  * 10.        # mm
+    db  = db_mm                  # mm
+    lh  = max(150., 12. * db)   # longitud gancho mm
+    sep_x = sep_x_cm * 10.      # mm
+    sep_y = sep_y_cm * 10.      # mm
 
-    elementos_bim = []
+    elementos = []
 
-    # 1. Dado
-    axis2d_dado = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
-    perf_dado = ifc.createIfcRectangleProfileDef("AREA", "Dado", axis2d_dado, Bd, Ld)
-    dir_extr = ifc.createIfcDirection((0., 0., -1.))
-    sol_dado = ifc.createIfcExtrudedAreaSolid(perf_dado, None, dir_extr, Hd)
-    
-    rep_dado = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_dado])
-    prod_rep_d = ifc.createIfcProductDefinitionShape(None, None, [rep_dado])
-    place_dado = _placement_local(ifc, 0., 0., 0.)
+    # ── Helper: crear extincion de perfil rectangular con placement desnudo ──
+    def _rect_solid(w, h, depth, dx=0., dy=0., dz=0., dir_z=(0.,0.,1.)):
+        ax2 = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+        prof = ifc.createIfcRectangleProfileDef("AREA", None, ax2, float(w), float(h))
+        ax3 = ifc.createIfcAxis2Placement3D(
+            ifc.createIfcCartesianPoint((float(dx), float(dy), float(dz))),
+            ifc.createIfcDirection(dir_z), ifc.createIfcDirection((1., 0., 0.)))
+        return ifc.createIfcExtrudedAreaSolid(prof, ax3, ifc.createIfcDirection(dir_z), float(depth))
 
+    def _circle_solid(r, depth, dx=0., dy=0., dz=0., dir_z=(0.,0.,1.)):
+        ax2 = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+        prof = ifc.createIfcCircleProfileDef("AREA", None, ax2, float(r))
+        ax3 = ifc.createIfcAxis2Placement3D(
+            ifc.createIfcCartesianPoint((float(dx), float(dy), float(dz))),
+            ifc.createIfcDirection(dir_z), ifc.createIfcDirection((1., 0., 0.)))
+        return ifc.createIfcExtrudedAreaSolid(prof, ax3, ifc.createIfcDirection(dir_z), float(depth))
+
+    def _add_element(cls_name, solid, name, type_str=None, px=0., py=0., pz=0.):
+        rep = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid])
+        pds = ifc.createIfcProductDefinitionShape(None, None, [rep])
+        plc = _placement_local(ifc, px, py, pz)
+        kwargs = dict(GlobalId=ifcopenshell.guid.new(), Name=name,
+                      Description=type_str, ObjectPlacement=plc, Representation=pds)
+        el = getattr(ifc, f"createIfc{cls_name}")(**kwargs)
+        return el
+
+    # ═══ 1. DADO ═══════════════════════════════════════════════════════════════
+    sol_dado = _rect_solid(Bd, Ld, Hd, dx=-Bd/2, dy=-Ld/2, dz=-Hd, dir_z=(0.,0.,1.))
     dado = ifc.createIfcFooting(
         ifcopenshell.guid.new(), None, f"Encepado {B_dado_m:.1f}x{L_dado_m:.1f}m",
-        "Dado de pilotes", None, place_dado, prod_rep_d, None, "PAD_FOOTING"
+        "PAD_FOOTING", None, _placement_local(ifc, 0, 0, 0),
+        ifc.createIfcProductDefinitionShape(None, None, [
+            ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_dado])]),
+        None, "PAD_FOOTING"
     )
     _material(ifc, dado, f"Concreto f'c={fc_dado:.0f}MPa")
-    elementos_bim.append(dado)
+    elementos.append(dado)
 
-    # 2. Columna base
-    hc = 1000. # 1m
-    axis2d_col = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
-    perf_col = ifc.createIfcRectangleProfileDef("AREA", "ColumnaP", axis2d_col, c1_cm*10., c2_cm*10.)
-    dir_extr_c = ifc.createIfcDirection((0., 0., 1.))
-    sol_col = ifc.createIfcExtrudedAreaSolid(perf_col, None, dir_extr_c, hc)
-    rep_col = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_col])
-    prod_rep_c = ifc.createIfcProductDefinitionShape(None, None, [rep_col])
-    place_col = _placement_local(ifc, 0., 0., 0.)
+    # ═══ 2. COLUMNA DE ARRANQUE ════════════════════════════════════════════════
+    sol_col = _rect_solid(c1_cm*10., c2_cm*10., 1000., dx=-c1_cm*5., dy=-c2_cm*5.,
+                          dz=0., dir_z=(0.,0.,1.))
     col = ifc.createIfcColumn(
-        ifcopenshell.guid.new(), None, f"Arranque Columna",
-        f"Col {c1_cm}x{c2_cm}", None, place_col, prod_rep_c, None, None
+        ifcopenshell.guid.new(), None, f"Arranque {c1_cm}x{c2_cm}cm",
+        None, None, _placement_local(ifc, 0, 0, 0),
+        ifc.createIfcProductDefinitionShape(None, None, [
+            ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_col])]),
+        None, None
     )
-    elementos_bim.append(col)
+    elementos.append(col)
 
-    # 3. Pilotes (DF) — cada pilote tiene su propio perfil independiente
-    for idx, r in df_pilotes.iterrows():
-        px = r["X [m]"] * 1000.
-        py = r["Y [m]"] * 1000.
-        pz = -Hd + emb
-        # Perfil independiente por pilote (evita referencias circulares IFC)
-        _ax2d_p = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
-        perf_pilote = ifc.createIfcCircleProfileDef("AREA", f"Pilote_{idx}", _ax2d_p, Dp / 2.)
-        dir_extr_p = ifc.createIfcDirection((0., 0., -1.))
-        sol_p = ifc.createIfcExtrudedAreaSolid(perf_pilote, None, dir_extr_p, 3000.0)
+    # ═══ 3. PILOTES (cada uno con perfil propio) ════════════════════════════════
+    L_pil = 3000.  # longitud visual 3m
+    for i_p, row in df_pilotes.iterrows():
+        px_mm = row["X [m]"] * 1000.
+        py_mm = row["Y [m]"] * 1000.
+        pz_mm = -(Hd - emb)  # tope del pilote
+
+        ax2_p = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+        prof_p = ifc.createIfcCircleProfileDef("AREA", f"Pil{i_p}", ax2_p, Dp / 2.)
+        ax3_p = ifc.createIfcAxis2Placement3D(
+            ifc.createIfcCartesianPoint((px_mm, py_mm, pz_mm)),
+            ifc.createIfcDirection((0., 0., -1.)),
+            ifc.createIfcDirection((1., 0., 0.)))
+        sol_p = ifc.createIfcExtrudedAreaSolid(prof_p, ax3_p, ifc.createIfcDirection((0.,0.,-1.)), L_pil)
         rep_p = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_p])
-        prod_rep_p = ifc.createIfcProductDefinitionShape(None, None, [rep_p])
-        place_p = _placement_local(ifc, px, py, pz)
+        pds_p = ifc.createIfcProductDefinitionShape(None, None, [rep_p])
+        pil = ifc.createIfcPile(
+            ifcopenshell.guid.new(), None, str(row["ID"]), "Pilote", None,
+            _placement_local(ifc, 0., 0., 0.), pds_p, None, "CAST_IN_PLACE"
+        )
+        _material(ifc, pil, "Concreto Pilote")
+        elementos.append(pil)
 
-        pilote = ifc.createIfcPile(ifcopenshell.guid.new(), None, r["ID"], "Pilote BIM", None, place_p, prod_rep_p, None, None, None)
-        elementos_bim.append(pilote)
-        ifc.createIfcRelAggregates(ifcopenshell.guid.new(), None, None, None, dado, [pilote])
+    # ═══ 4. ARMADURA INFERIOR EJE X ══════════════════════════════════════════
+    z_inf_mm = -Hd + emb + 30.  # 30mm sobre cabezas
+    r_bar = db / 2.
+    y_start = -Ld/2. + rec + r_bar
+    y_cur = y_start
+    bar_idx = 0
+    while y_cur <= Ld/2. - rec - r_bar:
+        bar_len = Bd - 2. * rec
+        # Cada barra: perfil + extrusion en X, con ganchos como extensiones verticales
+        # Barra principal horizontal
+        ax2_b = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+        prof_b = ifc.createIfcCircleProfileDef("AREA", f"BarX_{bar_idx}", ax2_b, r_bar)
+        ax3_b = ifc.createIfcAxis2Placement3D(
+            ifc.createIfcCartesianPoint((-Bd/2. + rec, y_cur, z_inf_mm)),
+            ifc.createIfcDirection((1., 0., 0.)),
+            ifc.createIfcDirection((0., 0., 1.)))
+        sol_bx = ifc.createIfcExtrudedAreaSolid(prof_b, ax3_b, ifc.createIfcDirection((1.,0.,0.)), bar_len)
+        # Gancho izquierdo (vertical hacia arriba)
+        ax2_h1 = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+        prof_h1 = ifc.createIfcCircleProfileDef("AREA", f"HkX_{bar_idx}L", ax2_h1, r_bar)
+        ax3_h1 = ifc.createIfcAxis2Placement3D(
+            ifc.createIfcCartesianPoint((-Bd/2. + rec, y_cur, z_inf_mm)),
+            ifc.createIfcDirection((0., 0., 1.)),
+            ifc.createIfcDirection((1., 0., 0.)))
+        sol_h1 = ifc.createIfcExtrudedAreaSolid(prof_h1, ax3_h1, ifc.createIfcDirection((0.,0.,1.)), lh)
+        # Gancho derecho
+        ax2_h2 = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+        prof_h2 = ifc.createIfcCircleProfileDef("AREA", f"HkX_{bar_idx}R", ax2_h2, r_bar)
+        ax3_h2 = ifc.createIfcAxis2Placement3D(
+            ifc.createIfcCartesianPoint((Bd/2. - rec, y_cur, z_inf_mm)),
+            ifc.createIfcDirection((0., 0., 1.)),
+            ifc.createIfcDirection((1., 0., 0.)))
+        sol_h2 = ifc.createIfcExtrudedAreaSolid(prof_h2, ax3_h2, ifc.createIfcDirection((0.,0.,1.)), lh)
+        # Crear IfcReinforcingBar con los 3 sólidos en CSG union
+        csg_union = ifc.createIfcBooleanResult("UNION", sol_bx, sol_h1)
+        csg_union2 = ifc.createIfcBooleanResult("UNION", csg_union, sol_h2)
+        rep_bar = ifc.createIfcShapeRepresentation(ctx, "Body", "CSG", [csg_union2])
+        pds_bar = ifc.createIfcProductDefinitionShape(None, None, [rep_bar])
+        rebar = ifc.createIfcReinforcingBar(
+            ifcopenshell.guid.new(), None, f"Barra X {bar_idx+1}",
+            None, None, _placement_local(ifc, 0., 0., 0.), pds_bar,
+            None, f"#{int(db/25.4*8)+1}", db, bar_len, "BOTTOM"
+        )
+        _material(ifc, rebar, "Acero fy=420MPa")
+        elementos.append(rebar)
+        y_cur += sep_y
+        bar_idx += 1
 
-    _contener_en_planta(ifc, planta, elementos_bim)
-    return _guardar_a_bytesio(ifc)
+    # ═══ 5. ARMADURA INFERIOR EJE Y ══════════════════════════════════════════
+    z_inf_y = z_inf_mm + db + 5.  # sobre las X
+    x_cur = -Bd/2. + rec + r_bar
+    bar_idx_y = 0
+    while x_cur <= Bd/2. - rec - r_bar:
+        bar_len_y = Ld - 2. * rec
+        ax2_by = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+        prof_by = ifc.createIfcCircleProfileDef("AREA", f"BarY_{bar_idx_y}", ax2_by, r_bar)
+        ax3_by = ifc.createIfcAxis2Placement3D(
+            ifc.createIfcCartesianPoint((x_cur, -Ld/2. + rec, z_inf_y)),
+            ifc.createIfcDirection((0., 1., 0.)),
+            ifc.createIfcDirection((1., 0., 0.)))
+        sol_by = ifc.createIfcExtrudedAreaSolid(prof_by, ax3_by, ifc.createIfcDirection((0.,1.,0.)), bar_len_y)
+        rep_by = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_by])
+        pds_by = ifc.createIfcProductDefinitionShape(None, None, [rep_by])
+        rebar_y = ifc.createIfcReinforcingBar(
+            ifcopenshell.guid.new(), None, f"Barra Y {bar_idx_y+1}",
+            None, None, _placement_local(ifc, 0., 0., 0.), pds_by,
+            None, f"#{int(db/25.4*8)+1}", db, bar_len_y, "BOTTOM"
+        )
+        _material(ifc, rebar_y, "Acero fy=420MPa")
+        elementos.append(rebar_y)
+        x_cur += sep_x
+        bar_idx_y += 1
+
+    # ═══ Vincular todos a la planta ════════════════════════════════════════════
+    ifc.createIfcRelContainedInSpatialStructure(
+        ifcopenshell.guid.new(), None, None, None, elementos, planta)
+
+    bio = io.BytesIO()
+    with tempfile.NamedTemporaryFile(suffix=".ifc", delete=False) as f:
+        tmp = f.name
+    ifc.write(tmp)
+    with open(tmp, "rb") as f:
+        bio.write(f.read())
+    os.unlink(tmp)
+    bio.seek(0)
+    return bio
