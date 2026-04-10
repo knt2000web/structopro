@@ -417,7 +417,7 @@ with tab_bim:
         
         doc.add_heading("5. Flexión y Cuantía de Acero Requerida", level=2)
         doc.add_paragraph(f"Momentos calculados en la cara del pedestal.\n- Eje X: Mu = {Mu_flex_x:.1f} kNm | As requerido = {As_x:.1f} cm²\n- Eje Y: Mu = {Mu_flex_y:.1f} kNm | As requerido = {As_y:.1f} cm²")
-        if maxdist < 2 * d_m:
+        if max_dist < 2 * d_m:
             doc.add_paragraph("ADVERTENCIA STM: Relación Luces/Peralte indica comportamiento de Viga de Gran Peralte. Verifique con método de Bielas y Tirantes.")
             
         bio = io.BytesIO()
