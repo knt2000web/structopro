@@ -400,26 +400,54 @@ with tab_bim:
     
     if _DOCX_AVAILABLE:
         doc = Document()
-        doc.add_heading(f"Memoria de Cálculo: Encepado de Pilotes", 0)
-        doc.add_paragraph(f"Dimensiones: {B_sugerido:.2f}m x {L_sugerido:.2f}m x {H_dado:.2f}m")
-        doc.add_heading("Punzonamiento Columna", level=2)
-        doc.add_paragraph(f"Vu actuante: {Vu_punz:.1f} kN\nResistencia phiVc: {phiVc_punz:.1f} kN\nEstado: {'CUMPLE' if ok_punz else 'FALLA'}")
+        doc.add_heading(f"Memoria de Cálculo Estructural: Encepado de Pilotes", 0)
+        doc.add_paragraph("Diseño de cabezal rígido según reglamento ACI 318 / NSR-10.")
+        
+        doc.add_heading("1. Geometría y Materiales", level=2)
+        doc.add_paragraph(f"- Dimensiones en planta (BxL): {B_sugerido:.2f} m x {L_sugerido:.2f} m\n- Espesor (H): {H_dado:.2f} m\n- f'c concreto: {fc_dado:.1f} MPa\n- fy acero: {fy_acero:.1f} MPa\n- Número de pilotes: {n_pil} (D={D_pilote:.2f} m)")
+        
+        doc.add_heading("2. Punzonamiento Columna", level=2)
+        doc.add_paragraph(f"Corte bidireccional evaluado a d/2 de la columna ({c1_col}x{c2_col} cm).\n- Vu actuante (descontando pilotes internos): {Vu_punz:.1f} kN\n- Resistencia phiVc: {phiVc_punz:.1f} kN\n- Estado: {'CUMPLE' if ok_punz else 'FALLA'} (Vu <= phiVc)")
+        
+        doc.add_heading("3. Punzonamiento Pilote Crítico", level=2)
+        doc.add_paragraph(f"Evaluación del perímetro crítico (bo = {b_o_pil:.2f} m) sobre el pilote más exigido.\n- Pu máx en pilote: {Pu_pilote_max:.1f} kN\n- Resistencia phiVc: {phiVc_pilz:.1f} kN\n- Estado: {'CUMPLE' if ok_pilz else 'FALLA'}")
+        
+        doc.add_heading("4. Cortante Unidireccional (Viga)", level=2)
+        doc.add_paragraph(f"Corte direccional evaluado a distancia d de la cara, reduciendo pilotes itersectados.\n- Dir X: Vu = {Vu_vx:.1f} kN | phiVc = {phiVc_vx:.1f} kN -> {'CUMPLE' if ok_vx else 'FALLA'}\n- Dir Y: Vu = {Vu_vy:.1f} kN | phiVc = {phiVc_vy:.1f} kN -> {'CUMPLE' if ok_vy else 'FALLA'}")
+        
+        doc.add_heading("5. Flexión y Cuantía de Acero Requerida", level=2)
+        doc.add_paragraph(f"Momentos calculados en la cara del pedestal.\n- Eje X: Mu = {Mu_flex_x:.1f} kNm | As requerido = {As_x:.1f} cm²\n- Eje Y: Mu = {Mu_flex_y:.1f} kNm | As requerido = {As_y:.1f} cm²")
+        if maxdist < 2 * d_m:
+            doc.add_paragraph("ADVERTENCIA STM: Relación Luces/Peralte indica comportamiento de Viga de Gran Peralte. Verifique con método de Bielas y Tirantes.")
+            
         bio = io.BytesIO()
         doc.save(bio)
-        col_exp1.download_button("📄 DOCX Memoria", data=bio.getvalue(), file_name="Memoria_Encepado.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        col_exp1.download_button("📄 " + _t("Descargar DOCX", "Download DOCX"), data=bio.getvalue(), file_name="Memoria_Encepado.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
     if _DXF_AVAILABLE:
         doc_dxf = ezdxf.new("R2010")
+        doc_dxf.layers.add("DADO", color=3)
+        doc_dxf.layers.add("PILOTES", color=1)
+        doc_dxf.layers.add("COLUMNA", color=2)
+        doc_dxf.layers.add("ROTULO", color=7)
         msp = doc_dxf.modelspace()
-        # Contorno Dado
-        msp.add_lwpolyline([(-B_sugerido/2, -L_sugerido/2), (B_sugerido/2, -L_sugerido/2), (B_sugerido/2, L_sugerido/2), (-B_sugerido/2, L_sugerido/2)], close=True, dxfattribs={"color": 3})
-        # Pilotes
-        for _, r in df_pilotes.iterrows(): msp.add_circle((r["X [m]"], r["Y [m]"]), radius=D_pilote/2, dxfattribs={"color": 1})
-        # Columna
-        msp.add_lwpolyline([(-c1_m/2, -c2_m/2), (c1_m/2, -c2_m/2), (c1_m/2, c2_m/2), (-c1_m/2, c2_m/2)], close=True, dxfattribs={"color": 2})
+        
+        # Geometría
+        msp.add_lwpolyline([(-B_sugerido/2, -L_sugerido/2), (B_sugerido/2, -L_sugerido/2), (B_sugerido/2, L_sugerido/2), (-B_sugerido/2, L_sugerido/2)], close=True, dxfattribs={"layer": "DADO"})
+        for _, r in df_pilotes.iterrows(): msp.add_circle((r["X [m]"], r["Y [m]"]), radius=D_pilote/2, dxfattribs={"layer": "PILOTES"})
+        msp.add_lwpolyline([(-c1_m/2, -c2_m/2), (c1_m/2, -c2_m/2), (c1_m/2, c2_m/2), (-c1_m/2, c2_m/2)], close=True, dxfattribs={"layer": "COLUMNA"})
+        
+        # Rótulo ICONTEC básico
+        R_w = max(B_sugerido*1.5, 5.0)
+        R_h = max(L_sugerido*1.5, 5.0)
+        msp.add_lwpolyline([(-R_w, -R_h), (R_w, -R_h), (R_w, R_h), (-R_w, R_h)], close=True, dxfattribs={"layer": "ROTULO"})
+        msp.add_text("PROYECTO: CIMENTACIONES PROFUNDAS", dxfattribs={"height": 0.2, "layer": "ROTULO"}).set_placement((R_w - 6.5, -R_h + 0.8))
+        msp.add_text(f"ENCEPADO TIPO {n_pil} PILOTES", dxfattribs={"height": 0.15, "layer": "ROTULO"}).set_placement((R_w - 6.5, -R_h + 0.5))
+        msp.add_text(f"DADO: {B_sugerido:.1f}x{L_sugerido:.1f} H={H_dado:.1f}", dxfattribs={"height": 0.15, "layer": "ROTULO"}).set_placement((R_w - 6.5, -R_h + 0.2))
+        
         bio_dxf = io.StringIO()
         doc_dxf.write(bio_dxf)
-        col_exp2.download_button("📐 DXF Planta 2D", data=bio_dxf.getvalue(), file_name="Planta_Encepado.dxf")
+        col_exp2.download_button("📐 " + _t("Descargar DXF", "Download DXF"), data=bio_dxf.getvalue(), file_name="Planta_Encepado.dxf")
         
     if _IFC_AVAILABLE:
         try:
@@ -449,7 +477,9 @@ with st.sidebar:
             "B x L x H": f"{B_sugerido:.1f}x{L_sugerido:.1f}x{H_dado:.1f}",
             "P_Max (kN)": f"{Pu_pilote_max:.0f}",
             "Punz. Col": "OK" if ok_punz else "X",
-            "Flexión (As)": f"{As_x:.0f} / {As_y:.0f}"
+            "Punz. Pil": "OK" if ok_pilz else "X",
+            "Cortante": "OK" if (ok_vx and ok_vy) else "X",
+            "Flex. As": f"{As_x:.0f} / {As_y:.0f}"
         })
         st.success("Configuración Guardada")
         
