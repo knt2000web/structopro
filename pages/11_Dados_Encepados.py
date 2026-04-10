@@ -59,6 +59,8 @@ with st.sidebar:
         fc_dado = st.number_input(_t("f'c Concreto Dado (MPa)", "f'c Cap Concrete (MPa)"), min_value=21.0, value=28.0, step=1.0)
         fy_acero = st.number_input(_t("fy Acero (MPa)", "fy Steel (MPa)"), min_value=240.0, value=420.0, step=10.0)
         peso_conc = st.number_input(_t("Peso Concreto (kN/m³)", "Concrete Weight (kN/m³)"), min_value=20.0, value=24.0, step=0.5)
+        recub_dado = st.number_input(_t("Recubrimiento (m)", "Clear Cover (m)"), min_value=0.04, value=0.075, step=0.005)
+        db_dado = st.number_input(_t("Diám. Barra principal (cm)", "Main Rebar Dia (cm)"), min_value=1.0, value=2.54, step=0.1)
 
     # 2. Geometría de Pilotes Internos
     with st.expander(_t("2. Pilotes Relacionados", "2. Related Piles"), expanded=True):
@@ -187,11 +189,11 @@ with tab_geo:
 with tab_des:
     st.subheader(_t("Análisis ACI 318 Seccional (Cortante y Flexión)", "ACI 318 Sectional Analysis (Shear and Flexure)"))
     
-    d_m = H_dado - 0.10 # Asumiendo ~10cm al baricentro inferior del acero
+    d_m = H_dado - recub_dado - (db_dado / 100.0) / 2.0
     c1_m = c1_col / 100.0
     c2_m = c2_col / 100.0
     
-    c_des1, c_des2, c_des3 = st.columns(3)
+    c_des1, c_des2, c_des3, c_des4 = st.columns(4)
     
     # ─── 1. PUNZONAMIENTO COLUMNA CENTRAL ──────────────────────────
     b_o = 2 * ((c1_m + d_m) + (c2_m + d_m))
@@ -211,37 +213,61 @@ with tab_des:
     ok_punz = phiVc_punz >= Vu_punz
     
     with c_des1:
-        st.write("### Punzonamiento Columna")
+        st.write("### Punz. Columna")
+        st.metric("Peralte Efectivo d", f"{d_m:.3f} m")
         st.metric("Vu actuante", f"{Vu_punz:.1f} kN")
-        st.metric("φVc resistente", f"{phiVc_punz:.1f} kN")
-        if ok_punz: st.success("CUMPLE (Vu ≤ φVc)")
-        else: st.error("FALLA EL PERALTE")
+        st.write(f"**φVc Resistente:** {phiVc_punz:.1f} kN")
+        if ok_punz: st.success("CUMPLE")
+        else: st.error("FALLA PERALTE")
+
+    # ─── 2. PUNZONAMIENTO PILOTE (ESQUINA/CRÍTICO) ─────────────────
+    # Evaluamos el pilote con mayor carga P_ui
+    Pu_pilote_max = df_pilotes["Carga Axial P_ui [kN]"].max() if n_pil > 0 else 0
+    # Perímetro crítico iterativo (asumimos interior o de borde truncado)
+    b_o_pil = math.pi * (D_pilote + d_m)
+    # ACI 318 límite resistente a punzonamiento pilote
+    phiVc_pilz = 0.75 * 0.33 * math.sqrt(fc_dado) * 1000 * b_o_pil * d_m
+    ok_pilz = phiVc_pilz >= Pu_pilote_max
+    
+    with c_des2:
+        st.write("### Punz. Pilote Crítico")
+        st.metric("Pu Pilote Máx", f"{Pu_pilote_max:.1f} kN")
+        st.write(f"**b_o considerado:** {b_o_pil:.2f} m")
+        st.write(f"**φVc Resistente:** {phiVc_pilz:.1f} kN")
+        if ok_pilz: st.success("CUMPLE")
+        else: st.error("FALLA PERALTE")
         
-    # ─── 2. CORTANTE UNIDIRECCIONAL (VIGA) ─────────────────────────
+    # ─── 3. CORTANTE UNIDIRECCIONAL (VIGA) ─────────────────────────
+    def descuento_por_ubicacion(dist_centro, cara_col, d_efectivo, d_pil):
+        dist_cara = dist_centro - cara_col
+        if dist_cara >= d_efectivo + d_pil/2.0: return 1.0 # 100% genera cortante
+        elif dist_cara <= d_efectivo - d_pil/2.0: return 0.0 # No genera
+        else: return (dist_cara - (d_efectivo - d_pil/2.0)) / d_pil # Fracción
+
     Vu_vx = 0; Vu_vy = 0
     for idx, r in df_pilotes.iterrows():
-        # Pilotes ubicados a una distancia mayor a "d" desde la cara de la columna
-        if r["X [m]"] > (c1_m/2 + d_m): Vu_vx += r["Carga Axial P_ui [kN]"]
-        if r["Y [m]"] > (c2_m/2 + d_m): Vu_vy += r["Carga Axial P_ui [kN]"]
+        frac_x = descuento_por_ubicacion(abs(r["X [m]"]), c1_m/2, d_m, D_pilote)
+        Vu_vx += r["Carga Axial P_ui [kN]"] * frac_x
+        frac_y = descuento_por_ubicacion(abs(r["Y [m]"]), c2_m/2, d_m, D_pilote)
+        Vu_vy += r["Carga Axial P_ui [kN]"] * frac_y
         
     phiVc_vx = 0.75 * 0.17 * math.sqrt(fc_dado) * 1000 * L_sugerido * d_m
     phiVc_vy = 0.75 * 0.17 * math.sqrt(fc_dado) * 1000 * B_sugerido * d_m
     ok_vx = phiVc_vx >= Vu_vx
     ok_vy = phiVc_vy >= Vu_vy
     
-    with c_des2:
+    with c_des3:
         st.write("### Cortante Unidireccional")
-        st.metric("Vu (Cara X) a distr. d", f"{Vu_vx:.1f} kN")
+        st.metric("Vu (X) Reducido", f"{Vu_vx:.1f} kN")
         st.write(f"φVc Resistencia = {phiVc_vx:.1f} kN {'✅' if ok_vx else '❌'}")
-        st.metric("Vu (Cara Y) a distr. d", f"{Vu_vy:.1f} kN")
+        st.metric("Vu (Y) Reducido", f"{Vu_vy:.1f} kN")
         st.write(f"φVc Resistencia = {phiVc_vy:.1f} kN {'✅' if ok_vy else '❌'}")
 
-    # ─── 3. FLEXIÓN Y ACERO DE REFUERZO ────────────────────────────
+    # ─── 4. FLEXIÓN Y ACERO DE REFUERZO ────────────────────────────
     Mu_flex_x = 0; Mu_flex_y = 0
     for idx, r in df_pilotes.iterrows():
-        # Extremos en X e Y evaluados en la cara de la columna
-        if r["X [m]"] > c1_m/2: Mu_flex_x += r["Carga Axial P_ui [kN]"] * (r["X [m]"] - c1_m/2)
-        if r["Y [m]"] > c2_m/2: Mu_flex_y += r["Carga Axial P_ui [kN]"] * (r["Y [m]"] - c2_m/2)
+        if abs(r["X [m]"]) > c1_m/2: Mu_flex_x += r["Carga Axial P_ui [kN]"] * (abs(r["X [m]"]) - c1_m/2)
+        if abs(r["Y [m]"]) > c2_m/2: Mu_flex_y += r["Carga Axial P_ui [kN]"] * (abs(r["Y [m]"]) - c2_m/2)
         
     def req_as(Mu_kNm, b_m, d_mf):
         if Mu_kNm <= 0: return 0.0
@@ -257,12 +283,12 @@ with tab_des:
     As_x = req_as(Mu_flex_x, L_sugerido, d_m)
     As_y = req_as(Mu_flex_y, B_sugerido, d_m)
     
-    with c_des3:
-        st.write("### Flexión y Acero (As)")
-        st.metric("Momento Mu,x (Cara Y)", f"{Mu_flex_x:.1f} kN.m")
-        st.write(f"**As Requerido en X:** {As_x:.1f} cm²")
-        st.metric("Momento Mu,y (Cara X)", f"{Mu_flex_y:.1f} kN.m")
-        st.write(f"**As Requerido en Y:** {As_y:.1f} cm²")
+    with c_des4:
+        st.write("### Flexión (As)")
+        st.metric("Mu,x (Alineado en Y)", f"{Mu_flex_x:.1f} kNm")
+        st.write(f"**As,x:** {As_x:.1f} cm² (A lo largo de L)")
+        st.metric("Mu,y (Alineado en X)", f"{Mu_flex_y:.1f} kNm")
+        st.write(f"**As,y:** {As_y:.1f} cm² (A lo largo de B)")
         
     # Método Puntal y Tensor (Alerta)
     st.markdown("---")
@@ -366,3 +392,70 @@ with tab_bim:
         
     else:
         st.error("Plotly no disponible.")
+
+    # Entregables
+    st.markdown("---")
+    st.subheader(_t("Exportar Entregables", "Export Deliverables"))
+    col_exp1, col_exp2, col_exp3 = st.columns(3)
+    
+    if _DOCX_AVAILABLE:
+        doc = Document()
+        doc.add_heading(f"Memoria de Cálculo: Encepado de Pilotes", 0)
+        doc.add_paragraph(f"Dimensiones: {B_sugerido:.2f}m x {L_sugerido:.2f}m x {H_dado:.2f}m")
+        doc.add_heading("Punzonamiento Columna", level=2)
+        doc.add_paragraph(f"Vu actuante: {Vu_punz:.1f} kN\nResistencia phiVc: {phiVc_punz:.1f} kN\nEstado: {'CUMPLE' if ok_punz else 'FALLA'}")
+        bio = io.BytesIO()
+        doc.save(bio)
+        col_exp1.download_button("📄 DOCX Memoria", data=bio.getvalue(), file_name="Memoria_Encepado.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+    if _DXF_AVAILABLE:
+        doc_dxf = ezdxf.new("R2010")
+        msp = doc_dxf.modelspace()
+        # Contorno Dado
+        msp.add_lwpolyline([(-B_sugerido/2, -L_sugerido/2), (B_sugerido/2, -L_sugerido/2), (B_sugerido/2, L_sugerido/2), (-B_sugerido/2, L_sugerido/2)], close=True, dxfattribs={"color": 3})
+        # Pilotes
+        for _, r in df_pilotes.iterrows(): msp.add_circle((r["X [m]"], r["Y [m]"]), radius=D_pilote/2, dxfattribs={"color": 1})
+        # Columna
+        msp.add_lwpolyline([(-c1_m/2, -c2_m/2), (c1_m/2, -c2_m/2), (c1_m/2, c2_m/2), (-c1_m/2, c2_m/2)], close=True, dxfattribs={"color": 2})
+        bio_dxf = io.StringIO()
+        doc_dxf.write(bio_dxf)
+        col_exp2.download_button("📐 DXF Planta 2D", data=bio_dxf.getvalue(), file_name="Planta_Encepado.dxf")
+        
+    if _IFC_AVAILABLE:
+        try:
+            from ifc_export import ifc_dado_parametrico
+            bio_ifc = ifc_dado_parametrico(
+                B_dado_m=B_sugerido, L_dado_m=L_sugerido, H_dado_m=H_dado,
+                df_pilotes=df_pilotes, D_pilote_m=D_pilote, embeb_m=embeb_pilote,
+                fc_dado=fc_dado, c1_cm=c1_col, c2_cm=c2_col
+            )
+            col_exp3.download_button("🏢 IFC BIM 3D", data=bio_ifc.getvalue(), file_name="Modelo_Encepado.ifc")
+        except Exception as e:
+            col_exp3.button("🏢 IFC BIM (Error)", help=str(e))
+    else:
+        col_exp3.warning("ifcopenshell no disponible.")
+
+# ─── REGISTRO DE DADOS (CUADRO DE MANDO) ────────────────────
+with st.sidebar:
+    st.markdown("---")
+    st.header(_t("📋 Cuadro de Mando", "📋 Dashboard"))
+    
+    if "registro_dados" not in st.session_state:
+        st.session_state.registro_dados = []
+        
+    if st.button(_t("💾 Guardar Diseño Actual", "💾 Save Current Design")):
+        st.session_state.registro_dados.append({
+            "Plantilla": plantilla.split(" ")[0] + "P",
+            "B x L x H": f"{B_sugerido:.1f}x{L_sugerido:.1f}x{H_dado:.1f}",
+            "P_Max (kN)": f"{Pu_pilote_max:.0f}",
+            "Punz. Col": "OK" if ok_punz else "X",
+            "Flexión (As)": f"{As_x:.0f} / {As_y:.0f}"
+        })
+        st.success("Configuración Guardada")
+        
+    if len(st.session_state.registro_dados) > 0:
+        df_reg = pd.DataFrame(st.session_state.registro_dados)
+        st.dataframe(df_reg, use_container_width=True)
+        if st.button(_t("🗑️ Limpiar Registro", "🗑️ Clear Registry")):
+            st.session_state.registro_dados = []
+            st.rerun()

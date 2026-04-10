@@ -845,3 +845,82 @@ def ifc_grupo_pilotes(
 
     _contener_en_planta(ifc, planta, elementos_bim)
     return _guardar_a_bytesio(ifc)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 8. ENCEPADO PARAMÉTRICO CON PILOTES
+# ══════════════════════════════════════════════════════════════════════════════
+
+def ifc_dado_parametrico(
+    B_dado_m: float, L_dado_m: float, H_dado_m: float,
+    df_pilotes, D_pilote_m: float, embeb_m: float, fc_dado: float,
+    c1_cm: float, c2_cm: float, nombre_proyecto: str = "Encepado Parametrico"
+) -> io.BytesIO:
+    """Exporta un encepado arbitrario usando un DataFrame de pilotes."""
+    if not IFC_DISPONIBLE:
+        raise ImportError("ifcopenshell no está instalado.")
+
+    import ifcopenshell
+    import ifcopenshell.guid
+    ifc = ifcopenshell.file(schema="IFC4")
+    planta, ctx = _nueva_jerarquia(ifc, nombre_proyecto)
+
+    Bd = B_dado_m * 1000.
+    Ld = L_dado_m * 1000.
+    Hd = H_dado_m * 1000.
+    Dp = D_pilote_m * 1000.
+    emb = embeb_m * 1000.
+
+    elementos_bim = []
+
+    # 1. Dado
+    axis2d_dado = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+    perf_dado = ifc.createIfcRectangleProfileDef("AREA", "Dado", axis2d_dado, Bd, Ld)
+    dir_extr = ifc.createIfcDirection((0., 0., -1.))
+    sol_dado = ifc.createIfcExtrudedAreaSolid(perf_dado, None, dir_extr, Hd)
+    
+    rep_dado = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_dado])
+    prod_rep_d = ifc.createIfcProductDefinitionShape(None, None, [rep_dado])
+    place_dado = _placement_local(ifc, 0., 0., 0.)
+
+    dado = ifc.createIfcFooting(
+        ifcopenshell.guid.new(), None, f"Encepado {B_dado_m:.1f}x{L_dado_m:.1f}m",
+        "Dado de pilotes", None, place_dado, prod_rep_d, None, "PAD_FOOTING"
+    )
+    _material(ifc, dado, f"Concreto f'c={fc_dado:.0f}MPa")
+    elementos_bim.append(dado)
+
+    # 2. Columna base
+    hc = 1000. # 1m
+    axis2d_col = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+    perf_col = ifc.createIfcRectangleProfileDef("AREA", "ColumnaP", axis2d_col, c1_cm*10., c2_cm*10.)
+    dir_extr_c = ifc.createIfcDirection((0., 0., 1.))
+    sol_col = ifc.createIfcExtrudedAreaSolid(perf_col, None, dir_extr_c, hc)
+    rep_col = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_col])
+    prod_rep_c = ifc.createIfcProductDefinitionShape(None, None, [rep_col])
+    place_col = _placement_local(ifc, 0., 0., 0.)
+    col = ifc.createIfcColumn(
+        ifcopenshell.guid.new(), None, f"Arranque Columna",
+        f"Col {c1_cm}x{c2_cm}", None, place_col, prod_rep_c, None, None
+    )
+    elementos_bim.append(col)
+
+    # 3. Pilotes (DF)
+    axis2d_p = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+    perf_pilote = ifc.createIfcCircleProfileDef("AREA", "PiloteCirc", axis2d_p, Dp / 2.)
+    for idx, r in df_pilotes.iterrows():
+        px = r["X [m]"] * 1000.
+        py = r["Y [m]"] * 1000.
+        pz = -Hd + emb
+        
+        dir_extr_p = ifc.createIfcDirection((0., 0., -1.))
+        sol_p = ifc.createIfcExtrudedAreaSolid(perf_pilote, None, dir_extr_p, 3000.0) # Dibujamos 3m visuales
+        rep_p = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_p])
+        prod_rep_p = ifc.createIfcProductDefinitionShape(None, None, [rep_p])
+        place_p = _placement_local(ifc, px, py, pz)
+
+        pilote = ifc.createIfcPile(ifcopenshell.guid.new(), None, r["ID"], "Pilote BIM", None, place_p, prod_rep_p, None, None, None)
+        elementos_bim.append(pilote)
+        ifc.createIfcRelAggregates(ifcopenshell.guid.new(), None, None, None, dado, [pilote])
+
+    _contener_en_planta(ifc, planta, elementos_bim)
+    return _guardar_a_bytesio(ifc)
