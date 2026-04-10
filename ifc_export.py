@@ -904,16 +904,16 @@ def ifc_dado_parametrico(
     )
     elementos_bim.append(col)
 
-    # 3. Pilotes (DF)
-    axis2d_p = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
-    perf_pilote = ifc.createIfcCircleProfileDef("AREA", "PiloteCirc", axis2d_p, Dp / 2.)
+    # 3. Pilotes (DF) — cada pilote tiene su propio perfil independiente
     for idx, r in df_pilotes.iterrows():
         px = r["X [m]"] * 1000.
         py = r["Y [m]"] * 1000.
         pz = -Hd + emb
-        
+        # Perfil independiente por pilote (evita referencias circulares IFC)
+        _ax2d_p = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
+        perf_pilote = ifc.createIfcCircleProfileDef("AREA", f"Pilote_{idx}", _ax2d_p, Dp / 2.)
         dir_extr_p = ifc.createIfcDirection((0., 0., -1.))
-        sol_p = ifc.createIfcExtrudedAreaSolid(perf_pilote, None, dir_extr_p, 3000.0) # Dibujamos 3m visuales
+        sol_p = ifc.createIfcExtrudedAreaSolid(perf_pilote, None, dir_extr_p, 3000.0)
         rep_p = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_p])
         prod_rep_p = ifc.createIfcProductDefinitionShape(None, None, [rep_p])
         place_p = _placement_local(ifc, px, py, pz)

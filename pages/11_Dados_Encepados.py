@@ -284,7 +284,7 @@ with tab_geo:
         Pi = P_unit + P_my + P_mx
         
         max_pu_pilote = max(max_pu_pilote, Pi)
-        estado = "✅ OK" if Pi <= Q_adm_pilote else "❌ EXCESO"
+        estado = "OK OK" if Pi <= Q_adm_pilote else "FALLA EXCESO"
         res_pilotes.append({
             "ID": f"P{i+1}", 
             "X [m]": round(x, 2), 
@@ -395,9 +395,9 @@ with tab_des:
     with c_des3:
         st.write("### Cortante Unidireccional")
         st.metric("Vu (X) Reducido", f"{Vu_vx:.1f} kN")
-        st.write(f"φVc Resistencia = {phiVc_vx:.1f} kN {'✅' if ok_vx else '❌'}")
+        st.write(f"φVc Resistencia = {phiVc_vx:.1f} kN {'OK' if ok_vx else 'FALLA'}")
         st.metric("Vu (Y) Reducido", f"{Vu_vy:.1f} kN")
-        st.write(f"φVc Resistencia = {phiVc_vy:.1f} kN {'✅' if ok_vy else '❌'}")
+        st.write(f"φVc Resistencia = {phiVc_vy:.1f} kN {'OK' if ok_vy else 'FALLA'}")
 
     # ─── 4. FLEXIÓN Y ACERO DE REFUERZO ────────────────────────────
     Mu_flex_x = 0; Mu_flex_y = 0
@@ -428,7 +428,7 @@ with tab_des:
         
     # Método Puntal y Tensor (Alerta)
     st.markdown("---")
-    st.write("#### ⚠️ Revisión Básica de Bielas y Tirantes (STM - ACI 318 Cap 23)")
+    st.write("#### ADVERTENCIA: Revisión Básica de Bielas y Tirantes (STM - ACI 318 Cap 23)")
     # Si la relación entre la distancia eje-pilar y peralte es menor a 2, rige STM
     max_dist = max([math.sqrt(r["X [m]"]**2 + r["Y [m]"]**2) for _, r in df_pilotes.iterrows()]) if n_pil > 0 else 0
     if max_dist < 2 * d_m:
@@ -486,7 +486,7 @@ with tab_des:
         costo_directo = df_pres["Subtotal (COP)"].sum()
         
         st.divider()
-        st.markdown("##### ⚙ Administración, Imprevistos y Utilidad (A.I.U.)")
+        st.markdown("##### Administración, Imprevistos y Utilidad (A.I.U.)")
         c_aiu1, c_aiu2, c_aiu3 = st.columns(3)
         with c_aiu1: pct_admin = st.slider("Administración (%)", 5, 25, 15, 1, key="aiu_adj_a")
         with c_aiu2: pct_impr = st.slider("Imprevistos (%)", 2, 10, 5, 1, key="aiu_adj_i")
@@ -553,7 +553,7 @@ with tab_bim:
             Yc = ppy + (D_pilote/2) * np.sin(Tc)
             fig3d.add_trace(go.Surface(
                 x=Xc, y=Yc, z=Zc,
-                colorscale=[[0, '#795548'], [1, '#8d6e63']],
+                colorscale=[[0, '#9e9e9e'], [1, '#bdbdbd']],
                 showscale=False, opacity=0.95, name=f'Pilote {r_p["ID"]}'
             ))
 
@@ -631,6 +631,8 @@ with tab_bim:
                 x=[xp, xp, xp, xp],
                 y=[y0, y0, y1, y1],
                 z=[z_inf + dz_y + lh, z_inf + dz_y, z_inf + dz_y, z_inf + dz_y + lh],
+                mode='lines', line=dict(color=color_acero, width=3),
+                marker=dict(size=0),
                 showlegend=False, hoverinfo='skip'))
             # Superior
             fig3d.add_trace(go.Scatter3d(
@@ -653,6 +655,7 @@ with tab_bim:
                         x=px_p, y=py_p, z=[z_c]*len(px_p),
                         mode='lines', line=dict(color='#26c6da', width=2),
                         name="Ref. Perimetral Piel" if c == 1 else "",
+                        marker=dict(size=0),
                         showlegend=(c == 1), hoverinfo='skip'))
 
         fig3d.update_layout(
@@ -711,7 +714,7 @@ with tab_bim:
             
         bio = io.BytesIO()
         doc.save(bio)
-        col_exp1.download_button("📄 " + _t("Descargar DOCX", "Download DOCX"), data=bio.getvalue(), file_name="Memoria_Encepado.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        col_exp1.download_button(_t("Descargar DOCX", "Download DOCX"), data=bio.getvalue(), file_name="Memoria_Encepado.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
     if _DXF_AVAILABLE:
         doc_dxf = ezdxf.new("R2010")
@@ -736,7 +739,7 @@ with tab_bim:
         
         bio_dxf = io.StringIO()
         doc_dxf.write(bio_dxf)
-        col_exp2.download_button("📐 " + _t("Descargar DXF", "Download DXF"), data=bio_dxf.getvalue(), file_name="Planta_Encepado.dxf")
+        col_exp2.download_button(_t("Descargar DXF", "Download DXF"), data=bio_dxf.getvalue(), file_name="Planta_Encepado.dxf")
         
     if _IFC_AVAILABLE:
         try:
@@ -746,21 +749,21 @@ with tab_bim:
                 df_pilotes=df_pilotes, D_pilote_m=D_pilote, embeb_m=embeb_pilote,
                 fc_dado=fc_dado, c1_cm=c1_col, c2_cm=c2_col
             )
-            col_exp3.download_button("🏢 IFC BIM 3D", data=bio_ifc.getvalue(), file_name="Modelo_Encepado.ifc")
+            col_exp3.download_button("IFC BIM 3D", data=bio_ifc.getvalue(), file_name="Modelo_Encepado.ifc")
         except Exception as e:
-            col_exp3.button("🏢 IFC BIM (Error)", help=str(e))
+            col_exp3.button("IFC BIM (Error)", help=str(e))
     else:
         col_exp3.warning("ifcopenshell no disponible.")
 
 # ─── REGISTRO DE DADOS (CUADRO DE MANDO) ────────────────────
 with st.sidebar:
     st.markdown("---")
-    st.header(_t("📋 Cuadro de Mando", "📋 Dashboard"))
+    st.header(_t("Cuadro de Mando", "Dashboard"))
     
     if "registro_dados" not in st.session_state:
         st.session_state.registro_dados = []
         
-    if st.button(_t("💾 Guardar Diseño Actual", "💾 Save Current Design")):
+    if st.button(_t("Guardar Diseño Actual", "Save Current Design")):
         st.session_state.registro_dados.append({
             "Plantilla": plantilla.split(" ")[0] + "P",
             "B x L x H": f"{B_sugerido:.1f}x{L_sugerido:.1f}x{H_dado:.1f}",
@@ -775,6 +778,6 @@ with st.sidebar:
     if len(st.session_state.registro_dados) > 0:
         df_reg = pd.DataFrame(st.session_state.registro_dados)
         st.dataframe(df_reg, use_container_width=True)
-        if st.button(_t("🗑️ Limpiar Registro", "🗑️ Clear Registry")):
+        if st.button(_t("Limpiar Registro", "Clear Registry")):
             st.session_state.registro_dados = []
             st.rerun()
