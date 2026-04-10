@@ -297,8 +297,10 @@ with tab_geo:
     with c_g2:
         if _PLOTLY_AVAILABLE:
             fig_geo = go.Figure()
-            # Bounding box del dado
-            fig_geo.add_shape(type="rect", x0=min(xs)-voladizo, y0=min(ys)-voladizo, x1=max(xs)+voladizo, y1=max(ys)+voladizo, line=dict(color="cyan", width=2))
+            # Bounding box del dado (Polígono genérico)
+            x_cont = [p[0] for p in contorno_dado] + [contorno_dado[0][0]]
+            y_cont = [p[1] for p in contorno_dado] + [contorno_dado[0][1]]
+            fig_geo.add_trace(go.Scatter(x=x_cont, y=y_cont, mode='lines', fill='toself', fillcolor='rgba(0, 255, 255, 0.05)', line=dict(color="cyan", width=2), showlegend=False, hoverinfo='skip'))
             # Columna
             fig_geo.add_shape(type="rect", x0=-c1_col/200, y0=-c2_col/200, x1=c1_col/200, y1=c2_col/200, line=dict(color="orange", width=2), fillcolor="orange", opacity=0.5)
             
@@ -506,20 +508,14 @@ with tab_bim:
     if _PLOTLY_AVAILABLE:
         fig3d = go.Figure()
         
-        # 1. Dado (Pile Cap) - Caja Semitransparente
-        Bx2 = B_sugerido / 2
-        Ly2 = L_sugerido / 2
-        hd = H_dado
-        
-        x_dado = [-Bx2, Bx2, Bx2, -Bx2, -Bx2, Bx2, Bx2, -Bx2]
-        y_dado = [-Ly2, -Ly2, Ly2, Ly2, -Ly2, -Ly2, Ly2, Ly2]
-        z_dado = [0, 0, 0, 0, -hd, -hd, -hd, -hd]
+        # 1. Dado (Pile Cap) - Malla por Alphahull
+        x_d = [p[0] for p in contorno_dado] * 2
+        y_d = [p[1] for p in contorno_dado] * 2
+        z_d = [-H_dado] * len(contorno_dado) + [0] * len(contorno_dado)
         
         fig3d.add_trace(go.Mesh3d(
-            x=x_dado, y=y_dado, z=z_dado,
-            i=[7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2],
-            j=[3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3],
-            k=[0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6],
+            x=x_d, y=y_d, z=z_d,
+            alphahull=0,
             color='lightblue', opacity=0.3, name='Concreto Encepado'
         ))
         
@@ -555,29 +551,58 @@ with tab_bim:
                 showscale=False, opacity=0.9, name=f'Pilote {r["ID"]}'
             ))
             
-        # 4. Canasta de Acero (Parrilla Inferior y Superior realistas)
-        z_inf = -H_dado + embeb_pilote + 0.03  # Se sienta 3cm sobre las cabezas de los pilotes
-        z_sup = -0.07  # Recubrimiento superior de 7cm
+        # 4. Canasta de Acero (Parrilla Inferior y Superior con DOBLECES)
+        z_inf = -H_dado + embeb_pilote + 0.03  
+        z_sup = -0.07
+        espacio_barras = 0.25
+        color_acero = '#b0bec5'
+        L_gancho = max(0.30, H_dado - 0.15) # Gancho estructural
         
-        espacio_barras = 0.25  # Simulando barras principales cada 25cm
-        color_acero = '#b0bec5' # Gris acero en lugar de naranja chillón
+        y_bars = np.arange(min([p[1] for p in contorno_dado]) + 0.15, max([p[1] for p in contorno_dado]) - 0.15 + espacio_barras, espacio_barras)
+        x_bars = np.arange(min([p[0] for p in contorno_dado]) + 0.15, max([p[0] for p in contorno_dado]) - 0.15 + espacio_barras, espacio_barras)
         
-        y_bars = np.arange(-Ly2 + 0.15, Ly2 - 0.15 + espacio_barras, espacio_barras)
-        x_bars = np.arange(-Bx2 + 0.15, Bx2 - 0.15 + espacio_barras, espacio_barras)
-        
-        # --- Parrilla Inferior ---
+        # --- Parrilla Horizontal (eje X cortando en Y) ---
         for yp in y_bars:
-            fig3d.add_trace(go.Scatter3d(x=[-Bx2+0.1, Bx2-0.1], y=[yp, yp], z=[z_inf, z_inf], mode='lines', line=dict(color=color_acero, width=3), showlegend=False))
-        for xp in x_bars:
-            # En la vida real cruzan una sobre otra
-            fig3d.add_trace(go.Scatter3d(x=[xp, xp], y=[-Ly2+0.1, Ly2-0.1], z=[z_inf + 0.02, z_inf + 0.02], mode='lines', line=dict(color=color_acero, width=3), showlegend=False))
+            x_inter = [p[0] for p in contorno_dado] if tipo_dado != "3" else []
+            if tipo_dado == "3":
+                for i in range(len(contorno_dado)):
+                    p1 = contorno_dado[i]
+                    p2 = contorno_dado[(i+1)%len(contorno_dado)]
+                    if min(p1[1], p2[1]) <= yp <= max(p1[1], p2[1]):
+                        if p1[1] != p2[1]: x_inter.append(p1[0] + (yp - p1[1]) * (p2[0] - p1[0]) / (p2[1] - p1[1]))
+            xmin, xmax = (min(x_inter)+0.10, max(x_inter)-0.10) if x_inter else (min([p[0] for p in contorno_dado])+0.1, max([p[0] for p in contorno_dado])-0.1)
             
-        # --- Parrilla Superior ---
-        for yp in y_bars:
-            fig3d.add_trace(go.Scatter3d(x=[-Bx2+0.1, Bx2-0.1], y=[yp, yp], z=[z_sup, z_sup], mode='lines', line=dict(color=color_acero, width=3), showlegend=False))
+            if xmin < xmax:
+                # Inferior con gancho arriba
+                fig3d.add_trace(go.Scatter3d(x=[xmin, xmin, xmax, xmax], y=[yp, yp, yp, yp], z=[z_inf+L_gancho, z_inf, z_inf, z_inf+L_gancho], mode='lines', line=dict(color=color_acero, width=3), showlegend=False, hoverinfo='skip'))
+                # Superior con gancho abajo
+                fig3d.add_trace(go.Scatter3d(x=[xmin, xmin, xmax, xmax], y=[yp, yp, yp, yp], z=[z_sup-L_gancho, z_sup, z_sup, z_sup-L_gancho], mode='lines', line=dict(color=color_acero, width=3), showlegend=False, hoverinfo='skip'))
+
+        # --- Parrilla Vertical (eje Y cortando en X) ---
         for xp in x_bars:
-            fig3d.add_trace(go.Scatter3d(x=[xp, xp], y=[-Ly2+0.1, Ly2-0.1], z=[z_sup - 0.02, z_sup - 0.02], mode='lines', line=dict(color=color_acero, width=3), showlegend=False))
+            y_inter = [p[1] for p in contorno_dado] if tipo_dado != "3" else []
+            if tipo_dado == "3":
+                for i in range(len(contorno_dado)):
+                    p1 = contorno_dado[i]
+                    p2 = contorno_dado[(i+1)%len(contorno_dado)]
+                    if min(p1[0], p2[0]) <= xp <= max(p1[0], p2[0]):
+                        if p1[0] != p2[0]: y_inter.append(p1[1] + (xp - p1[0]) * (p2[1] - p1[1]) / (p2[0] - p1[0]))
+            ymin, ymax = (min(y_inter)+0.10, max(y_inter)-0.10) if y_inter else (min([p[1] for p in contorno_dado])+0.1, max([p[1] for p in contorno_dado])-0.1)
             
+            if ymin < ymax:
+                fig3d.add_trace(go.Scatter3d(x=[xp, xp, xp, xp], y=[ymin, ymin, ymax, ymax], z=[z_inf+L_gancho, z_inf+0.02, z_inf+0.02, z_inf+L_gancho], mode='lines', line=dict(color=color_acero, width=3), showlegend=False, hoverinfo='skip'))
+                fig3d.add_trace(go.Scatter3d(x=[xp, xp, xp, xp], y=[ymin, ymin, ymax, ymax], z=[z_sup-L_gancho, z_sup-0.02, z_sup-0.02, z_sup-L_gancho], mode='lines', line=dict(color=color_acero, width=3), showlegend=False, hoverinfo='skip'))
+
+        # --- Acero Intermedio (Retracción Perimetral) ---
+        if H_dado > 0.60:
+            num_capas = int((H_dado - 0.20) / 0.30)
+            if num_capas > 0:
+                px = [p[0] * 0.95 for p in contorno_dado] + [contorno_dado[0][0] * 0.95]
+                py = [p[1] * 0.95 for p in contorno_dado] + [contorno_dado[0][1] * 0.95]
+                for c in range(1, num_capas + 1):
+                    z_capa = [-H_dado + 0.10 + c * 0.30] * len(px)
+                    fig3d.add_trace(go.Scatter3d(x=px, y=py, z=z_capa, mode='lines', line=dict(color='#4dd0e1', width=3), name=f"Ref. Temperatura" if c==1 else "", showlegend=(c==1), hoverinfo='skip'))
+                    
         fig3d.update_layout(
             scene=dict(
                 xaxis=dict(title="X [m]", range=[-B_sugerido*1.2, B_sugerido*1.2]),
