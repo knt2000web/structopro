@@ -532,12 +532,36 @@ with tab_bim:
         c1x = c1_m / 2; c2y = c2_m / 2; hc = 1.0
         x_col = [-c1x, c1x, c1x, -c1x, -c1x, c1x, c1x, -c1x]
         y_col = [-c2y, -c2y, c2y, c2y, -c2y, -c2y, c2y, c2y]
-        z_col = [hc, hc, hc, hc, 0, 0, 0, 0]        z_inf = -H_dado + embeb_pilote + 0.03
+        z_col = [hc, hc, hc, hc, 0, 0, 0, 0]
+        fig3d.add_trace(go.Mesh3d(
+            x=x_col, y=y_col, z=z_col,
+            i=[7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2],
+            j=[3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3],
+            k=[0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6],
+            color='#607d8b', opacity=1.0, name='Columna'
+        ))
+
+        # 3. Pilotes
+        L_render = 3.0
+        for idx_p, r_p in df_pilotes.iterrows():
+            ppx = r_p['X [m]']; ppy = r_p['Y [m]']
+            z_top_pil = -(H_dado - embeb_pilote)
+            theta_p = np.linspace(0, 2*np.pi, 20)
+            z_cil = np.linspace(z_top_pil, z_top_pil - L_render, 2)
+            Tc, Zc = np.meshgrid(theta_p, z_cil)
+            Xc = ppx + (D_pilote/2) * np.cos(Tc)
+            Yc = ppy + (D_pilote/2) * np.sin(Tc)
+            fig3d.add_trace(go.Surface(
+                x=Xc, y=Yc, z=Zc,
+                colorscale=[[0, '#795548'], [1, '#8d6e63']],
+                showscale=False, opacity=0.95, name=f'Pilote {r_p["ID"]}'
+            ))
+
+        # 4. Canasta de Acero (Ganchos ACI 318 §25.3: lhb = 12*db)
+        z_inf = -H_dado + embeb_pilote + 0.03
         z_sup = -0.07
-        espacio_barras = 0.20  # una barra cada 20cm para mejor densidad visual
-        color_acero = '#b0bec5'
-        
-        # Longitud de gancho segun ACI 318 §25.3: lhb = 12 * db (min 150mm)
+        espacio_barras = 0.20
+        color_acero = '#cfd8dc'
         lh = max(0.15, 12.0 * (db_dado / 100.0))
 
         # Limites del contorno para generar rangos de barras
@@ -586,6 +610,7 @@ with tab_bim:
                 y=[yp, yp, yp, yp],
                 z=[z_inf + lh, z_inf, z_inf, z_inf + lh],
                 mode='lines', line=dict(color=color_acero, width=3),
+                marker=dict(size=0),
                 showlegend=False, hoverinfo='skip'))
             # Superior: barra horizontal con bastones 90° apuntando hacia ABAJO
             fig3d.add_trace(go.Scatter3d(
@@ -593,6 +618,7 @@ with tab_bim:
                 y=[yp, yp, yp, yp],
                 z=[z_sup - lh, z_sup, z_sup, z_sup - lh],
                 mode='lines', line=dict(color=color_acero, width=3),
+                marker=dict(size=0),
                 showlegend=False, hoverinfo='skip'))
 
         # --- Parrilla eje Y (barras a lo largo de Y, distribuidas en X) ---
@@ -612,6 +638,7 @@ with tab_bim:
                 y=[y0, y0, y1, y1],
                 z=[z_sup - dz_y - lh, z_sup - dz_y, z_sup - dz_y, z_sup - dz_y - lh],
                 mode='lines', line=dict(color=color_acero, width=3),
+                marker=dict(size=0),
                 showlegend=False, hoverinfo='skip'))
 
         # --- Acero de Retraccion Perimetral (NSR-10 piel cada 30cm si H>60cm) ---
