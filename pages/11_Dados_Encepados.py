@@ -329,12 +329,28 @@ with tab_bim:
                 showscale=False, opacity=0.9, name=f'Pilote {r["ID"]}'
             ))
             
-        # 4. Malla Inferior de Acero Simbólica
-        z_malla = -H_dado + 0.10
-        for yp in np.linspace(-Ly2 + 0.15, Ly2 - 0.15, 6):
-            fig3d.add_trace(go.Scatter3d(x=[-Bx2+0.1, Bx2-0.1], y=[yp, yp], z=[z_malla, z_malla], mode='lines', line=dict(color='orange', width=4), showlegend=False))
-        for xp in np.linspace(-Bx2 + 0.15, Bx2 - 0.15, 6):
-            fig3d.add_trace(go.Scatter3d(x=[xp, xp], y=[-Ly2+0.1, Ly2-0.1], z=[z_malla, z_malla], mode='lines', line=dict(color='orange', width=4), showlegend=False))
+        # 4. Canasta de Acero (Parrilla Inferior y Superior realistas)
+        z_inf = -H_dado + embeb_pilote + 0.03  # Se sienta 3cm sobre las cabezas de los pilotes
+        z_sup = -0.07  # Recubrimiento superior de 7cm
+        
+        espacio_barras = 0.25  # Simulando barras principales cada 25cm
+        color_acero = '#b0bec5' # Gris acero en lugar de naranja chillón
+        
+        y_bars = np.arange(-Ly2 + 0.15, Ly2 - 0.15 + espacio_barras, espacio_barras)
+        x_bars = np.arange(-Bx2 + 0.15, Bx2 - 0.15 + espacio_barras, espacio_barras)
+        
+        # --- Parrilla Inferior ---
+        for yp in y_bars:
+            fig3d.add_trace(go.Scatter3d(x=[-Bx2+0.1, Bx2-0.1], y=[yp, yp], z=[z_inf, z_inf], mode='lines', line=dict(color=color_acero, width=3), showlegend=False))
+        for xp in x_bars:
+            # En la vida real cruzan una sobre otra
+            fig3d.add_trace(go.Scatter3d(x=[xp, xp], y=[-Ly2+0.1, Ly2-0.1], z=[z_inf + 0.02, z_inf + 0.02], mode='lines', line=dict(color=color_acero, width=3), showlegend=False))
+            
+        # --- Parrilla Superior ---
+        for yp in y_bars:
+            fig3d.add_trace(go.Scatter3d(x=[-Bx2+0.1, Bx2-0.1], y=[yp, yp], z=[z_sup, z_sup], mode='lines', line=dict(color=color_acero, width=3), showlegend=False))
+        for xp in x_bars:
+            fig3d.add_trace(go.Scatter3d(x=[xp, xp], y=[-Ly2+0.1, Ly2-0.1], z=[z_sup - 0.02, z_sup - 0.02], mode='lines', line=dict(color=color_acero, width=3), showlegend=False))
             
         fig3d.update_layout(
             scene=dict(
