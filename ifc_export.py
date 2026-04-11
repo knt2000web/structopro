@@ -852,6 +852,7 @@ def ifc_grupo_pilotes(
 
 
 
+
 def ifc_dado_parametrico(
     B_dado_m: float, L_dado_m: float, H_dado_m: float,
     df_pilotes, D_pilote_m: float, embeb_m: float,
@@ -862,11 +863,9 @@ def ifc_dado_parametrico(
     nombre_proyecto: str = "Encepado Parametrico"
 ) -> "io.BytesIO":
     """
-    IFC4 pile cap export:
-    - IfcFooting (dado)
-    - IfcColumn (arranque)
-    - IfcPile x N  (cada uno con perfil propio, extruye hacia -Z)
-    - IfcReinforcingBar x M  (barras X e Y, SweptSolid, sin CSG)
+    IFC4 pile cap complete export.
+    Canonical approach: ObjectPlacement carries position, geometry relative to local origin.
+    Includes: dado, column, piles (down), rebar X+Y with hooks, skin reinforcement.
     """
     if not IFC_DISPONIBLE:
         raise ImportError("ifcopenshell no disponible.")
@@ -874,169 +873,202 @@ def ifc_dado_parametrico(
     ifc = ifcopenshell.file(schema="IFC4")
     planta, ctx = _nueva_jerarquia(ifc, nombre_proyecto)
 
-    # mm
-    Bd  = B_dado_m   * 1000.
-    Ld  = L_dado_m   * 1000.
-    Hd  = H_dado_m   * 1000.
-    Dp  = D_pilote_m * 1000.
-    emb = embeb_m    * 1000.
-    rec = recub_cm   * 10.      # mm
-    db  = db_mm                 # mm
-    lh  = max(150., 12. * db)  # mm (ACI 25.3)
-    sep_x = sep_x_cm * 10.     # mm
-    sep_y = sep_y_cm * 10.     # mm
-    r   = db / 2.              # radio de barra mm
+    # All dimensions in mm
+    Bd   = B_dado_m   * 1000.
+    Ld   = L_dado_m   * 1000.
+    Hd   = H_dado_m   * 1000.
+    Dp   = D_pilote_m * 1000.
+    emb  = embeb_m    * 1000.
+    rec  = recub_cm   * 10.       # mm
+    db   = db_mm                  # mm diameter
+    r    = db / 2.                # mm radius
+    lh   = max(150., 12. * db)   # hook length mm (ACI 318-25.3)
+    sep_x = sep_x_cm * 10.       # mm
+    sep_y = sep_y_cm * 10.       # mm
 
     elementos = []
 
-    # ── Helper: extrusión en +Z local de un rectángulo ──────────────────────
-    def _box(w, h, depth, ox=0., oy=0., oz=0.):
-        """Caja sólida: w×h en XY, extrusión depth en +Z"""
-        ax2 = ifc.createIfcAxis2Placement2D(
-            ifc.createIfcCartesianPoint((0., 0.)), None)
+    # ── Helpers ──────────────────────────────────────────────────────────────
+    def _pt2(x, y):
+        return ifc.createIfcCartesianPoint((float(x), float(y)))
+
+    def _pt3(x, y, z):
+        return ifc.createIfcCartesianPoint((float(x), float(y), float(z)))
+
+    def _dir3(x, y, z):
+        return ifc.createIfcDirection((float(x), float(y), float(z)))
+
+    def _ax3(ox=0., oy=0., oz=0., zx=0., zy=0., zz=1., xx=1., xy=0., xz=0.):
+        return ifc.createIfcAxis2Placement3D(
+            _pt3(ox, oy, oz), _dir3(zx, zy, zz), _dir3(xx, xy, xz))
+
+    def _local_plac(ox=0., oy=0., oz=0.):
+        return ifc.createIfcLocalPlacement(None, _ax3(ox, oy, oz))
+
+    def _rect_solid(w, h, depth):
+        """Box w×h extruded in +Z for depth, origin at (0,0,0)"""
+        ax2 = ifc.createIfcAxis2Placement2D(_pt2(0., 0.), None)
         prof = ifc.createIfcRectangleProfileDef("AREA", None, ax2, float(w), float(h))
-        ax3 = ifc.createIfcAxis2Placement3D(
-            ifc.createIfcCartesianPoint((float(ox), float(oy), float(oz))),
-            ifc.createIfcDirection((0., 0., 1.)),
-            ifc.createIfcDirection((1., 0., 0.)))
-        return ifc.createIfcExtrudedAreaSolid(
-            prof, ax3, ifc.createIfcDirection((0., 0., 1.)), float(depth))
+        return ifc.createIfcExtrudedAreaSolid(prof, _ax3(), _dir3(0.,0.,1.), float(depth))
 
-    # ── Helper: cilindro con eje en dirección world_dir ──────────────────────
-    def _cylinder(rad, length, ox, oy, oz, world_dir):
-        """
-        Cilindro de radio rad y longitud length cuyo eje apunta en world_dir.
-        El perfil (círculo) esta en el plano perpendicular a world_dir.
-        SweptSolid extrude siempre en local-Z, por tanto:
-          local-Z = world_dir
-          local-X = cualquier vector perpendicular
-        """
-        wx, wy, wz = world_dir
-        # Elegir local-X perpendicular a world_dir
-        if abs(wx) < 0.9:
-            lx = (1., 0., 0.)
-        elif abs(wy) < 0.9:
-            lx = (0., 1., 0.)
-        else:
-            lx = (0., 0., 1.)
-        # Gram-Schmidt
-        dot = lx[0]*wx + lx[1]*wy + lx[2]*wz
-        lx = (lx[0]-dot*wx, lx[1]-dot*wy, lx[2]-dot*wz)
-        mag = math.sqrt(sum(v*v for v in lx))
-        lx = tuple(v/mag for v in lx)
-
-        ax2 = ifc.createIfcAxis2Placement2D(
-            ifc.createIfcCartesianPoint((0., 0.)), None)
+    def _cyl_local(rad, depth):
+        """Vertical cylinder: radius rad, height depth, extrudes in +Z from origin"""
+        ax2 = ifc.createIfcAxis2Placement2D(_pt2(0., 0.), None)
         prof = ifc.createIfcCircleProfileDef("AREA", None, ax2, float(rad))
-        ax3 = ifc.createIfcAxis2Placement3D(
-            ifc.createIfcCartesianPoint((float(ox), float(oy), float(oz))),
-            ifc.createIfcDirection(world_dir),
-            ifc.createIfcDirection(lx))
-        return ifc.createIfcExtrudedAreaSolid(
-            prof, ax3, ifc.createIfcDirection((0., 0., 1.)), float(length))
+        return ifc.createIfcExtrudedAreaSolid(prof, _ax3(), _dir3(0.,0.,1.), float(depth))
 
-    def _shape(solid, rep_type="SweptSolid"):
-        rep = ifc.createIfcShapeRepresentation(ctx, "Body", rep_type, [solid])
+    def _swept_bar(pts_3d, radius):
+        """
+        IfcSweptDiskSolid along a 3D polyline — used for bars with hooks.
+        pts_3d: list of (x,y,z) tuples in LOCAL coordinates.
+        """
+        ifc_pts = [_pt3(*p) for p in pts_3d]
+        polyline = ifc.createIfcPolyline(ifc_pts)
+        return ifc.createIfcSweptDiskSolid(polyline, float(radius), None, 0., 1.)
+
+    def _shape_swept(solid):
+        rep = ifc.createIfcShapeRepresentation(ctx, "Body", "AdvancedSweptSolid", [solid])
         return ifc.createIfcProductDefinitionShape(None, None, [rep])
 
-    # ═══ 1. DADO ═════════════════════════════════════════════════════════════
-    # Dado: de z=-Hd a z=0
-    sol_dado = _box(Bd, Ld, Hd, ox=-Bd/2, oy=-Ld/2, oz=-Hd)
+    def _shape_solid(solid):
+        rep = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid])
+        return ifc.createIfcProductDefinitionShape(None, None, [rep])
+
+    # ═══ 1. DADO (IfcFooting) ═════════════════════════════════════════════════
+    # Placed at (-Bd/2, -Ld/2, -Hd), extrudes +Z for Hd → dado from z=-Hd to z=0
     dado = ifc.createIfcFooting(
         ifcopenshell.guid.new(), None,
         f"Encepado {B_dado_m:.1f}x{L_dado_m:.1f}m",
         "PAD_FOOTING", None,
-        _placement_local(ifc, 0., 0., 0.),
-        _shape(sol_dado), None, "PAD_FOOTING")
+        _local_plac(-Bd/2., -Ld/2., -Hd),
+        _shape_solid(_rect_solid(Bd, Ld, Hd)),
+        None, "PAD_FOOTING")
     _material(ifc, dado, f"Concreto f'c={fc_dado:.0f}MPa")
     elementos.append(dado)
 
-    # ═══ 2. COLUMNA (z=0 → z=+1000) ═════════════════════════════════════════
-    sol_col = _box(c1_cm*10., c2_cm*10., 1000., ox=-c1_cm*5., oy=-c2_cm*5., oz=0.)
+    # ═══ 2. COLUMNA (IfcColumn) ══════════════════════════════════════════════
+    # Centered at (0,0), from z=0 to z=+1000
     col = ifc.createIfcColumn(
         ifcopenshell.guid.new(), None,
-        f"Arranque Col {c1_cm:.0f}x{c2_cm:.0f}cm",
-        None, None,
-        _placement_local(ifc, 0., 0., 0.),
-        _shape(sol_col), None, None)
+        f"Col {c1_cm:.0f}x{c2_cm:.0f}cm", None, None,
+        _local_plac(-c1_cm*5., -c2_cm*5., 0.),
+        _shape_solid(_rect_solid(c1_cm*10., c2_cm*10., 1000.)),
+        None, None)
     elementos.append(col)
 
-    # ═══ 3. PILOTES (extruyen hacia -Z desde dentro del dado) ════════════════
-    # z_top_pil = tope del pilote = -(Hd - emb)  [dentro del dado]
-    z_top = -(Hd - emb)    # p.ej. -900 mm para H=1m, emb=0.1m
-    L_pil = 3000.           # 3m visibles
+    # ═══ 3. PILOTES (IfcPile) — van HACIA ABAJO desde z=-(Hd-emb) ═══════════
+    z_top_pil = -(Hd - emb)   # top of pile inside dado, e.g. -900mm
+    L_pil = 3000.              # visual length
     for i_p, row in df_pilotes.iterrows():
         px = row["X [m]"] * 1000.
         py = row["Y [m]"] * 1000.
-        # Cilindro de z_top hacia -Z (down)
-        # _cylinder extrude en local+Z = world_dir
-        # Para ir hacia -Z: start = z_top - L_pil, world_dir = (0,0,1)
-        # → pilote desde z_top-L_pil hasta z_top
-        sol_pil = _cylinder(Dp/2, L_pil, px, py, z_top - L_pil, (0., 0., 1.))
-        rep_p = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_pil])
-        pds_p = ifc.createIfcProductDefinitionShape(None, None, [rep_p])
+        # Place at (px, py, z_top_pil - L_pil) = bottom of pile
+        # Extrude +Z  for L_pil → top at z_top_pil ✓
         pil = ifc.createIfcPile(
-            ifcopenshell.guid.new(), None, str(row["ID"]),
-            "Pilote", None,
-            _placement_local(ifc, 0., 0., 0.),
-            pds_p, None, "BORED", None)
+            ifcopenshell.guid.new(), None,
+            str(row["ID"]), "Pilote", None,
+            _local_plac(px - Dp/2., py - Dp/2., z_top_pil - L_pil),
+            _shape_solid(_cyl_local(Dp/2., L_pil)),
+            None, "BORED", None)
         _material(ifc, pil, "Concreto Pilote")
         elementos.append(pil)
 
-    # ═══ 4. ARMADURA INFERIOR EJE X ══════════════════════════════════════════
-    # Barras horizontales en X, separadas en Y
-    z_inf = -(Hd - emb - 30.)  # 30mm sobre tope pilotes → z negativo cercano a fondo
-    # Corrección: z desde fondo del dado hacia arriba
-    z_inf = -Hd + emb + 30.   # mm, negativo
-    bar_len_x = Bd - 2. * rec
-    y_start = -Ld/2. + rec
-    y_end   =  Ld/2. - rec
-    y_cur = y_start
+    # ═══ 4. ACERO EJE X (barras con ganchos, IfcReinforcingBar) ══════════════
+    # Bars run in local +X direction, placed at actual (px_start, py, z_inf)
+    z_inf = -(Hd - emb - 30.)        # z_inf = e.g. -870mm
+    bar_len_x = Bd - 2. * rec        # net length
+    # hook path: 3D polyline (lh up, horizontal, lh up) in bar's local X-Z plane
+    # Local origin = LEFT end of bar at z=0, bar runs in +X
+    def _hook_path_x(bar_len, hook_len):
+        # L-bar path: left hook up → run right → right hook up
+        return [
+            (0.,   0., hook_len),   # top of left hook
+            (0.,   0., 0.),          # base left
+            (bar_len, 0., 0.),       # base right
+            (bar_len, 0., hook_len), # top of right hook
+        ]
+
+    y_cur = -Ld/2. + rec
     bix = 0
-    while y_cur <= y_end + 1.:
-        # barra en X: eje = +X, origen = (-Bd/2+rec, y_cur, z_inf)
-        sol_bx = _cylinder(r, bar_len_x, -Bd/2 + rec, y_cur, z_inf, (1., 0., 0.))
-        rep_bx = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_bx])
-        pds_bx = ifc.createIfcProductDefinitionShape(None, None, [rep_bx])
+    while y_cur <= Ld/2. - rec + 1.:
+        # ObjectPlacement = left end of bar
+        plac_bx = _local_plac(-Bd/2. + rec, y_cur, z_inf)
+        pts = _hook_path_x(bar_len_x, lh)
+        sol_bx = _swept_bar(pts, r)
+        pds_bx = _shape_swept(sol_bx)
         rebar = ifc.createIfcReinforcingBar(
-            ifcopenshell.guid.new(), None, f"B-X-{bix+1}",
-            None, None,
-            _placement_local(ifc, 0., 0., 0.),
-            pds_bx,
-            f"BX{bix+1}", "B500S",
-            float(db), float(math.pi*r*r), float(bar_len_x),
+            ifcopenshell.guid.new(), None, f"BX-{bix+1}",
+            None, None, plac_bx, pds_bx,
+            f"BX{bix+1}", None, float(db),
+            float(math.pi * r * r), float(bar_len_x + 2*lh),
             "MAIN", "TEXTURED")
         _material(ifc, rebar, "Acero fy=420MPa")
         elementos.append(rebar)
         y_cur += sep_y
-        bix  += 1
+        bix += 1
 
-    # ═══ 5. ARMADURA INFERIOR EJE Y ══════════════════════════════════════════
-    z_inf_y = z_inf + db + 5.  # encima de las X
+    # ═══ 5. ACERO EJE Y (barras con ganchos, encima de X) ════════════════════
+    z_inf_y = z_inf + db + 5.   # encima de las X
     bar_len_y = Ld - 2. * rec
-    x_start = -Bd/2. + rec
-    x_end   =  Bd/2. - rec
-    x_cur = x_start
+    def _hook_path_y(bar_len, hook_len):
+        # Bars run in local +Y (we place at y_start, oriented in Y)
+        return [
+            (0., 0.,       hook_len),
+            (0., 0.,       0.),
+            (0., bar_len,  0.),
+            (0., bar_len,  hook_len),
+        ]
+
+    x_cur = -Bd/2. + rec
     biy = 0
-    while x_cur <= x_end + 1.:
-        # barra en Y: eje = +Y  
-        sol_by = _cylinder(r, bar_len_y, x_cur, -Ld/2. + rec, z_inf_y, (0., 1., 0.))
-        rep_by = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_by])
-        pds_by = ifc.createIfcProductDefinitionShape(None, None, [rep_by])
+    while x_cur <= Bd/2. - rec + 1.:
+        plac_by = _local_plac(x_cur, -Ld/2. + rec, z_inf_y)
+        pts_y = _hook_path_y(bar_len_y, lh)
+        sol_by = _swept_bar(pts_y, r)
+        pds_by = _shape_swept(sol_by)
         rebar_y = ifc.createIfcReinforcingBar(
-            ifcopenshell.guid.new(), None, f"B-Y-{biy+1}",
-            None, None,
-            _placement_local(ifc, 0., 0., 0.),
-            pds_by,
-            f"BY{biy+1}", "B500S",
-            float(db), float(math.pi*r*r), float(bar_len_y),
+            ifcopenshell.guid.new(), None, f"BY-{biy+1}",
+            None, None, plac_by, pds_by,
+            f"BY{biy+1}", None, float(db),
+            float(math.pi * r * r), float(bar_len_y + 2*lh),
             "MAIN", "TEXTURED")
         _material(ifc, rebar_y, "Acero fy=420MPa")
         elementos.append(rebar_y)
         x_cur += sep_x
-        biy  += 1
+        biy += 1
 
-    # ═══ 6. Vincular todo a la planta ════════════════════════════════════════
+    # ═══ 6. ACERO INTERMEDIO DE PIEL (NSR-10: cada 30cm si H>600mm) ══════════
+    if Hd > 600.:
+        n_capas = int((Hd - 200.) / 300.)
+        db_piel = 9.5   # #3 = 3/8"
+        r_piel  = db_piel / 2.
+        # Perimetral rings along dado border
+        for ci in range(1, n_capas + 1):
+            z_piel = -Hd + 100. + ci * 300.   # z negativo
+            # 4 rectas perimetrales formando un cuadro interior (a 1 rec de los bordes)
+            _piel_corners = [
+                ((-Bd/2 + rec*1.5, -Ld/2 + rec*1.5, z_piel),
+                 ( Bd/2 - rec*1.5, -Ld/2 + rec*1.5, z_piel)),
+                (( Bd/2 - rec*1.5, -Ld/2 + rec*1.5, z_piel),
+                 ( Bd/2 - rec*1.5,  Ld/2 - rec*1.5, z_piel)),
+                (( Bd/2 - rec*1.5,  Ld/2 - rec*1.5, z_piel),
+                 (-Bd/2 + rec*1.5,  Ld/2 - rec*1.5, z_piel)),
+                ((-Bd/2 + rec*1.5,  Ld/2 - rec*1.5, z_piel),
+                 (-Bd/2 + rec*1.5, -Ld/2 + rec*1.5, z_piel)),
+            ]
+            for (x0,y0,z0),(x1,y1,z1) in _piel_corners:
+                seg = [(0., 0., 0.), (x1-x0, y1-y0, z1-z0)]
+                sol_sk = _swept_bar(seg, r_piel)
+                pds_sk = _shape_swept(sol_sk)
+                sk_bar = ifc.createIfcReinforcingBar(
+                    ifcopenshell.guid.new(), None, f"Piel-c{ci}",
+                    None, None, _local_plac(x0, y0, z0), pds_sk,
+                    None, None, float(db_piel),
+                    float(math.pi*r_piel*r_piel), float(math.sqrt((x1-x0)**2+(y1-y0)**2)),
+                    "LIGATURE", "PLAIN")
+                elementos.append(sk_bar)
+
+    # ═══ 7. Vincular a la planta ══════════════════════════════════════════════
     ifc.createIfcRelContainedInSpatialStructure(
         ifcopenshell.guid.new(), None, None, None, elementos, planta)
 
