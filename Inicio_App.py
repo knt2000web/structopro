@@ -591,6 +591,8 @@ home      = st.Page(run_home, title="Inicio App", icon=":material/home:", defaul
 p_col     = st.Page("pages/01_Columnas_PM.py", title="Columnas PM", icon=":material/domain:")
 p_vig     = st.Page("pages/02_Vigas_Losas.py", title="Vigas Losas", icon=":material/horizontal_rule:")
 p_zap     = st.Page("pages/09_Zapatas.py", title="Zapatas", icon=":material/layers:")
+p_pil     = st.Page("pages/10_Pilotes.py", title="Pilotes", icon=":material/format_align_center:")
+p_dad     = st.Page("pages/11_Dados_Encepados.py", title="Dados y Cabezales", icon=":material/view_module:")
 p_mcont   = st.Page("pages/12_Muros_Contencion.py", title="Muros Contención", icon=":material/view_stream:")
 p_ccirc   = st.Page("pages/07_Columnas_Circulares.py", title="Columnas Circulares", icon=":material/lens:")
 p_pred    = st.Page("pages/04_Predimensionamiento.py", title="Predimensionamiento", icon=":material/straighten:")
@@ -621,7 +623,7 @@ p_res     = st.Page("pages/19_Resistencia_Materiales.py", title="Resistencia Mat
 p_util    = st.Page("pages/20_Utilidades_Comunes.py", title="Utilidades Comunes", icon=":material/widgets:")
 
 all_pages = [
-    home, p_col, p_vig, p_zap, p_mcont, p_ccirc, p_pred,
+    home, p_col, p_vig, p_zap, p_pil, p_dad, p_mcont, p_ccirc, p_pred,
     p_sismo, p_viento, p_irreg,
     p_mamp_e, p_mamp_m, p_placa, p_konte, p_mad, p_metal,
     p_calc, p_apu,

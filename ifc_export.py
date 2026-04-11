@@ -767,8 +767,8 @@ def ifc_grupo_pilotes(
     tipo_seccion: str, D_pilote_m: float, L_pilote_m: float,
     m_filas: int, n_cols: int, S_metros: float,
     fc_dado: float, fc_pilote: float,
-    nombre_proyecto: str = "Cimentacion Profunda"
-) -> "io.BytesIO":
+    nombre_proyecto: str = "Cimentacion Profunda",
+    n_barras_p: int = 0, db_long_mm: float = 0.0, s_trans_mm: float = 0.0) -> "io.BytesIO":
     """Exporta un encepado genérico con su grupo de pilotes. Enfoque canónico IFC4."""
     if not IFC_DISPONIBLE:
         raise ImportError("ifcopenshell no disponible.")
@@ -820,25 +820,64 @@ def ifc_grupo_pilotes(
     offset_y = (m_filas - 1) * Sm / 2.0
     
     num_p = 1
+    
+    rec_p = 50.0  # 50mm recubrimiento
+    import math
+
     for i in range(n_cols):
         for j in range(m_filas):
             cx = -offset_x + i * Sm
             cy = -offset_y + j * Sm
             
-            p_plac = _local_plac(cx - Dp/2, cy - Dp/2, z_bot)
+            p_plac = _local_plac(cx - Dp/2, cy - Dp/2, z_Bot)
+            p_plac = _local_plac(cx, cy, z_bot) # Centroide
             if tipo_seccion == "Circular":
                 p_sol = _cyl_local(Dp/2, Lp)
+                p_plac_corner = _local_plac(cx - Dp/2, cy - Dp/2, z_bot)
             else:
                 p_sol = _rect_solid(Dp, Dp, Lp)
+                p_plac_corner = _local_plac(cx - Dp/2, cy - Dp/2, z_bot)
                 
             pilote = ifc.createIfcPile(
                 ifcopenshell.guid.new(), None, f"Pilote-{num_p}", "Pilote", None,
-                p_plac, _shape_solid(p_sol), None, "BORED", None)
+                p_plac_corner if tipo_seccion != "Circular" else _local_plac(cx, cy, z_bot), 
+                _shape_solid(p_sol if tipo_seccion != "Circular" else _cyl_local(Dp/2, Lp)), 
+                None, "BORED", None)
             _material(ifc, pilote, f"Concreto f'c={fc_pilote}MPa")
             elementos.append(pilote)
+            
+            # Rebar (Longitudinal)
+            if n_barras_p > 0 and db_long_mm > 0:
+                rad_l = db_long_mm / 2.0
+                r_armado = Dp/2 - rec_p - rad_l if tipo_seccion == "Circular" else Dp/2 - rec_p - rad_l
+                
+                # Barras long
+                for b_i in range(n_barras_p):
+                    if tipo_seccion == "Circular":
+                        ang = 2.0 * math.pi * b_i / n_barras_p
+                        lx = cx + r_armado * math.cos(ang)
+                        ly = cy + r_armado * math.sin(ang)
+                    else:
+                        per_face = max(1, n_barras_p // 4)
+                        # Rectangular logic approximation
+                        ang = 2.0 * math.pi * b_i / n_barras_p
+                        lx = cx + r_armado * math.cos(ang) * 1.15
+                        ly = cy + r_armado * math.sin(ang) * 1.15
+                        
+                    # Extruded cylinder for the straight bar
+                    bar_plac = _local_plac(lx, ly, z_bot)
+                    bar_sol = _cyl_local(rad_l, Lp)
+                    r_bar = ifc.createIfcReinforcingBar(
+                        ifcopenshell.guid.new(), None, f"Barra_Long_{num_p}_{b_i+1}",
+                        None, None, bar_plac, _shape_solid(bar_sol),
+                        None, None, float(db_long_mm),
+                        float(math.pi*rad_l**2), float(Lp),
+                        "MAIN", "TEXTURED")
+                    _material(ifc, r_bar, "Acero fy=420MPa")
+                    elementos.append(r_bar)
+                    
             num_p += 1
-
-    ifc.createIfcRelContainedInSpatialStructure(ifcopenshell.guid.new(), None, None, None, elementos, planta)
+ifc.createIfcRelContainedInSpatialStructure(ifcopenshell.guid.new(), None, None, None, elementos, planta)
 
     import io, tempfile, os
     bio = io.BytesIO()
@@ -913,167 +952,44 @@ def ifc_dado_parametrico(
         prof = ifc.createIfcCircleProfileDef("AREA", None, ax2, float(rad))
         return ifc.createIfcExtrudedAreaSolid(prof, _ax3(), _dir3(0.,0.,1.), float(depth))
 
+        def _cyl_segment(pt1, pt2, radius):
+        # Create cylinder from pt1 to pt2
+        dx = pt2[0] - pt1[0]
+        dy = pt2[1] - pt1[1]
+        dz = pt2[2] - pt1[2]
+        L = math.sqrt(dx**2 + dy**2 + dz**2)
+        if L < 1e-5: return None
+        
+        # Local Z axis is along the segment
+        dz_vec = (dx/L, dy/L, dz/L)
+        # Arbitrary X axis
+        if abs(dz_vec[2]) < 0.99:
+            dx_vec = (dz_vec[1], -dz_vec[0], 0.0)
+        else:
+            dx_vec = (1.0, 0.0, 0.0)
+        
+        n_dx = math.sqrt(dx_vec[0]**2 + dx_vec[1]**2 + dx_vec[2]**2)
+        dx_vec = (dx_vec[0]/n_dx, dx_vec[1]/n_dx, dx_vec[2]/n_dx)
+        
+        ax3 = _ax3(pt1[0], pt1[1], pt1[2], 
+                   dz_vec[0], dz_vec[1], dz_vec[2], 
+                   dx_vec[0], dx_vec[1], dx_vec[2])
+                   
+        prof = ifc.createIfcCircleProfileDef("AREA", None, ifc.createIfcAxis2Placement2D(_pt2(0,0), None), float(radius))
+        return ifc.createIfcExtrudedAreaSolid(prof, ax3, _dir3(0.,0.,1.), float(L))
+
     def _swept_bar(pts_3d, radius):
-        """
-        IfcSweptDiskSolid along a 3D polyline — used for bars with hooks.
-        pts_3d: list of (x,y,z) tuples in LOCAL coordinates.
-        """
-        ifc_pts = [_pt3(*p) for p in pts_3d]
-        polyline = ifc.createIfcPolyline(ifc_pts)
-        return ifc.createIfcSweptDiskSolid(polyline, float(radius), None, 0., 1.)
+        """Assembles multiple cylinders instead of IfcSweptDiskSolid to avoid viewer sphere artifacts."""
+        solids = []
+        for i in range(len(pts_3d)-1):
+            s = _cyl_segment(pts_3d[i], pts_3d[i+1], radius)
+            if s: solids.append(s)
+        return solids
 
-    def _shape_swept(solid):
-        rep = ifc.createIfcShapeRepresentation(ctx, "Body", "AdvancedSweptSolid", [solid])
+    def _shape_swept(solids_list):
+        if not isinstance(solids_list, list):
+            solids_list = [solids_list]
+        rep = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", solids_list)
         return ifc.createIfcProductDefinitionShape(None, None, [rep])
 
-    def _shape_solid(solid):
-        rep = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid])
-        return ifc.createIfcProductDefinitionShape(None, None, [rep])
 
-    # ═══ 1. DADO (IfcFooting) ═════════════════════════════════════════════════
-    # Placed at (-Bd/2, -Ld/2, -Hd), extrudes +Z for Hd → dado from z=-Hd to z=0
-    dado = ifc.createIfcFooting(
-        ifcopenshell.guid.new(), None,
-        f"Encepado {B_dado_m:.1f}x{L_dado_m:.1f}m",
-        "PAD_FOOTING", None,
-        _local_plac(-Bd/2., -Ld/2., -Hd),
-        _shape_solid(_rect_solid(Bd, Ld, Hd)),
-        None, "PAD_FOOTING")
-    _material(ifc, dado, f"Concreto f'c={fc_dado:.0f}MPa")
-    elementos.append(dado)
-
-    # ═══ 2. COLUMNA (IfcColumn) ══════════════════════════════════════════════
-    # Centered at (0,0), from z=0 to z=+1000
-    col = ifc.createIfcColumn(
-        ifcopenshell.guid.new(), None,
-        f"Col {c1_cm:.0f}x{c2_cm:.0f}cm", None, None,
-        _local_plac(-c1_cm*5., -c2_cm*5., 0.),
-        _shape_solid(_rect_solid(c1_cm*10., c2_cm*10., 1000.)),
-        None, None)
-    elementos.append(col)
-
-    # ═══ 3. PILOTES (IfcPile) — van HACIA ABAJO desde z=-(Hd-emb) ═══════════
-    z_top_pil = -(Hd - emb)   # top of pile inside dado, e.g. -900mm
-    L_pil = 3000.              # visual length
-    for i_p, row in df_pilotes.iterrows():
-        px = row["X [m]"] * 1000.
-        py = row["Y [m]"] * 1000.
-        # Place at (px, py, z_top_pil - L_pil) = bottom of pile
-        # Extrude +Z  for L_pil → top at z_top_pil ✓
-        pil = ifc.createIfcPile(
-            ifcopenshell.guid.new(), None,
-            str(row["ID"]), "Pilote", None,
-            _local_plac(px - Dp/2., py - Dp/2., z_top_pil - L_pil),
-            _shape_solid(_cyl_local(Dp/2., L_pil)),
-            None, "BORED", None)
-        _material(ifc, pil, "Concreto Pilote")
-        elementos.append(pil)
-
-    # ═══ 4. ACERO EJE X (barras con ganchos, IfcReinforcingBar) ══════════════
-    # Bars run in local +X direction, placed at actual (px_start, py, z_inf)
-    z_inf = -(Hd - emb - 30.)        # z_inf = e.g. -870mm
-    bar_len_x = Bd - 2. * rec        # net length
-    # hook path: 3D polyline (lh up, horizontal, lh up) in bar's local X-Z plane
-    # Local origin = LEFT end of bar at z=0, bar runs in +X
-    def _hook_path_x(bar_len, hook_len):
-        # L-bar path: left hook up → run right → right hook up
-        return [
-            (0.,   0., hook_len),   # top of left hook
-            (0.,   0., 0.),          # base left
-            (bar_len, 0., 0.),       # base right
-            (bar_len, 0., hook_len), # top of right hook
-        ]
-
-    y_cur = -Ld/2. + rec
-    bix = 0
-    while y_cur <= Ld/2. - rec + 1.:
-        # ObjectPlacement = left end of bar
-        plac_bx = _local_plac(-Bd/2. + rec, y_cur, z_inf)
-        pts = _hook_path_x(bar_len_x, lh)
-        sol_bx = _swept_bar(pts, r)
-        pds_bx = _shape_swept(sol_bx)
-        rebar = ifc.createIfcReinforcingBar(
-            ifcopenshell.guid.new(), None, f"BX-{bix+1}",
-            None, None, plac_bx, pds_bx,
-            f"BX{bix+1}", None, float(db),
-            float(math.pi * r * r), float(bar_len_x + 2*lh),
-            "MAIN", "TEXTURED")
-        _material(ifc, rebar, "Acero fy=420MPa")
-        elementos.append(rebar)
-        y_cur += sep_y
-        bix += 1
-
-    # ═══ 5. ACERO EJE Y (barras con ganchos, encima de X) ════════════════════
-    z_inf_y = z_inf + db + 5.   # encima de las X
-    bar_len_y = Ld - 2. * rec
-    def _hook_path_y(bar_len, hook_len):
-        # Bars run in local +Y (we place at y_start, oriented in Y)
-        return [
-            (0., 0.,       hook_len),
-            (0., 0.,       0.),
-            (0., bar_len,  0.),
-            (0., bar_len,  hook_len),
-        ]
-
-    x_cur = -Bd/2. + rec
-    biy = 0
-    while x_cur <= Bd/2. - rec + 1.:
-        plac_by = _local_plac(x_cur, -Ld/2. + rec, z_inf_y)
-        pts_y = _hook_path_y(bar_len_y, lh)
-        sol_by = _swept_bar(pts_y, r)
-        pds_by = _shape_swept(sol_by)
-        rebar_y = ifc.createIfcReinforcingBar(
-            ifcopenshell.guid.new(), None, f"BY-{biy+1}",
-            None, None, plac_by, pds_by,
-            f"BY{biy+1}", None, float(db),
-            float(math.pi * r * r), float(bar_len_y + 2*lh),
-            "MAIN", "TEXTURED")
-        _material(ifc, rebar_y, "Acero fy=420MPa")
-        elementos.append(rebar_y)
-        x_cur += sep_x
-        biy += 1
-
-    # ═══ 6. ACERO INTERMEDIO DE PIEL (NSR-10: cada 30cm si H>600mm) ══════════
-    if Hd > 600.:
-        n_capas = int((Hd - 200.) / 300.)
-        db_piel = 9.5   # #3 = 3/8"
-        r_piel  = db_piel / 2.
-        # Perimetral rings along dado border
-        for ci in range(1, n_capas + 1):
-            z_piel = -Hd + 100. + ci * 300.   # z negativo
-            # 4 rectas perimetrales formando un cuadro interior (a 1 rec de los bordes)
-            _piel_corners = [
-                ((-Bd/2 + rec*1.5, -Ld/2 + rec*1.5, z_piel),
-                 ( Bd/2 - rec*1.5, -Ld/2 + rec*1.5, z_piel)),
-                (( Bd/2 - rec*1.5, -Ld/2 + rec*1.5, z_piel),
-                 ( Bd/2 - rec*1.5,  Ld/2 - rec*1.5, z_piel)),
-                (( Bd/2 - rec*1.5,  Ld/2 - rec*1.5, z_piel),
-                 (-Bd/2 + rec*1.5,  Ld/2 - rec*1.5, z_piel)),
-                ((-Bd/2 + rec*1.5,  Ld/2 - rec*1.5, z_piel),
-                 (-Bd/2 + rec*1.5, -Ld/2 + rec*1.5, z_piel)),
-            ]
-            for (x0,y0,z0),(x1,y1,z1) in _piel_corners:
-                seg = [(0., 0., 0.), (x1-x0, y1-y0, z1-z0)]
-                sol_sk = _swept_bar(seg, r_piel)
-                pds_sk = _shape_swept(sol_sk)
-                sk_bar = ifc.createIfcReinforcingBar(
-                    ifcopenshell.guid.new(), None, f"Piel-c{ci}",
-                    None, None, _local_plac(x0, y0, z0), pds_sk,
-                    None, None, float(db_piel),
-                    float(math.pi*r_piel*r_piel), float(math.sqrt((x1-x0)**2+(y1-y0)**2)),
-                    "LIGATURE", "PLAIN")
-                elementos.append(sk_bar)
-
-    # ═══ 7. Vincular a la planta ══════════════════════════════════════════════
-    ifc.createIfcRelContainedInSpatialStructure(
-        ifcopenshell.guid.new(), None, None, None, elementos, planta)
-
-    bio = io.BytesIO()
-    with tempfile.NamedTemporaryFile(suffix=".ifc", delete=False) as f:
-        tmp = f.name
-    ifc.write(tmp)
-    with open(tmp, "rb") as f:
-        bio.write(f.read())
-    os.unlink(tmp)
-    bio.seek(0)
-    return bio

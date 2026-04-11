@@ -1301,7 +1301,9 @@ with tab_mem:
                             tipo_seccion=tipo_seccion, D_pilote_m=D_pilote, L_pilote_m=L_pilote,
                             m_filas=m_filas, n_cols=n_cols, S_metros=S_metros,
                             fc_dado=fc_d, fc_pilote=fc_pilote,
-                            nombre_proyecto=f"Grupo de {n_pilotes} Pilotes"
+                            nombre_proyecto=f"Grupo de {n_pilotes} Pilotes",
+                            n_barras_p=n_barras_p, 
+                            db_long_mm=_dict_db[barras_long] * 10
                         )
                         st.download_button(
                             label=" Descargar Modelo.ifc",
