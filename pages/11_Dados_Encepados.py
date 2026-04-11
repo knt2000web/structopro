@@ -1188,7 +1188,7 @@ with tab_bim:
 
         # ── DESCARGA PDF (via ezdxf drawing addon + matplotlib) ───────────────
         try:
-            from ezdxf.addons.drawing import RenderEngine, Frontend
+            from ezdxf.addons.drawing import RenderContext, Frontend
             from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
             import matplotlib
             matplotlib.use("Agg")
@@ -1197,7 +1197,7 @@ with tab_bim:
             _ax.set_aspect("equal")
             _ax.axis("off")
             _backend_pdf = MatplotlibBackend(_ax)
-            Frontend(RenderEngine(doc_dxf), _backend_pdf).draw_layout(msp, finalize=True)
+            Frontend(RenderContext(doc_dxf), _backend_pdf).draw_layout(msp, finalize=True)
             _bio_pdf = io.BytesIO()
             _fig.savefig(_bio_pdf, format="pdf", bbox_inches="tight", dpi=150)
             plt.close(_fig)
