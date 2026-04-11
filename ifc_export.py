@@ -767,91 +767,87 @@ def ifc_grupo_pilotes(
     tipo_seccion: str, D_pilote_m: float, L_pilote_m: float,
     m_filas: int, n_cols: int, S_metros: float,
     fc_dado: float, fc_pilote: float,
-    nombre_proyecto: str = "Cimentación Profunda"
-) -> io.BytesIO:
-    """Exporta un encepado con su grupo de pilotes inferior."""
+    nombre_proyecto: str = "Cimentacion Profunda"
+) -> "io.BytesIO":
+    """Exporta un encepado genérico con su grupo de pilotes. Enfoque canónico IFC4."""
     if not IFC_DISPONIBLE:
-        raise ImportError("ifcopenshell no está instalado.")
+        raise ImportError("ifcopenshell no disponible.")
 
     ifc = ifcopenshell.file(schema="IFC4")
     planta, ctx = _nueva_jerarquia(ifc, nombre_proyecto)
 
-    # Convertir a mm
+    # Conversión a local mm
     Bd = B_dado_m * 1000.
     Ld = L_dado_m * 1000.
     Hd = H_dado_m * 1000.
-    
     Dp = D_pilote_m * 1000.
     Lp = L_pilote_m * 1000.
     Sm = S_metros * 1000.
 
-    elementos_bim = []
+    elementos = []
 
-    # 1. Crear el Encepado (Dado) centríco en Z=0 (hacia abajo -Hd) o Z=+Hd
-    # Mejor que el dado empiece en Z=0 hacia abajo, y pilotes desde Z=-Hd hacia abajo
-    axis2d_dado = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
-    perf_dado = ifc.createIfcRectangleProfileDef("AREA", "Dado", axis2d_dado, Bd, Ld)
-    dir_extr = ifc.createIfcDirection((0., 0., -1.))
-    sol_dado = ifc.createIfcExtrudedAreaSolid(perf_dado, None, dir_extr, Hd)
-    
-    rep_dado = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_dado])
-    prod_rep_d = ifc.createIfcProductDefinitionShape(None, None, [rep_dado])
-    place_dado = _placement_local(ifc, 0., 0., 0.)
+    # Helpers
+    def _pt2(x, y): return ifc.createIfcCartesianPoint((float(x), float(y)))
+    def _pt3(x, y, z): return ifc.createIfcCartesianPoint((float(x), float(y), float(z)))
+    def _dir3(x, y, z): return ifc.createIfcDirection((float(x), float(y), float(z)))
+    def _ax3(ox=0., oy=0., oz=0., zx=0., zy=0., zz=1., xx=1., xy=0., xz=0.):
+        return ifc.createIfcAxis2Placement3D(_pt3(ox, oy, oz), _dir3(zx, zy, zz), _dir3(xx, xy, xz))
+    def _local_plac(ox=0., oy=0., oz=0.):
+        return ifc.createIfcLocalPlacement(None, _ax3(ox, oy, oz))
+    def _rect_solid(w, h, depth):
+        prof = ifc.createIfcRectangleProfileDef("AREA", None, ifc.createIfcAxis2Placement2D(_pt2(0,0), None), float(w), float(h))
+        return ifc.createIfcExtrudedAreaSolid(prof, _ax3(), _dir3(0,0,1), float(depth))
+    def _cyl_local(rad, depth):
+        prof = ifc.createIfcCircleProfileDef("AREA", None, ifc.createIfcAxis2Placement2D(_pt2(0,0), None), float(rad))
+        return ifc.createIfcExtrudedAreaSolid(prof, _ax3(), _dir3(0,0,1), float(depth))
+    def _shape_solid(solid):
+        rep = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [solid])
+        return ifc.createIfcProductDefinitionShape(None, None, [rep])
 
+    # 1. Encepado en (-Bd/2, -Ld/2, -Hd) hasta 0
     dado = ifc.createIfcFooting(
-        ifcopenshell.guid.new(), None,
-        f"Encepado {B_dado_m}x{L_dado_m}x{H_dado_m}m",
-        "Dado de pilotes", None, place_dado, prod_rep_d, None, "PAD_FOOTING"
-    )
-    _material(ifc, dado, f"Concreto Encepado f'c={fc_dado:.0f}MPa")
-    elementos_bim.append(dado)
+        ifcopenshell.guid.new(), None, "Encepado", "PAD_FOOTING", None,
+        _local_plac(-Bd/2, -Ld/2, -Hd), _shape_solid(_rect_solid(Bd, Ld, Hd)),
+        None, "PAD_FOOTING")
+    _material(ifc, dado, f"Concreto f'c={fc_dado}MPa")
+    elementos.append(dado)
 
-    # 2. Crear los Pilotes
+    # 2. Pilotes hacia abajo (desde z_top = -(Hd - 100mm embebido))
+    z_top = -(Hd - 100.)
+    z_bot = z_top - Lp
+    
     offset_x = (n_cols - 1) * Sm / 2.0
     offset_y = (m_filas - 1) * Sm / 2.0
-
-    # Perfil del pilote
-    axis2d_p = ifc.createIfcAxis2Placement2D(ifc.createIfcCartesianPoint((0., 0.)), None)
-    if tipo_seccion == "Circular":
-        perf_pilote = ifc.createIfcCircleProfileDef("AREA", "PiloteCirc", axis2d_p, Dp / 2.)
-    else:
-        perf_pilote = ifc.createIfcRectangleProfileDef("AREA", "PiloteCuad", axis2d_p, Dp, Dp)
-
+    
+    num_p = 1
     for i in range(n_cols):
         for j in range(m_filas):
             cx = -offset_x + i * Sm
             cy = -offset_y + j * Sm
-            # Extrusión hacia abajo desde la base del dado (Z = -Hd)
-            dir_extr_p = ifc.createIfcDirection((0., 0., -1.))
-            sol_p = ifc.createIfcExtrudedAreaSolid(perf_pilote, None, dir_extr_p, Lp)
             
-            rep_p = ifc.createIfcShapeRepresentation(ctx, "Body", "SweptSolid", [sol_p])
-            prod_rep_p = ifc.createIfcProductDefinitionShape(None, None, [rep_p])
-            place_p = _placement_local(ifc, cx, cy, -Hd)
-
-            # Usamos IfcPile directamente
+            p_plac = _local_plac(cx - Dp/2, cy - Dp/2, z_bot)
+            if tipo_seccion == "Circular":
+                p_sol = _cyl_local(Dp/2, Lp)
+            else:
+                p_sol = _rect_solid(Dp, Dp, Lp)
+                
             pilote = ifc.createIfcPile(
-                ifcopenshell.guid.new(), None,
-                f"Pilote {i}-{j}",
-                f"Pilote {tipo_seccion} L={L_pilote_m}m", 
-                None, place_p, prod_rep_p, None, None, None
-            )
-            _material(ifc, pilote, f"Concreto Pilote f'c={fc_pilote:.0f}MPa")
-            elementos_bim.append(pilote)
+                ifcopenshell.guid.new(), None, f"Pilote-{num_p}", "Pilote", None,
+                p_plac, _shape_solid(p_sol), None, "BORED", None)
+            _material(ifc, pilote, f"Concreto f'c={fc_pilote}MPa")
+            elementos.append(pilote)
+            num_p += 1
 
-            # Agrupar pilote al dado para indicar que es un assembly
-            ifc.createIfcRelAggregates(
-                ifcopenshell.guid.new(), None, None, None, dado, [pilote])
+    ifc.createIfcRelContainedInSpatialStructure(ifcopenshell.guid.new(), None, None, None, elementos, planta)
 
-    _contener_en_planta(ifc, planta, elementos_bim)
-    return _guardar_a_bytesio(ifc)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 8. ENCEPADO PARAMÉTRICO CON PILOTES
-# ══════════════════════════════════════════════════════════════════════════════
-
-
-
+    import io, tempfile, os
+    bio = io.BytesIO()
+    with tempfile.NamedTemporaryFile(suffix=".ifc", delete=False) as f: tmp = f.name
+    ifc.write(tmp)
+    with open(tmp, "rb") as f: bio.write(f.read())
+    os.unlink(tmp)
+    bio.seek(0)
+    return bio
 
 def ifc_dado_parametrico(
     B_dado_m: float, L_dado_m: float, H_dado_m: float,

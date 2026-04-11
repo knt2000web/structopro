@@ -1126,143 +1126,162 @@ with tab_mem:
     except NameError: _efi = 1.0
     
     with col_docx:
-        st.markdown('#####  Memoria de Cálculo')
+        st.markdown('#####  Memoria de Cálculo (DOCX)')
         if not _DOCX_AVAILABLE:
-            st.error("Librería `python-docx` requerida.")
+            st.warning("Librería `python-docx` no instalada.")
         else:
-            if st.button("Generar DOCX (Ingeniería)", key="btn_docx"):
+            if st.button("Generar Súper Memoria", key="btn_docx"):
                 try:
                     doc = Document()
-                    doc.add_heading(f"Memoria de Cimentación Profunda", 0)
-                    doc.add_paragraph("Generado por Konte Ingeniería - Módulo NSR-10/ACI 318")
+                    doc.add_heading("Súper Memoria de Cálculo: Cimentación Profunda", 0)
+                    doc.add_paragraph("Diseño Geotécnico y Estructural de Pilotes según ACI 318 / NSR-10.")
                     
-                    doc.add_heading("1. Configuración Geométrica", level=1)
-                    doc.add_paragraph(f"• Tipo de Pilote: {tipo_seccion}")
-                    doc.add_paragraph(f"• Diámetro/Lado: {D_pilote:.2f} m")
-                    doc.add_paragraph(f"• Longitud (L): {L_pilote:.2f} m")
-                    doc.add_paragraph(f"• Total de Pilotes: {n_pilotes} ({m_filas}x{n_cols})")
-                    doc.add_paragraph(f"• Encepado (Dado): {B_dado:.2f} m × {L_dado:.2f} m × {H_dado:.2f} m")
+                    doc.add_heading("1. Geometría Relevante", level=2)
+                    doc.add_paragraph(f"- Diámetro del Pilote (D): {D_pilote:.2f} m\n"
+                                      f"- Longitud del Pilote (L): {L_pilote:.2f} m\n"
+                                      f"- Número de Pilotes en Grupo: {n_pilotes}\n"
+                                      f"- Encepado (Dado): {B_dado:.2f} m x {L_dado:.2f} m x H={H_dado:.2f} m")
                     
-                    doc.add_heading("2. Desempeño Geotécnico", level=1)
-                    doc.add_paragraph(f"• Capacidad por Punta (Meyerhof): {_Qp:.1f} kN")
-                    doc.add_paragraph(f"• Capacidad por Fuste (Tomlinson/Beta): {_Qs:.1f} kN")
-                    doc.add_paragraph(f"• Eficiencia Converse-Labarre: {(_efi*100):.1f}%")
+                    doc.add_heading("2. Parámetros Geomecánicos y Capacidad del Pilote Único", level=2)
+                    doc.add_paragraph(f"- Capacidad por Fuste (Q_fuste): {Qf_T:.1f} kN\n"
+                                      f"- Capacidad por Punta (Q_punta): {Qp_T:.1f} kN\n"
+                                      f"- Capacidad Total Última (Q_total): {Q_total_T:.1f} kN\n"
+                                      f"- Factor de Seguridad Global (FS): {FS_glo}\n"
+                                      f"- Capacidad Admisible (Q_adm): {Qadm:.1f} kN")
                     
-                    doc.add_heading("3. Perfil Estratigráfico Relevante", level=1)
-                    for _, rem in df.iterrows():
-                        doc.add_paragraph(f"• Estrato {int(rem['Estrato'])}: {rem['Tipo']} | Prof: {rem['z_top']}m a {rem['z_bot']}m")
-                        prp = f"   γ={rem['γ (kN/m³)']}"
-                        if rem['c (kPa)'] > 0: prp += f", c={rem['c (kPa)']} kPa"
-                        if rem['φ (°)'] > 0: prp += f", φ={rem['φ (°)']}°"
-                        doc.add_paragraph(prp)
+                    doc.add_heading("3. Análisis de Grupo de Pilotes", level=2)
+                    doc.add_paragraph(f"- Disposición: {n_cols} columnas x {m_filas} filas\n"
+                                      f"- Separación (S): {S_metros:.2f} m\n"
+                                      f"- Eficiencia del Grupo (Converse-Labarre): {eficiencia*100:.1f}%\n"
+                                      f"- Capacidad del Grupo (Q_grupo): {Q_grupo:.1f} kN\n"
+                                      f"- Asentamiento Esperado: {S_mm:.1f} mm")
                     
-                    doc.add_heading("4. Refuerzo Estructural ACI-318", level=1)
-                    doc.add_paragraph(f"• Concreto f'c: {fc_pilote:.0f} MPa")
-                    doc.add_paragraph(f"• Acero Longitudinal: {n_barras_p} barras {barras_long}")
-                    doc.add_paragraph(f"• Acero Confinamiento: {barras_trans} c/{s_trans_cm} cm ({tipo_trans})")
-                    
-                    doc_io = io.BytesIO()
-                    doc.save(doc_io)
-                    doc_io.seek(0)
+                    doc.add_heading("4. Diseño Estructural del Pilote (ACI-318)", level=2)
+                    doc.add_paragraph(f"- Concreto f'c: {fc_pilote:.1f} MPa\n"
+                                      f"- Acero Longitudinal: {n_barras_p} barras {barras_long} (Área = {Ast:.2f} cm²)\n"
+                                      f"- Confinamiento / Transversal: {barras_trans} c/{s_trans_cm} cm ({tipo_trans})\n"
+                                      f"- Cuantía proporcionada: {ro_real*100:.2f} % (Mínimo: {ro_min})\n"
+                                      f"- Capacidad Axial Máxima phiPn: {Pn_max:.1f} kN")
+
+                    doc.add_heading("5. Cantidades de Obra", level=2)
+                    doc.add_paragraph(f"- Volumen de concreto (pilotes): {np.sum([r['Volumen m3'] for r in calc_v['Pilotes']]):.1f} m3\n"
+                                      f"- Volumen de concreto (dado): {np.sum([r['Volumen m3'] for r in calc_v['Dado']]):.1f} m3\n"
+                                      f"- Acero longitudinal: {np.sum([r['Subtotal kg'] for r in calc_a if r['Tipo']=='Longitudinal']):.1f} kg\n"
+                                      f"- Acero transversal: {np.sum([r['Subtotal kg'] for r in calc_a if r['Tipo']=='Transversal']):.1f} kg\n"
+                                      f"- Total de acero estimado: {np.sum([r['Subtotal kg'] for r in calc_a]):.1f} kg")
+
+                    bio_docx = io.BytesIO()
+                    doc.save(bio_docx)
                     st.download_button(
-                        label=" Descargar Memoria.docx",
-                        data=doc_io,
-                        file_name=f"Memoria_Pilotes_Konte.docx",
+                        label=" Descargar Súper Memoria.docx",
+                        data=bio_docx.getvalue(),
+                        file_name=f"Memoria_Pilotes_Grupo_{n_pilotes}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         key="btn_dl_docx"
                     )
-                    st.success("Memoria DOCX Generada.")
+                    st.success("Súper Memoria Generada.")
                 except Exception as e:
                     st.error(f"Error DOCX: {e}")
 
     with col_dxf:
-        st.markdown('#####  Plano en Planta (DXF)')
+        st.markdown('#####  Plano en Planta (DXF & PDF)')
         if not _DXF_AVAILABLE:
             st.error("Librería `ezdxf` no instalada.")
         else:
-            if st.button("Generar Plano DXF", key="btn_dxf"):
+            if st.button("Generar Plano A1", key="btn_dxf"):
                 try:
                     doc_dxf = ezdxf.new(dxfversion='R2010')
+                    doc_dxf.header["$INSUNITS"] = 6
+                    for _l, _c in [("DADO",3),("PILOTES",4),("TEXTO",7),("ROTULO",7),("MARCO",7),("COTAS",6)]:
+                        doc_dxf.layers.add(_l, color=_c)
                     msp = doc_dxf.modelspace()
                     
-                    # Dibujar contorno del encepado a escala
+                    # ── ZONAS ──
+                    _PXc = 5.0; _PYc = 15.0     # Planta
+                    _RX0 = 33.0; _RY0 = 0.0     # Rotulo
+                    _RW = 9.0; _RH = 27.0
+                    
+                    # Planta
                     msp.add_lwpolyline([
-                        (-B_dado/2, -L_dado/2), (B_dado/2, -L_dado/2),
-                        (B_dado/2, L_dado/2), (-B_dado/2, L_dado/2),
-                        (-B_dado/2, -L_dado/2)
-                    ], dxfattribs={'layer': 'ENCEPADO', 'color': 3}) # Color 3=Green
+                        (_PXc-B_dado/2, _PYc-L_dado/2), (_PXc+B_dado/2, _PYc-L_dado/2),
+                        (_PXc+B_dado/2, _PYc+L_dado/2), (_PXc-B_dado/2, _PYc+L_dado/2),
+                        (_PXc-B_dado/2, _PYc-L_dado/2)
+                    ], dxfattribs={'layer': 'DADO', 'lineweight':50})
                     
-                    # Pilotes
-                    offset_x = (n_cols - 1) * (S_metros) / 2.0
-                    offset_y = (m_filas - 1) * (S_metros) / 2.0
-                    
+                    offset_x = (n_cols - 1) * S_metros / 2.0
+                    offset_y = (m_filas - 1) * S_metros / 2.0
                     for i in range(n_cols):
                         for j in range(m_filas):
-                            cx = -offset_x + i * S_metros
-                            cy = -offset_y + j * S_metros
+                            cx = _PXc - offset_x + i * S_metros
+                            cy = _PYc - offset_y + j * S_metros
                             if tipo_seccion == "Circular":
-                                msp.add_circle((cx, cy), D_pilote/2, dxfattribs={'layer': 'PILOTES', 'color': 4}) # Cyan
+                                msp.add_circle((cx, cy), D_pilote/2, dxfattribs={'layer': 'PILOTES','lineweight':30})
                             else:
                                 Dp2 = D_pilote/2
-                                msp.add_lwpolyline([
-                                    (cx-Dp2, cy-Dp2), (cx+Dp2, cy-Dp2),
-                                    (cx+Dp2, cy+Dp2), (cx-Dp2, cy+Dp2),
-                                    (cx-Dp2, cy-Dp2)
-                                ], dxfattribs={'layer': 'PILOTES', 'color': 4})
+                                msp.add_lwpolyline([(cx-Dp2,cy-Dp2),(cx+Dp2,cy-Dp2),(cx+Dp2,cy+Dp2),(cx-Dp2,cy+Dp2),(cx-Dp2,cy-Dp2)],
+                                                   dxfattribs={'layer': 'PILOTES','lineweight':30})
                     
-                    # Textos Informativos
-                    # DXF fix: API ezdxf >=0.17 usa set_placement() en vez de set_pos()
-                    _t1 = msp.add_text(f"GRUPO DE {n_pilotes} PILOTES", dxfattribs={'height': 0.15, 'layer': 'TEXTOS'})
-                    _t1.set_placement((-B_dado/2, L_dado/2 + 0.3))
-                    _t2 = msp.add_text(f"DADO: {B_dado:.2f}x{L_dado:.2f}x{H_dado:.2f}m", dxfattribs={'height': 0.15, 'layer': 'TEXTOS'})
-                    _t2.set_placement((-B_dado/2, L_dado/2 + 0.1))
+                    # Cotas
+                    msp.add_text(f"GRUPO DE {n_pilotes} PILOTES", dxfattribs={'height': 0.15, 'layer': 'TEXTO'}).set_placement((_PXc-B_dado/2, _PYc+L_dado/2 + 0.5))
+                    msp.add_text(f"DADO: {B_dado:.2f}x{L_dado:.2f}x{H_dado:.2f}m", dxfattribs={'height': 0.15, 'layer': 'TEXTO'}).set_placement((_PXc-B_dado/2, _PYc+L_dado/2 + 0.2))
 
-                    # ROTULO PERIMETRAL ICONTEC
-                    rot_w = max(4.0, B_dado/1.5); rot_h = max(1.0, B_dado/6); row_h = rot_h / 6
-                    rot_x = B_dado/2 + 1.0; rot_y = -L_dado/2
-                    # Marco
-                    if 'ROTULO' not in doc_dxf.layers: doc_dxf.layers.add('ROTULO', color=6)
-                    msp.add_lwpolyline([(rot_x, rot_y), (rot_x + rot_w, rot_y), (rot_x + rot_w, rot_y + rot_h), (rot_x, rot_y + rot_h)], close=True, dxfattribs={'layer': 'ROTULO'})
-                    msp.add_line((rot_x + rot_w*0.35, rot_y), (rot_x + rot_w*0.35, rot_y + rot_h), dxfattribs={'layer': 'ROTULO'})
-                    import datetime as _dt_dxf
-                    _rotulo_filas = [
-                        ("PROYECTO", f"Grupo {n_pilotes} Pilotes"),
-                        ("DADO", f"{B_dado:.2f}x{L_dado:.2f}x{H_dado:.2f}m"),
-                        ("DISEÑO", "StructuroPro"),
-                        ("FECHA", _dt_dxf.date.today().strftime('%d/%m/%Y')),
-                        ("PLANO", "PIL-001"), ("REV", "R0")
+                    # Rotulo A1
+                    msp.add_lwpolyline([(_RX0,_RY0),(_RX0+_RW,_RY0),(_RX0+_RW,_RY0+_RH),(_RX0,_RY0+_RH)], close=True, dxfattribs={'layer': 'MARCO', 'lineweight':80})
+                    msp.add_lwpolyline([(_RX0+0.06,_RY0+0.06),(_RX0+_RW-0.06,_RY0+0.06),(_RX0+_RW-0.06,_RY0+_RH-0.06),(_RX0+0.06,_RY0+_RH-0.06)], close=True, dxfattribs={'layer': 'MARCO', 'lineweight':20})
+                    
+                    _rdivs = [4.5, 6.0, 7.5, 10.0, 23.0]
+                    for _rd in _rdivs: msp.add_line((_RX0,_RY0+_rd),(_RX0+_RW,_RY0+_rd), dxfattribs={'layer': 'ROTULO','lineweight':20})
+                    msp.add_line((_RX0+_RW*0.55,_RY0+4.5),(_RX0+_RW*0.55,_RY0+10.0), dxfattribs={'layer': 'ROTULO','lineweight':15})
+                    
+                    _ritems = [
+                        (0.15, 26.5, 0.30, "ESTRUCTURAS DE CIMENTACION PROFUNDA"),
+                        (0.15, 25.8, 0.18, f"GRUPO {n_pilotes} PILOTES"),
+                        (0.15, 22.5, 0.12, "DESCRIPCION:"),
+                        (0.15, 22.0, 0.11, f"Pilotes: {n_pilotes} unid. | L={L_pilote:.2f}m"),
+                        (0.15, 21.5, 0.11, f"Dado: {B_dado:.2f}x{L_dado:.2f}x{H_dado:.2f}m"),
+                        (0.15, 20.8, 0.11, f"Capacidad Grupo: {Q_grupo:.1f} kN"),
+                        (0.15, 20.3, 0.11, f"Asentamiento Est: {S_mm:.1f} mm"),
+                        (0.15, 19.5, 0.12, "REFUERZO DEL PILOTE:"),
+                        (0.15, 19.0, 0.11, f"Longitudinal: {n_barras_p} barras {barras_long}"),
+                        (0.15, 18.5, 0.11, f"Transversal: {barras_trans} c/{s_trans_cm}cm ({tipo_trans})"),
+                        (0.15, 17.5, 0.12, "ESTRATIGRAFIA (Resumen):"),
                     ]
-                    for _i_rot, (c, v) in enumerate(_rotulo_filas):
-                        yr = rot_y + rot_h - (_i_rot + 1) * row_h
-                        if _i_rot > 0: msp.add_line((rot_x, yr + row_h), (rot_x + rot_w, yr + row_h), dxfattribs={'layer': 'ROTULO'})
-                        _t_c = msp.add_text(c, dxfattribs={'height': row_h*0.35, 'layer': 'ROTULO'})
-                        _t_c.set_placement((rot_x + rot_w*0.02, yr + row_h*0.25))
-                        _t_v = msp.add_text(v, dxfattribs={'height': row_h*0.45, 'layer': 'ROTULO'})
-                        _t_v.set_placement((rot_x + rot_w*0.38, yr + row_h*0.20))
                     
-                    # Añadir Estratigrafía al DXF (Debajo del Rótulo)
-                    _tx_est = msp.add_text("PERFIL ESTRATIGRAFICO:", dxfattribs={'height': row_h*0.4, 'layer': 'TEXTOS'})
-                    _tx_est.set_placement((rot_x, rot_y - row_h*1.5))
-                    for i_est, (_, rem) in enumerate(df.iterrows()):
-                        props_txt = f"[{rem['z_top']}-{rem['z_bot']}m] {rem['Tipo']} | gam={rem['γ (kN/m³)']}"
-                        if rem['c (kPa)'] > 0: props_txt += f" c={rem['c (kPa)']}"
-                        if rem['φ (°)'] > 0: props_txt += f" phi={rem['φ (°)']}"
-                        _tx_p = msp.add_text(props_txt, dxfattribs={'height': row_h*0.35, 'layer': 'TEXTOS'})
-                        _tx_p.set_placement((rot_x, rot_y - row_h * (i_est + 2.5)))
+                    for idx_s, (_, rst) in enumerate(df.iterrows()):
+                        if idx_s > 4: break
+                        _ritems.append((0.15, 17.0 - idx_s*0.5, 0.10, f"[{rst['z_top']}-{rst['z_bot']}m] {rst['Tipo']} | gam={rst['γ (kN/m³)']:.1f}"))
 
-                    dxf_io = io.StringIO()
-                    doc_dxf.write(dxf_io)
-                    dxf_io.seek(0)
-                    st.download_button(
-                        label=" Descargar Plano.dxf",
-                        data=dxf_io.getvalue().encode('utf-8'),
-                        file_name=f"Plano_Pilotes_{n_pilotes}u.dxf",
-                        mime="application/dxf",
-                        key="btn_dl_dxf"
-                    )
-                    st.success("Plano DXF Geométrico Generado.")
+                    _ritems.extend([
+                        (0.15, 9.65, 0.11, "ESCALA: 1:50"),
+                        (0.15, 9.15, 0.11, "LAMINA: P-01"),
+                        (_RW*0.55+0.10, 9.65, 0.10, "REVISO: ________"),
+                        (_RW*0.55+0.10, 9.15, 0.10, "CALCULO: _______"),
+                        (0.15, 6.65, 0.10, "__________________________"),
+                        (0.15, 6.15, 0.09, "Ingeniero Proyectista"),
+                        (0.15, 5.65, 0.10, "NORMAS: NSR-10 / ACI 318")
+                    ])
+                    for _tx, _ty, _th, _txt in _ritems:
+                        msp.add_text(_txt, dxfattribs={'height': _th, 'layer': 'ROTULO'}).set_placement((_RX0+_tx, _RY0+_ty))
+
+                    bio_dxf = io.BytesIO()
+                    doc_dxf.write(bio_dxf)
+                    st.download_button(" Descargar Plano.dxf", data=bio_dxf.getvalue(), file_name=f"Plano_Pilotes_{n_pilotes}u.dxf", mime="application/dxf")
+                    
+                    # PDF EXPORT
+                    import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
+                    from ezdxf.addons.drawing import RenderContext, Frontend
+                    from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
+                    _fig, _ax = plt.subplots(figsize=(33.11, 23.39))
+                    _ax.set_aspect("equal")
+                    _ax.axis("off")
+                    Frontend(RenderContext(doc_dxf), MatplotlibBackend(_ax)).draw_layout(msp, finalize=True)
+                    _bio_pdf = io.BytesIO()
+                    _fig.savefig(_bio_pdf, format="pdf", bbox_inches="tight", dpi=150)
+                    plt.close(_fig)
+                    st.download_button(" Descargar Plano (.PDF)", data=_bio_pdf.getvalue(), file_name=f"Plano_Pilotes_{n_pilotes}.pdf", mime="application/pdf")
+                    st.success("Plano DXF y PDF Generado con Exito.")
                 except Exception as e:
-                    st.error(f"Error DXF: {e}")
+                    st.error(f"Error DXF/PDF: {e}")
 
     with col_ifc:
         st.markdown('#####  Integración BIM 3D (IFC)')
