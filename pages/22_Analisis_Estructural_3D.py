@@ -10,18 +10,24 @@ from docx.shared import Inches, Pt
 from datetime import datetime
 import json
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL Y NORMA
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+
+mostrar_referencias_norma(norma_sel, "analisis_3d")
 
 st.set_page_config(page_title=_t("StructMaster 3D", "StructMaster 3D"), layout="wide")
 st.title(_t("StructMaster 3D - Análisis Matricial Espacial", "StructMaster 3D - Spatial Matrix Analysis"))
 st.markdown(_t("Entorno Tridimensional Interactivo para Pórticos y Armaduras Espaciales (6 GDL por Nudo).", 
                "Interactive 3D Environment for Space Frames and Trusses (6 DOF per Node)."))
 
-# ─────────────────────────────────────────────
+# 
 # CODES (φ factores)
 CODES = {
     "NSR-10 (Colombia)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"NSR-10"},
@@ -41,7 +47,7 @@ phi_shear = code["phi_shear"]
 phi_comp = code["phi_comp"]
 lam = code["lambda"]
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES DE DISEÑO (similares a las del 2D, adaptadas a 3D)
 def get_beta1(fc):
     if fc <= 28: return 0.85
@@ -100,7 +106,7 @@ def design_column(Pu, Mu_y, Mu_z, b_cm, h_cm, fc, fy, recub=5):
         warning = ""
     return As_min, ok, warning
 
-# ─────────────────────────────────────────────
+# 
 # INICIALIZACIÓN DE DATOS (estado)
 if "nudos3d_df" not in st.session_state:
     st.session_state.nudos3d_df = pd.DataFrame([
@@ -154,7 +160,7 @@ if "cargas3d_df" not in st.session_state:
 if "resultados3d" not in st.session_state:
     st.session_state.resultados3d = None
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIÓN DE DIBUJO 3D
 def plot_frame_3d(df_n, df_b, df_sup, df_load, U_amp=None, amp=20.0):
     """Dibuja la estructura con opción de deformada amplificada."""
@@ -227,7 +233,7 @@ def plot_frame_3d(df_n, df_b, df_sup, df_load, U_amp=None, amp=20.0):
     )
     return fig
 
-# ─────────────────────────────────────────────
+# 
 # INTERFAZ PRINCIPAL
 st.info("**Tip:** Todos los cambios en tablas se reflejan en tiempo real en el gráfico 3D.")
 c_ui1, c_ui2 = st.columns([1, 1.2])
@@ -249,11 +255,11 @@ with c_ui2:
     st.plotly_chart(fig_live, use_container_width=True, height=800)
 
 st.markdown("---")
-st.header(_t("⚡ Análisis y diseño estructural 3D", "⚡ 3D Structural Analysis and Design"))
+st.header(_t(" Análisis y diseño estructural 3D", " 3D Structural Analysis and Design"))
 
-# ─────────────────────────────────────────────
+# 
 # BOTÓN DE CÁLCULO
-if st.button(_t("▶ Ejecutar análisis espacial", "▶ Run spatial analysis"), type="primary"):
+if st.button(_t(" Ejecutar análisis espacial", " Run spatial analysis"), type="primary"):
     with st.spinner(_t("Ensamblando matriz de rigidez espacial...", "Assembling spatial stiffness matrix...")):
         nodes = st.session_state.nudos3d_df.copy().dropna()
         elements = st.session_state.barras3d_df.copy().dropna()
@@ -469,7 +475,7 @@ if st.button(_t("▶ Ejecutar análisis espacial", "▶ Run spatial analysis"), 
         }
         st.success(_t("Análisis completado.", "Analysis completed."))
 
-# ─────────────────────────────────────────────
+# 
 # TABLA DE RESULTADOS Y EXPORTACIONES
 if st.session_state.resultados3d is not None:
     res = st.session_state.resultados3d

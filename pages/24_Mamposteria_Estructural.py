@@ -12,11 +12,15 @@ from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from datetime import datetime
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Albañilería / Mamposteria Confinada", "Confined Masonry"), layout="wide")
 
@@ -34,9 +38,9 @@ else:
 st.title(_titulo_mod)
 st.markdown(_desc_mod)
 
-# ─────────────────────────────────────────────
+# 
 # BASES DE DATOS POR NORMA
-# ─────────────────────────────────────────────
+# 
 NORMAS_AC = {
     "E.070 (Perú)":        {"pais":"pe","phi_f":0.90,"phi_v":0.85,"phi_c":0.70,"bag_kg":42.5,
                             "fm_def":65.0,"vm_def":8.05,"E_def":32500.0,
@@ -101,9 +105,9 @@ ESTRIBO_MM = {
     "10 mm": {"area":0.786,"diam_mm":10},
 }
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES AUXILIARES
-# ─────────────────────────────────────────────
+# 
 def mix_for_fc(fc_mpa):
     fc = fc_mpa * 10.1972
     if fc <= 175:
@@ -132,10 +136,10 @@ def to_ton(v, u):
         return float(v) / 9.80665
     return float(v)
 
-# ─────────────────────────────────────────────
+# 
 # SIDEBAR — CONFIGURACIÓN GLOBAL
-# ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙ Norma y País","⚙ Code & Country"))
+# 
+st.sidebar.header(_t(" Norma y País"," Code & Country"))
 
 global_norma = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 if global_norma not in NORMAS_AC:
@@ -143,6 +147,8 @@ if global_norma not in NORMAS_AC:
 
 norma_ac = st.sidebar.selectbox(
     _t("Norma de Diseño","Design Code"),
+
+mostrar_referencias_norma(norma_ac, "mamposteria_estructural")
     list(NORMAS_AC.keys()),
     index=list(NORMAS_AC.keys()).index(global_norma),
     key="ac_norma_selector"
@@ -213,7 +219,7 @@ L_m = L_m_in * 100
 t_m = t_m_in * 100
 h_m = h_m_in * 100
 
-st.sidebar.header(_t("⚡ Cargas","⚡ Loads"))
+st.sidebar.header(_t(" Cargas"," Loads"))
 Pm_in = st.sidebar.number_input(f"Pm (D+L) [{nc['fuerza']}]",0.0,2000.0,st.session_state.get("ac_Pm",16.0),0.5,key="ac_Pm")
 Pg_in = st.sidebar.number_input(f"Pg (D+0.25L) [{nc['fuerza']}]",0.0,2000.0,st.session_state.get("ac_Pg",14.0),0.5,key="ac_Pg")
 Ve_in = st.sidebar.number_input(f"Ve (sismo mod.) [{nc['fuerza']}]",0.0,2000.0,st.session_state.get("ac_Ve",8.72),0.1,key="ac_Ve")
@@ -266,9 +272,9 @@ L_total_obra = st.sidebar.number_input(_t("Longitud total muros [m]","Total wall
 nombre_muro  = st.sidebar.text_input(_t("Nombre del muro","Wall name"),"MX-1",key="ac_nombre")
 piso_muro    = st.sidebar.text_input(_t("Piso/Nivel","Floor/Level"),"Piso 1",key="ac_piso")
 
-# ─────────────────────────────────────────────
+# 
 # CÁLCULOS PRINCIPALES
-# ─────────────────────────────────────────────
+# 
 sigma_m_kgcm2 = Pm * 1000 / (L_m * t_m)
 Fa_inner = 0.2 * fm * (1 - (h_m / (35 * t_m))**2)
 Fa_lim   = 0.15 * fm
@@ -384,9 +390,9 @@ n_sol      = math.ceil(As_sol / Ab_col)
 n_sol      = max(4, n_sol)
 As_sol_prov= n_sol * Ab_col
 
-# ─────────────────────────────────────────────
+# 
 # CANTIDADES Y COSTOS
-# ─────────────────────────────────────────────
+# 
 vol_col_ml   = Ac_final / 1e4 * (h_m / 100)
 n_col_total  = math.ceil(L_total_obra / L_m_in) * Nc
 vol_col_total= n_col_total * vol_col_ml
@@ -421,9 +427,9 @@ area_muro_total = L_total_obra * h_m_in
 n_ladrillos_total = math.ceil(lad_m2 * area_muro_total * 1.05)
 vol_mortero_total = area_muro_total * t_m_in * 0.15
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES DE DIBUJO PARA FIGURADO
-# ─────────────────────────────────────────────
+# 
 def draw_longitudinal_bar(total_len_cm, straight_len_cm, hook_len_cm, bar_diam_mm, bar_name=None):
     fig, ax = plt.subplots(figsize=(max(6, total_len_cm/20), 2))
     ax.set_aspect('equal')
@@ -556,7 +562,7 @@ with tab_res:
         st.markdown(f"#### 06 — Refuerzo Horizontal `{art_ref6}`")
         if necesita_Hz:
             estado_hz = ' CUMPLE' if ok_rho_h else ' NO CUMPLE'
-            st.warning(f"⚠ 1 {bar_hor_sel} @ {s_hor:.0f}cm | ρh={rho_h_prov:.5f} — {estado_hz}")
+            st.warning(f" 1 {bar_hor_sel} @ {s_hor:.0f}cm | ρh={rho_h_prov:.5f} — {estado_hz}")
             st.caption(f"ρh_min = {rho_h_min:.4f} | ρh_prov = {rho_h_prov:.5f}")
         else:
             st.success("No requiere refuerzo horizontal según la norma aplicada")
@@ -672,7 +678,7 @@ with tab_diag:
     Lw = L_m_in*100; Hw = h_m_in*100
     bc = col_b_min; hv = vs_h_in
 
-    # ── MURO (ladrillos)
+    #  MURO (ladrillos)
     ax.add_patch(patches.Rectangle((bc, 0), Lw-2*bc, Hw-hv, fc='#c8633b', ec='#8B4513', lw=0.8))
     hilada_h = (lad["H"]+junta)/10; lad_l = (lad["L"]+junta)/10
     n_hil = int((Hw-hv)/hilada_h)
@@ -685,7 +691,7 @@ with tab_diag:
             x = bc + ci*lad_l + off
             if bc <= x <= Lw-bc: ax.plot([x, x], [row*hilada_h, (row+1)*hilada_h], color='#8B4513', lw=0.4, alpha=0.7)
 
-    # ── COLUMNAS confinamiento + zonas confinadas
+    #  COLUMNAS confinamiento + zonas confinadas
     for xc in [0, Lw-bc]:
         ax.add_patch(patches.Rectangle((xc, 0), bc, Hw-hv, fc='#b1b4bc', ec='white', lw=1.5))
         z_h = min(Z_col, Hw-hv)
@@ -693,7 +699,7 @@ with tab_diag:
         ax.add_patch(patches.Rectangle((xc, Hw-hv-z_h), bc, z_h, fc='none', ec='yellow', lw=1.5, ls='--'))
         ax.text(xc+bc/2, z_h/2, f"Z.C: {Z_col:.0f}cm", color='yellow', ha='center', fontsize=6, rotation=90)
 
-    # ── VIGA (nom. según país) en alzado + flejes esquemáticos
+    #  VIGA (nom. según país) en alzado + flejes esquemáticos
     ax.add_patch(patches.Rectangle((0, Hw-hv), Lw, hv, fc='#b1b4bc', ec='white', lw=2))
     # Varillas long. en viga (alzado)
     _db_cm_v = db_col/10
@@ -716,14 +722,14 @@ with tab_diag:
                 color='#ffffff', fontsize=8, ha='center', va='center', weight='bold',
                 bbox=dict(boxstyle='round', fc='#4287f5', ec='#225cb2', pad=0.4))
     
-    # ── Varillas longitudinales en columnas (alzado)
+    #  Varillas longitudinales en columnas (alzado)
     db_cm = db_col/10
     xs_bars = [recub_col, bc-recub_col-db_cm]
     for xc_base in [0, Lw-bc]:
         for xb in xs_bars:
             ax.plot([xc_base+xb+db_cm/2, xc_base+xb+db_cm/2], [0, Hw-hv], color='#cc2222', lw=1.5)
             
-    # ── Estribos en columnas (esquemáticos)
+    #  Estribos en columnas (esquemáticos)
     for xc_base in [0, Lw-bc]:
         for y_est in np.linspace(5, Hw-hv-5, 20):
             ax.plot([xc_base+recub_col, xc_base+bc-recub_col], [y_est, y_est], color='#ffd700', lw=0.8)
@@ -735,7 +741,7 @@ with tab_diag:
     ax.text(bc/2, Hw/2, "Col. Conf.", color='black', weight='bold', ha='center', fontsize=7, rotation=90)
     ax.text(Lw-bc/2, Hw/2, "Col. Conf.", color='black', weight='bold', ha='center', fontsize=7, rotation=90)
     
-    # ── CORTE TRANSVERSAL COLUMNA
+    #  CORTE TRANSVERSAL COLUMNA
     Wc = col_b_min; Hc = col_d_use
     ax_sec.add_patch(patches.Rectangle((0, 0), Wc, Hc, fc='#b1b4bc', ec='white', lw=2))
     ax_sec.text(Wc/2, Hc + 3, f"{n_bars_f} {bar_col_sel}", color='white', ha='center', weight='bold', fontsize=8)
@@ -757,7 +763,7 @@ with tab_diag:
     ax_sec.axis('off')
     ax_sec.set_title("Corte Columna", color='white', fontsize=9, pad=4)
 
-    # ── CORTE TRANSVERSAL VIGA DE AMARRE / SOLERA
+    #  CORTE TRANSVERSAL VIGA DE AMARRE / SOLERA
     Wv = vs_b_in; Hv = vs_h_in
     ax_viga.add_patch(patches.Rectangle((0, 0), Wv, Hv, fc='#9ab0c4', ec='white', lw=2))
     re_v = recub_col
@@ -1119,7 +1125,7 @@ with tab_qty:
     df_desp = pd.DataFrame(despiece_data)
     df_desp.columns = ["Marca","Descripción","Diámetro","Cantidad","L.unit.(m)","Peso Total"]
     st.dataframe(df_desp, use_container_width=True, hide_index=True)
-    st.metric("⚖ Total Acero", f"{total_acero_kg:.1f} kg")
+    st.metric(" Total Acero", f"{total_acero_kg:.1f} kg")
 
     # Figurado
     with st.expander("Dibujo de Figurado para Taller", expanded=False):
@@ -1188,14 +1194,14 @@ with tab_apu:
                        file_name=f"Presupuesto_{nombre_muro}.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-# ─────────────────────────────────────────────
+# 
 # FOOTER
-# ─────────────────────────────────────────────
+# 
 st.markdown("---")
 st.markdown(f"""
 > **Albañilería Confinada — Multi-Norma**  
 > Norma activa: `{norma_ac}`  
 > f'c = {fc_in:.2f} {nc['unidad']} | fy = {fy_in:.0f} {nc['unidad']}  
 > **Referencia:** {norma_ac}  
-> ⚠ *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
+>  *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
 """)

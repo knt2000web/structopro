@@ -1,9 +1,9 @@
-# ═══════════════════════════════════════════════════════════════════
+# 
 # KonteWall — Diseño Estructural de Muros de Contención en Voladizo
 # Multinorma: NSR-10 · ACI 318-25/19 · E.060 · NEC-SE-HM · NTC-EM
 # COVENIN 1753 · NB 1225001 · CIRSOC 201
 # Autor:  — Konte v4.0 · 2026
-# ═══════════════════════════════════════════════════════════════════
+# 
 import streamlit as st
 import numpy as np
 import math
@@ -13,21 +13,25 @@ import matplotlib.patches as patches
 import io
 import plotly.graph_objects as go
 
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 st.set_page_config(
     page_title="KonteWall © Konte | Muro de Contención",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ── Modo claro / oscuro ──────────────────────────────────────────
+#  Modo claro / oscuro 
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = True
 _c1, _c2 = st.sidebar.columns([1, 3])
 with _c1:
-    if st.button(""if st.session_state.dark_mode else "☀", key="kw_dm"):
+    if st.button(""if st.session_state.dark_mode else "", key="kw_dm"):
         st.session_state.dark_mode = not st.session_state.dark_mode
 with _c2:
-    st.caption("Modo oscuro "if st.session_state.dark_mode else "Modo claro ☀")
+    st.caption("Modo oscuro "if st.session_state.dark_mode else "Modo claro ")
 
 _BG     = "#0e1117" if st.session_state.dark_mode else "#FFFFFF"
 _FG     = "#FFFFFF" if st.session_state.dark_mode else "#111111"
@@ -97,9 +101,9 @@ with st.expander("KonteWall — Solución Integral para el Análisis y Diseño d
     )
     st.caption("KonteWall v4.0 · 2026 · Konte — Construcción, Consultoría y Tecnología ·  · Duitama, Boyacá")
 
-# ══════════════════════════════════════════════════════════════════
+# 
 # FUNCIONES AUXILIARES
-# ══════════════════════════════════════════════════════════════════
+# 
 def Ab_diam(d):
     m = {"3/8\"":(0.71,"#3"),"1/2\"":(1.27,"#4"),"5/8\"":(1.99,"#5"),
          "3/4\"":(2.85,"#6"),"7/8\"":(3.87,"#7"),"1\"":(5.10,"#8")}
@@ -137,7 +141,7 @@ def badge(ok, etq="", det=""):
 def recbox(msg):
     st.info(f" {msg}")
 
-# ── Funciones de recomendación ───────────────────────────────────
+#  Funciones de recomendación 
 def recomendar_volteo(FS, FS_min, B, b, ct, Bp, xbr, MrW1, MrW2, MrW3, MrW4, MrEav, MrEscv, sumMa, gr, Hp, SC):
     """Sugiere nuevo Bp para cumplir FS volteo >= FS_min."""
     if FS >= FS_min:
@@ -243,16 +247,18 @@ def recomendar_deslizamiento(FS, FS_min, B, muct, sumFv, Ccoh, Ep, sumFh):
     msg.append("Si es factible, aumentar el coeficiente de fricción μ mejorando la interfaz.")
     return " | ".join(msg)
 
-# ══════════════════════════════════════════════════════════════════
+# 
 # SIDEBAR — PARÁMETROS DE ENTRADA (con descripciones)
-# ══════════════════════════════════════════════════════════════════
-st.sidebar.markdown("## ⚙ Parámetros de Diseño")
+# 
+st.sidebar.markdown("##  Parámetros de Diseño")
 
 with st.sidebar.expander(" Norma y Idioma", expanded=False):
     c1, c2 = st.columns([2, 1])
     with c1:
         norma_sel = st.selectbox("Norma de diseño", [
             "NSR-10 (Colombia)","ACI 318-25 (USA)","E.060 (Perú)",
+
+mostrar_referencias_norma(norma_sel, "kontewall")
             "NEC-SE-HM (Ecuador)","NTC-EM (México)","COVENIN 1753 (Venezuela)",
             "NB 1225001 (Bolivia)","CIRSOC 201 (Argentina)"
         ], key="norma_sel")
@@ -422,7 +428,7 @@ with st.sidebar.expander(" Longitud del Muro", expanded=False):
     with c2:
         st.caption("Longitud total")
 
-# ══ Copyright sidebar ══
+#  Copyright sidebar 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
     " **KonteWall v4.0** © 2026  \n"
@@ -432,9 +438,9 @@ st.sidebar.markdown(
     "Duitama, Boyacá, Colombia"
 )
 
-# ══════════════════════════════════════════════════════════════════
+# 
 # CÁLCULO
-# ══════════════════════════════════════════════════════════════════
+# 
 if st.sidebar.button(_t(" Calcular Muro", " Design Wall"), type="primary"):
     st.session_state["calculado"] = True
 
@@ -443,21 +449,21 @@ if not st.session_state.get("calculado", False):
                " Set parameters and press **Design Wall**"))
     st.stop()
 
-# ── Variables globales auxiliares ──
+#  Variables globales auxiliares 
 rm = rec / 100  # recubrimiento en metros
 
-# ── Geometría derivada ──
+#  Geometría derivada 
 xbl = b
 xbr = b + ct
 xtl = xbl + (ct - ccor)
 xtr = xbr
 
-# ── Predimensionamiento ──
+#  Predimensionamiento 
 db_supuesto = 1.59
 Ldh_supuesto = max(0.24 * fy / math.sqrt(fc) * db_supuesto, 8 * db_supuesto, 15.0) / 100
 hz_necesaria = Ldh_supuesto + rec / 100
 
-# ── Coeficientes de presión (igual que antes) ──
+#  Coeficientes de presión (igual que antes) 
 ph1r = math.radians(ph1)
 alpr = math.radians(alp)
 deltr = math.radians(delt)
@@ -495,7 +501,7 @@ else:
 ph2r = math.radians(ph2)
 Kp = math.tan(math.radians(45) + ph2r/2)**2
 
-# ── Empujes ──
+#  Empujes 
 Eah = 0.5 * Ka * gr * Hp**2
 Esch = Ka * gr * hs * Hp
 Ep = 0.5 * Kp * gf * (hz + hd)**2 if hd > 0 else 0.5 * Kp * gf * hz**2
@@ -506,7 +512,7 @@ Escv = Esch * math.sin(deltr)
 Cy = 0.6 * Hp + hz
 Eim = Kh * gc * 0.5 * (ct + ccor) * Hp if sismo else 0.0
 
-# ── Pesos y momentos ──
+#  Pesos y momentos 
 W1 = gc * hz * B
 W2 = 0.5 * gc * (ct - ccor) * Hp
 W3 = gc * ccor * Hp
@@ -540,7 +546,7 @@ MaEs = Es * Cy if sismo else 0.0
 MaEim = Eim * (Hp / 2 + hz) if sismo else 0.0
 sumMa = MaEah + MaEsch + MaEs + MaEim
 
-# ── Verificaciones ──
+#  Verificaciones 
 FSvolt = sumMr / max(sumMa, 1e-9)
 Frdesl = muct * sumFv + Ccoh * B + Ep
 FSdesl = Frdesl / max(sumFh, 1e-9)
@@ -563,7 +569,7 @@ ens = abs(B/2 - xrns)
 q1ns = sumFvns / B * (1 + 6 * ens / B) / 10000
 q2ns = sumFvns / B * (1 - 6 * ens / B) / 10000
 
-# ── Diseño acero ──
+#  Diseño acero 
 rhomin = 0.0015
 rhomin_zap = 0.0018
 diam_def = "5/8\""
@@ -652,9 +658,9 @@ Vc_den = ct * hd * Lmuro if hd > 0 else 0.0
 Vc_tot = Vc_zap + Vc_pan + Vc_den
 As_tot_kg = (Aptl * Bp + Appu * b + Api * Hp + Ape * Hp) * Lmuro * 7850 / 10000
 
-# ══════════════════════════════════════════════════════════════════
+# 
 # RESULTADOS — EXPANDERS
-# ══════════════════════════════════════════════════════════════════
+# 
 with st.expander("01. Datos Generales y Predimensionamiento", expanded=True):
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -681,11 +687,11 @@ with st.expander("01. Datos Generales y Predimensionamiento", expanded=True):
         st.write(f"Diámetro asumido: 5/8\" (d_b = {db_supuesto:.2f} cm)")
         st.write(f"Longitud de anclaje requerida Ldh = {Ldh_supuesto*100:.2f} cm")
         st.write(f"Altura necesaria de zapata: hz_necesaria = Ldh + rec = {hz_necesaria*100:.2f} cm")
-        st.write(f"Altura adoptada: hz = {hz*100:.2f} cm → {'OK'if hz >= hz_necesaria else '⚠ Aumentar'}")
+        st.write(f"Altura adoptada: hz = {hz*100:.2f} cm → {'OK'if hz >= hz_necesaria else ' Aumentar'}")
     with colB:
         st.markdown("**Longitud de la base**")
         st.write(f"Rango recomendado: H/2 = {Ht/2:.2f} m  a  2H/3 = {2*Ht/3:.2f} m")
-        st.write(f"Valor adoptado: B = {B:.2f} m → {'OK'if Ht/2 <= B <= 2*Ht/3 else '⚠ Revisar'}")
+        st.write(f"Valor adoptado: B = {B:.2f} m → {'OK'if Ht/2 <= B <= 2*Ht/3 else ' Revisar'}")
 
     st.markdown("---")
     st.markdown("### Verificación de dimensiones")
@@ -702,7 +708,7 @@ with st.expander("01. Datos Generales y Predimensionamiento", expanded=True):
             "Mín": f"{vmin:.2f} m",
             "Máx": f"{vmax:.2f} m" if vmax else "—",
             "Adoptado": f"{vadp:.2f} m",
-            "Estado": " OK" if okv else "⚠ Revisar"
+            "Estado": " OK" if okv else " Revisar"
         })
     st.table(pd.DataFrame(rowspre))
 
@@ -731,7 +737,7 @@ with st.expander("03. Verificación de Estabilidad" + (" + Sismo Mononobe-Okabe"
     with cv:
         st.markdown("**Fuerzas Verticales y Momentos Estabilizadores [kg/m]**")
         st.table(pd.DataFrame({
-            "Concepto": ["W1 Zapata", "W2 Pantalla △", "W3 Pantalla □", "W4 Dentellón", "W5 Relleno", "SC", "Eav", "Escv"],
+            "Concepto": ["W1 Zapata", "W2 Pantalla ", "W3 Pantalla ", "W4 Dentellón", "W5 Relleno", "SC", "Eav", "Escv"],
             "F [kg/m]": [f"{W1:.2f}", f"{W2:.2f}", f"{W3:.2f}", f"{W4:.2f}", f"{W5:.2f}", f"{WSC:.2f}", f"{Eav:.2f}", f"{Escv:.2f}"],
             "Brazo [m]": [f"{x1:.2f}", f"{x2:.2f}", f"{x3:.2f}", f"{x4:.2f}", f"{x5:.2f}", f"{xSC:.2f}", f"{xbr:.2f}", f"{xbr:.2f}"],
             "Mr [kg·m/m]": [f"{MrW1:.2f}", f"{MrW2:.2f}", f"{MrW3:.2f}", f"{MrW4:.2f}", f"{MrW5:.2f}", f"{MrWSC:.2f}", f"{MrEav:.2f}", f"{MrEscv:.2f}"]
@@ -751,7 +757,7 @@ with st.expander("03. Verificación de Estabilidad" + (" + Sismo Mononobe-Okabe"
         if sugg:
             recbox(sugg)
 
-    st.markdown(f"**2. ↔ Deslizamiento** — Fr/ΣFh = {Frdesl:.2f}/{sumFh:.2f}")
+    st.markdown(f"**2.  Deslizamiento** — Fr/ΣFh = {Frdesl:.2f}/{sumFh:.2f}")
     badge(okdFS, f"FS={FSdesl:.3f}", "≥ 1.50")
     if not okdFS:
         sugg = recomendar_deslizamiento(FSdesl, 1.5, B, muct, sumFv, Ccoh, Ep, sumFh)
@@ -832,7 +838,7 @@ with st.expander("04. Verificación Sin Sobrecarga", expanded=False):
     st.table(pd.DataFrame({
         "Verificación": ["FS volteo", "FS desl.", "Excentr.", "q₁", "q₂"],
         "Valor": [f"FS={FSvns:.3f}", f"FS={FSdns:.3f}", f"e={ens:.4f}m", f"q₁={q1ns:.4f} kg/cm²", f"q₂={q2ns:.4f} kg/cm²"],
-        "Estado": [" OK" if x else "⚠ Revisar" for x in [FSvns >= 2.0, FSdns >= 1.5, ens < B/6, q1ns <= qadm, q2ns >= 0]]
+        "Estado": [" OK" if x else " Revisar" for x in [FSvns >= 2.0, FSdns >= 1.5, ens < B/6, q1ns <= qadm, q2ns >= 0]]
     }))
 
 with st.expander(f"05. Diseño Pantalla — Sección Crítica Base", expanded=False):
@@ -1124,16 +1130,16 @@ with st.expander("10. Cubicación de Materiales", expanded=False):
     varillas = math.ceil(As_tot_kg / (7850 * Ab_diam(diam_def)[0] / 10000 * 6))
     st.write(f"Varillas Ø {diam_def} × 6m estimadas: **{varillas} varillas**")
 
-# ══════════════════════════════════════════════════════════════════
+# 
 # 10. ESQUEMA FINAL, MODELO 3D Y EXPORTACIÓN
-# ══════════════════════════════════════════════════════════════════
+# 
 with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
     tab2d, tabpl, tab3d, tabiso, tabexp = st.tabs([
         " Sección 2D", " Vista en Planta",
         " Modelo 3D", " Isométrico", " Exportar"
     ])
 
-    # ── TAB 2D ───────────────────────────────────────────────────
+    #  TAB 2D 
     with tab2d:
         fig2d, ax2d = plt.subplots(figsize=(9, 12))
         fig2d.patch.set_facecolor('white')
@@ -1304,7 +1310,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
         ax2d.grid(True, alpha=0.1, color='#aaa')
         st.pyplot(fig2d, use_container_width=True)
 
-    # ── TAB PLANTA ───────────────────────────────────────────────
+    #  TAB PLANTA 
     with tabpl:
         largopl = st.slider("Longitud de análisis [m]", 0.5, 5.0, 1.0, 0.10)
         espesor = ct
@@ -1365,7 +1371,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
         axpl.grid(True, alpha=0.12)
         st.pyplot(figpl, use_container_width=True)
 
-    # ── TAB 3D (Plotly) ──────────────────────────────────────────
+    #  TAB 3D (Plotly) 
     with tab3d:
         try:
             L3d = st.slider("Longitud del muro [m]", 0.5, 6.0, 3.0, 0.5, key="kwL3d")
@@ -1559,7 +1565,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
         except Exception as e3d:
             st.error(f"Error 3D: {e3d}")
 
-    # ── TAB ISOMÉTRICO (Matplotlib) ───────────────────────────────
+    #  TAB ISOMÉTRICO (Matplotlib) 
     with tabiso:
         try:
             Liso = st.slider("Longitud isométrico [m]", 0.5, 5.0, 2.0, 0.5, key="kwLiso")
@@ -1701,7 +1707,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
         except Exception as eiso:
             st.error(f"Error isométrico: {eiso}")
 
-    # ── TAB EXPORTAR (DXF 2D mejorado) ────────────────────────────
+    #  TAB EXPORTAR (DXF 2D mejorado) 
     with tabexp:
         st.markdown("###  Exportar Documentación Profesional")
         col_exp1, col_exp2, col_exp3 = st.columns(3)
@@ -1859,7 +1865,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     doc.saveas(buf)
                     buf.seek(0)
                     st.download_button(
-                        "⬇ Descargar DXF 2D",
+                        " Descargar DXF 2D",
                         buf,
                         file_name=f"KonteWall_{Ht:.1f}m.dxf",
                         mime="application/octet-stream")
@@ -2024,7 +2030,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     doc.save(buf_docx)
                     buf_docx.seek(0)
                     st.download_button(
-                        "⬇ Descargar Memoria DOCX",
+                        " Descargar Memoria DOCX",
                         buf_docx,
                         file_name=f"KonteWall_Memoria_Ht{Ht:.1f}m.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
@@ -2157,7 +2163,7 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                     wb.save(buf_xlsx)
                     buf_xlsx.seek(0)
                     st.download_button(
-                        "⬇ Descargar XLSX",
+                        " Descargar XLSX",
                         buf_xlsx,
                         file_name=f"KonteWall_Calculo_Ht{Ht:.1f}m.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -2165,9 +2171,9 @@ with st.expander("10. Esquema Final, Modelo 3D y Exportación", expanded=True):
                 except Exception as exlsx:
                     st.error(f"Error XLSX: {exlsx}")
 
-# ══════════════════════════════════════════════════════════════════
+# 
 # FOOTER
-# ══════════════════════════════════════════════════════════════════
+# 
 st.markdown("---")
 st.markdown(
     "<div style='text-align:center;font-size:12px;opacity:0.65;padding:8px;'>"

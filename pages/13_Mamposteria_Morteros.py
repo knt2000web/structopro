@@ -11,35 +11,39 @@ from docx import Document
 from docx.shared import Inches, Pt
 from datetime import datetime
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Mampostería y Morteros", "Masonry and Mortars"), layout="wide")
 st.title(_t("Mampostería y Dosificación de Morteros", "Masonry and Mortar Dosing"))
 st.markdown(_t("Herramienta integral para el cálculo de cantidades de materiales en tabiquería/mampostería (ladrillos y mortero) y la dosificación exacta de mezclas según el volumen requerido.", 
                "Comprehensive tool for calculating partition/masonry materials (bricks and mortar) and exact mortar mix dosing based on required volume."))
 
-# ─────────────────────────────────────────────
+# 
 # PIE DE PÁGINA / DERECHOS RESERVADOS
-# ─────────────────────────────────────────────
+# 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i> Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
+# 
 # CONFIGURACIÓN GENERAL
-# ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙ Configuración Global", "⚙ Global Settings"))
+# 
+st.sidebar.header(_t(" Configuración Global", " Global Settings"))
 if "norma_sel" not in st.session_state:
     st.session_state.norma_sel = "NSR-10 (Colombia)"
 
@@ -53,9 +57,9 @@ st.sidebar.markdown(
     f'</div>', unsafe_allow_html=True
 )
 
-# ─────────────────────────────────────────────
+# 
 # BASE DE DATOS DE LADRILLOS (MULTINORMA)
-# ─────────────────────────────────────────────
+# 
 BRICK_DB = {
     "NSR-10 (Colombia)": {
         "Ladrillo Común Macizo (25x12x6)": {"L":25.0, "W":12.0, "H":6.0},
@@ -118,16 +122,16 @@ else:
 
 lista_ladrillos = list(current_dict.keys()) + [_t("Típico Personalizado...", "Custom Size...")]
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES AUXILIARES
-# ─────────────────────────────────────────────
+# 
 def mix_for_fc(fc):
     """Placeholder para futura integración con APU (no usada directamente aquí)."""
     return (350, 200, 800, 1000)  # cemento_kg, agua_L, arena_kg, grava_kg
 
-# ─────────────────────────────────────────────
+# 
 # T1: CÁLCULO DE TABIQUE Y MAMPOSTERÍA
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("1. Cantidades de Mampostería (Ladrillos y Juntas)", " 1. Masonry Wall Quantities (Bricks and Joints)"), expanded=True):
     st.info(_t("**Modo de uso:** Ingresa las dimensiones del muro a construir y el tipo de aparejo/ladrillo (filtrado automáticamente por la norma de tu país). El sistema calculará el número exacto de ladrillos por metro cuadrado, el total, y el volumen de mortero requerido para las juntas.", 
                " **How to use:** Enter wall dimensions and brick type (filtered by active country code). The system will calculate bricks per square meter, total bricks, and joint mortar volume."))
@@ -144,6 +148,8 @@ with st.expander(_t("1. Cantidades de Mampostería (Ladrillos y Juntas)", " 1. M
     with col2:
         st.write(_t("#### Dimensiones del Ladrillo", "#### Brick Dimensions"))
         ladrillo_sel = st.selectbox(_t("Tipo de Ladrillo (Norma Activa)", "Brick Type (Active Code)"), 
+
+mostrar_referencias_norma(ladrillo_sel, "mamposteria")
                                      lista_ladrillos,
                                      index=lista_ladrillos.index(st.session_state.get("mam_lad_sel", lista_ladrillos[0])) if st.session_state.get("mam_lad_sel", lista_ladrillos[0]) in lista_ladrillos else 0,
                                      key="mam_lad_sel")
@@ -232,9 +238,9 @@ with st.expander(_t("1. Cantidades de Mampostería (Ladrillos y Juntas)", " 1. M
     res_2.metric(label=_t("Ladrillos Totales (Con Desp.)", "Total Bricks (incl. waste)"), value=f"{ladrillos_pedidos} uds")
     res_3.metric(label=_t("Vol. Mortero p/ Muro (Con Desp.)", "Mortar Vol. (incl. waste)"), value=f"{vol_mortero_pedido:.3f} m³")
 
-# ─────────────────────────────────────────────
+# 
 # T2: DOSIFICACIÓN DE MORTEROS
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("2. Dosificación y Diseño de Morteros (Cemento, Arena, Agua)", " 2. Mortar Dosing (Cement, Sand, Water)"), expanded=True):
     st.info(_t("**Modo de uso:** Ingresa la proporción volumétrica deseada del mortero (ej. 1:3 para pegue muy resistente, o 1:4 para pegue estándar) y el volumen a producir. El sistema usa equivalencias teóricas empíricas para entregar bultos de cemento, m³ de arena y litros de agua.", 
                " **How to use:** Enter mortar volumetric ratio (e.g. 1:3 for high strength, 1:4 for standard masonry) and volume. Returns bags of cement, sand volume, and water in liters."))
@@ -298,10 +304,10 @@ with st.expander(_t("2. Dosificación y Diseño de Morteros (Cemento, Arena, Agu
     ])
     st.table(df_mort)
 
-# ─────────────────────────────────────────────
+# 
 # T3: PESO SUPERFICIAL DEL MURO
-# ─────────────────────────────────────────────
-with st.expander(_t("⚖ 3. Peso Superficial de Muros de Mampostería", "⚖ 3. Surface Weight of Masonry Walls"), expanded=False):
+# 
+with st.expander(_t(" 3. Peso Superficial de Muros de Mampostería", " 3. Surface Weight of Masonry Walls"), expanded=False):
     st.info(_t("**Modo de uso:** Calcula el peso real de 1 m² de muro (kg/m²) tomando en cuenta la densidad del material, el porcentaje de vacíos o huecos de la pieza, y el peso de las juntas de mortero.", 
                " **How to use:** Calculates the actual weight of 1 m² of wall (kg/m²) accounting for material density, void percentage of the brick, and mortar joints weight."))
     
@@ -347,9 +353,9 @@ with st.expander(_t("⚖ 3. Peso Superficial de Muros de Mampostería", "⚖ 3. 
         st.markdown(f"### **{_t('Equivalencia:', 'Equivalent:')}** <span style='color:green'>{peso_total_kn:.2f} kN/m²</span>", unsafe_allow_html=True)
         st.write(_t("*Usualmente empleado como Carga Muerta (D) en análisis estructural.*", "*Commonly used as Dead Load (D) in structural analysis.*"))
 
-# ─────────────────────────────────────────────
+# 
 # T4: DIAGRAMAS, DXF, APU Y EXPORTACIONES
-# ─────────────────────────────────────────────
+# 
 st.markdown("---")
 tab_diag, tab_3d, tab_dxf, tab_mem, tab_apu = st.tabs([
     " " + _t("Diagrama Ladrillo 2D", "2D Brick Diagram"),

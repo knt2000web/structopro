@@ -10,19 +10,24 @@ import ezdxf
 from docx import Document
 from docx.shared import Inches, Pt
 from datetime import datetime
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL y NORMA (al inicio)
-# ─────────────────────────────────────────────
+# 
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 
 # Obtener norma activa de session_state
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+mostrar_referencias_norma(norma_sel, "predimensionamiento")
 
-# ─────────────────────────────────────────────
+# 
 # BASES DE DATOS SÍSMICAS MULTI-NORMA (comprimida)
-# ─────────────────────────────────────────────
+# 
 SEISMIC_DATA = {
     "NSR-10 (Colombia)": {
         "ciudades": {
@@ -106,9 +111,9 @@ def get_seismic_params(norma, ciudad, perfil, uso):
             else: return 2.5 * Z * uso_factor * S * (Tp * TL / T**2)
         return {"Z": Z, "U": uso_factor, "S": S, "R": R, "Tp": Tp, "TL": TL, "espectro": espectro}
 
-# ─────────────────────────────────────────────
+# 
 # FACTORES MULTI-NORMA
-# ─────────────────────────────────────────────
+# 
 _NORM_FACTORS = {
     "NSR-10 (Colombia)":         (28, 21, 10, 12, 0.5525),
     "ACI 318-25 (EE.UU.)":       (28, 21, 10, 12, 0.5525),
@@ -122,9 +127,9 @@ _NORM_FACTORS = {
 _nf = _NORM_FACTORS.get(norma_sel, _NORM_FACTORS["NSR-10 (Colombia)"])
 DIV_LOSA_MAC, DIV_LOSA_NERV, DIV_VIGA_SIMP, DIV_VIGA_CONT, COL_IDX = _nf
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES DE CÁLCULO
-# ─────────────────────────────────────────────
+# 
 def predimensionar_losa(lmax, tipo="maciza"):
     divisor = DIV_LOSA_MAC if tipo == "maciza" else DIV_LOSA_NERV
     h = lmax / divisor
@@ -331,9 +336,9 @@ def plot_edificio(nudos, cols, vigas_x, vigas_z, zaps, zap_dim_dict=None):
     )
     return fig
 
-# ─────────────────────────────────────────────
+# 
 # SIDEBAR – CONFIGURACIÓN (se mantiene igual que en la versión anterior)
-# ─────────────────────────────────────────────
+# 
 _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}
 _iso = _PAIS_ISO.get(norma_sel, "un")
 st.sidebar.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)
@@ -448,9 +453,9 @@ with st.sidebar.expander(_t("6⃣ FORMA DEL PREDIO (OPCIONAL)", "6⃣ PLOT SHAPE
 st.sidebar.markdown("---")
 st.sidebar.markdown("""<div style="text-align: center; color: gray; font-size: 11px;">© 2026 </div>""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
+# 
 # CÁLCULOS ESTRUCTURALES
-# ─────────────────────────────────────────────
+# 
 l_max = max(lx, ly)
 h_mac = predimensionar_losa(l_max, "maciza")
 h_ali = predimensionar_losa(l_max, "aligerada")
@@ -480,7 +485,7 @@ K_col_estim = 30000
 deriva_rel = V_basal_kN / (n_cols * K_col_estim) / h_story
 warning_deriva = None
 if deriva_rel > 0.01:
-    warning_deriva = f"⚠ Deriva estimada {deriva_rel*100:.2f}% > 1% → considerar vigas más peraltadas"
+    warning_deriva = f" Deriva estimada {deriva_rel*100:.2f}% > 1% → considerar vigas más peraltadas"
 
 # Zapatas (con momento sísmico)
 q_adm = st.sidebar.number_input("Capacidad admisible del suelo (kg/cm²)", 1.0, 5.0, 2.0, 0.1, key="q_adm")

@@ -11,36 +11,42 @@ from docx import Document
 from docx.shared import Inches, Pt
 from datetime import datetime
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Estructuras en Madera", "Timber Structures"), layout="wide")
 st.title(_t("Diseño de Estructuras en Madera", "Timber Structure Design"))
 st.markdown(_t("Cálculo y diseño de elementos de madera estructural (Vigas, Columnas, Uniones) y cuantificación comercial en Pies Madereros. Basado en metodologías de Esfuerzos Admisibles (NDS / NSR-10).", 
                "Design of structural timber elements (Beams, Columns, Connections) and commercial quantification in Board Feet. Based on Allowable Stress Design (NDS / NSR-10)."))
 
-# ─────────────────────────────────────────────
+# 
 # PIE DE PÁGINA / DERECHOS RESERVADOS
-# ─────────────────────────────────────────────
+# 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i> Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
+# 
 # CONFIGURACIÓN GLOBAL
-# ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙ Configuración Global", "⚙ Global Settings"))
+# 
+st.sidebar.header(_t(" Configuración Global", " Global Settings"))
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+
+mostrar_referencias_norma(norma_sel, "madera")
 _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}
 _iso = _PAIS_ISO.get(norma_sel, "un")
 st.sidebar.markdown(
@@ -75,9 +81,9 @@ val_Fv = st.sidebar.number_input(_t("Esfuerzo Cortante Adm. Fv [MPa]", "Allowabl
 val_Fc = st.sidebar.number_input(_t("Compresión Paralela Fc [MPa]", "Parallel Compression Fc [MPa]"), 1.0, 30.0, st.session_state.get("m_Fc", Fc), 1.0, disabled=(grupo_madera!=_t("Personalizado / Custom", "Custom")), key="m_Fc")
 val_G = st.sidebar.number_input(_t("Gravedad Específica G", "Specific Gravity G"), 0.1, 1.2, st.session_state.get("m_G", G_sp), 0.05, disabled=(grupo_madera!=_t("Personalizado / Custom", "Custom")), key="m_G")
 
-# ─────────────────────────────────────────────
+# 
 # T1: CALCULADORA DE PIES MADEREROS
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("1. Calculadora de Pies² de Madera (Board Feet)", " 1. Board Feet Calculator"), expanded=False):
     st.info(_t("Ingresa el espesor y ancho en pulgadas, y el largo de la pieza (en pies o metros).", "Enter thickness/width in inches, and length."))
     
@@ -115,9 +121,9 @@ with st.expander(_t("1. Calculadora de Pies² de Madera (Board Feet)", " 1. Boar
         ax.axis('off')
         st.pyplot(fig)
 
-# ─────────────────────────────────────────────
+# 
 # T2: DISEÑO DE VIGAS DE MADERA
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("2. Diseño de Vigas de Madera (Flexión y Cortante)", " 2. Timber Beam Design (Flexure and Shear)"), expanded=False):
     v1, v2, v3 = st.columns(3)
     with v1:
@@ -172,9 +178,9 @@ with st.expander(_t("2. Diseño de Vigas de Madera (Flexión y Cortante)", " 2. 
         ax2.axis('off')
         st.pyplot(fig2)
 
-# ─────────────────────────────────────────────
+# 
 # T3: COLUMNAS DE MADERA A COMPRESIÓN PURA
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("3. Diseño de Columnas de Madera (Compresión)", " 3. Timber Column Design (Compression)"), expanded=False):
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -217,9 +223,9 @@ with st.expander(_t("3. Diseño de Columnas de Madera (Compresión)", " 3. Timbe
             ax3.axis('off')
             st.pyplot(fig3)
 
-# ─────────────────────────────────────────────
+# 
 # T4: UNIONES CON CLAVOS (NDS)
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4. Nail Connection (Lateral Shear)"), expanded=False):
     st.info(_t("Según NDS 2018, la resistencia de diseño lateral para clavos se ajusta por factores de duración de carga, humedad, temperatura y grupo.", "Based on NDS 2018, design lateral resistance for nails is adjusted by load duration, moisture, temperature and group factors."))
     uc1, uc2, uc3 = st.columns([1,1,2])
@@ -276,9 +282,9 @@ with st.expander(_t("4. Resistencia de Uniones con Clavos (Corte Lateral)", " 4.
     ax4.set_xlim(0, 4); ax4.set_ylim(-0.5, 1.5); ax4.axis('off')
     st.pyplot(fig4)
 
-# ─────────────────────────────────────────────
+# 
 # EXPORTACIÓN INTEGRAL (DXF, DOCX, APU)
-# ─────────────────────────────────────────────
+# 
 st.markdown("---")
 st.subheader(_t("Exportación Integral", "Comprehensive Export"))
 
@@ -363,7 +369,7 @@ with tab_dxf:
         _USE_H_mad = False
     col_dxf1, col_dxf2 = st.columns(2)
 
-    # ── Viga DXF (elevación) ──
+    #  Viga DXF (elevación) 
     doc_v = ezdxf.new('R2010'); doc_v.units = ezdxf.units.M
     if _USE_H_mad:
         dxf_setup(doc_v, 50); dxf_add_layers(doc_v)
@@ -388,7 +394,7 @@ with tab_dxf:
                              data=_out_v.getvalue().encode("utf-8"),
                              file_name=f"Viga_Madera_{b_beam:.0f}x{h_beam:.0f}.dxf", mime="application/dxf")
 
-    # ── Columna DXF (elevación) ──
+    #  Columna DXF (elevación) 
     doc_c = ezdxf.new('R2010'); doc_c.units = ezdxf.units.M
     if _USE_H_mad:
         dxf_setup(doc_c, 50); dxf_add_layers(doc_c)

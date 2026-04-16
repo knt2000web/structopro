@@ -1,4 +1,18 @@
 import streamlit as st
+
+#  Utilidad: Color AutoCAD segun # de cuartos de pulgada 
+from normas_referencias import mostrar_referencias_norma
+def _color_acero_dxf(db_mm: float) -> int:
+    """Retorna color AutoCAD (1-255) segun diametro nominal en mm (ASTM/NTC)."""
+    if   db_mm <  7.5: return 2   # #2 1/4"   - Amarillo
+    elif db_mm < 11.1: return 3   # #3 3/8"   - Verde
+    elif db_mm < 14.3: return 4   # #4 1/2"   - Cian
+    elif db_mm < 17.5: return 5   # #5 5/8"   - Azul
+    elif db_mm < 20.6: return 6   # #6 3/4"   - Magenta
+    elif db_mm < 23.8: return 30  # #7 7/8"   - Naranja
+    elif db_mm < 27.0: return 1   # #8 1"     - Rojo
+    else:              return 10  # #9+ 1-1/8" - Verde oscuro (pesado)
+# 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -19,18 +33,18 @@ import qrcode
 from PIL import Image
 import tempfile
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
 lang = st.session_state["idioma"] if "idioma" in st.session_state else "Español"
 def _t(es, en):
     return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Diagramas de Interacción Biaxial", "Biaxial Interaction Diagrams"), layout="wide")
 
-# ─────────────────────────────────────────────
+# 
 # PERSISTENCIA SUPABASE
-# ─────────────────────────────────────────────
+# 
 import requests
 
 def get_supabase_rest_info():
@@ -170,9 +184,9 @@ def capturar_estado_actual():
     ]
     return {k: st.session_state[k] for k in claves if k in st.session_state}
 
-# ─────────────────────────────────────────────
+# 
 # FIX BUG #4: Manejo seguro de BASE_DIR para Streamlit Cloud
-# ─────────────────────────────────────────────
+# 
 try:
     BASE_DIR = Path(__file__).parent.parent
 except NameError:
@@ -200,9 +214,9 @@ with st.expander(" ¿Cómo usar esta herramienta?"):
     5. ** Exportar:** Memoria DOCX completa, DXF con rótulo ICONTEC, Excel, etc.
     """)
 
-# ─────────────────────────────────────────────
+# 
 # DICCIONARIOS DE BARRAS
-# ─────────────────────────────────────────────
+# 
 REBAR_US = {
     "#3 (3/8\")": {"area": 0.71, "diam_mm": 9.53},
     "#4 (1/2\")": {"area": 1.29, "diam_mm": 12.70},
@@ -240,9 +254,9 @@ STIRRUP_MM = {
     "12 mm": {"area": 1.131, "diam_mm": 12.0},
 }
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES DE DIBUJO PARA FIGURADO
-# ─────────────────────────────────────────────
+# 
 _MM_TO_BAR = {
     6.0:  "#2 (1/4\")",  6.35: "#2 (1/4\")",
     8.0:  "#2.5 (5/16\")",
@@ -351,9 +365,9 @@ def draw_spiral(D_cm, paso_cm, bar_diam_mm, bar_name=None):
     ax.set_title(f"Espiral — {label}", fontsize=9, fontweight='bold')
     return fig
 
-# ─────────────────────────────────────────────
+# 
 # PARÁMETROS POR NORMA (con límites por nivel sísmico)
-# ─────────────────────────────────────────────
+# 
 CODES = {
     "NSR-10 (Colombia)": {
         "phi_tied": 0.65, "phi_spiral": 0.75, "phi_tension": 0.90,
@@ -437,9 +451,9 @@ CODES = {
     },
 }
 
-# ─────────────────────────────────────────────
+# 
 # PRESENTACIONES DE CEMENTO POR PAÍS
-# ─────────────────────────────────────────────
+# 
 CEMENT_BAGS = {
     "NSR-10 (Colombia)": [{"label": "Cemento gris (50 kg)", "kg": 50.0}, {"label": "Bolsa pequeña (25 kg)", "kg": 25.0}],
     "ACI 318-25 (EE.UU.)": [{"label": "Type I/II (94 lb / 42.6 kg)", "kg": 42.6}, {"label": "Type III (47 lb / 21.3 kg)", "kg": 21.3}],
@@ -453,9 +467,9 @@ CEMENT_BAGS = {
     "CIRSOC 201-2025 (Argentina)": [{"label": "Cemento (50 kg)", "kg": 50.0}, {"label": "Bolsa pequeña (25 kg)", "kg": 25.0}],
 }
 
-# ─────────────────────────────────────────────
+# 
 # TABLA DE DOSIFICACIÓN ACI 211
-# ─────────────────────────────────────────────
+# 
 MIX_DESIGNS = [
     {"fc_mpa": 14.0, "cem": 250, "agua": 205, "arena": 810, "grava": 1060, "wc": 0.82},
     {"fc_mpa": 17.0, "cem": 290, "agua": 200, "arena": 780, "grava": 1060, "wc": 0.69},
@@ -486,9 +500,9 @@ def get_development_length(db_mm, fy, fc, lambda_=1.0, psi_t=1.0, psi_e=1.0, psi
     ld = (3/40) * (fy / (lambda_ * math.sqrt(fc))) * (psi_t * psi_e * psi_s * psi_g / cb_ktr) * db_mm
     return max(ld, 300)
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES PARA CÁLCULO DE CAPACIDAD UNIAXIAL
-# ─────────────────────────────────────────────
+# 
 def compute_uniaxial_capacity(b, h, d_prime, layers, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza):
     eps_cu = 0.003
     eps_y = fy / Es
@@ -674,9 +688,9 @@ def compute_uniaxial_capacity_circular(D, d_prime, layers, fc, fy, Es, phi_c_max
         'M_balance': M_balance,
     }
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIÓN PARA VERIFICACIÓN BIAXIAL (BRESLER)
-# ─────────────────────────────────────────────
+# 
 def interp_pm_curve(M_query, phi_Mn_arr, phi_Pn_arr):
     """
     Interpola φPn dado φMn en la curva P-M NO monótona.
@@ -703,11 +717,11 @@ def interp_pm_curve(M_query, phi_Mn_arr, phi_Pn_arr):
     # Índice del punto de balance (donde φMn es máximo)
     idx_bal = int(np.argmax(phi_Mn_arr))
     
-    # ── Rama COMPRESIÓN: Po → Balance (M creciente, P decreciente) ──
+    #  Rama COMPRESIÓN: Po → Balance (M creciente, P decreciente) 
     Mc = phi_Mn_arr[:idx_bal + 1]
     Pc = phi_Pn_arr[:idx_bal + 1]
     
-    # ── Rama TENSIÓN: Balance → Tracción pura (M decreciente, P→0) ──
+    #  Rama TENSIÓN: Balance → Tracción pura (M decreciente, P→0) 
     Mt = phi_Mn_arr[idx_bal:]
     Pt = phi_Pn_arr[idx_bal:]
     
@@ -778,9 +792,9 @@ def biaxial_bresler(Pu, Mux, Muy, cap_x, cap_y, Po, phi_factor):
         'msg_exceso': None,
     }
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIÓN PARA ESBELTEZ (NSR-10 C.10.10 / ACI 6.6)
-# ─────────────────────────────────────────────
+# 
 def check_slenderness(L, b, h, k, Pu, M1, M2, fc, fy, Es, factor_fuerza, es_circular=False):
     r = 0.25 * b if es_circular else min(b, h) / math.sqrt(12)
     kl = k * L
@@ -827,6 +841,7 @@ def check_slenderness(L, b, h, k, Pu, M1, M2, fc, fy, Es, factor_fuerza, es_circ
 st.sidebar.header(_t("0. Norma de Diseño", "0. Design Code"))
 norma_options = list(CODES.keys())
 norma_sel = st.sidebar.selectbox(_t("Norma", "Code"), norma_options, key="circ_pm_norma")
+mostrar_referencias_norma(norma_sel, "columnas_circulares")
 code = CODES[norma_sel]
 
 nivel_sismico = st.sidebar.selectbox(
@@ -946,7 +961,7 @@ elif not es_circular and n_barras < 4:
 if cuantia < rho_min or cuantia > rho_max:
     st.sidebar.error(f" CUANTÍA FUERA DE LÍMITES: ρ = {cuantia:.2f}% (límites: {rho_min}% - {rho_max}%)")
 elif cuantia > 4.0:
-    st.sidebar.warning(f"⚠ Alerta constructiva: ρ = {cuantia:.2f}% > 4%. NSR-10 recomienda no superar 4% por congestión.")
+    st.sidebar.warning(f" Alerta constructiva: ρ = {cuantia:.2f}% > 4%. NSR-10 recomienda no superar 4% por congestión.")
 
 st.sidebar.header(_t("4. Refuerzo Transversal", "4. Transverse Reinforcement"))
 
@@ -1068,7 +1083,7 @@ st.sidebar.markdown("""
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠ Nota Legal: Herramienta de apoyo profesional.</i>
+    <i> Nota Legal: Herramienta de apoyo profesional.</i>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1096,9 +1111,9 @@ else:
 phi_factor = phi_c_max
 bresler = biaxial_bresler(Pu_input, Mux_input, Muy_input, cap_x, cap_y, cap_x['Po'], phi_factor)
 
-# ═══════════════════════════════════════════════════════════════
+# 
 # BLOQUE: COMPRESIÓN AXIAL PURA — Verificación paso a paso
-# ═══════════════════════════════════════════════════════════════
+# 
 with st.expander("Compresión Axial Pura — Verificación Paso a Paso (NSR-10 C.9.3.2.2)", expanded=False):
 
     # Cálculo desglosado
@@ -1124,7 +1139,7 @@ with st.expander("Compresión Axial Pura — Verificación Paso a Paso (NSR-10 C
     <b>Ag</b> (área bruta)         = <b>{Ag_cm2:.2f} cm²</b><br>
     <b>Ast</b> (área acero)        = <b>{Ast_cm2:.2f} cm²</b><br>
     <b>Ag − Ast</b> (concreto neto) = <b>{Anc_cm2:.2f} cm²</b><br>
-    <span style="color:#aaa">─────────────────────────────────────────</span><br>
+    <span style="color:#aaa"></span><br>
     <b>Po</b>     = [0.85 × {fc:.1f} × {Anc_cm2:.2f} + {fy:.0f} × {Ast_cm2:.2f}] / 1000
              = <b>{Po_out:.1f} {unidad_fuerza}</b><br>
     <b>Pn,máx</b> = {p_max_factor:.2f} × {Po_out:.1f}
@@ -1177,7 +1192,7 @@ with st.expander("Compresión Axial Pura — Verificación Paso a Paso (NSR-10 C
         )
     elif Pu_kN_check > 0.90 * phi_Pn_max_kN:
         st.warning(
-            f"⚠ Pu representa el **{Pu_kN_check / phi_Pn_max_kN * 100:.1f}%** de φPn,máx. "
+            f" Pu representa el **{Pu_kN_check / phi_Pn_max_kN * 100:.1f}%** de φPn,máx. "
             f"Zona muy próxima al límite de capacidad axial."
         )
     else:
@@ -1185,7 +1200,7 @@ with st.expander("Compresión Axial Pura — Verificación Paso a Paso (NSR-10 C
             f" Pu = {Pu_input:.1f} {unidad_fuerza} → **{Pu_kN_check / phi_Pn_max_kN * 100:.1f}%** "
             f"de φPn,máx = {phi_Pn_out:.1f} {unidad_fuerza}. Capacidad axial suficiente."
         )
-# ═══════════════════════════════════════════════════════════════
+# 
 
 if es_circular:
     slenderness = check_slenderness(L_col, D, D, k_factor, Pu_input, Mux_input, Mux_input, fc, fy, Es, factor_fuerza, es_circular=True)
@@ -1203,7 +1218,7 @@ if not es_circular:
     # NSR-10 C.7.7.1 — recubrimiento mínimo para columnas
     _recub_min_nsr = 3.8  # cm — columnas expuestas o en ambiente normal
     if recub_cm < _recub_min_nsr:
-        st.sidebar.warning(f"⚠ NSR-10 C.7.7.1: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo recomendado de {_recub_min_nsr} cm para columnas. Verifique d'.")
+        st.sidebar.warning(f" NSR-10 C.7.7.1: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo recomendado de {_recub_min_nsr} cm para columnas. Verifique d'.")
     bc = b - 2 * recub_cm
     hc = h - 2 * recub_cm
     Ach = bc * hc
@@ -1269,7 +1284,7 @@ else:
     recub_cm = max(d_prime - rebar_diam / 20.0, 2.5)
     _recub_min_nsr = 3.8
     if recub_cm < _recub_min_nsr:
-        st.sidebar.warning(f"⚠ NSR-10 C.7.7.1: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo de {_recub_min_nsr} cm.")
+        st.sidebar.warning(f" NSR-10 C.7.7.1: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo de {_recub_min_nsr} cm.")
     dc = D - 2 * recub_cm
     Ach = math.pi * (dc/2)**2
     Ag_circ = math.pi * (D/2)**2
@@ -1448,7 +1463,7 @@ with tab1:
 | **Déficit** | {deficit:.1f} {unidad_fuerza} ({(ratio-1)*100:.0f}% sobre la capacidad) |
 """)
             if ratio > 5:
-                st.error("⚠ **Relación > 5x:** La sección es muy insuficiente. Se recomienda rediseñar completamente la geometría.")
+                st.error(" **Relación > 5x:** La sección es muy insuficiente. Se recomienda rediseñar completamente la geometría.")
         st.markdown("---")
         st.subheader(_t("Verificación de Esbeltez", "Slenderness Verification"))
         st.markdown(f"""
@@ -1461,7 +1476,7 @@ with tab1:
         | **Muy magnificado** | {Muy_magnified:.2f} {unidad_mom} | |
         """)
         if slenderness['kl_r'] > 100:
-            st.warning("⚠ **kl/r > 100** — Se requiere análisis no lineal según NSR-10 C.10.10.7")
+            st.warning(" **kl/r > 100** — Se requiere análisis no lineal según NSR-10 C.10.10.7")
         st.markdown("---")
         st.subheader(_t("Verificación de Estribos / Espiral", "Tie / Spiral Verification"))
         if not es_circular:
@@ -1476,7 +1491,7 @@ with tab1:
             st.markdown(f"""
             | Parámetro | Valor | Requerido | Estado |
             |-----------|-------|-----------|--------|
-            | **Claro Libre (Cx, Cy)** | {claro_libre_x:.1f} cm, {claro_libre_y:.1f} cm | ≤ 15 cm | {'' if claro_libre_x<=15 and claro_libre_y<=15 else '⚠ Crossties Requeridos'} |
+            | **Claro Libre (Cx, Cy)** | {claro_libre_x:.1f} cm, {claro_libre_y:.1f} cm | ≤ 15 cm | {'' if claro_libre_x<=15 and claro_libre_y<=15 else ' Crossties Requeridos'} |
             | **Apoyo lateral (Crossties)** | {num_flejes_x} en X, {num_flejes_y} en Y | NSR-10 C.7.10.5 | |
             | **Ramas Efectivas** | {ramas_x} ramas en X, {ramas_y} ramas en Y | | |
             | **Ash provisto** | {Ash_prov:.3f} cm² | ≥ {Ash_req:.2f} | {'' if ash_ok else ''} |
@@ -1492,7 +1507,7 @@ with tab1:
                 s_correcto = min(s_req1, s_req2)
                 
                 if ratio_ash < 0.5:
-                    st.error(f"⚠ **Déficit crítico de estribos.** Para cumplir con las estribos actuales, usar separación $s \\le {s_correcto:.1f}$ cm o proponer más ramas.")
+                    st.error(f" **Déficit crítico de estribos.** Para cumplir con las estribos actuales, usar separación $s \\le {s_correcto:.1f}$ cm o proponer más ramas.")
                 else:
                     st.warning(f"Para cumplir Ash con los estribos actuales → reducir separación a $s \\le {s_correcto:.1f}$ cm.")
         else:
@@ -1525,7 +1540,7 @@ with tab2:
         z_c = [0, 0, 0, 0, L_col, L_col, L_col, L_col]
         fig3d_col.add_trace(go.Mesh3d(x=x_c, y=y_c, z=z_c, alphahull=0, opacity=0.15, color='gray', name='Concreto'))
         
-    # ── BARRAS LONGITUDINALES 3D ──────────────────────────
+    #  BARRAS LONGITUDINALES 3D 
     z_barras = [0, L_col]
     if es_circular:
         radio_c = D/2 - d_prime
@@ -1563,7 +1578,7 @@ with tab2:
                         showlegend=False, name='Barra lat.'
                     ))
 
-    # ── ESTRIBOS 3D ───────────────────────────────────────
+    #  ESTRIBOS 3D 
     if not es_circular:
         paso_3d = s_conf if (es_des or es_dmo) else s_basico
         z_est = np.arange(0, L_col + paso_3d, paso_3d)
@@ -1644,7 +1659,7 @@ with tab2:
             "Verificación": ["Cuantía longitudinal", "Verificación biaxial", "Esbeltez (kl/r ≤ 22)",
                              f"Ash {'espiral' if es_circular else 'estribos'}", "Longitud confinamiento Lo", "Separación máxima"],
             "Estado": ["" if rho_min <= cuantia <= rho_max else "", "" if bresler['ok'] else "",
-                       "" if slenderness['kl_r'] <= 22 else "⚠", "" if ash_ok else "",
+                       "" if slenderness['kl_r'] <= 22 else "", "" if ash_ok else "",
                        "",
                        "" if (es_des and s_conf <= 15) or (es_dmo and s_conf <= 20) or es_dmi else ""]
         }
@@ -1672,7 +1687,7 @@ with tab2:
                     doc_dxf.layers.add(lay, color=col)
             msp = doc_dxf.modelspace()
 
-            # ── Zonas del plano A4 horizontal (29.7 x 21.0) ──
+            #  Zonas del plano A4 horizontal (29.7 x 21.0) 
             ancho_plano = 29.7
             alto_plano  = 21.0
             rotulo_h    = 6.0
@@ -1684,12 +1699,12 @@ with tab2:
                  (0.5,alto_plano-0.5),(0.5,0.5)],
                 dxfattribs={'layer':'MARGEN','color':8})
 
-            # ── Estilo de texto ──
+            #  Estilo de texto 
             if 'ROMANS' not in doc_dxf.styles:
                 try:    doc_dxf.styles.new('ROMANS', dxfattribs={'font':'romans.shx'})
                 except: doc_dxf.styles.new('ROMANS', dxfattribs={'font':'txt.shx'})
 
-            # ── ZONA 1: ALZADO LONGITUDINAL (Lado Izquierdo) ──
+            #  ZONA 1: ALZADO LONGITUDINAL (Lado Izquierdo) 
             alz_x0 = 1.0
             alz_y0 = 1.0
             alz_w  = 11.5
@@ -1723,17 +1738,17 @@ with tab2:
             # Varillas longitudinales y traslapos (Alzado)
             rec_alz = recub_cm * escala_alz_x
             # Barras principales
-            msp.add_line((ax0+rec_alz, ay0), (ax0+rec_alz, ay0+L_col*escala_alz + 1.0), dxfattribs={'layer':'VARILLAS'})
-            msp.add_line((ax0+dib_alz_w-rec_alz, ay0), (ax0+dib_alz_w-rec_alz, ay0+L_col*escala_alz + 1.0), dxfattribs={'layer':'VARILLAS'})
+            msp.add_line((ax0+rec_alz, ay0), (ax0+rec_alz, ay0+L_col*escala_alz + 1.0), dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
+            msp.add_line((ax0+dib_alz_w-rec_alz, ay0), (ax0+dib_alz_w-rec_alz, ay0+L_col*escala_alz + 1.0), dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
             
             # Dibujar traslapos simulados en la base (inclinación 1:6 normativa)
-            msp.add_line((ax0+rec_alz, ay0-1.0), (ax0+rec_alz, ay0), dxfattribs={'layer':'VARILLAS'})
-            msp.add_line((ax0+rec_alz, ay0), (ax0+rec_alz+0.15, ay0+0.4), dxfattribs={'layer':'VARILLAS'})
-            msp.add_line((ax0+rec_alz+0.15, ay0+0.4), (ax0+rec_alz+0.15, ay0+2.5), dxfattribs={'layer':'VARILLAS'})
+            msp.add_line((ax0+rec_alz, ay0-1.0), (ax0+rec_alz, ay0), dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
+            msp.add_line((ax0+rec_alz, ay0), (ax0+rec_alz+0.15, ay0+0.4), dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
+            msp.add_line((ax0+rec_alz+0.15, ay0+0.4), (ax0+rec_alz+0.15, ay0+2.5), dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
             
-            msp.add_line((ax0+dib_alz_w-rec_alz, ay0-1.0), (ax0+dib_alz_w-rec_alz, ay0), dxfattribs={'layer':'VARILLAS'})
-            msp.add_line((ax0+dib_alz_w-rec_alz, ay0), (ax0+dib_alz_w-rec_alz-0.15, ay0+0.4), dxfattribs={'layer':'VARILLAS'})
-            msp.add_line((ax0+dib_alz_w-rec_alz-0.15, ay0+0.4), (ax0+dib_alz_w-rec_alz-0.15, ay0+2.5), dxfattribs={'layer':'VARILLAS'})
+            msp.add_line((ax0+dib_alz_w-rec_alz, ay0-1.0), (ax0+dib_alz_w-rec_alz, ay0), dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
+            msp.add_line((ax0+dib_alz_w-rec_alz, ay0), (ax0+dib_alz_w-rec_alz-0.15, ay0+0.4), dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
+            msp.add_line((ax0+dib_alz_w-rec_alz-0.15, ay0+0.4), (ax0+dib_alz_w-rec_alz-0.15, ay0+2.5), dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
 
             # Distribución de estribos (Alzado)
             y_curr = 5.0 # arrancar 5cm arriba del nodo
@@ -1741,7 +1756,7 @@ with tab2:
                 in_conf = (y_curr <= Lo_conf) or (y_curr >= L_col - Lo_conf)
                 sep = s_conf if in_conf else s_basico
                 ye = ay0 + y_curr * escala_alz
-                msp.add_line((ax0+rec_alz, ye), (ax0+dib_alz_w-rec_alz, ye), dxfattribs={'layer':'ESTRIBOS'})
+                msp.add_line((ax0+rec_alz, ye), (ax0+dib_alz_w-rec_alz, ye), dxfattribs={'layer':'ESTRIBOS','color':_color_acero_dxf(stirrup_diam)})
                 y_curr += sep
 
             # Cota de altura L
@@ -1766,7 +1781,7 @@ with tab2:
                 msp.add_line((ax0+dib_alz_w, ay0+L_col*escala_alz), (cx_r+0.3, ay0+L_col*escala_alz), dxfattribs={'layer':'COTAS'})
                 msp.add_text(f"Lo={Lo_conf:.0f}cm", dxfattribs={'layer':'COTAS','style':'ROMANS','height':0.22,'insert':(cx_r+0.2, ay0+(L_col-Lo_conf/2)*escala_alz),'align_point':(cx_r+0.2, ay0+(L_col-Lo_conf/2)*escala_alz),'halign':1,'valign':2,'rotation':-90})
 
-            # ── ZONA 2: SECCIÓN TRANSVERSAL (Top-Center) ──
+            #  ZONA 2: SECCIÓN TRANSVERSAL (Top-Center) 
             sec_zona_x0 = 13.5
             sec_zona_y0 = rotulo_h + 1.0  # 7.0
             sec_zona_ancho = 6.5
@@ -1786,13 +1801,13 @@ with tab2:
                 cx, cy = ox + sec_w/2, oy + sec_h/2
                 msp.add_circle((cx,cy), D/2*escala, dxfattribs={'layer':'CONCRETO'})
                 r_esp = (D/2-recub_cm)*escala
-                msp.add_circle((cx,cy), r_esp, dxfattribs={'layer':'ESTRIBOS'})
+                msp.add_circle((cx,cy), r_esp, dxfattribs={'layer':'ESTRIBOS','color':_color_acero_dxf(stirrup_diam)})
                 hl = 4.0 * escala
-                msp.add_lwpolyline([(cx, cy + r_esp), (cx - hl*0.5, cy + r_esp - hl*0.5)], dxfattribs={'layer':'ESTRIBOS'})
+                msp.add_lwpolyline([(cx, cy + r_esp), (cx - hl*0.5, cy + r_esp - hl*0.5)], dxfattribs={'layer':'ESTRIBOS','color':_color_acero_dxf(stirrup_diam)})
                 for ang in np.linspace(0, 2*np.pi, n_barras, endpoint=False):
                     xb_c = cx + (D/2 - d_prime)*escala * math.cos(ang)
                     yb_c = cy + (D/2 - d_prime)*escala * math.sin(ang)
-                    msp.add_circle((xb_c,yb_c), rebar_diam/20*escala, dxfattribs={'layer':'VARILLAS'})
+                    msp.add_circle((xb_c,yb_c), rebar_diam/20*escala, dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
             else:
                 msp.add_lwpolyline([(ox,oy),(ox+sec_w,oy),(ox+sec_w,oy+sec_h),(ox,oy+sec_h),(ox,oy)], dxfattribs={'layer':'CONCRETO'})
                 re_s = recub_cm * escala
@@ -1809,25 +1824,25 @@ with tab2:
                     (x_st_min, y_st_min), (x_st_max, y_st_min), (x_st_max, y_st_max),
                     (x_st_min + hl*0.3, y_st_max), (x_st_min + hl*0.9, y_st_max - hl*0.6)
                 ]
-                msp.add_lwpolyline(pts_estribo, dxfattribs={'layer':'ESTRIBOS'})
+                msp.add_lwpolyline(pts_estribo, dxfattribs={'layer':'ESTRIBOS','color':_color_acero_dxf(stirrup_diam)})
                 
                 xs_b = np.linspace(cx_min, cx_max, num_filas_h) if num_filas_h > 1 else [ox + sec_w/2]
                 for xb_c in xs_b:
-                    msp.add_circle((xb_c, cy_max), r_bar, dxfattribs={'layer':'VARILLAS'})
-                    msp.add_circle((xb_c, cy_min), r_bar, dxfattribs={'layer':'VARILLAS'})
+                    msp.add_circle((xb_c, cy_max), r_bar, dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
+                    msp.add_circle((xb_c, cy_min), r_bar, dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
                 
                 if num_filas_h > 2:
                     for xb_c in xs_b[1:-1]:
                         pts_grapa_v = [(xb_c - hl*0.5, y_st_max - hl*0.5), (xb_c, y_st_max), (xb_c, y_st_min), (xb_c + hl*0.5, y_st_min + hl*0.5)]
-                        msp.add_lwpolyline(pts_grapa_v, dxfattribs={'layer':'ESTRIBOS'})
+                        msp.add_lwpolyline(pts_grapa_v, dxfattribs={'layer':'ESTRIBOS','color':_color_acero_dxf(stirrup_diam)})
 
                 if num_capas_intermedias > 0:
                     ys_h = np.linspace(cy_min, cy_max, num_filas_v)
                     for yi in ys_h[1:-1]:
-                        msp.add_circle((cx_min, yi), r_bar, dxfattribs={'layer':'VARILLAS'})
-                        msp.add_circle((cx_max, yi), r_bar, dxfattribs={'layer':'VARILLAS'})
+                        msp.add_circle((cx_min, yi), r_bar, dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
+                        msp.add_circle((cx_max, yi), r_bar, dxfattribs={'layer':'VARILLAS','color':_color_acero_dxf(rebar_diam)})
                         pts_grapa_h = [(x_st_min + hl*0.5, yi + hl*0.5), (x_st_min, yi), (x_st_max, yi), (x_st_max - hl*0.5, yi - hl*0.5)]
-                        msp.add_lwpolyline(pts_grapa_h, dxfattribs={'layer':'ESTRIBOS'})
+                        msp.add_lwpolyline(pts_grapa_h, dxfattribs={'layer':'ESTRIBOS','color':_color_acero_dxf(stirrup_diam)})
 
                 # Cotas dentro del plano (Sección)
                 yc = oy + sec_h + 0.6
@@ -1844,7 +1859,7 @@ with tab2:
                 
                 msp.add_text(f"rec={recub_cm:.0f}cm", dxfattribs={'layer':'COTAS','style':'ROMANS','height':0.22,'insert':(ox+re_s*0.3, oy+re_s*0.3)})
 
-            # ── ZONA 3: TEXTOS DESCRIPTIVOS (Top-Right Extremo) ──
+            #  ZONA 3: TEXTOS DESCRIPTIVOS (Top-Right Extremo) 
             tx  = sec_zona_x0 + sec_zona_ancho + 0.5
             ty0 = alto_plano - 1.5
             th  = 0.30
@@ -1905,7 +1920,7 @@ with tab2:
                  (rotulo_x,rotulo_y+rotulo_h_real),(rotulo_x,rotulo_y)],
                 dxfattribs={'layer':'ROTULO','color':2})
 
-            # ── Tabla de Despiece (Resumen de Cantidades) ──
+            #  Tabla de Despiece (Resumen de Cantidades) 
             tab_w = rotulo_w
             tab_x = rotulo_x
             tab_y_start = rotulo_y + rotulo_h_real + 0.5
@@ -2002,6 +2017,38 @@ with tab2:
                 data=dxf_bytes,
                 file_name=f"Columna_{b:.0f}x{h:.0f}_ICONTEC.dxf",
                 mime="application/dxf")
+            #  PDF EXPORT (MatplotlibBackend) 
+            try:
+                import matplotlib; matplotlib.use('Agg')
+                import matplotlib.pyplot as _mpdf
+                from ezdxf.addons.drawing import RenderContext, Frontend
+                from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
+                from ezdxf.addons.drawing.config import Configuration, BackgroundPolicy
+                
+                fig_w_in = ancho_plano * 0.3937
+                fig_h_in = alto_plano * 0.3937
+                fig_pdf, ax_pdf = _mpdf.subplots(figsize=(fig_w_in, fig_h_in))
+                fig_pdf.patch.set_facecolor('white'); ax_pdf.set_facecolor('white')
+                
+                _config = Configuration.defaults().with_changes(background_policy=BackgroundPolicy.WHITE)
+                Frontend(RenderContext(doc_dxf), MatplotlibBackend(ax_pdf), config=_config).draw_layout(msp, finalize=True)
+                
+                ax_pdf.set_aspect('equal')
+                ax_pdf.axis('off')
+                
+                _cx = ancho_plano / 2
+                _cy = alto_plano / 2
+                ax_pdf.set_xlim(_cx - ancho_plano/2 - 0.5, _cx + ancho_plano/2 + 0.5)
+                ax_pdf.set_ylim(_cy - alto_plano/2 - 0.5, _cy + alto_plano/2 + 0.5)
+                
+                bio_pdf_x = io.BytesIO()
+                fig_pdf.savefig(bio_pdf_x, format='pdf', bbox_inches='tight', dpi=150, facecolor='white')
+                bio_pdf_x.seek(0); _mpdf.close(fig_pdf)
+                st.download_button(label="  Descargar Plano PDF (A4)", data=bio_pdf_x.getvalue(),
+                    file_name="Plano_Col_Circ_A1.pdf", mime="application/pdf", key="pdf_Col_Circ_btn")
+            except Exception as e_pdf:
+                st.warning(f"PDF no disponible: {{e_pdf}}")
+
 
         except Exception as e:
             import traceback
@@ -2026,6 +2073,16 @@ with tab3:
     col_c2.metric(_t("Acero Total", "Total Steel"), f"{peso_total_acero_kg:.2f} kg")
     col_c3.metric(_t("Acero Longitudinal", "Long. Steel"), f"{peso_acero_long_kg:.2f} kg")
     col_c4.metric(_t("Acero Estribos", "Tie Steel"), f"{peso_total_estribos_kg:.2f} kg")
+    # P-3 Encofrado / P-1 Agua / P-4 Cuantía
+    _dim_b = D if es_circular else b
+    _dim_h = D if es_circular else h
+    _area_enc = (3.14159 * _dim_b / 100) * (L_col / 100) if es_circular else (2 * (_dim_b + _dim_h) / 100) * (L_col / 100)
+    _mix_c = get_mix_for_fc(fc)
+    _litros_agua = _mix_c.get("agua", 180) * vol_concreto_m3
+    _col_e1, _col_e2, _col_e3 = st.columns(3)
+    _col_e1.metric(_t("Encofrado", "Formwork"), f"{_area_enc:.2f} m²")
+    _col_e2.metric(_t("Agua concreto", "Mixing water"), f"{_litros_agua:.0f} L")
+    _col_e3.metric(_t("Cuantía ρ", "Steel ratio ρ"), f"{cuantia:.2f}%")
     st.markdown("---")
     st.subheader(_t("Despiece de Acero", "Bar Bending Schedule"))
     
@@ -2043,11 +2100,14 @@ with tab3:
         }
         long_bar_m = long_bar
     else:
+        _tiene_empalme = st.checkbox(_t("Incluir empalme inferior (arranque desde cimentación)", "Include lap splice at base"), value=False, key="col_empalme")
+        _long_empalme = (1.3 * ld_mm/10) / 100 if _tiene_empalme else 0.0
         long_bar_m = (L_col + 2 * (ld_mm/10) + 2 * (12*rebar_diam/10)) / 100
+        long_bar_arranque = long_bar_m + _long_empalme
         peso_long_total = n_barras_total * long_bar_m * (rebar_area * 100) * 7.85e-3
         
         despiece_data = {
-            "Marca": ["L1", "E1"],
+            "Marca": ["L1 (cuerpo)", "L1A (arranque)" , "E1"] if _tiene_empalme else ["L1", "E1"],
             "Cantidad": [n_barras_total, n_estribos_total],
             "Diámetro": [_bar_label(rebar_diam), _bar_label(stirrup_diam)],
             "Longitud (m)": [long_bar_m, perim_estribo/100],
@@ -2104,6 +2164,10 @@ with tab3:
                 precio_acero = st.number_input(_t("Precio por kg acero", "Price per kg steel"), value=st.session_state["apu_acero"], step=100.0)
                 precio_arena = st.number_input(_t("Precio por m³ arena", "Price per m³ sand"), value=st.session_state["apu_arena"], step=5000.0)
                 precio_grava = st.number_input(_t("Precio por m³ grava", "Price per m³ gravel"), value=st.session_state["apu_grava"], step=5000.0)
+                if "apu_agua" not in st.session_state: st.session_state["apu_agua"] = 3500.0
+                if "apu_encofrado" not in st.session_state: st.session_state["apu_encofrado"] = 45000.0
+                precio_agua = st.number_input(_t("Precio agua (m³)", "Water price /m³"), value=st.session_state["apu_agua"], step=500.0)
+                precio_encofrado = st.number_input(_t("Precio encofrado (m²)", "Formwork price /m²"), value=st.session_state["apu_encofrado"], step=2000.0)
             with col_apu2:
                 if "apu_mo" not in st.session_state: st.session_state["apu_mo"] = 70000.0
                 if "apu_aui" not in st.session_state: st.session_state["apu_aui"] = 30.0
@@ -2126,7 +2190,8 @@ with tab3:
             if submitted:
                 st.session_state.apu_config = {"moneda": moneda, "cemento": precio_cemento, "acero": precio_acero,
                     "arena": precio_arena, "grava": precio_grava, "costo_dia_mo": precio_mo, "pct_aui": pct_aui,
-                    "premix": usar_premezclado, "precio_premix_m3": precio_premix_m3}
+                    "premix": usar_premezclado, "precio_premix_m3": precio_premix_m3,
+                    "agua": precio_agua, "encofrado": precio_encofrado}
                 st.success(_t("Precios guardados.", "Prices saved."))
                 st.rerun()
         if "apu_config" in st.session_state:
@@ -2148,27 +2213,36 @@ with tab3:
                 costo_conc_premix = 0.0
             costo_acero = peso_total_acero_kg * apu["acero"]
             costo_mo = (peso_total_acero_kg * 0.04 + vol_concreto_m3 * 0.4) * apu["costo_dia_mo"]
-            costo_directo = costo_cemento + costo_acero + costo_arena + costo_grava + costo_conc_premix + costo_mo
+            # P-1 Agua
+            _mix_apu = get_mix_for_fc(fc)
+            _litros_apu = _mix_apu.get("agua", 180) * vol_concreto_m3
+            costo_agua = (_litros_apu / 1000) * apu.get("agua", 3500)
+            # P-3 Encofrado
+            _dim_enc_b = D if es_circular else b
+            _dim_enc_h = D if es_circular else h
+            _area_enc_apu = (3.14159 * _dim_enc_b / 100) * (L_col / 100) if es_circular else (2 * (_dim_enc_b + _dim_enc_h) / 100) * (L_col / 100)
+            costo_encofrado = _area_enc_apu * apu.get("encofrado", 45000)
+            costo_directo = costo_cemento + costo_acero + costo_arena + costo_grava + costo_conc_premix + costo_mo + costo_agua + costo_encofrado
             aiu = costo_directo * apu["pct_aui"]
             total = costo_directo + aiu
-            # ── Métricas cards ──────────────────────────────────────────────
+            #  Métricas cards 
             _c1, _c2, _c3 = st.columns(3)
             _c1.metric(_t(" Total Proyecto", " Total Project"), f"{total:,.0f} {apu['moneda']}")
             _c2.metric(_t(" Costo Directo", "Direct Cost"), f"{costo_directo:,.0f} {apu['moneda']}")
             _c3.metric(_t(" Mano de Obra", "Labor"), f"{costo_mo:,.0f} {apu['moneda']}")
 
-            # ── Gráfica Plotly — Desglose de costos ────────────────────────
+            #  Gráfica Plotly — Desglose de costos 
             import plotly.graph_objects as _go
             _items_label = (
-                [_t("Concreto PM", "Ready-mix"), _t("Acero", "Steel"), _t("M.O.", "Labor"), "A.I.U."]
+                [_t("Concreto PM", "Ready-mix"), _t("Acero", "Steel"), _t("M.O.", "Labor"), _t("Agua","Water"), _t("Encofrado","Formwork"), "A.I.U."]
                 if _usar_premix else
                 [_t("Cemento", "Cement"), _t("Acero", "Steel"), _t("Arena", "Sand"),
-                 _t("Grava", "Gravel"), _t("M.O.", "Labor"), "A.I.U."]
+                 _t("Grava", "Gravel"), _t("M.O.", "Labor"), _t("Agua","Water"), _t("Encofrado","Formwork"), "A.I.U."]
             )
             _items_val = (
-                [costo_conc_premix, costo_acero, costo_mo, aiu]
+                [costo_conc_premix, costo_acero, costo_mo, costo_agua, costo_encofrado, aiu]
                 if _usar_premix else
-                [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, aiu]
+                [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, costo_agua, costo_encofrado, aiu]
             )
             _colors = ["#3fb950", "#79c0ff", "#ffa657", "#d2a8ff", "#58a6ff", "#f0883e"][:len(_items_label)]
             _fig_apu = _go.Figure(_go.Bar(
@@ -2198,21 +2272,23 @@ with tab3:
             with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
                 if _usar_premix:
                     df_apu = pd.DataFrame({
-                        "Item":     ["Concreto Premezclado", "Acero", "Mano de Obra", "A.I.U.", "TOTAL"],
+                        "Item":     ["Concreto Premezclado", "Acero", "Mano de Obra", "Agua", "Encofrado", "A.I.U.", "TOTAL"],
                         "Cantidad": [vol_concreto_m3, peso_total_acero_kg,
-                                     peso_total_acero_kg * 0.04 + vol_concreto_m3 * 0.4, "", ""],
-                        "Unidad":   ["m³", "kg", "días", f"{apu['pct_aui']*100:.0f}%", ""],
-                        "Subtotal": [costo_conc_premix, costo_acero, costo_mo, aiu, total]
+                                     peso_total_acero_kg * 0.04 + vol_concreto_m3 * 0.4,
+                                     round(_litros_apu, 0), round(_area_enc_apu, 2), "", ""],
+                        "Unidad":   ["m³", "kg", "días", "litros", "m²", f"{apu['pct_aui']*100:.0f}%", ""],
+                        "Subtotal": [costo_conc_premix, costo_acero, costo_mo, costo_agua, costo_encofrado, aiu, total]
                     })
                 else:
                     df_apu = pd.DataFrame({
-                        "Item":     ["Cemento", "Acero", "Arena", "Grava", "Mano de Obra", "A.I.U.", "TOTAL"],
+                        "Item":     ["Cemento", "Acero", "Arena", "Grava", "Mano de Obra", "Agua", "Encofrado", "A.I.U.", "TOTAL"],
                         "Cantidad": [bultos_col, peso_total_acero_kg, mix["arena"]*vol_concreto_m3/1500,
                                      mix["grava"]*vol_concreto_m3/1600,
-                                     peso_total_acero_kg*0.04 + vol_concreto_m3*0.4, "", ""],
-                        "Unidad":   [f"bultos ({bag_kg}kg)", "kg", "m³", "m³", "días",
+                                     peso_total_acero_kg*0.04 + vol_concreto_m3*0.4,
+                                     round(_litros_apu, 0), round(_area_enc_apu, 2), "", ""],
+                        "Unidad":   [f"bultos ({bag_kg}kg)", "kg", "m³", "m³", "días", "litros", "m²",
                                      f"{apu['pct_aui']*100:.0f}%", ""],
-                        "Subtotal": [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, aiu, total]
+                        "Subtotal": [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, costo_agua, costo_encofrado, aiu, total]
                     })
                 df_apu.to_excel(writer, index=False, sheet_name='APU')
                 workbook = writer.book
@@ -2255,7 +2331,7 @@ with tab4:
                                file_name=_ifc_fname, mime="application/x-step", key="ifc_col")
 
         except ImportError:
-            st.warning("⚠ La librería `ifcopenshell` no está instalada. Ejecuta `pip install ifcopenshell` para habilitar la exportación IFC/BIM.")
+            st.warning(" La librería `ifcopenshell` no está instalada. Ejecuta `pip install ifcopenshell` para habilitar la exportación IFC/BIM.")
         except Exception as e:
             st.error(f"Error generando IFC: {e}")
             st.info("Asegúrate de que `ifc_export.py` y `ifcopenshell` estén disponibles en el entorno de ejecución.")
@@ -2433,6 +2509,10 @@ with tab4:
         doc.add_paragraph("Firma: ___________________________")
         doc.add_paragraph("Matrícula Profesional: _______________")
         doc.add_heading("8. LONGITUDES DE DESARROLLO Y EMPALMES", level=1)
+        # Calcular variables de empalme localmente
+        splice_length_mm = 1.3 * ld_mm
+        splice_start = 0.0
+        splice_end = splice_length_mm / 10
         doc.add_paragraph(f"Longitud de desarrollo (ld): {ld_mm/10:.1f} cm\nLongitud de empalme (Clase B): {splice_length_mm/10:.1f} cm\nZona de empalme: {splice_start:.0f} cm - {splice_end:.0f} cm desde la base")
         doc.add_heading("9. SOLICITACIONES Y COMBINACIONES DE DISEÑO", level=1)
         doc.add_paragraph(f"Cargas últimas ingresadas para el diseño y verificación:\nPu = {Pu_input:.1f} {unidad_fuerza}\nMux = {Mux_input:.1f} {unidad_mom}\nMuy = {Muy_input:.1f} {unidad_mom}")

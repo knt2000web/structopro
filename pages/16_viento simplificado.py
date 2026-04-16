@@ -12,20 +12,24 @@ from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from datetime import datetime
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Placa Fácil", "Easy Slab"), layout="wide")
 st.title(_t("Placa Fácil – Sistema de Vigueta y Bloques", "Easy Slab – Joist & Block System"))
 st.markdown(_t("Diseño de losas con vigueta metálica y bloques de arcilla cocida (Placa Fácil). Verificación según NSR-10 (Colombia) y normas internacionales.", 
                "Design of slabs with metal joists and fired clay blocks (Easy Slab). Verification according to NSR-10 (Colombia) and international codes."))
 
-# ─────────────────────────────────────────────
+# 
 # NORMATIVAS SOPORTADAS (multi-norma)
-# ─────────────────────────────────────────────
+# 
 NORMAS_PLACA = {
     "NSR-10 (Colombia)": {
         "luz_max": 4.2,          # m, luz máxima de perfiles sin apoyo intermedio
@@ -56,9 +60,9 @@ NORMAS_PLACA = {
     },
 }
 
-# ─────────────────────────────────────────────
+# 
 # DATOS DEL BLOQUELÓN (estándar colombiano)
-# ─────────────────────────────────────────────
+# 
 BLOCK_DATA = {
     "largo": 0.80,      # m
     "ancho": 0.23,      # m
@@ -72,17 +76,19 @@ BLOCK_DATA = {
     "aislamiento_acustico": 45,     # dB (estimado)
 }
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES AUXILIARES
-# ─────────────────────────────────────────────
+# 
 def qty_table(rows):
     df = pd.DataFrame(rows, columns=["Concepto", "Valor"])
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ─────────────────────────────────────────────
+# 
 # SIDEBAR – CONFIGURACIÓN DEL PROYECTO
-# ─────────────────────────────────────────────
+# 
 norma_sel = st.sidebar.selectbox(_t("Norma de diseño", "Design code"), list(NORMAS_PLACA.keys()), index=0)
+
+mostrar_referencias_norma(norma_sel, "viento")
 norma = NORMAS_PLACA[norma_sel]
 
 st.sidebar.header(_t("Datos del proyecto", "Project data"))
@@ -131,9 +137,9 @@ pct_aui = st.sidebar.number_input(_t("% A.I.U. (sobre costo directo)", "A.I.U. p
 pct_util = st.sidebar.number_input(_t("% Utilidad (sobre costo directo)", "Profit percentage"), 0.0, 20.0, 5.0, 1.0) / 100.0
 iva = st.sidebar.number_input(_t("% IVA (sobre utilidad)", "IVA on profit"), 0.0, 30.0, 19.0, 1.0) / 100.0
 
-# ─────────────────────────────────────────────
+# 
 # CÁLCULOS DE CANTIDADES (con rendimiento real)
-# ─────────────────────────────────────────────
+# 
 area_total = Lx * Ly
 
 # Determinar dirección de los perfiles
@@ -174,9 +180,9 @@ cemento_por_m3 = 350  # kg/m³
 total_cemento_kg = cemento_por_m3 * vol_concreto_total_desp
 bultos_cemento = math.ceil(total_cemento_kg / 50)  # bultos de 50 kg
 
-# ─────────────────────────────────────────────
+# 
 # VERIFICACIONES NORMATIVAS (NSR-10 y otras)
-# ─────────────────────────────────────────────
+# 
 verificaciones = []
 
 # 1. Luz máxima de perfiles
@@ -279,9 +285,9 @@ verificaciones.append({
     "observacion": "Buen aislamiento térmico" if BLOCK_DATA['transmitancia_termica'] <= 3.0 else "Mejorar aislamiento"
 })
 
-# ─────────────────────────────────────────────
+# 
 # PRESUPUESTO APU
-# ─────────────────────────────────────────────
+# 
 costo_bloques = n_bloques_desp * precio_bloque
 costo_perfiles = longitud_total_perfiles_desp * precio_perfil
 costo_malla = area_malla * precio_malla
@@ -298,9 +304,9 @@ utilidad = costo_directo * pct_util
 iva_util = utilidad * iva
 total_proyecto = costo_directo + herramienta + aiu + iva_util
 
-# ─────────────────────────────────────────────
+# 
 # VISUALIZACIÓN 3D (Plotly) – con bloques de arcilla y pestañas
-# ─────────────────────────────────────────────
+# 
 def create_3d_model(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo, 
                     block_length, block_width, block_height, espesor_torta, 
                     viga_b, viga_h, incluir_vigas):
@@ -392,9 +398,9 @@ def create_3d_model(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_la
     )
     return fig
 
-# ─────────────────────────────────────────────
+# 
 # DXF EXPORT (PLANTA Y DETALLES)
-# ─────────────────────────────────────────────
+# 
 def generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo, 
                  block_length, incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente):
     doc_dxf = ezdxf.new('R2010')
@@ -451,9 +457,9 @@ def generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo
     doc_dxf.write(out)
     return out.getvalue().encode('utf-8')
 
-# ─────────────────────────────────────────────
+# 
 # MEMORIA DOCX
-# ─────────────────────────────────────────────
+# 
 def generate_memory():
     doc = Document()
     doc.add_heading(f"Memoria de Cálculo – Placa Fácil", 0)
@@ -501,9 +507,9 @@ def generate_memory():
     
     return doc
 
-# ─────────────────────────────────────────────
+# 
 # INTERFAZ PRINCIPAL (PESTAÑAS)
-# ─────────────────────────────────────────────
+# 
 tab_res, tab_3d, tab_dxf, tab_mem, tab_qty, tab_apu = st.tabs([
     " Resultados", " Modelo 3D", " DXF", " Memoria", " Cantidades", " APU"
 ])
@@ -601,9 +607,9 @@ with tab_apu:
         st.download_button("Descargar Excel", data=output, file_name=f"Presupuesto_PlacaFacil_{proyecto_nombre}.xlsx", 
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-# ─────────────────────────────────────────────
+# 
 # FOOTER
-# ─────────────────────────────────────────────
+# 
 st.markdown("---")
 st.markdown(f"""
 > **Placa Fácil – Sistema de Vigueta y Bloques**  
@@ -611,5 +617,5 @@ st.markdown(f"""
 > f'c = {fc_concreto:.1f} MPa | Espesor torta = {espesor_torta*100:.1f} cm | Altura total = {altura_total*100:.1f} cm  
 > Bloques de arcilla: {block_length*100:.0f}×{block_width*100:.0f}×{block_height*100:.0f} cm, {BLOCK_DATA['unidades_por_m2']:.2f} ud/m²  
 > **Referencia:** {norma['ref']}  
-> ⚠ *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
+>  *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
 """)

@@ -1,4 +1,18 @@
 import streamlit as st
+
+#  Utilidad: Color AutoCAD segun # de cuartos de pulgada 
+from normas_referencias import mostrar_referencias_norma
+def _color_acero_dxf(db_mm: float) -> int:
+    """Retorna color AutoCAD (1-255) segun diametro nominal en mm (ASTM/NTC)."""
+    if   db_mm <  7.5: return 2   # #2 1/4"   - Amarillo
+    elif db_mm < 11.1: return 3   # #3 3/8"   - Verde
+    elif db_mm < 14.3: return 4   # #4 1/2"   - Cian
+    elif db_mm < 17.5: return 5   # #5 5/8"   - Azul
+    elif db_mm < 20.6: return 6   # #6 3/4"   - Magenta
+    elif db_mm < 23.8: return 30  # #7 7/8"   - Naranja
+    elif db_mm < 27.0: return 1   # #8 1"     - Rojo
+    else:              return 10  # #9+ 1-1/8" - Verde oscuro (pesado)
+# 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -17,18 +31,18 @@ except ImportError:
     ifc_export = None
     _IFC_AVAILABLE = False
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Zapatas y Suelos", "Footings and Soils"), layout="wide")
 
-# ─────────────────────────────────────────────
+# 
 # PERSISTENCIA SUPABASE
-# ─────────────────────────────────────────────
+# 
 import requests
 import json
 import streamlit as st
@@ -130,7 +144,7 @@ def capturar_estado_module(ref):
         match = ["pi_", "p_", "apu_", "fc_pi"]
     return {k: st.session_state[k] for k in st.session_state if any(k.startswith(m) for m in match)}
 
-# ─────────────────────────────────────────────
+# 
 
 
 # 1. Banner SVG compacto
@@ -164,23 +178,23 @@ with st.expander(" ¿Qué hace este módulo? — Guía rápida", expanded=False)
     ''')
 
 
-# ─────────────────────────────────────────────
+# 
 # PIE DE PÁGINA / DERECHOS RESERVADOS
-# ─────────────────────────────────────────────
+# 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i> Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
+# 
 # CONFIGURACIÓN GENERAL Y APU
-# ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙ Configuración Global", "⚙ Global Settings"))
+# 
+st.sidebar.header(_t(" Configuración Global", " Global Settings"))
 if "norma_sel" not in st.session_state:
     st.session_state.norma_sel = "NSR-10 (Colombia)"
 
@@ -203,7 +217,7 @@ if "E.060" in norma_sel:
 fc_basico = st.sidebar.number_input(_t("f'c Zapata [MPa]", "f'c Footing [MPa]"), 15.0, 50.0, st.session_state.get("z_fc", 21.0), 1.0, key="z_fc")
 fy_basico = st.sidebar.number_input(_t("fy Acero [MPa]", "fy Steel [MPa]"), 240.0, 500.0, st.session_state.get("z_fy", 420.0), 10.0, key="z_fy")
 
-# ─── CONVERSOR GLOBAL DE UNIDADES DE SUELO ← Visible en toda la página
+#  CONVERSOR GLOBAL DE UNIDADES DE SUELO ← Visible en toda la página
 st.sidebar.markdown("---")
 st.sidebar.header(_t(" Conversor Unidades de Suelo", " Soil Units Converter"))
 _cu = st.sidebar.selectbox(_t("Unidad a convertir:", "Unit to convert:"), 
@@ -215,8 +229,18 @@ _ck = {
     "psi → ...": _cv * 6.89476,
 }.get(_cu, _cv)
 st.sidebar.markdown(f"""
+<div style="background:#223;padding:10px;border-radius:5px;text-align:center;">
+    <small>{_cu.split('→')[0].strip()}</small><br>
+    <b>{_cv:.2f}</b><br>
+    <span style="color:#0f0;">⬇</span><br>
+    <b style="color:#4caf50;">{_ck:.2f} kPa</b><br><small>({_ck/9.80665:.2f} t/m² | {_ck/98.0665:.2f} kg/cm²)</small>
+</div>
+""", unsafe_allow_html=True)
 
-    st.sidebar.markdown("---")
+try:
+    mostrar_referencias_norma(norma_sel, "zapatas")
+except NameError:
+    pass
     st.sidebar.subheader(" Guardar / Cargar Proyecto")
     nombre_producido = st.session_state.get(f"np_{"zapatas"}", "")
     
@@ -254,6 +278,7 @@ st.sidebar.markdown(f"""
             if ok: st.sidebar.success(msg)
             else: st.sidebar.error(msg)
 
+st.sidebar.markdown(f"""
 | | |
 |:---|---:|
 | **kPa** | `{_ck:.2f}` |
@@ -286,9 +311,9 @@ else:
     }
     def_idx = 1 # 12 mm
 
-# ─────────────────────────────────────────────
+# 
 # HELPER GLOBAL: BOUSSINESQ INFLUENCE FACTOR (version escalar y vectorizada)
-# ─────────────────────────────────────────────
+# 
 def I_z_bous(m, n):
     V1 = m**2 + n**2 + 1
     V2 = m**2 * n**2
@@ -311,11 +336,11 @@ def I_z_bous_vec(m_arr, n_arr):
     angulo = np.where(V1 - V2 < 0, angulo + np.pi, angulo)
     return (1 / (4 * np.pi)) * (term1 * term2 + angulo)
 
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 # OPCIÓN B — FUNCIONES AUXILIARES GLOBALES (Fases 1-5)
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 
-# ─── TABLA MULTINORMA VIGA DE AMARRE ────────────────────────────────────────
+#  TABLA MULTINORMA VIGA DE AMARRE 
 _STRAP_NORM = {
     "NSR-10 (Colombia)":          {"nombre": "Viga de amarre",    "art": "C.15.13.3",     "h_factor": 20, "F_ax_pct": 0.025, "idioma": "es"},
     "ACI 318-25 (EE.UU.)":        {"nombre": "Strap beam",        "art": "§13.3.3",       "h_factor": 15, "F_ax_pct": 0.025, "idioma": "en"},
@@ -336,7 +361,7 @@ def _get_strap_norm(norma):
             return _STRAP_NORM[key]
     return _STRAP_NORM["NSR-10 (Colombia)"]  # fallback
 
-# ─── F1: DISTRIBUCIÓN DE PRESIONES ─────────────────────────────────────────
+#  F1: DISTRIBUCIÓN DE PRESIONES 
 def calcular_distribucion_presiones(P, M_B, M_L, B, L):
     """
     Retorna qu_max, qu_min, tipo_dist, e_B, e_L para cualquier tipo de zapata.
@@ -364,7 +389,7 @@ def calcular_distribucion_presiones(P, M_B, M_L, B, L):
         tipo_dist = "con_tension"
     return qu_max, qu_min, tipo_dist, e_B, e_L, Ix, Iy, A
 
-# ─── F2: ÁREA EFECTIVA MEYERHOF ────────────────────────────────────────────
+#  F2: ÁREA EFECTIVA MEYERHOF 
 def calcular_area_efectiva_meyerhof(B, L, e_B, e_L):
     """Retorna B', L', A' para el caso qu_min < 0."""
     B_prima = max(0.1, B - 2 * e_B)
@@ -372,7 +397,7 @@ def calcular_area_efectiva_meyerhof(B, L, e_B, e_L):
     A_prima = B_prima * L_prima
     return B_prima, L_prima, A_prima
 
-# ─── F3: MAPA DE CALOR 3D PRESIONES ────────────────────────────────────────
+#  F3: MAPA DE CALOR 3D PRESIONES 
 def render_mapa_calor_presiones(B, L, P, M_B, M_L, Ix, Iy, A, qu_max_val, qu_min_val, c1_col_cm, c2_col_cm, titulo="", q_adm=None):
     """Genera go.Figure con surface 3D de qu(x,y)."""
     _nx, _ny = 30, 30
@@ -412,7 +437,7 @@ def render_mapa_calor_presiones(B, L, P, M_B, M_L, Ix, Iy, A, qu_max_val, qu_min
         fig.add_trace(go.Surface(x=_xg, y=_yg, z=_z_adm, colorscale=[[0, 'blue'], [1, 'blue']],
                                  opacity=0.35, showscale=False, name="q_adm Límite"))
     _titulo = titulo or (f"qu(x,y) | qu_max={qu_max_val:.1f} | qu_min={qu_min_val:.1f} kPa" +
-                         (" | ⚠ LEVANTAMIENTO" if _ten else " |  Compresión total"))
+                         (" |  LEVANTAMIENTO" if _ten else " |  Compresión total"))
     fig.update_layout(scene=dict(xaxis_title="B[m]", yaxis_title="L[m]", zaxis_title="qu[kPa]",
                                  bgcolor="#0f1117",
                                  xaxis=dict(gridcolor="#333"), yaxis=dict(gridcolor="#333"),
@@ -424,7 +449,7 @@ def render_mapa_calor_presiones(B, L, P, M_B, M_L, Ix, Iy, A, qu_max_val, qu_min
                       showlegend=True)
     return fig, _ten
 
-# ─── F4: CÁLCULO VIGA DE AMARRE ────────────────────────────────────────────
+#  F4: CÁLCULO VIGA DE AMARRE 
 def calcular_viga_amarre(R_strap_kN, L_libre_m, b_viga_cm, h_viga_cm, gamma_c=24.0):
     """
     Genera el diagrama de fuerzas, V(x) y M(x) de la viga de amarre.
@@ -447,7 +472,7 @@ def calcular_viga_amarre(R_strap_kN, L_libre_m, b_viga_cm, h_viga_cm, gamma_c=24
     V_max = float(np.max(np.abs(V_arr)))
     return x_arr, V_arr, M_arr, M_max, V_max, pp_viga, R_int, _adv_Rint
 
-# ─── F5: DISEÑO VIGA DE AMARRE ─────────────────────────────────────────────
+#  F5: DISEÑO VIGA DE AMARRE 
 def disenar_viga_amarre(M_max_kNm, V_max_kN, F_ax_kN, b_v_cm, h_v_cm,
                         fc_MPa, fy_MPa, L_libre_m, P_total_kN, norma,
                         recub_v=4.0, bar_long="N.5 (5/8\")", bar_est="N.3 (3/8\")",
@@ -544,7 +569,7 @@ def disenar_viga_amarre(M_max_kNm, V_max_kN, F_ax_kN, b_v_cm, h_v_cm,
         "db_long": db_long, "db_est": db_est,
     }
 
-# ─── F6: DIAGRAMA V(x) / M(x) PLOTLY ───────────────────────────────────────
+#  F6: DIAGRAMA V(x) / M(x) PLOTLY 
 def render_diagrama_VM(x_arr, V_arr, M_arr, R_strap, R_int, pp_viga, L_libre):
     """Genera figura Plotly con dos paneles: V(x) arriba y M(x) abajo."""
     from plotly.subplots import make_subplots
@@ -568,7 +593,7 @@ def render_diagrama_VM(x_arr, V_arr, M_arr, R_strap, R_int, pp_viga, L_libre):
                        text=f"↑ R_ext = {R_strap:.1f} kN",
                        showarrow=False, font=dict(color="#7fff00", size=11),
                        bgcolor="rgba(0,0,0,0.5)", align="left")
-    _Rint_lbl = f"↑ R_int = {R_int:.1f} kN" if R_int >= 0 else f"⚠ R_int = {R_int:.1f} kN (levant.)"
+    _Rint_lbl = f"↑ R_int = {R_int:.1f} kN" if R_int >= 0 else f" R_int = {R_int:.1f} kN (levant.)"
     _Rint_col = "#ff6b6b" if R_int >= 0 else "#ffaa00"
     fig.add_annotation(x=0.98, y=0.95, xref="paper", yref="paper",
                        text=_Rint_lbl,
@@ -581,7 +606,7 @@ def render_diagrama_VM(x_arr, V_arr, M_arr, R_strap, R_int, pp_viga, L_libre):
                       yaxis=dict(gridcolor="#222"), yaxis2=dict(gridcolor="#222"))
     return fig
 
-# ─── F7: VISTA 3D PLOTLY — SISTEMA COMPLETO ────────────────────────────────
+#  F7: VISTA 3D PLOTLY — SISTEMA COMPLETO 
 def render_3d_sistema(zap_ext, zap_int, viga_d, dis_d, fc_col=None):
     """
     zap_ext: dict con B, L, H, x0_col, y0_col (centro zapata exterior en coords globales)
@@ -693,234 +718,196 @@ def render_3d_sistema(zap_ext, zap_int, viga_d, dis_d, fc_col=None):
                       showlegend=True, dragmode='turntable')
     return fig
 
-# ─── F8: DXF — SISTEMA COMPLETO ────────────────────────────────────────────
-def generar_dxf_sistema(zap_ext_d, zap_int_d, viga_d, dis_d, norma, fc, fy):
-    """Genera doc ezdxf con planta general, corte long. y trans. de viga de amarre."""
+#  F8: DXF — SISTEMA COMPLETO 
+def generar_dxf_sistema(zap_ext_d, zap_int_d, viga_d, dis_d, norma, fc, fy, papel_w, papel_h, papel_lbl):
+    """Genera plano DXF ICONTEC con planta general, y cortes."""
     import datetime as _dt2
     sn = _get_strap_norm(norma)
-    doc = ezdxf.new('R2010')
+    doc = ezdxf.new('R2010', setup=True)
     doc.units = ezdxf.units.CM
-    ESCALA = 25; TH = 0.06*ESCALA; TH_T = 0.10*ESCALA
-    doc.header['$DIMSCALE'] = ESCALA
-    doc.header['$TEXTSIZE'] = TH
+    
+    LW = {'ZAPATA_EXT':40, 'ZAPATA_INT':40, 'VIGA_STRAP':50, 'ACERO_LONG':40, 'ACERO_EST':25, 'COTAS':25, 'TEXTO':25, 'ROTULO':35, 'MARGEN':70}
+    COL = {'ZAPATA_EXT':3, 'ZAPATA_INT':5, 'VIGA_STRAP':1, 'ACERO_LONG':6, 'ACERO_EST':7, 'COTAS':2, 'TEXTO':7, 'ROTULO':8, 'MARGEN':7}
+    for lay, lw in LW.items():
+        doc.layers.new(lay, dxfattribs={'color':COL[lay], 'lineweight':lw})
+    doc.styles.new('ROMANS', dxfattribs={'font':'romans.shx'})
     msp = doc.modelspace()
-    # Layers
-    for _ln, _lc in [('ZAPATA_EXT',4),('ZAPATA_INT',3),('VIGA_STRAP',1),
-                     ('ACERO_LONG',2),('ACERO_EST',7),('COTAS',8),('TEXTO',2),('ROTULO',6)]:
-        if _ln not in doc.layers: doc.layers.add(_ln, color=_lc)
+    
+    # Dibujar elementos virtualmente (unidades CM reales)
     def _rect(ox, oy, w, h, lay):
-        msp.add_lwpolyline([(ox,oy),(ox+w,oy),(ox+w,oy+h),(ox,oy+h)], close=True, dxfattribs={'layer':lay})
-    def _txt(x, y, txt, lay, h=None):
-        msp.add_text(txt, dxfattribs={'layer':lay,'height':h or TH,'insert':(x,y)})
-    def _dim_h(x1,x2,yd,txt):
-        msp.add_line((x1,yd),(x2,yd),dxfattribs={'layer':'COTAS'})
-        msp.add_line((x1,yd-TH),(x1,yd+TH),dxfattribs={'layer':'COTAS'})
-        msp.add_line((x2,yd-TH),(x2,yd+TH),dxfattribs={'layer':'COTAS'})
-        _txt((x1+x2)/2, yd+TH*0.5, txt, 'COTAS')
-    # — PLANTA GENERAL (origen 0,0) —
+        msp.add_lwpolyline([(ox,oy),(ox+w,oy),(ox+w,oy+h),(ox,oy+h),(ox,oy)], dxfattribs={'layer':lay})
+    def _txt(x, y, txt, lay, h=2.5, ha='center', va='center'):
+        msp.add_text(txt, dxfattribs={'layer':lay,'style':'ROMANS','height':h,
+                                      'insert':(x,y),'align_point':(x,y),
+                                      'halign':{'left':0,'center':1,'right':2}[ha],
+                                      'valign': 2 if va=='center' else 0})
+                                      
     Be_cm = zap_ext_d["B_cm"]; Le_cm = zap_ext_d["L_cm"]
     Bi_cm = zap_int_d["B_cm"]; Li_cm = zap_int_d["L_cm"]
-    sep_cm = viga_d["L_libre_m"]*100
-    # Zapata exterior en x=0
+    sep_cm = viga_d["L_libre_m"]*100; bv_cm = viga_d["b_cm"]; hv_cm = viga_d["h_cm"]
+    
+    # ── PLANTA ──
     _rect(0, -Le_cm/2, Be_cm, Le_cm, 'ZAPATA_EXT')
-    _txt(Be_cm/2, Le_cm/2+TH, f"Z.EXT {Be_cm:.0f}x{Le_cm:.0f}cm", 'TEXTO', TH_T)
-    # Zapata interior en x = Be_cm + sep_cm
-    ox_int = Be_cm + sep_cm
-    _rect(ox_int, -Li_cm/2, Bi_cm, Li_cm, 'ZAPATA_INT')
-    _txt(ox_int+Bi_cm/2, Li_cm/2+TH, f"Z.INT {Bi_cm:.0f}x{Li_cm:.0f}cm", 'TEXTO', TH_T)
-    # Viga de amarre
-    bv_cm = viga_d["b_cm"]
+    _rect(Be_cm + sep_cm, -Li_cm/2, Bi_cm, Li_cm, 'ZAPATA_INT')
     _rect(Be_cm, -bv_cm/2, sep_cm, bv_cm, 'VIGA_STRAP')
-    _txt(Be_cm+sep_cm/2, bv_cm/2+TH, f"{sn['nombre']} {viga_d['b_cm']:.0f}x{viga_d['h_cm']:.0f}cm", 'TEXTO', TH)
-    # Cotas planta
-    _dim_h(0, Be_cm, -Le_cm/2-TH*5, f"B_ext={Be_cm:.0f}cm")
-    _dim_h(ox_int, ox_int+Bi_cm, -Li_cm/2-TH*5, f"B_int={Bi_cm:.0f}cm")
-    _dim_h(Be_cm, ox_int, -max(Le_cm,Li_cm)/2-TH*10, f"L_libre={sep_cm:.0f}cm")
-    _txt((Be_cm+sep_cm+Bi_cm)/2, max(Le_cm,Li_cm)/2+TH_T*3,
-         f"PLANTA — {sn['nombre'].upper()}  ESC 1:{ESCALA}", 'TEXTO', TH_T)
-    # — CORTE LONGITUDINAL (origen 0, -Le_cm/2-TH*20) —
-    oy_el = -max(Le_cm,Li_cm)/2 - TH*25
-    hv_cm = viga_d["h_cm"]; hz_ext = zap_ext_d["H_cm"]; hz_int = zap_int_d["H_cm"]
-    _rect(0, oy_el, Be_cm, hz_ext, 'ZAPATA_EXT')
-    _rect(ox_int, oy_el, Bi_cm, hz_int, 'ZAPATA_INT')
-    _rect(Be_cm, oy_el+max(hz_ext,hz_int), sep_cm, hv_cm, 'VIGA_STRAP')
-    # Barras sup e inf de la viga
-    rec_v = viga_d.get("recub_cm", 4)
-    y_sup = oy_el+max(hz_ext,hz_int)+hv_cm - rec_v
-    y_inf = oy_el+max(hz_ext,hz_int) + rec_v
-    msp.add_line((Be_cm+rec_v, y_sup),(Be_cm+sep_cm-rec_v, y_sup), dxfattribs={'layer':'ACERO_LONG'})
-    msp.add_line((Be_cm+rec_v, y_inf),(Be_cm+sep_cm-rec_v, y_inf), dxfattribs={'layer':'ACERO_LONG'})
-    _txt(Be_cm+sep_cm+TH, y_sup, f"{dis_d['n_sup']}x{dis_d['bar_long']} (sup)", 'TEXTO', TH*0.8)
-    _txt(Be_cm+sep_cm+TH, y_inf, f"{dis_d['n_inf']}x{dis_d['bar_long']} (inf)", 'TEXTO', TH*0.8)
-    # Estribos en corte longitudinal (líneas verticales)
-    _s_dxf = dis_d['s_est_cm']
-    for _xe in np.arange(Be_cm+_s_dxf, Be_cm+sep_cm, _s_dxf):
-        msp.add_line((_xe, y_inf), (_xe, y_sup), dxfattribs={'layer':'ACERO_EST'})
-    _txt(Be_cm+sep_cm/2, oy_el+max(hz_ext,hz_int)+hv_cm+TH_T*2,
-         f"CORTE A-A (Longitudinal) ESC 1:{ESCALA}", 'TEXTO', TH_T)
-    # — CORTE TRANSVERSAL (a la derecha del corte long.) —
-    ox_tr = Be_cm*2 + sep_cm + Bi_cm + 60
-    oy_tr = oy_el+max(hz_ext,hz_int)
-    _rect(ox_tr, oy_tr, bv_cm, hv_cm, 'VIGA_STRAP')
-    # EM-5 CORREGIDO: barras dinámicas según n_sup / n_inf (no siempre 4)
-    _r_bar = dis_d['db_long'] / 50.0
-    _n_sup_dxf = dis_d['n_sup']
-    _n_inf_dxf = dis_d['n_inf']
-    # Barras superiores distribuidas horizontalmente en la sección
-    _rec_est = rec_v + dis_d.get('db_est', 9.5)/20.0
-    for _ki in range(_n_sup_dxf):
-        _bx_s = ox_tr + _rec_est + (_ki + 0.5) * (bv_cm - 2*_rec_est) / _n_sup_dxf
-        msp.add_circle((_bx_s, oy_tr+hv_cm-_rec_est), _r_bar, dxfattribs={'layer':'ACERO_LONG'})
-    # Barras inferiores
-    for _ki in range(_n_inf_dxf):
-        _bx_i = ox_tr + _rec_est + (_ki + 0.5) * (bv_cm - 2*_rec_est) / _n_inf_dxf
-        msp.add_circle((_bx_i, oy_tr+_rec_est), _r_bar, dxfattribs={'layer':'ACERO_LONG'})
-    # Estribo cerrado
-    _er = rec_v + dis_d['db_est']/20
-    msp.add_lwpolyline([(ox_tr+_er, oy_tr+_er),(ox_tr+bv_cm-_er, oy_tr+_er),
-                        (ox_tr+bv_cm-_er, oy_tr+hv_cm-_er),(ox_tr+_er, oy_tr+hv_cm-_er)],
-                       close=True, dxfattribs={'layer':'ACERO_EST'})
-    _txt(ox_tr+bv_cm/2, oy_tr+hv_cm+TH_T*2, "CORTE B-B (Trans.)", 'TEXTO', TH_T)
-    _txt(ox_tr, oy_tr-TH*3, f"Est. {dis_d['bar_est']} @ {dis_d['s_est_cm']:.0f}/{dis_d['s_crit_cm']:.0f}cm", 'TEXTO', TH*0.8)
-    # — RÓTULO —
-    rot_w = 200; rot_h = 60; rot_x = ox_int*2 + 80; rot_y = oy_el - 80
-    _rect(rot_x, rot_y, rot_w, rot_h, 'ROTULO')
-    msp.add_line((rot_x+60, rot_y),(rot_x+60, rot_y+rot_h), dxfattribs={'layer':'ROTULO'})
-    _filas = [
-        ("PROYECTO", f"Zapata Medianera + {sn['nombre']}"),
-        ("NORMA", f"{norma}  Art. {sn['art']}"),
-        ("DISEÑÓ", "StructuroPro Zapatas"),
-        ("f'c", f"{fc} MPa  |  fy = {fy} MPa"),
-        ("VIGA", f"{viga_d['b_cm']:.0f}x{viga_d['h_cm']:.0f} cm — {dis_d['n_sup']}x{dis_d['bar_long']} + Est.@{dis_d['s_est_cm']:.0f}cm"),
-        ("ESCALA", f"1:{ESCALA}"),
-        ("FECHA", _dt2.date.today().strftime('%d/%m/%Y')),
-        ("REV", "R0"),
-    ]
-    row_h = rot_h / len(_filas)
-    for _i, (_campo, _val) in enumerate(_filas):
-        _yrow = rot_y + rot_h - (_i+1)*row_h
-        if _i > 0: msp.add_line((rot_x, _yrow+row_h),(rot_x+rot_w, _yrow+row_h), dxfattribs={'layer':'ROTULO'})
-        _txt(rot_x+2, _yrow+row_h*0.3, _campo, 'ROTULO', TH*0.7)
-        _txt(rot_x+62, _yrow+row_h*0.3, _val, 'ROTULO', TH)
+    _txt(Be_cm/2, 0, f"Z.EXT {Be_cm:.0f}x{Le_cm:.0f}", 'TEXTO', 4.0)
+    _txt(Be_cm + sep_cm + Bi_cm/2, 0, f"Z.INT {Bi_cm:.0f}x{Li_cm:.0f}", 'TEXTO', 4.0)
+    _txt(Be_cm + sep_cm/2, 0, f"VIGA {bv_cm:.0f}x{hv_cm:.0f}", 'TEXTO', 4.0)
+    _txt((Be_cm+sep_cm+Bi_cm)/2, max(Le_cm, Li_cm)/2 + 20, "VISTA EN PLANTA", 'TEXTO', 5.0)
 
-    # ── RÓTULO PERIMETRAL ICONTEC (doble línea de borde de hoja) ──────────────
-    _px_min = min(-50, ox_el - 50)
-    _py_min = min(rot_y - 20, oy_el - 50)
-    _px_max = rot_x + rot_w + 30
-    _py_max = max(oy_el + zap_ext_d['H_zap'] + zap_ext_d['D_zap'] + 50,
-                  oy_tr + viga_d['h_cm'] + 50,
-                  rot_y + rot_h + 50)
-    _rect(_px_min,   _py_min,   _px_max - _px_min,   _py_max - _py_min,   'ROTULO')
-    _rect(_px_min+1, _py_min+1, _px_max - _px_min-2, _py_max - _py_min-2, 'ROTULO')
+    # ── CORTE LONGITUDINAL ──
+    oy_el = -max(Le_cm, Li_cm)/2 - 100
+    hz_ext = zap_ext_d["H_cm"]; hz_int = zap_int_d["H_cm"]
+    _rect(0, oy_el, Be_cm, hz_ext, 'ZAPATA_EXT')
+    _rect(Be_cm + sep_cm, oy_el, Bi_cm, hz_int, 'ZAPATA_INT')
+    _rect(Be_cm, oy_el + max(hz_ext, hz_int), sep_cm, hv_cm, 'VIGA_STRAP')
+    
+    rec_v = viga_d.get("recub_cm", 4)
+    y_sup = oy_el + max(hz_ext, hz_int) + hv_cm - rec_v
+    y_inf = oy_el + max(hz_ext, hz_int) + rec_v
+    msp.add_line((Be_cm+rec_v, y_sup), (Be_cm+sep_cm-rec_v, y_sup), dxfattribs={'layer':'ACERO_LONG'})
+    msp.add_line((Be_cm+rec_v, y_inf), (Be_cm+sep_cm-rec_v, y_inf), dxfattribs={'layer':'ACERO_LONG'})
+    
+    s_est = dis_d['s_est_cm']
+    import numpy as np
+    for _xe in np.arange(Be_cm + s_est, Be_cm + sep_cm, s_est):
+        msp.add_line((_xe, y_inf), (_xe, y_sup), dxfattribs={'layer':'ACERO_EST'})
+    _txt((Be_cm+sep_cm+Bi_cm)/2, oy_el - 30, f"CORTE LONGITUDINAL", 'TEXTO', 5.0)
+
+    # ── CORTE TRANSVERSAL ──
+    ox_tr = Be_cm*2 + sep_cm + Bi_cm + 80
+    oy_tr = oy_el + hz_ext
+    _rect(ox_tr, oy_tr, bv_cm, hv_cm, 'VIGA_STRAP')
+    msp.add_lwpolyline([(ox_tr+rec_v, oy_tr+rec_v), (ox_tr+bv_cm-rec_v, oy_tr+rec_v), 
+                        (ox_tr+bv_cm-rec_v, oy_tr+hv_cm-rec_v), (ox_tr+rec_v, oy_tr+hv_cm-rec_v)], 
+                        close=True, dxfattribs={'layer':'ACERO_EST'})
+    _txt(ox_tr + bv_cm/2, oy_tr - 30, f"CORTE TRANS.", 'TEXTO', 5.0)
+
+    # ESCALADO
+    dim_w = ox_tr + bv_cm + 50
+    dim_h = (max(Le_cm, Li_cm)/2 + 50) + abs(oy_el - 60)
+    escala_den = 50
+    for den in [100, 75, 50, 25, 20]:
+        if dim_w / den <= papel_w*0.8 and dim_h / den <= papel_h*0.8:
+            escala_den = den; break
+    ESC = 1.0 / escala_den
+
+    # ── MARGEN Y ROTULO N4 ──
+    msp.add_lwpolyline([(1,1), (papel_w-1,1), (papel_w-1,papel_h-1), (1,papel_h-1), (1,1)], dxfattribs={'layer':'MARGEN'})
+    msp.add_lwpolyline([(1,1), (papel_w-1,1), (papel_w-1,5), (1,5), (1,1)], dxfattribs={'layer':'ROTULO'})
+    _txt(papel_w/2, 3.5, f"ZAPATA MEDIANERA + {sn['nombre']} | {norma}", 'TEXTO', 0.5)
+    _txt(papel_w/2, 2.0, f"Papel: {papel_lbl} | Escala Vista Inicial: 1:{escala_den}", 'TEXTO', 0.4)
+
+    # Convertir a bloque y escalar
+    doc.blocks.new(name='VISTAS_SISTEMA')
+    blk = doc.blocks.get('VISTAS_SISTEMA')
+    for e in list(msp):
+        if e.dxf.layer not in ['MARGEN', 'ROTULO', 'TEXTO']:
+            blk.add_entity(e.copy())
+            e.destroy()
+        elif e.dxf.layer == 'TEXTO' and e.dxf.height >= 1.0:
+            blk.add_entity(e.copy())
+            e.destroy()
+            
+    ox_b = (papel_w - dim_w*ESC)/2 + 10
+    oy_b = 6 + (papel_h - 6 - dim_h*ESC)/2 + abs(oy_el - 60)*ESC
+    msp.add_blockref('VISTAS_SISTEMA', insert=(ox_b, oy_b), dxfattribs={'xscale': ESC, 'yscale': ESC})
 
     return doc
 
-# ─── F9: DOCX AMPLIADO ─────────────────────────────────────────────────────
 def generar_docx_ampliado(zap_ext_d, zap_int_d, viga_d, dis_d, dist_d, norma, fig_vm=None):
-    """Genera Document() de python-docx con la sección de viga de amarre."""
+    """Genera Document() de python-docx Estándar Diamante N4."""
     from docx import Document as _Doc
     from docx.shared import Inches as _In, Pt as _Pt
+    import datetime as _dt_dxf
     sn = _get_strap_norm(norma)
     doc = _Doc()
-    doc.add_heading(f"MEMORIA — {sn['nombre'].upper()} ({norma})", 0)
-    doc.add_paragraph(f"Norma: {norma}  |  Artículo: {sn['art']}")
-    doc.add_paragraph(f"Fecha: {_dt.datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    doc.add_heading("1. DATOS DE ENTRADA", level=1)
-    doc.add_paragraph(f"  Zapata Exterior: B={zap_ext_d['B_cm']:.0f} cm × L={zap_ext_d['L_cm']:.0f} cm × H={zap_ext_d['H_cm']:.0f} cm")
-    doc.add_paragraph(f"  Zapata Interior:  B={zap_int_d['B_cm']:.0f} cm × L={zap_int_d['L_cm']:.0f} cm × H={zap_int_d['H_cm']:.0f} cm")
-    doc.add_paragraph(f"  {sn['nombre']}: {viga_d['b_cm']:.0f} cm × {viga_d['h_cm']:.0f} cm × L_libre={viga_d['L_libre_m']:.2f} m")
-    doc.add_paragraph(f"  f'c = {viga_d.get('fc',21)} MPa  |  fy = {viga_d.get('fy',420)} MPa")
+    
+    doc.add_heading(f"MEMORIA ESTRUCTURAL — SISTEMA {sn['nombre'].upper()} ({norma})", 0)
+
+    # 0. Portada
+    p0 = doc.add_paragraph()
+    p0.add_run(f"Proyecto: \nElemento: Zapata Medianera + {sn['nombre']}\nNorma: {norma} — Art. {sn['art']}\nFecha: {_dt_dxf.datetime.now().strftime('%d/%m/%Y')}\nMateriales: Concreto f'c = {viga_d.get('fc',21)} MPa, Acero fy = {viga_d.get('fy',420)} MPa").bold = True
+
+    # 1. Parámetros de Diseño y Geometría
+    doc.add_heading("1. PARÁMETROS DE DISEÑO", level=1)
+    doc.add_paragraph(f"  Geometría Zapata Exterior: B={zap_ext_d['B_cm']:.0f} cm × L={zap_ext_d['L_cm']:.0f} cm × H={zap_ext_d['H_cm']:.0f} cm")
+    doc.add_paragraph(f"  Geometría Zapata Interior: B={zap_int_d['B_cm']:.0f} cm × L={zap_int_d['L_cm']:.0f} cm × H={zap_int_d['H_cm']:.0f} cm")
+    doc.add_paragraph(f"  Viga de Amarre: {viga_d['b_cm']:.0f} cm × {viga_d['h_cm']:.0f} cm × L_libre={viga_d['L_libre_m']:.2f} m")
+
+    # 2. Distribución de Presiones
     doc.add_heading("2. DISTRIBUCIÓN DE PRESIONES", level=1)
     doc.add_paragraph(f"  qu_max = {dist_d.get('qu_max',0):.2f} kPa  |  qu_min = {dist_d.get('qu_min',0):.2f} kPa")
-    doc.add_paragraph(f"  Tipo distribución: {dist_d.get('tipo','—')}")
-    doc.add_paragraph(f"  Excentricidad e_B = {dist_d.get('e_B',0):.3f} m  |  e_L = {dist_d.get('e_L',0):.3f} m")
+    doc.add_paragraph(f"  Excentricidades resultantes: e_B = {dist_d.get('e_B',0):.3f} m  |  e_L = {dist_d.get('e_L',0):.3f} m")
     mey = dist_d.get('meyerhof')
     if mey:
-        doc.add_paragraph(f"  ⚠ Área Efectiva Meyerhof: B'={mey['B_prima']:.2f} m × L'={mey['L_prima']:.2f} m → qu_eff={mey['qu_eff']:.1f} kPa")
-    doc.add_heading(f"3. DISEÑO {sn['nombre'].upper()}", level=1)
-    doc.add_paragraph(f"  Dimensión {sn['nombre']}: {viga_d['b_cm']:.0f} × {viga_d['h_cm']:.0f} cm")
-    doc.add_paragraph(f"  h_min normativo ({sn['art']}): L/{sn['h_factor']} = {dis_d['h_min_cm']:.1f} cm  →  {' Cumple' if dis_d['ok_hmin'] else ' No cumple'}")
-    doc.add_paragraph(f"  Peralte efectivo d = {dis_d['d_v']:.1f} cm")
-    doc.add_paragraph(f"  Acero superior: {dis_d['n_sup']}x {dis_d['bar_long']}  →  As = {dis_d['As_sup']:.2f} cm²")
-    doc.add_paragraph(f"  Acero inferior: {dis_d['n_inf']}x {dis_d['bar_long']}  →  As = {dis_d['As_inf']:.2f} cm²")
-    doc.add_paragraph(f"  Cortante: φVc = {dis_d['phi_Vc']:.1f} kN  →  {' Cumple' if dis_d['ok_cort'] else ' No cumple'}")
-    doc.add_paragraph(f"  Estribos: {dis_d['bar_est']} @ {dis_d['s_crit_cm']:.0f}/{dis_d['s_est_cm']:.0f} cm (crítica/resto)")
-    doc.add_paragraph(f"  Fuerza axial sísmica req. = {dis_d['F_ax_req']:.1f} kN  |  {sn['F_ax_pct']*100:.1f}% × ΣP  →  {'' if dis_d['ok_Fax'] else ''}")
+        doc.add_paragraph(f"  Área Efectiva Meyerhof: B'={mey['B_prima']:.2f} m × L'={mey['L_prima']:.2f} m → qu_eff={mey['qu_eff']:.1f} kPa")
+
+    # 3. Diseño Flexo-compresión Viga Strap
+    doc.add_heading(f"3. DISEÑO DE {sn['nombre'].upper()} A FLEXIÓN", level=1)
+    doc.add_paragraph(f"  Peralte mínimo normativo: L/{sn['h_factor']} = {dis_d['h_min_cm']:.1f} cm  →  {'CUMPLE' if dis_d['ok_hmin'] else 'NO CUMPLE'}")
+    doc.add_paragraph(f"  Acero longitudinal Superior: {dis_d['n_sup']}x {dis_d['bar_long']}  (As = {dis_d['As_sup']:.2f} cm²)")
+    doc.add_paragraph(f"  Acero longitudinal Inferior: {dis_d['n_inf']}x {dis_d['bar_long']}  (As = {dis_d['As_inf']:.2f} cm²)")
+    doc.add_paragraph(f"  Fuerza axial sísmica requerida: {dis_d['F_ax_req']:.1f} kN")
+
+    # 4. Diseño a Cortante
+    doc.add_heading("4. DISEÑO A CORTANTE Y ESTRIBOS", level=1)
+    doc.add_paragraph(f"  Resistencia del concreto (φVc): {dis_d['phi_Vc']:.1f} kN  →  {'CUMPLE cortante' if dis_d['ok_cort'] else 'NO CUMPLE cortante'}")
+    doc.add_paragraph(f"  Distribución de Estribos: {dis_d['bar_est']} @ {dis_d['s_crit_cm']:.0f} cm en zona crítica, {dis_d['s_est_cm']:.0f} cm en el resto.")
+
+    # 5. Verificaciones Normativas
+    doc.add_heading("5. VERIFICACIONES DE SISTEMA ZAPATA-VIGA", level=1)
+    table = doc.add_table(rows=1, cols=3)
+    table.style = 'Table Grid'
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'Parámetro Verificado'
+    hdr_cells[1].text = 'Estado'
+    hdr_cells[2].text = 'Valor'
+    
+    def _add_row(param, status, val):
+        row_cells = table.add_row().cells
+        row_cells[0].text = param
+        row_cells[1].text = "CUMPLE" if status else "NO CUMPLE"
+        row_cells[2].text = val
+    
+    _add_row("Peralte h mínimo", dis_d['ok_hmin'], f"h={viga_d['h_cm']}cm ≥ {dis_d['h_min_cm']:.1f}cm")
+    _add_row("Diseño a Cortante", dis_d['ok_cort'], f"φVc={dis_d['phi_Vc']:.0f}kN")
+    _add_row("Fuerza axial", dis_d['ok_Fax'], f"Fax={dis_d['F_ax_req']:.0f}kN")
+
+    # 6. Cuantificación
+    doc.add_heading("6. CUANTIFICACIÓN DE VIGA", level=1)
+    doc.add_paragraph("Volúmenes y aceros reportados por tabulación separada en la UI.")
+
+    # 7. Detalles Generales
+    doc.add_heading("7. DIAGRAMAS Y PLANOS", level=1)
     if fig_vm is not None:
         try:
             import io as _io
-            _buf = _io.BytesIO()
-            fig_vm.write_image(_buf, format="png", width=700, height=350, scale=1.5)
-            _buf.seek(0)
-            doc.add_heading("4. DIAGRAMA V(x) / M(x)", level=1)
-            doc.add_picture(_buf, width=_In(5.5))
-        except Exception:
-            doc.add_paragraph("  [Diagrama V/M no disponible — instalar kaleido para imágenes Plotly]")
+            _img = _io.BytesIO()
+            fig_vm.savefig(_img, format='png', bbox_inches='tight', dpi=150)
+            _img.seek(0)
+            doc.add_paragraph("Diagrama de Cortante y Momento (Viga):")
+            doc.add_picture(_img, width=_In(5.5))
+        except Exception as e:
+            doc.add_paragraph(f"(Error al embeber imagen: {e})")
 
-    # ── SECCIÓN 5: VOLCAMIENTO Y DESLIZAMIENTO ─────────────────────────────
-    doc.add_heading("5. VERIFICACIÓN DE ESTABILIDAD GLOBAL", level=1)
-    doc.add_paragraph("  Referencia: NSR-10 C.15 / ACI 318 §13")
-    doc.add_paragraph("")
-
-    # Pesos propios
-    _fc  = viga_d.get('fc',  21)
-    _fy  = viga_d.get('fy', 420)
-    _gc  = 24.0   # kN/m³ concreto
-    _phi = 30.0   # fricción suelo (sin datos sismicos generales)
-    _Be  = zap_ext_d['B_cm'] / 100.0
-    _Le  = zap_ext_d['L_cm'] / 100.0
-    _He  = zap_ext_d['H_cm'] / 100.0
-    _Bi  = zap_int_d['B_cm'] / 100.0
-    _Li  = zap_int_d['L_cm'] / 100.0
-    _Hi  = zap_int_d['H_cm'] / 100.0
-    _bv  = viga_d.get('b_cm', 30) / 100.0
-    _hv  = viga_d.get('h_cm', 50) / 100.0
-    _Lv  = viga_d.get('L_libre_m', 4.0)
-
-    _W_zap_e = _Be * _Le * _He * _gc
-    _W_zap_i = _Bi * _Li * _Hi * _gc
-    _W_viga  = _bv * _hv * _Lv * _gc
-    _W_total = _W_zap_e + _W_zap_i + _W_viga
-
-    _P_ext = dist_d.get('P_ext', dist_d.get('qu_max', 0) * _Be * _Le)
-    _P_int = dist_d.get('P_int', dist_d.get('qu_max', 0) * _Bi * _Li)
-    _P_total = _P_ext + _P_int + _W_total
-
-    doc.add_paragraph(f"  Peso Zapata Exterior:    {_W_zap_e:.2f} kN")
-    doc.add_paragraph(f"  Peso Zapata Interior:    {_W_zap_i:.2f} kN")
-    doc.add_paragraph(f"  Peso Viga de Amarre:     {_W_viga:.2f} kN")
-    doc.add_paragraph(f"  Peso Total Sistema:      {_W_total:.2f} kN")
-    doc.add_paragraph(f"  Carga Vertical Total:    {_P_total:.2f} kN")
-    doc.add_paragraph("")
-
-    # Volcamiento (eje en el borde de la zapata exterior)
-    _M_volc = dist_d.get('M_volc', dist_d.get('e_B', 0) * _P_ext)
-    _M_rest = _P_total * (_Be / 2.0)
-    _FS_v   = _M_rest / max(_M_volc, 0.001)
-    _ok_v   = _FS_v >= 1.5
-    doc.add_paragraph(f"  VOLCAMIENTO → M_resist = {_M_rest:.2f} kN·m  |  M_volcante = {_M_volc:.2f} kN·m")
-    doc.add_paragraph(f"  FS_volcamiento = {_FS_v:.2f}  {' ≥ 1.5 NSR-10 C.15' if _ok_v else ' < 1.5 — AUMENTAR B o L'}")
-    doc.add_paragraph("")
-
-    # Deslizamiento
-    import math as _math
-    _V_h    = dist_d.get('V_horiz', 0.0)          # cortante en la base
-    _R_dmax = _P_total * _math.tan(_math.radians(_phi))   # fricción suelo-concreto
-    _FS_d   = _R_dmax / max(_V_h, 0.001)
-    _ok_d   = _FS_d >= 1.5 or _V_h == 0
-    doc.add_paragraph(f"  DESLIZAMIENTO → R_fricción = {_R_dmax:.2f} kN  |  V_horiz = {_V_h:.2f} kN  (φ = {_phi:.0f}°)")
-    doc.add_paragraph(f"  FS_deslizamiento = {_FS_d:.2f}  {' ≥ 1.5' if _ok_d else ' < 1.5 — Considerar llave de corte'}")
+    # 8. Referencias
+    doc.add_heading("8. REFERENCIAS CITADAS", level=1)
+    doc.add_paragraph("NSR-10 Título C y E.")
+    doc.add_paragraph("\n\n_________________________________________\nFirma Ing. Responsable")
+    doc.add_paragraph("Matrícula Profesional: _______________")
 
     return doc
 
-# ─────────────────────────────────────────────
+
+# 
 # T1: ESFUERZOS EN EL SUELO (BOUSSINESQ)
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("1. Esfuerzos en masa de suelo debajo de zapata", "1. Soil Stresses under Footing (Boussinesq)"), expanded=False):
     st.info(_t("**Modo de uso:** Ingresa las dimensiones de la zapata y la carga aplicada. El programa usa la solución de Boussinesq (integración de carga rectangular) para encontrar el incremento de esfuerzo vertical a cierta profundidad Z debajo del centro de la zapata.", " **How to use:** Enter footing dimensions and load. Uses Boussinesq method to find vertical stress increment at depth Z."))
     c1, c2 = st.columns(2)
     with c1:
-        # ── Selector de Unidades para la Carga ──────────────────────────
+        #  Selector de Unidades para la Carga 
         _P_unidades = {
             "kN":     1.0,
             "kgf":    0.00980665,
@@ -1034,9 +1021,9 @@ with st.expander(_t("1. Esfuerzos en masa de suelo debajo de zapata", "1. Soil S
     fig_b.tight_layout()
     st.pyplot(fig_b)
 
-# ─────────────────────────────────────────────
+# 
 # T2: CAPACIDAD PORTANTE DE SUELO (TERZAGHI) + ASENTAMIENTOS
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos", " 2. Bearing Capacity (Terzaghi) and Settlements"), expanded=False):
     st.info(_t(
         " **Modo de uso:** Ingresa φ, c, γ y la geometría de la zapata. "
@@ -1048,7 +1035,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
         "pressure bulb, and optionally estimates immediate elastic settlement."
     ))
 
-    # ── CONVERSOR DE UNIDADES ───────────────────────────────────────────────
+    #  CONVERSOR DE UNIDADES 
     with st.container():
         st.markdown("** Conversor Rápido de Resistencia de Suelo**")
         uc1, uc2, uc3 = st.columns([1, 1, 2])
@@ -1070,7 +1057,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
                         f"| **psi** | `{_conv/6.89476:.2f}` |")
     st.divider()
 
-    # ── ENTRADAS ────────────────────────────────────────────────────────────
+    #  ENTRADAS 
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("#####  Parámetros Geotécnicos")
@@ -1118,7 +1105,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
     # Parámetros para asentamiento elástico movidos abajo para unificar IO
     pass
 
-    # ── CÁLCULO GEOTÉCNICO ──────────────────────────────────────────────────
+    #  CÁLCULO GEOTÉCNICO 
     phi_rad = math.radians(phi_ang)
 
     if metodo_cap == "Terzaghi":
@@ -1187,7 +1174,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
     FS_calc = q_ult / q_act if q_act > 0 else 999.0
     cumplio = q_act <= q_adm
 
-    # ── RESULTADOS ──────────────────────────────────────────────────────────
+    #  RESULTADOS 
     st.divider()
     st.markdown(f"####  Resultados de Capacidad Portante ({metodo_cap})")
     col_c1, col_c2, col_c3 = st.columns(3)
@@ -1249,7 +1236,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
             st.metric("λ (rigidez relativa)", f"{lambda_rel:.4f}")
             st.markdown(tipo_rig)
 
-    # ── ASENTAMIENTO ELÁSTICO (opcional) ─────────────────────────────
+    #  ASENTAMIENTO ELÁSTICO (opcional) 
     with st.expander("Asentamiento elástico inmediato", expanded=True):
         usar_asent = st.checkbox("Calcular asentamiento inmediato", value=False)
         if usar_asent:
@@ -1270,7 +1257,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
             I_center = I_f_center(m, n)
             asentamiento = q_adm * B_cp * (1 - nu_suelo**2) / E_kPa * I_center * 1000  # en mm
             st.metric("Asentamiento inmediato estimado", f"{asentamiento:.1f} mm")
-            st.caption("⚠ Cálculo aproximado usando factor de influencia empírico. Para diseño detallado, usar métodos más refinados (e.g., Steinbrenner completo).")
+            st.caption(" Cálculo aproximado usando factor de influencia empírico. Para diseño detallado, usar métodos más refinados (e.g., Steinbrenner completo).")
             # Guardar asentamiento para uso en memoria
             st.session_state['asentamiento'] = asentamiento
         else:
@@ -1290,11 +1277,11 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
 
         if _razones_pil:
             _necesita_pilotes = True
-            st.warning("⚠ **Considera cimentación profunda (pilotes):**\n" + 
+            st.warning(" **Considera cimentación profunda (pilotes):**\n" + 
                        "\n".join(f"- {r}" for r in _razones_pil))
             st.info("*Este módulo calcula zapatas superficiales. Para pilotes, ver módulo **10_Pilotes** (próximamente).*")
 
-    # ── GRÁFICA: TIPO DE FALLA (Vesic 1973 / SPT) ──────────────────────────
+    #  GRÁFICA: TIPO DE FALLA (Vesic 1973 / SPT) 
     st.divider()
     st.markdown("####  Diagrama Tipo de Falla — Vesic (1973)")
     Dr_pct = min(100.0, 1.08 * math.sqrt(max(N_spt, 0) / 60.0) * 100)
@@ -1331,7 +1318,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
     ax_ves.legend(loc="lower right", fontsize=8, facecolor="#111", labelcolor="white")
     st.pyplot(fig_ves)
 
-    # ── GRÁFICA: BULBO DE PRESIONES / MECANISMO DE FALLA (VECTORIZADO) ───
+    #  GRÁFICA: BULBO DE PRESIONES / MECANISMO DE FALLA (VECTORIZADO) 
     st.divider()
     st.markdown("####  Mecanismo de Falla y Bulbo de Presiones (Terzaghi)")
     fig_tb, ax_tb = plt.subplots(figsize=(10, 7))
@@ -1441,7 +1428,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
     # Nivel freático
     if NF_prof < Df_cp + B_cp*2.5:
         ax_tb.axhline(-NF_prof, color="#29b6f6", lw=1.5, linestyle=":",
-                      label=f"▽ NF = {NF_prof}m")
+                      label=f" NF = {NF_prof}m")
     ax_tb.axhline(zap_bot, color="#888", lw=0.8, linestyle="--")
     ax_tb.axhline(0, color="#555", lw=0.5)
     ax_tb.set_xlim(-B_cp*4, B_cp*4)
@@ -1454,9 +1441,9 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
     ax_tb.legend(loc="upper right", fontsize=8, facecolor="#111", labelcolor="white")
     st.pyplot(fig_tb)
 
-# ─────────────────────────────────────────────
+# 
 # T4: PROFUNDIDAD MÍNIMA EXPLORACIÓN
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("4. Profundidad Mínima de Exploración de Subsuelo (NSR-10)", " 4. Minimum Subsurface Exploration Depth")):
     st.info(_t(
         " **Modo de uso:** Sincronizado automáticamente con las dimensiones (B, L) y carga (Q_actuante) ingresadas en el panel principal. "
@@ -1517,13 +1504,13 @@ with st.expander(_t("4. Profundidad Mínima de Exploración de Subsuelo (NSR-10)
     # Guardar en sesión para usarlo en gráficos
     st.session_state.z_exploracion = z_mid
 
-# ─────────────────────────────────────────────
+# 
 # T3: DISEÑO ESTRUCTURAL DE ZAPATA + DIBUJADOR 3000 (con biaxialidad)
-# ─────────────────────────────────────────────
+# 
 with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 3000", "3. Footing Structural Design & DXF Drafter"), expanded=True):
     st.markdown(f"**Norma Estructural activa:** `{norma_sel}`")
 
-    # ─── SELECTOR DE TIPO DE ZAPATA (Opción B) ───────────────────────────────
+    #  SELECTOR DE TIPO DE ZAPATA (Opción B) 
     _TIPOS_ZAP = [
         "1. Aislada Céntrica",
         "2. Medianera (Lindero)",
@@ -1546,12 +1533,12 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     _modo_esquina   = ("3." in tipo_zap)
     _modo_strap     = ("4." in tipo_zap or _modo_medianera or _modo_esquina)
 
-    # ─── TIPO 2, 3, 4: Redirigir a render_medianera() ────────────────────────
+    #  TIPO 2, 3, 4: Redirigir a render_medianera() 
     if not _modo_aislada:
         render_medianera(norma_sel, fc_basico, fy_basico, REBAR_DICT, def_idx, phi_v, phi_f, tipo_zap)
         # Los tipos 2/3/4 tienen su propio flujo completo, no continúan el bloque T3
     else:
-        # ─── TIPO 1: Flujo original de zapata aislada céntrica ────────────────
+        #  TIPO 1: Flujo original de zapata aislada céntrica 
         st.info(_t("**Modo: Zapata Aislada Céntrica** — Ingresa las Cargas de Servicio (para dimensionar BxL) y Últimas (para diseñar espesor y acero).",
                    " **Mode: Isolated Centered Footing** — Enter Service Loads (BxL sizing) and Ultimate Loads (thickness and steel)."))
 
@@ -1606,14 +1593,14 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         A_bar_z = REBAR_DICT[bar_z]["area"] * 100 # mm2
         db_bar_z = REBAR_DICT[bar_z]["db"] # mm
         
-    # ─── Validaciones robustas ──────────────────────────────────────────────
+    #  Validaciones robustas 
     if c1_col <= 0 or c2_col <= 0:
         st.error("Las dimensiones de la columna (c1, c2) deben ser mayores a 0 cm.")
         st.stop()
     # Verificar espesor mínimo
     d_min = recub_z + db_bar_z/10.0 + 2  # cm
     if H_zap < d_min:
-        st.warning(f"⚠ El espesor H={H_zap} cm es menor que el mínimo recomendado (recubrimiento + db/10 + 2 cm = {d_min:.1f} cm). Aumente H.")
+        st.warning(f" El espesor H={H_zap} cm es menor que el mínimo recomendado (recubrimiento + db/10 + 2 cm = {d_min:.1f} cm). Aumente H.")
     # Verificar q_net positivo
     q_net = q_adm_z - gamma_prom * Df_z
     if q_net <= 0:
@@ -1636,7 +1623,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     B_use = cB.number_input("B usado para cálculo [m]", value=max(2.0, B_zap), step=0.1)
     L_use = cL.number_input("L usado para cálculo [m]", value=max(2.0, L_zap), step=0.1)
 
-    # ─── Presión de contacto con flexión biaxial ─────────────────────────────
+    #  Presión de contacto con flexión biaxial 
     A_use = B_use * L_use
     
     A_req = getattr(st.session_state, 'z_A_req_cache', max(B_zap * L_zap, 0.1)) # fallback safely
@@ -1664,7 +1651,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     # Para simplificar, usamos el promedio de qu_max y max(qu_min,0)
     qu_avg = (qu_max + max(qu_min, 0)) / 2.0
 
-    # ─── B4: ÁREA EFECTIVA MEYERHOF (cuando qu_min < 0) ────────────────────
+    #  B4: ÁREA EFECTIVA MEYERHOF (cuando qu_min < 0) 
     # Si hay zona en tensión, la superposición simple sobreestima la presión
     # real. Se aplica el método de área efectiva: B' = B-2eB, L' = L-2eL
     _ecc_B = abs(M_svc_L / P_svc) if P_svc > 0 else 0.0   # excentricidad dir.B [m]
@@ -1677,7 +1664,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         qu_avg = P_ult / _A_prima        # QA-1: qu_avg mutado antes de usarse en punzonamiento y cortante
         qu_max = qu_avg * 1.25           # distribución trapezoidal aproximada
         qu_min = 0.0                     # por definición en el área efectiva
-        _meyerhof_info = (f"⚠ **Área Efectiva Meyerhof aplicada** — qu_min < 0 → "
+        _meyerhof_info = (f" **Área Efectiva Meyerhof aplicada** — qu_min < 0 → "
                           f"eB={_ecc_B:.2f} m, eL={_ecc_L:.2f} m | "
                           f"B'={_B_prima:.2f} m, L'={_L_prima:.2f} m | "
                           f"A'={_A_prima:.2f} m² | qu_eff={qu_avg:.1f} kPa")
@@ -1691,7 +1678,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         st.stop()
     d_z_m = d_z / 100.0
 
-    # ─── CORTANTE UNIDIRECCIONAL (Viga) con integración exacta de presión ───
+    #  CORTANTE UNIDIRECCIONAL (Viga) con integración exacta de presión 
     lv_b = (B_use - c1_col/100.0) / 2.0
     lv_l = (L_use - c2_col/100.0) / 2.0
 
@@ -1728,7 +1715,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     phi_Vc_1way_L = phi_v * 0.17 * 1.0 * math.sqrt(fc_basico) * (B_use * 1000) * (d_z * 10) / 1000.0  # kN
     ok_1way_L = phi_Vc_1way_L >= Vu_1way_L
 
-    # ─── PUNZONAMIENTO (bidireccional) con presión promedio ─────────────────
+    #  PUNZONAMIENTO (bidireccional) con presión promedio 
     bo_1 = c1_col/100.0 + d_z_m
     bo_2 = c2_col/100.0 + d_z_m
     if pos_col_iso == "Interior":
@@ -1765,11 +1752,11 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         vc_min_MPa = min(Vc1, Vc2, Vc3)
     except ZeroDivisionError:
         vc_min_MPa = 0.0
-        st.warning("⚠ División por cero al calcular resistencia a punzonamiento — revise dimensiones.")
+        st.warning(" División por cero al calcular resistencia a punzonamiento — revise dimensiones.")
     phi_Vc_punz = phi_v * vc_min_MPa * (bo_perim * 1000) * (d_z * 10) / 1000.0  # kN
     ok_punz = phi_Vc_punz >= Vu_punz
 
-    # ─── FLEXIÓN (momentos con integración exacta) ───────────────────────────
+    #  FLEXIÓN (momentos con integración exacta) 
     # Momento en dirección B (respecto al eje paralelo a L)
     # Se integra presión * brazo a lo largo del voladizo
     # Para simplificar, integramos numéricamente
@@ -1900,13 +1887,13 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     with tab_res:
         st.markdown(f"**Revisión Estructural: f'c = {fc_basico} MPa | fy = {fy_basico} MPa**")
         
-        # ─── RECOMENDACIÓN DE ACERO Y ALERTA ───
+        #  RECOMENDACIÓN DE ACERO Y ALERTA 
         sep_max = min(3 * H_zap, 45.0)
         warning_bar = []
         if sep_B > sep_max or sep_L > sep_max:
-            warning_bar.append(f"⚠ La separación ({max(sep_B, sep_L):.1f} cm) excede la máxima permitida normativa ({sep_max} cm). ¡Usa una varilla más pequeña (ej. #4 o #5)!")
+            warning_bar.append(f" La separación ({max(sep_B, sep_L):.1f} cm) excede la máxima permitida normativa ({sep_max} cm). ¡Usa una varilla más pequeña (ej. #4 o #5)!")
         if sep_B < 10.0 or sep_L < 10.0:
-            warning_bar.append(f"⚠ La separación ({min(sep_B, sep_L):.1f} cm) es muy estrecha para fundir bien (< 10 cm). Considera usar una varilla de mayor diámetro.")
+            warning_bar.append(f" La separación ({min(sep_B, sep_L):.1f} cm) es muy estrecha para fundir bien (< 10 cm). Considera usar una varilla de mayor diámetro.")
         if warning_bar:
             st.error("\n\n".join(warning_bar))
             
@@ -1933,7 +1920,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         
         st.markdown("---")
         
-        estado_tension = " Compresión Total (e ≤ B/6)" if qu_min >= 0 else "⚠ Levantamiento"
+        estado_tension = " Compresión Total (e ≤ B/6)" if qu_min >= 0 else " Levantamiento"
         
         # Cálculo de longitud de desarrollo l_dh (NSR-10 C.12.5) para gancho 90°
         # l_dh = (0.24 * fy / sqrt(f'c)) * db_mm  [resultado en mm]
@@ -1946,7 +1933,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         ok_ldh = L_disp_min_cm >= ldh_req_cm
 
         data_res = [
-            {"Revisión": "Geometría Propuesta", "Solicitado": f"Area Req = {Area_req:.2f} m²", "Capacidad/Provisto": f"Area Prov. = {A_use:.2f} m²", "Estado": " OK" if A_use>=Area_req else "⚠ Subdimensionado"},
+            {"Revisión": "Geometría Propuesta", "Solicitado": f"Area Req = {Area_req:.2f} m²", "Capacidad/Provisto": f"Area Prov. = {A_use:.2f} m²", "Estado": " OK" if A_use>=Area_req else " Subdimensionado"},
             {"Revisión": "Pres. Contacto qu", "Solicitado": f"Max: {qu_max:.2f} kPa", "Capacidad/Provisto": f"Min: {qu_min:.2f} kPa", "Estado": estado_tension},
             {"Revisión": "Flexión Dir. B", "Solicitado": f"Mu_B = {Mu_flex_B:.1f} kN-m", "Capacidad/Provisto": f"As_B = {As_req_B:.1f} cm² → {n_barras_B} {bar_z} c/{sep_B:.1f}cm", "Estado": " OK" if disc_B>0 else " Rompe en compresión"},
             {"Revisión": "Flexión Dir. L", "Solicitado": f"Mu_L = {Mu_flex_L:.1f} kN-m", "Capacidad/Provisto": f"As_L = {As_req_L:.1f} cm² → {n_barras_L} {bar_z} c/{sep_L:.1f}cm", "Estado": " OK" if disc_L>0 else " Rompe en compresión"},
@@ -1965,9 +1952,9 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         if _meyerhof_info:
             st.warning(_meyerhof_info)
 
-        # ═══════════════════════════════════════════════════════════════════
+        # 
         # A1 — FS VOLCAMIENTO Y DESLIZAMIENTO (NSR-10 H.4)
-        # ═══════════════════════════════════════════════════════════════════
+        # 
         st.markdown("---")
         st.markdown("###  Estabilidad Global — Volcamiento y Deslizamiento (NSR-10 H.4)")
         with st.expander("Parámetros de estabilidad", expanded=True):
@@ -2022,9 +2009,9 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         # Actualizar data_res con estabilidad
         st.caption(f"δ = {delta_ang:.1f}° | W_total = {W_total:.1f} kN | b. estabilizador = {B_use/2.0:.2f} m | brazo volcador(H) = {arm_volc:.2f} m")
 
-        # ═══════════════════════════════════════════════════════════════════
+        # 
         # A2 — MAPA DE CALOR PLOTLY 3D — qu(x,y)
-        # ═══════════════════════════════════════════════════════════════════
+        # 
         st.markdown("---")
         st.markdown("###  Distribución de Presiones bajo la Zapata — qu(x,y)")
         with st.expander("Mapa de calor 3D de esfuerzos de contacto", expanded=True):
@@ -2094,7 +2081,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                 paper_bgcolor="#0f1117", font=dict(color="white"),
                 margin=dict(l=0, r=0, b=0, t=40), height=500,
                 title=dict(text=f"qu(x,y) — qu_max={qu_max:.1f} kPa | qu_min={qu_min:.1f} kPa"
-                               + (" | ⚠ ZONA EN LEVANTAMIENTO" if _tiene_tension else " |  Compresión total"),
+                               + (" |  ZONA EN LEVANTAMIENTO" if _tiene_tension else " |  Compresión total"),
                            font=dict(color="#ffdd44" if _tiene_tension else "#44ff88")),
                 showlegend=True,
             )
@@ -2109,7 +2096,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             else:
                 if not _tiene_tension:
                     st.warning(
-                        f"⚠ **Distribución trapezoidal** — "
+                        f" **Distribución trapezoidal** — "
                         f"qu_max = {qu_max:.1f} kPa | qu_min = {qu_min:.1f} kPa. "
                         f"Excentricidad activa en la zapata."
                     )
@@ -2120,18 +2107,18 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                         "o activar el método de Área Efectiva Meyerhof (Bloque B4 disponible abajo)."
                     )
 
-        # ═══════════════════════════════════════════════════════════════════
+        # 
         # A3 — DISEÑO AUTOMÁTICO ITERATIVO DE H
-        # ═══════════════════════════════════════════════════════════════════
+        # 
         st.markdown("---")
-        st.markdown("### ⚙ Optimizador de Espesor H (Diseño Automático Iterativo)")
+        st.markdown("###  Optimizador de Espesor H (Diseño Automático Iterativo)")
         with st.expander("Encontrar H mínimo que cumple cortante y punzonamiento", expanded=False):
             st.info("El optimizador busca el menor H [cm] (en pasos de 5 cm) que satisface simultáneamente "
                     "Cortante 1D (Dir.B), Cortante 1D (Dir.L) y Punzonamiento, con los materiales y cargas actuales.")
             _H_min_check = st.number_input("H mínimo a considerar [cm]", 20.0, 80.0, 20.0, 5.0, key="z_opt_hmin")
             _H_max_check = st.number_input("H máximo a considerar [cm]", 50.0, 200.0, 120.0, 5.0, key="z_opt_hmax")
 
-            if st.button("▶ Ejecutar optimizador de H", type="primary"):
+            if st.button(" Ejecutar optimizador de H", type="primary"):
                 _H_vals   = np.arange(_H_min_check, _H_max_check + 5, 5)
                 _res_iter = []
                 _H_optimo = None
@@ -2237,313 +2224,275 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             ax_2d.set_title(f"Armadura Inferior\n{int(n_barras_B)} {bar_z} (B) / {int(n_barras_L)} {bar_z} (L)", color="white", fontsize=10)
             st.pyplot(fig_2d)
         
-        # ── MEMORIA DE CÁLCULO COMPLETA ────────────────────────────────────
+        #  MEMORIA DE CÁLCULO COMPLETA 
         doc_zap = Document()
-        doc_zap.add_heading(f"MEMORIA DE CÁLCULO — ZAPATA {B_use:.2f}x{L_use:.2f} m", 0)
-        doc_zap.add_paragraph(f"Fecha: {_dt.datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        doc_zap.add_paragraph(f"Norma Estructural: {norma_sel}")
-        doc_zap.add_paragraph(f"Elaborado con: StructuroPro — Módulo Zapatas NSR-10/ACI-318/Multi-Norma")
-        doc_zap.add_heading("1. MATERIALES", level=1)
-        doc_zap.add_paragraph(f"  f'c = {fc_basico} MPa  |  fy = {fy_basico} MPa  |  Recubrimiento = {recub_z} cm")
-        doc_zap.add_paragraph(f"  Varilla seleccionada: {bar_z}  |  Área unitaria = {REBAR_DICT[bar_z]['area']:.3f} cm²  |  db = {REBAR_DICT[bar_z]['db']:.1f} mm")
-        doc_zap.add_heading("2. CARGAS APLICADAS", level=1)
-        doc_zap.add_paragraph(f"  Servicio: Ps = {P_svc:.1f} kN, Ms_B = {M_svc_B:.1f} kN·m, Ms_L = {M_svc_L:.1f} kN·m")
-        doc_zap.add_paragraph(f"  Últimas: Pu = {P_ult:.1f} kN, Mu_B = {M_ult_B:.1f} kN·m, Mu_L = {M_ult_L:.1f} kN·m")
-        doc_zap.add_heading("3. DIMENSIONAMIENTO EN PLANTA", level=1)
-        doc_zap.add_paragraph(f"  q_adm = {q_adm_z:.2f} kPa  |  γ_prom = {gamma_prom:.1f} kN/m³  |  Df = {Df_z:.2f} m")
-        doc_zap.add_paragraph(f"  q_neto = {q_net:.2f} kPa  |  Área requerida = {Area_req:.2f} m²")
-        doc_zap.add_paragraph(f"  Dimensiones mínimas → B = {B_zap:.2f} m, L = {L_zap:.2f} m")
-        doc_zap.add_paragraph(f"  Dimensiones adoptadas → B = {B_use:.2f} m, L = {L_use:.2f} m")
-        doc_zap.add_paragraph(f"  qu_max = {qu_max:.2f} kPa  |  qu_min = {qu_min:.2f} kPa  |  qu_avg = {qu_avg:.2f} kPa")
-        doc_zap.add_heading("4. ESPESOR Y PERALTE EFECTIVO", level=1)
-        doc_zap.add_paragraph(f"  Espesor H = {H_zap:.0f} cm  |  Recubrimiento = {recub_z:.1f} cm")
-        doc_zap.add_paragraph(f"  Peralte efectivo d = H - recub - db/10 = {d_z:.1f} cm")
-        doc_zap.add_heading("5. REVISIÓN DE CORTANTE", level=1)
-        doc_zap.add_paragraph(f"  CORTANTE UNIDIRECCIONAL (Viga) — Dir B:")
-        doc_zap.add_paragraph(f"    φVc = {phi_Vc_1way_B:.1f} kN  {'≥' if ok_1way_B else '<'}  Vu = {Vu_1way_B:.1f} kN  → {' OK' if ok_1way_B else ' Aumentar H'}")
-        doc_zap.add_paragraph(f"  CORTANTE UNIDIRECCIONAL (Viga) — Dir L:")
-        doc_zap.add_paragraph(f"    φVc = {phi_Vc_1way_L:.1f} kN  {'≥' if ok_1way_L else '<'}  Vu = {Vu_1way_L:.1f} kN  → {' OK' if ok_1way_L else ' Aumentar H'}")
-        doc_zap.add_paragraph(f"  PUNZONAMIENTO (Bidireccional):")
-        doc_zap.add_paragraph(f"    bo = {bo_perim:.3f} m  |  φVc = {phi_Vc_punz:.1f} kN  {'≥' if ok_punz else '<'}  Vup = {Vu_punz:.1f} kN  → {' OK' if ok_punz else ' Aumentar H'}")
-        doc_zap.add_heading("6. DISEÑO A FLEXIÓN — ACERO DE REFUERZO", level=1)
-        doc_zap.add_paragraph(f"  DIR. B (malla sobre el ancho L={L_use:.2f}m):")
-        doc_zap.add_paragraph(f"    Mu_B = {Mu_flex_B:.1f} kN·m  |  As_B = {As_req_B:.2f} cm²  |  ρ_B = {rho_use_B:.4f}")
-        doc_zap.add_paragraph(f"    Arreglo: {n_barras_B} varillas {bar_z}  c/ {sep_B:.1f} cm  {' OK' if disc_B>0 else ' Aumentar H'}")
-        doc_zap.add_paragraph(f"  DIR. L (malla sobre el ancho B={B_use:.2f}m):")
-        doc_zap.add_paragraph(f"    Mu_L = {Mu_flex_L:.1f} kN·m  |  As_L = {As_req_L:.2f} cm²  |  ρ_L = {rho_use_L:.4f}")
-        doc_zap.add_paragraph(f"    Arreglo: {n_barras_L} varillas {bar_z}  c/ {sep_L:.1f} cm  {' OK' if disc_L>0 else ' Aumentar H'}")
-        doc_zap.add_paragraph(f"  DETALLES DE DOBLADO (Gancho 90° estándar ACI/NSR-10):")
-        doc_zap.add_paragraph(f"    Diámetro mín. de doblez = {D_doblez_cm:.1f} cm")
-        doc_zap.add_paragraph(f"    Extensión recta después de la curva = {L_ext_gancho_cm:.1f} cm")
-        doc_zap.add_paragraph(f"    Altura del gancho ajustada a zapata = {L_gancho_real_cm:.1f} cm")
-        doc_zap.add_heading("7. CANTIDADES DE MATERIALES (APU)", level=1)
-        _area_m2_doc = REBAR_DICT[bar_z]["area"] * 1e-4
-        # Longitud exacta considerando tramo recto, curva y extensión
-        # Tramo recto + 2 * (desarrollo curva + extension)
-        _long_gancho_m = ( (math.pi * radio_doblez_cm / 2) + L_ext_gancho_cm ) / 100.0
-        _long_var_B = L_use - 2*(recub_z/100.0) + 2*_long_gancho_m
-        _long_var_L = B_use - 2*(recub_z/100.0) + 2*_long_gancho_m
-        _pe_B = n_barras_B * _long_var_B * _area_m2_doc * 7850
-        _pe_L = n_barras_L * _long_var_L * _area_m2_doc * 7850
-        _pe_tot = _pe_B + _pe_L
-        _vol_exc = (B_use + 0.5) * (L_use + 0.5) * Df_z
-        _vol_conc = B_use * L_use * (H_zap/100.0)
-        doc_zap.add_paragraph(f"  Excavación = {_vol_exc:.2f} m³")
-        doc_zap.add_paragraph(f"  Concreto   = {_vol_conc:.2f} m³")
-        doc_zap.add_paragraph(f"  Acero Dir.B = {_pe_B:.1f} kg  |  Acero Dir.L = {_pe_L:.1f} kg  |  Total = {_pe_tot:.1f} kg")
-        doc_zap.add_paragraph(f"  Cuantía = {(_pe_tot/_vol_conc) if _vol_conc>0 else 0:.1f} kg/m³")
+        doc_zap.add_heading(f"MEMORIA ESTRUCTURAL — ZAPATA {tipo_zap} ({norma_sel})", 0)
 
-        # Integrar Costos APU al Reporte
-        _apu_doc = st.session_state.get("apu_config", {})
-        _mon_d = _apu_doc.get("moneda", "COP")
-        _p_cem_d = _apu_doc.get("cemento", 32000.0)
-        _p_ace_d = _apu_doc.get("acero",   4500.0)
-        _p_are_d = _apu_doc.get("arena",   85000.0)
-        _p_gra_d = _apu_doc.get("grava",   95000.0)
-        _p_exc_d = _apu_doc.get("costo_excav_m3", 25000.0)
-        
-        _bultos_d = _vol_conc * 350 / 50.0
-        _vol_are_d = _vol_conc * 0.55
-        _vol_gra_d = _vol_conc * 0.80
-        
-        _c_exc_d = _vol_exc * _p_exc_d
-        _c_cem_d = _bultos_d * _p_cem_d
-        _c_are_d = _vol_are_d * _p_are_d
-        _c_gra_d = _vol_gra_d * _p_gra_d
-        _c_ace_d = _pe_tot * _p_ace_d
-        _c_tot_doc = _c_exc_d + _c_cem_d + _c_are_d + _c_gra_d + _c_ace_d
-        
-        doc_zap.add_heading("8. PRESUPUESTO ESTIMADO (APU) — DESGLOSE COMPLETO", level=1)
-        doc_zap.add_paragraph(f"  Moneda Base: {_mon_d}\n")
-        doc_zap.add_paragraph(f"  A. MATERIALES DIRECTOS:")
-        doc_zap.add_paragraph(f"     - Excavación:      {_vol_exc:.2f} m³   × {_p_exc_d:,.0f}/m³  = {_c_exc_d:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"     - Cemento:         {_bultos_d:.1f} blt  × {_p_cem_d:,.0f}/blt = {_c_cem_d:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"     - Arena:           {_vol_are_d:.2f} m³   × {_p_are_d:,.0f}/m³  = {_c_are_d:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"     - Gravilla:        {_vol_gra_d:.2f} m³   × {_p_gra_d:,.0f}/m³  = {_c_gra_d:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"     - Acero Refuerzo:  {_pe_tot:.1f} kg   × {_p_ace_d:,.0f}/kg  = {_c_ace_d:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"  ─────────────────────────────────────────────────")
-        doc_zap.add_paragraph(f"  SUBTOTAL MATERIALES DIRECTOS = {_c_tot_doc:,.0f} {_mon_d}")
+        # 0. Portada
+        p0 = doc_zap.add_paragraph()
+        p0.add_run(f"Proyecto: \nElemento: Zapata {tipo_zap}\nNorma: {norma_sel}\nNivel Sísmico: {nivel_sismico}\nMateriales: Concreto f'c = {fc_basico:.1f} MPa, Acero fy = {fy_basico:.1f} MPa\nFecha: {_dt_dxf.datetime.now().strftime('%d/%m/%Y')}").bold = True
 
-        # Calcular Mano de Obra y demás con valores del APU si están disponibles
-        _apu_doc_cfg = st.session_state.get("apu_config", {})
-        _pct_he_doc  = _apu_doc_cfg.get("pct_herramienta", 0.05)
-        _pct_aiu_doc = _apu_doc_cfg.get("pct_aui", 0.30)
-        _pct_uti_doc = _apu_doc_cfg.get("pct_util", 0.05)
-        _pct_iva_doc = _apu_doc_cfg.get("iva", 0.19)
-        _dia_mo_doc  = _apu_doc_cfg.get("costo_dia_mo", 69333.33)
-        _vol_conc_doc = B_use * L_use * (H_zap / 100.0)
-        _vol_exc_doc2 = (B_use + 0.5) * (L_use + 0.5) * Df_z
-        _dias_mo_doc = (_pe_tot * 0.04) + (_vol_conc_doc * 0.4) + (_vol_exc_doc2 * 0.3)
-        _c_mo_doc    = _dias_mo_doc * _dia_mo_doc
-        _cd_doc      = _c_tot_doc + _c_mo_doc
-        _herr_doc    = _c_mo_doc * _pct_he_doc
-        _aiu_doc_val = _cd_doc * _pct_aiu_doc
-        _util_doc    = _cd_doc * _pct_uti_doc
-        _iva_doc_val = _util_doc * _pct_iva_doc
-        _gran_total_doc = _cd_doc + _herr_doc + _aiu_doc_val + _iva_doc_val
+        # 1. Parámetros de Diseño
+        doc_zap.add_heading("1. PARÁMETROS DE DISEÑO", level=1)
+        doc_zap.add_paragraph(f"Geometría: B = {B_use:.2f} m, L = {L_use:.2f} m, H = {H_zap:.0f} cm\nRecubrimiento: {recub_z} cm\nPedestal: c1 = {cx} cm, c2 = {cy} cm")
+        doc_zap.add_paragraph(f"Cargas de servicio aplicadas:\n  P_serv = {P_serv:.1f} kN\n  M_serv = {M_serv:.1f} kN·m")
+        doc_zap.add_paragraph(f"Cargas últimas de diseño:\n  Pu = {P_ult:.1f} kN\n  Mu = {M_ult:.1f} kN·m\n  Vu = {V_ult:.1f} kN")
 
-        doc_zap.add_paragraph(f"")
-        doc_zap.add_paragraph(f"  B. MANO DE OBRA:")
-        doc_zap.add_paragraph(f"     {_dias_mo_doc:.2f} días-obra × {_dia_mo_doc:,.0f} {_mon_d}/día = {_c_mo_doc:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"  ─────────────────────────────────────────────────")
-        doc_zap.add_paragraph(f"  COSTO DIRECTO (CD) = Mat. + MO = {_cd_doc:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"")
-        doc_zap.add_paragraph(f"  C. CARGAS INDIRECTAS:")
-        doc_zap.add_paragraph(f"     - Herramienta Menor ({_pct_he_doc*100:.1f}% MO): {_herr_doc:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"     - A.I.U. ({_pct_aiu_doc*100:.0f}% CD):         {_aiu_doc_val:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"     - IVA s/ Utilidad ({_pct_iva_doc*100:.0f}% × Util.): {_iva_doc_val:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"  ═════════════════════════════════════════════════")
-        doc_zap.add_paragraph(f"  GRAN TOTAL DEL PROYECTO = {_gran_total_doc:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"  (Diferencia Gran Total vs Materiales = {_gran_total_doc - _c_tot_doc:,.0f} {_mon_d}")
-        doc_zap.add_paragraph(f"   = MO + Herramienta + AIU + IVA)")
+        # 2. Esfuerzos y Presiones
+        doc_zap.add_heading("2. DISTRIBUCIÓN DE PRESIONES Y ESTABILIDAD", level=1)
+        doc_zap.add_paragraph(f"Capacidad del suelo (qa): {qa:.1f} kPa\nExcentricidad (e): {e_serv:.3f} m (L/6 = {L_use/6:.3f} m)")
+        doc_zap.add_paragraph(f"Presiones Máximas (Servicio): q_max = {qmax_s:.1f} kPa, q_min = {qmin_s:.1f} kPa")
+        doc_zap.add_paragraph(f"Presiones de Diseño (Mayoradas): q_max_u = {qmax_u:.1f} kPa, q_min_u = {qmin_u:.1f} kPa")
+        if area_ok and vol_y_ok:
+            doc_zap.add_paragraph("✔ Geometría en planta CUMPLE admitiendo las presiones bajo qa.").bold = True
+        else:
+            doc_zap.add_paragraph("❌ ÁREA INSUFICIENTE para la capacidad del suelo q_a ó Volcamiento.").bold = True
 
-        # FI-6: ESTABILIDAD GLOBAL — VOLCAMIENTO Y DESLIZAMIENTO ─────────────
-        # Variables FS_volc / FS_desl calculadas en el bloque A1 (L1616-1668)
-        doc_zap.add_heading("8a. ESTABILIDAD GLOBAL — VOLCAMIENTO Y DESLIZAMIENTO (NSR-10 H.4)", level=1)
-        try:
-            doc_zap.add_paragraph(
-                f"  Carga horizontal H = {H_horiz:.1f} kN  |  "
-                f"Angulo friccion cimentacion delta = {delta_ang:.1f} deg  |  "
-                f"Peso total W = {W_total:.1f} kN"
-            )
-            doc_zap.add_paragraph(
-                f"  FS Volcamiento  = {FS_volc:.2f}  "
-                f"{'[OK] Cumple' if ok_volc else '[X] No cumple'} (req. >= 1.50)  |  "
-                f"M_estabilizador = {M_estab:.1f} kN·m  |  M_volcador = {M_volc:.1f} kN·m"
-            )
-            doc_zap.add_paragraph(
-                f"  FS Deslizamiento = {FS_desl:.2f}  "
-                f"{'[OK] Cumple' if ok_desl else '[X] No cumple'} (req. >= 1.50)  |  "
-                f"FR = {FR:.1f} kN  |  H_horiz = {H_horiz:.1f} kN"
-            )
-            if Pp_pasivo > 0:
-                doc_zap.add_paragraph(f"  Empuje pasivo considerado: Ep = {Pp_pasivo:.1f} kN")
-        except Exception:
-            doc_zap.add_paragraph("  [Estabilidad no calculada — ingrese H horizontal en el panel de estabilidad]")
-        # ───────────────────────────────────────────────────────────────────────
+        # 3. Diseño a Cortante (Unidireccional)
+        doc_zap.add_heading("3. DISEÑO A CORTANTE UNIDIRECCIONAL", level=1)
+        doc_zap.add_paragraph(f"Peralte efectivo promedio (d): {d_avg:.1f} cm")
+        doc_zap.add_paragraph(f"Cortante Actuante Mayorado (Vu): {Vu:.1f} kN")
+        doc_zap.add_paragraph(f"Resistencia del Concreto (φVc): {phiVc:.1f} kN")
+        if cort_ok:
+            doc_zap.add_paragraph("✔ CUMPLE diseño por Cortante.").bold = True
+        else:
+            doc_zap.add_paragraph("❌ NO CUMPLE Cortante — Aumentar el espesor H de la zapata.").bold = True
 
-        # Si hay asentamiento guardado, agregarlo
-        if "asentamiento" in st.session_state:
-            doc_zap.add_heading("8b. ASENTAMIENTO ELÁSTICO ESTIMADO", level=1)
-            doc_zap.add_paragraph(f"  Asentamiento inmediato (estimado) = {st.session_state.asentamiento:.1f} mm")
+        # 4. Diseño a Punzonamiento (Bidireccional)
+        doc_zap.add_heading("4. DISEÑO A PUNZONAMIENTO", level=1)
+        doc_zap.add_paragraph(f"Perímetro crítico (bo): {bo:.1f} cm")
+        doc_zap.add_paragraph(f"Cortante Punzonante Actuante (Vu_p): {Vu_p:.1f} kN")
+        doc_zap.add_paragraph(f"Resistencia del Concreto (φvc_p_total): {phi_vc_p * bo * d_avg / 10:.1f} kN")
+        if punz_ok:
+            doc_zap.add_paragraph("✔ CUMPLE diseño por Punzonamiento.").bold = True
+        else:
+            doc_zap.add_paragraph("❌ NO CUMPLE Punzonamiento — Aumentar H o la dimensión de la columna.").bold = True
 
-            
-        doc_zap.add_heading("9. ANEXO GRÁFICO (ESQUEMAS GENERADOS)", level=1)
-        # Función auxiliar para incrustar figuras
-        def _add_plt_to_doc(fig_obj, width_in=6.0):
-            img_io = io.BytesIO()
-            fig_obj.savefig(img_io, format='png', bbox_inches='tight', facecolor=fig_obj.get_facecolor())
-            img_io.seek(0)
-            doc_zap.add_picture(img_io, width=Inches(width_in))
-            
-        doc_zap.add_paragraph("Anexo A. Distribución Boussinesq (Perfil Vertical y Perfiles Horizontales):")
-        try: _add_plt_to_doc(fig_b)
-        except NameError: pass
+        # 5. Diseño a Flexión y Cuantías
+        doc_zap.add_heading("5. DISEÑO A FLEXIÓN Y REFUERZO", level=1)
+        doc_zap.add_paragraph(f"Momento Flector de Diseño (Mu): {Mu:.1f} kN·m")
+        doc_zap.add_paragraph(f"Cuantía requerida (ρ_req): {rho_req:.4f}")
+        doc_zap.add_paragraph(f"Cuantía mínima normativa (ρ_min): {rho_z_min:.4f}")
+        doc_zap.add_paragraph(f"Área de Acero (As) Dir L y B: {max(As_req, As_min):.2f} cm²")
+        doc_zap.add_paragraph(f"Armado propuesto: {bar_z} @ {sep_L:.1f} cm (Dir L), {bar_z} @ {sep_B:.1f} cm (Dir B)")
+
+        # 6. Cuantificación de Materiales
+        doc_zap.add_heading("6. CUANTIFICACIÓN DE MATERIALES", level=1)
+        doc_zap.add_paragraph(f"Volumen de concreto: {vol_c:.3f} m³")
+        doc_zap.add_paragraph(f"Peso del acero (Dir L): {peso_L:.1f} kg")
+        doc_zap.add_paragraph(f"Peso del acero (Dir B): {peso_B:.1f} kg")
+        doc_zap.add_paragraph(f"Peso total Acero: {peso_L + peso_B:.1f} kg ({kg_m3:.1f} kg/m³)")
+
+        # 7. Detalles Generales
+        doc_zap.add_heading("7. PLANOS Y DETALLES", level=1)
+        doc_zap.add_paragraph("El plano en detalle puede ser exportado desde la suite estructural utilizando el estándar DXF-ICONTEC.")
         
-        doc_zap.add_paragraph("\nAnexo B. Mecanismo de Falla (Terzaghi/Meyerhof) y Bulbo de Presiones:")
-        try: _add_plt_to_doc(fig_tb)
-        except NameError: pass
-        
-        doc_zap.add_paragraph("\nAnexo C. Profundidad de Exploración Normativa (NSR-10, criterio 10% q_0):")
-        try: _add_plt_to_doc(fig_ex)
-        except NameError: pass
-        
-        doc_zap.add_paragraph("\nAnexo D. Esquema 2D de Acero de Refuerzo en Planta:")
-        try: _add_plt_to_doc(fig_2d, width_in=4.5)
-        except NameError: pass
+        # 8. Referencias Citadas
+        doc_zap.add_heading("8. REFERENCIAS CITADAS", level=1)
+        doc_zap.add_paragraph("NSR-10 Título C.15: Zapatas")
+        doc_zap.add_paragraph("NSR-10 Título C.11: Cortante y Torsión")
+        doc_zap.add_paragraph("\n\n_________________________________________\nFirma Ing. Responsable")
+        doc_zap.add_paragraph("Matrícula Profesional: _______________")
 
         f_zap_io = io.BytesIO()
         doc_zap.save(f_zap_io)
         f_zap_io.seek(0)
-        # ── EXPORTACIÓN DXF ────────────────────────────────────────────────
+        #  EXPORTACIÓN DXF (Protocolo Diamante N4)
         import datetime as _dt_dxf
-        doc_dxf = ezdxf.new('R2010')
-        doc_dxf.units = ezdxf.units.CM
-        
-        ESCALA = 20
-        doc_dxf.header['$DIMSCALE'] = ESCALA
-        doc_dxf.header['$LTSCALE'] = 0.02
-        doc_dxf.header['$TEXTSIZE'] = 0.08 * ESCALA
-        doc_dxf.header['$DIMTXT'] = 0.06 * ESCALA
-        TH = 0.06 * ESCALA
-        TH_TITLE = 0.1 * ESCALA
-        
-        msp = doc_dxf.modelspace()
-        
-        _layers = [
-            ('CONCRETO', 7), ('ACERO_B', 1), ('ACERO_L', 3),
-            ('TEXTO', 2), ('EJES', 8), ('COTAS', 4),
-            ('ROTULO', 4), ('HATCH', 254),
-        ]
-        for _ln, _lc in _layers:
-            if _ln not in doc_dxf.layers: doc_dxf.layers.add(_ln, color=_lc)
-        
-        B_cm = B_use * 100; L_cm = L_use * 100; Hc = H_zap; rec = recub_z
-        db_cm = db_bar_z / 10.0; radio_dob = D_doblez_cm / 2.0; L_ext = L_ext_gancho_cm
-        c1c = c1_col; c2c = c2_col
-        
-        def _rect(ox, oy, w, h, lay):
-            msp.add_lwpolyline([(ox,oy),(ox+w,oy),(ox+w,oy+h),(ox,oy+h)], close=True, dxfattribs={'layer': lay})
-        
-        def _text(x, y, txt, lay, h=None, ha='left'):
-            msp.add_text(txt, dxfattribs={'layer': lay, 'height': h or TH, 'halign': {'left':0,'center':4,'right':2}[ha], 'insert': (x, y)})
-            
-        def _dim_horiz(x1, x2, y_dim, txt, lay='COTAS'):
-            ans = TH * 0.5
-            for _x in (x1, x2):
-                msp.add_line((_x, y_dim - ans), (_x, y_dim + ans), dxfattribs={'layer': lay})
-                msp.add_line((_x, y_dim), (_x, y_dim - TH*2), dxfattribs={'layer': lay, 'color': 8})
-            msp.add_line((x1, y_dim), (x2, y_dim), dxfattribs={'layer': lay})
-            _text((x1+x2)/2, y_dim + TH*0.5, txt, lay, ha='center')
-            
-        def _dim_vert(x_dim, y1, y2, txt, lay='COTAS'):
-            ans = TH * 0.5
-            for _y in (y1, y2):
-                msp.add_line((x_dim - ans, _y), (x_dim + ans, _y), dxfattribs={'layer': lay})
-                msp.add_line((x_dim, _y), (x_dim + TH*2, _y), dxfattribs={'layer': lay, 'color': 8})
-            msp.add_line((x_dim, y1), (x_dim, y2), dxfattribs={'layer': lay})
-            _text(x_dim - TH*0.5, (y1+y2)/2, txt, lay, ha='right')
-            
-        def _hook_arc(ox, oy, side, lay):
-            r = radio_dob
-            if side == 'left':
-                msp.add_arc((ox + r, oy + r), r, start_angle=180, end_angle=270, dxfattribs={'layer': lay})
-                msp.add_line((ox, oy + r), (ox, oy + r + L_ext), dxfattribs={'layer': lay})
-            else:
-                msp.add_arc((ox - r, oy + r), r, start_angle=270, end_angle=0, dxfattribs={'layer': lay})
-                msp.add_line((ox, oy + r), (ox, oy + r + L_ext), dxfattribs={'layer': lay})
-        
-        ex_A = 0; ey_A = 0
-        _rect(ex_A, ey_A, B_cm, Hc, 'CONCRETO')
-        _rect(ex_A + (B_cm - c1c) / 2, ey_A + Hc, c1c, 50, 'CONCRETO')
-        y_bar_A = ey_A + rec + db_cm/2
-        for j in range(int(n_barras_L)): msp.add_circle((ex_A + rec + j * sep_L, y_bar_A), db_cm/2, dxfattribs={'layer':'ACERO_L'})
-        msp.add_line((ex_A + rec + radio_dob, y_bar_A), (ex_A + B_cm - rec - radio_dob, y_bar_A), dxfattribs={'layer':'ACERO_B'})
-        _hook_arc(ex_A + rec, y_bar_A, 'left', 'ACERO_B'); _hook_arc(ex_A + B_cm - rec, y_bar_A, 'right', 'ACERO_B')
-        
-        ex_B = B_cm + 60; ey_B = 0
-        _rect(ex_B, ey_B, L_cm, Hc, 'CONCRETO')
-        _rect(ex_B + (L_cm - c2c) / 2, ey_B + Hc, c2c, 50, 'CONCRETO')
-        y_bar_B = ey_B + rec + db_cm/2
-        for i in range(int(n_barras_B)): msp.add_circle((ex_B + rec + i * sep_B, y_bar_B), db_cm/2, dxfattribs={'layer':'ACERO_B'})
-        y_bar_L = y_bar_B + db_cm
-        msp.add_line((ex_B + rec + radio_dob, y_bar_L), (ex_B + L_cm - rec - radio_dob, y_bar_L), dxfattribs={'layer':'ACERO_L'})
-        _hook_arc(ex_B + rec, y_bar_L, 'left', 'ACERO_L'); _hook_arc(ex_B + L_cm - rec, y_bar_L, 'right', 'ACERO_L')
-        
-        px = 0; py = Hc + 80
-        _rect(px, py, B_cm, L_cm, 'CONCRETO')
-        _rect(px + (B_cm - c1c)/2, py + (L_cm - c2c)/2, c1c, c2c, 'CONCRETO')
-        for i in range(int(n_barras_B)):
-            yi = py + rec + i * sep_B
-            msp.add_line((px + rec, yi), (px + B_cm - rec, yi), dxfattribs={'layer':'ACERO_B'})
-        for j in range(int(n_barras_L)):
-            xj = px + rec + j * sep_L
-            msp.add_line((xj, py + rec), (xj, py + L_cm - rec), dxfattribs={'layer':'ACERO_L'})
-        
-        rot_w = 180; rot_h = 60; row_h = rot_h / 8; rot_x = max(B_cm + 60 + L_cm, B_cm) + 60; rot_y = -rot_h - 20
-        _rect(rot_x, rot_y, rot_w, rot_h, 'ROTULO')
-        msp.add_line((rot_x + 55, rot_y), (rot_x + 55, rot_y + rot_h), dxfattribs={'layer':'ROTULO'})
-        _rotulo_filas = [
-            ("PROYECTO", f"Zapata Aislada {B_use:.2f}×{L_use:.2f}m — H={H_zap:.0f}cm"),
-            ("EMPRESA", "Konte Ingeniería"), ("DISEÑÓ", "StructuroPro"), ("NORMA", "NSR-10 / ACI 318-19"),
-            ("ESCALA", f"1:{ESCALA}"), ("FECHA", _dt_dxf.date.today().strftime('%d/%m/%Y')),
-            ("PLANO N°", "ZAP-001"), ("REVISIÓN", "R0")
-        ]
-        for i, (c, v) in enumerate(_rotulo_filas):
-            yr = rot_y + rot_h - (i + 1) * row_h
-            if i > 0: msp.add_line((rot_x, yr + row_h), (rot_x + rot_w, yr + row_h), dxfattribs={'layer':'ROTULO'})
-            _text(rot_x + 2, yr + row_h*0.3, c, 'ROTULO', TH * 0.7); _text(rot_x + 57, yr + row_h*0.3, v, 'ROTULO', TH)
-        
-        # RÓTULO PERIMETRAL ICONTEC
-        min_x_plano = -40; min_y_plano = min(rot_y - 10, -TH*25 - 20)
-        max_x_plano = rot_x + rot_w + 20; max_y_plano = py + L_cm + 120
-        _rect(min_x_plano, min_y_plano, max_x_plano - min_x_plano, max_y_plano - min_y_plano, 'ROTULO')
-        _rect(min_x_plano+1, min_y_plano+1, max_x_plano - min_x_plano - 2, max_y_plano - min_y_plano - 2, 'ROTULO')
-        
-        _dxf_text = io.StringIO()
-        doc_dxf.write(_dxf_text)
-        _dxf_bytes = _dxf_text.getvalue().encode("utf-8")
+        st.write("#### Planos DXF ICONTEC")
+        papel_opc = {"Carta (21x28cm)": (21.6,27.9,"CARTA"), "Oficio (21x33cm)": (21.6,33.0,"OFICIO"), "Medio Pliego (50x70cm)": (50.0,70.7,"MEDIO PLIEGO"), "Pliego (70x100cm)": (70.7,100.0,"PLIEGO")}
+        papel_sel = st.selectbox("Formato de Papel (Zapata Aislada):", list(papel_opc.keys()), key="za_papel")
+        W_P, H_P, LBL_P = papel_opc[papel_sel]
 
-        # ── EXPORTACIÓN IFC ────────────────────────────────────────────────
-        if not _IFC_AVAILABLE:
-            st.warning("⚠ ifcopenshell no instalado — ejecuta: `pip install ifcopenshell`")
-        else:
-            try:
-                buf_ifc = ifc_export.ifc_zapata(
-                    B_use*100, L_use*100, H_zap, fc_basico, fy_basico,
-                    bar_z, db_bar_z, int(n_barras_B), bar_z, db_bar_z, int(n_barras_L),
-                    recub_z, P_ult, norma_sel, "Proyecto NSR-10"
-                )
-            except Exception:
-                buf_ifc = None
+        _dxf_bytes = None
+        if st.button("Generar Plano DXF ICONTEC - Zapata Aislada"):
+            doc_dxf = ezdxf.new('R2010', setup=True)
+            doc_dxf.units = ezdxf.units.CM
+            LW = {'CONCRETO':70, 'ACERO_L':40, 'ACERO_B':40, 'COTAS':25, 'TEXTO':25, 'ROTULO':35, 'MARGEN':70}
+            COL = {'CONCRETO':7, 'ACERO_L':3, 'ACERO_B':1, 'COTAS':2, 'TEXTO':7, 'ROTULO':8, 'MARGEN':7}
+            for lay, lw in LW.items():
+                doc_dxf.layers.new(lay, dxfattribs={'color':COL[lay], 'lineweight':lw})
+            doc_dxf.styles.new('ROMANS', dxfattribs={'font':'romans.shx'})
+            
+            msp = doc_dxf.modelspace()
+            
+            B_cm = B_use * 100; L_cm = L_use * 100; Hc = H_zap; rec = recub_z
+            db_cm = db_bar_z / 10.0; radio_dob = D_doblez_cm / 2.0; L_ext = L_ext_gancho_cm
+            c1c = c1_col; c2c = c2_col
+            
+            # Dibujar en Model Space (unidades reales CM)
+            def _rect(ox, oy, w, h, lay):
+                msp.add_lwpolyline([(ox,oy),(ox+w,oy),(ox+w,oy+h),(ox,oy+h),(ox,oy)], dxfattribs={'layer': lay})
+            
+            def _text(x, y, txt, lay, h=2.5, ha='left', va='center'):
+                halign = {'left':0, 'center':1, 'right':2}[ha]
+                msp.add_text(txt, dxfattribs={'layer': lay, 'style': 'ROMANS', 'height': h, 'insert': (x,y), 'align_point': (x,y), 'halign': halign, 'valign': 2 if va=='center' else 0})
+                
+            def _hook_arc(ox, oy, side, lay):
+                r = radio_dob
+                if side == 'left':
+                    msp.add_arc((ox + r, oy + r), r, start_angle=180, end_angle=270, dxfattribs={'layer': lay})
+                    msp.add_line((ox, oy + r), (ox, oy + r + L_ext), dxfattribs={'layer': lay})
+                else:
+                    msp.add_arc((ox - r, oy + r), r, start_angle=270, end_angle=360, dxfattribs={'layer': lay})
+                    msp.add_line((ox, oy + r), (ox, oy + r + L_ext), dxfattribs={'layer': lay})
 
-        # ── BOTONES INTELIGENTES (3 COLUMNAS) ──────────────────────────────
+            ex_A = 0; ey_A = 0
+            _rect(ex_A, ey_A, B_cm, Hc, 'CONCRETO')
+            _rect(ex_A + (B_cm - c1c) / 2, ey_A + Hc, c1c, 50, 'CONCRETO')
+            y_bar_A = ey_A + rec + db_cm/2
+            for j in range(int(n_barras_L)): msp.add_circle((ex_A + rec + j * sep_L, y_bar_A), db_cm/2, dxfattribs={'layer':'ACERO_L'})
+            msp.add_line((ex_A + rec + radio_dob, y_bar_A), (ex_A + B_cm - rec - radio_dob, y_bar_A), dxfattribs={'layer':'ACERO_B'})
+            _hook_arc(ex_A + rec, y_bar_A, 'left', 'ACERO_B'); _hook_arc(ex_A + B_cm - rec, y_bar_A, 'right', 'ACERO_B')
+            _text(ex_A + B_cm/2, ey_A - 15, "CORTE A-A (Dir. B)", 'TEXTO', h=3.0, ha='center')
+
+            ex_B = B_cm + 60; ey_B = 0
+            _rect(ex_B, ey_B, L_cm, Hc, 'CONCRETO')
+            _rect(ex_B + (L_cm - c2c) / 2, ey_B + Hc, c2c, 50, 'CONCRETO')
+            y_bar_B = ey_B + rec + db_cm/2
+            for i in range(int(n_barras_B)): msp.add_circle((ex_B + rec + i * sep_B, y_bar_B), db_cm/2, dxfattribs={'layer':'ACERO_B'})
+            y_bar_L = y_bar_B + db_cm
+            msp.add_line((ex_B + rec + radio_dob, y_bar_L), (ex_B + L_cm - rec - radio_dob, y_bar_L), dxfattribs={'layer':'ACERO_L'})
+            _hook_arc(ex_B + rec, y_bar_L, 'left', 'ACERO_L'); _hook_arc(ex_B + L_cm - rec, y_bar_L, 'right', 'ACERO_L')
+            _text(ex_B + L_cm/2, ey_B - 15, "CORTE B-B (Dir. L)", 'TEXTO', h=3.0, ha='center')
+
+            px = 0; py = Hc + 60
+            _rect(px, py, B_cm, L_cm, 'CONCRETO')
+            _rect(px + (B_cm - c1c)/2, py + (L_cm - c2c)/2, c1c, c2c, 'CONCRETO')
+            for i in range(int(n_barras_B)):
+                yi = py + rec + i * sep_B
+                msp.add_line((px + rec, yi), (px + B_cm - rec, yi), dxfattribs={'layer':'ACERO_B'})
+            for j in range(int(n_barras_L)):
+                xj = px + rec + j * sep_L
+                msp.add_line((xj, py + rec), (xj, py + L_cm - rec), dxfattribs={'layer':'ACERO_L'})
+            _text(px + B_cm/2, py - 15, "PLANTA ZAPATA", 'TEXTO', h=3.0, ha='center')
+            
+            # Mover dibujos a un bloque (virtual) y escalarlo para encajar en el papel
+            escala_den = 50
+            dim_w = max(B_cm+60+L_cm, B_cm)
+            dim_h = (Hc + 60 + L_cm)
+            for den in [100, 75, 50, 25, 20]:
+                if dim_w / den <= W_P*0.75 and dim_h / den <= H_P*0.75:
+                    escala_den = den; break
+            
+            # Margen y Rotulo Protocolo N4
+            msp.add_lwpolyline([(1,1), (W_P-1,1), (W_P-1,H_P-1), (1,H_P-1), (1,1)], dxfattribs={'layer':'MARGEN'})
+            msp.add_lwpolyline([(1,1), (W_P-1,1), (W_P-1,4), (1,4), (1,1)], dxfattribs={'layer':'ROTULO'})
+            _text(W_P/2, 2.5, f"ZAPATA AISLADA {B_use:.2f}x{L_use:.2f}m - H={H_zap:.0f}cm | {norma_sel}", 'TEXTO', h=0.4, ha='center')
+            _text(W_P/2, 1.5, f"Papel: {LBL_P} | Escala Vista: 1:{escala_den}", 'TEXTO', h=0.3, ha='center')
+            
+            # Crear un nuevo bloque y mover entidades
+            # (Por simplicidad en streamlit-ezdxf al vuelo, redibujaremos con escala)
+            doc_dxf.blocks.new(name='VISTAS_ZAP')
+            blk = doc_dxf.blocks.get('VISTAS_ZAP')
+            
+            # Transferimos desde msp a blk y borramos de msp
+            for e in list(msp):
+                if e.dxf.layer not in ['MARGEN', 'ROTULO', 'TEXTO']:
+                    blk.add_entity(e.copy())
+                    e.destroy()
+            for e in list(msp): # Limpiar textos h=3.0 que son del dibujo
+                if e.dxf.layer == 'TEXTO' and e.dxf.height > 1.0:
+                    blk.add_entity(e.copy())
+                    e.destroy()
+            
+            # Insertar el bloque escalado en el centro
+            ESC = 1.0 / escala_den
+            ox = (W_P - dim_w*ESC)/2
+            oy = 5 + (H_P - 6 - dim_h*ESC)/2
+            msp.add_blockref('VISTAS_ZAP', insert=(ox, oy), dxfattribs={'xscale': ESC, 'yscale': ESC})
+
+            import tempfile, os
+            with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp:
+                tmp_path = tmp.name
+            doc_dxf.saveas(tmp_path)
+            with open(tmp_path, 'rb') as f:
+                _dxf_bytes = f.read()
+            os.unlink(tmp_path)
+            st.success("DXF generado correctamente con Estándar Diamante.")
+
+        #  EXPORTACIÓN IFC AUTÓNOMA 
         st.markdown("---")
-        st.write("####  Entregables")
+        st.markdown("####  Exportar Modelo BIM (.ifc)")
+        st.caption("Implementación Nativa IFC4 con Parametrización NSR-10/ACI")
         
-        if not area_ok:
-            st.warning("⚠ **Área insuficiente.** Corrige las dimensiones de la zapata para habilitar la exportación.")
+        def _make_ifc_zapata_aislada(B_m, L_m, H_m, c1_m, c2_m, fc_mpa, fy_mpa,
+                                     bar_B, n_B, bar_L, n_L, recub_cm,
+                                     Pu_kN, norma, proyecto):
+            try:
+                import ifcopenshell
+                import ifcopenshell.api
+                import uuid
+                import time
+            except ImportError:
+                return None
             
+            O = ifcopenshell.file(schema="IFC4")
+
+            
+            def p4(x,y,z): return O.createIfcCartesianPoint((float(x),float(y),float(z)))
+            def ax2(pt, z_dir=(0.,0.,1.), x_dir=(1.,0.,0.)):
+                return O.createIfcAxis2Placement3D(pt, O.createIfcDirection(z_dir), O.createIfcDirection(x_dir))
+            
+            ifcopenshell.api.run("project.create_project", O, name="Proyecto_StructoPro")
+            context = ifcopenshell.api.run("context.add_context", O, context_type="Model")
+            body    = ifcopenshell.api.run("context.add_context", O, context_type="Model", context_identifier="Body", target_view="MODEL_VIEW", parent=context)
+            project = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject", Name=proyecto)
+            site    = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite", Name="Sitio")
+            building= ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", Name="Edificio")
+            ifcopenshell.api.run("unit.assign_unit", O, units={"LENGTHUNIT": "METRE"})
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project, product=site)
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, product=building)
+            
+            # Zapata Geom
+            zapata = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", Name="Zapata Aislada")
+            zapata.PredefinedType = "PAD_FOOTING"
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, product=zapata)
+            
+            rect_prof = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), B_m, L_m)
+            extr_zap  = O.createIfcExtrudedAreaSolid(rect_prof, ax2(p4(0,0,0)), O.createIfcDirection((0.,0.,1.)), H_m)
+            shape_zap = O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [extr_zap])
+            ifcopenshell.api.run("geometry.assign_representation", O, product=zapata, representation=shape_zap)
+            ifcopenshell.api.run("geometry.edit_object_placement", O, product=zapata)
+            
+            # Pedestal Geom
+            pedestal = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcColumn", Name="Pedestal Corto")
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, product=pedestal)
+            rect_ped = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), c1_m, c2_m)
+            extr_ped = O.createIfcExtrudedAreaSolid(rect_ped, ax2(p4(0,0,H_m)), O.createIfcDirection((0.,0.,1.)), 0.5)
+            shape_ped= O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [extr_ped])
+            ifcopenshell.api.run("geometry.assign_representation", O, product=pedestal, representation=shape_ped)
+            ifcopenshell.api.run("geometry.edit_object_placement", O, product=pedestal)
+            
+            # Propiedades NSR-10
+            pset = ifcopenshell.api.run("pset.add_pset", O, product=zapata, name="Pset_NSR10_Zapata")
+            ifcopenshell.api.run("pset.edit_pset", O, pset=pset, properties={
+                "f_c_MPa": float(fc_mpa), "fy_MPa": float(fy_mpa),
+                "Acero_Dir_B": f"{n_B} {bar_B}", "Acero_Dir_L": f"{n_L} {bar_L}",
+                "Carga_Pu_kN": float(Pu_kN), "Norma": norma
+            })
+            
+            import tempfile, os
+            with tempfile.NamedTemporaryFile(suffix='.ifc', delete=False) as tmp:
+                tmp_path = tmp.name
+            O.write(tmp_path)
+            with open(tmp_path, 'rb') as f:
+                b_ifc = f.read()
+            os.unlink(tmp_path)
+            return b_ifc
+
+        buf_ifc = None
+        if st.button("Generar Modelo BIM (IFC) - Zapata Aislada"):
+            with st.spinner("Generando IFC4 nativo..."):
+                buf_ifc = _make_ifc_zapata_aislada(
+                    B_use, L_use, H_zap/100, c1_col/100, c2_col/100, fc_basico, fy_basico,
+                    bar_z, int(n_barras_B), bar_z, int(n_barras_L), recub_z, P_ult, norma_sel, "Proyecto NSR-10"
+                )
+                if buf_ifc:
+                    st.success("IFC4 generado con éxito.")
+                else:
+                    st.error("Error al generar IFC.")
+
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
             st.download_button("Memoria DOCX", data=f_zap_io,
@@ -2551,16 +2500,16 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                use_container_width=True, disabled=not area_ok)
         with col_m2:
-            st.download_button("Plano DXF (ICONTEC)", data=_dxf_bytes,
-                               file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}m.dxf",
+            st.download_button("Descargar Plano DXF (ICONTEC)", data=_dxf_bytes,
+                               file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}.dxf" if _dxf_bytes else "Plano.dxf",
                                mime="application/dxf",
-                               use_container_width=True, disabled=not area_ok)
+                               use_container_width=True, disabled=(_dxf_bytes is None))
         with col_m3:
-            if buf_ifc:
-                st.download_button("Modelo BIM (IFC)", data=buf_ifc,
-                                   file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}m.ifc",
-                                   mime="application/x-step",
-                                   use_container_width=True, disabled=not area_ok)
+            st.download_button("Descargar Modelo BIM (IFC)", data=buf_ifc,
+                               file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}.ifc" if buf_ifc else "Modelo.ifc",
+                               mime="application/x-step",
+                               use_container_width=True, disabled=(buf_ifc is None))
+
     with tab_dwg:
         st.subheader("Visualización 3D de la Fundación con Acero de Refuerzo")
         fig3d = go.Figure()
@@ -2718,7 +2667,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
 
 
     with tab_apu:
-        # ─── Cantidades base ────────────────────────────────────────────────
+        #  Cantidades base 
         vol_excavacion   = (B_use + 0.5) * (L_use + 0.5) * Df_z
         vol_concreto_zap = B_use * L_use * (H_zap / 100.0)
 
@@ -2739,10 +2688,10 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         vol_grava_z   = vol_concreto_zap * pct_grava_apu             # m³
         litros_agua   = vol_concreto_zap * 185.0                     # l/m³  (rel a/c ≈0.53)
 
-        # ─── SECCIÓN 1: Resumen de materiales ──────────────────────────────
+        #  SECCIÓN 1: Resumen de materiales 
         st.markdown("###  Resumen de Materiales — Quantiy Take-Off")
         cols_m = st.columns(4)
-        cols_m[0].metric("⛏ Excavación", f"{vol_excavacion:.2f} m³")
+        cols_m[0].metric(" Excavación", f"{vol_excavacion:.2f} m³")
         cols_m[1].metric(" Vol. Concreto", f"{vol_concreto_zap:.2f} m³")
         cols_m[2].metric(" Acero Total", f"{peso_total_acero_zap:.1f} kg")
         cols_m[3].metric(" Cuantía", f"{peso_total_acero_zap/vol_concreto_zap:.1f} kg/m³")
@@ -2789,7 +2738,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             col_msg.success(f" Precios actualizados del scraping — {_mon}")
             col_metric.metric(f" Gran Total Proyecto [{_mon}]", f"{_gran_total:,.0f}")
             
-            # ─── DESGLOSE TRANSPARENTE DEL GRAN TOTAL ───────────────────────
+            #  DESGLOSE TRANSPARENTE DEL GRAN TOTAL 
             st.markdown("####  Desglose del Presupuesto")
             _pct_he  = _apu.get('pct_herramienta', 0.05)*100
             _pct_aiu = _apu.get('pct_aui', 0.30)*100
@@ -2798,11 +2747,11 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             _desglose = [
                 {"Concepto": "① Materiales Directos",  "Base de cálculo": "Excavación + Concreto + Acero", "Importe": f"{_total_mat:,.0f} {_mon}"},
                 {"Concepto": "② Mano de Obra",         "Base de cálculo": f"{total_dias_mo:.2f} días × {_apu.get('costo_dia_mo',69333.33):,.0f}/día", "Importe": f"{costo_mo:,.0f} {_mon}"},
-                {"Concepto": "━ COSTO DIRECTO (CD)",   "Base de cálculo": "① + ②",                         "Importe": f"{costo_directo:,.0f} {_mon}"},
+                {"Concepto": " COSTO DIRECTO (CD)",   "Base de cálculo": "① + ②",                         "Importe": f"{costo_directo:,.0f} {_mon}"},
                 {"Concepto": f"③ Herramienta Menor",   "Base de cálculo": f"{_pct_he:.1f}% × MO",          "Importe": f"{herramienta:,.0f} {_mon}"},
                 {"Concepto": f"④ A.I.U. ({_pct_aiu:.0f}%)", "Base de cálculo": f"{_pct_aiu:.1f}% × CD",   "Importe": f"{aiu:,.0f} {_mon}"},
                 {"Concepto": f"⑤ IVA s/ Utilidad",    "Base de cálculo": f"{_pct_iva:.1f}% × Utilidad ({_pct_uti:.1f}% CD)", "Importe": f"{iva:,.0f} {_mon}"},
-                {"Concepto": "━ GRAN TOTAL",           "Base de cálculo": "CD + ③ + ④ + ⑤",                "Importe": f"**{_gran_total:,.0f} {_mon}**"},
+                {"Concepto": " GRAN TOTAL",           "Base de cálculo": "CD + ③ + ④ + ⑤",                "Importe": f"**{_gran_total:,.0f} {_mon}**"},
             ]
             st.dataframe(pd.DataFrame(_desglose), use_container_width=True, hide_index=True)
         else:
@@ -2812,7 +2761,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
 
         # TABLA: Materiales con costos
         _mat_rows = [
-            {"Material": "⛏ Excavación",    "Cantidad": f"{vol_excavacion:.2f}", "Unidad": "m³",           "Precio Unit.": f"{c_excav_u:,.0f} {_mon}" if _has_prices else "—", "Subtotal": f"{_c_exc:,.0f} {_mon}" if _has_prices else "—"},
+            {"Material": " Excavación",    "Cantidad": f"{vol_excavacion:.2f}", "Unidad": "m³",           "Precio Unit.": f"{c_excav_u:,.0f} {_mon}" if _has_prices else "—", "Subtotal": f"{_c_exc:,.0f} {_mon}" if _has_prices else "—"},
             {"Material": " Cemento",        "Cantidad": f"{bultos_zap:.1f}",    "Unidad": "bultos (50kg)", "Precio Unit.": f"{_p_cem:,.0f} {_mon}" if _has_prices else "—",   "Subtotal": f"{_c_cem:,.0f} {_mon}" if _has_prices else "—"},
             {"Material": " Arena",          "Cantidad": f"{vol_arena_z:.3f}",   "Unidad": "m³",           "Precio Unit.": f"{_p_are:,.0f} {_mon}" if _has_prices else "—",   "Subtotal": f"{_c_are:,.0f} {_mon}" if _has_prices else "—"},
             {"Material": " Gravilla",        "Cantidad": f"{vol_grava_z:.3f}",   "Unidad": "m³",           "Precio Unit.": f"{_p_gra:,.0f} {_mon}" if _has_prices else "—",   "Subtotal": f"{_c_gra:,.0f} {_mon}" if _has_prices else "—"},
@@ -2825,7 +2774,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             _total_mat = _c_exc + _c_cem + _c_are + _c_gra + _c_ace
             st.metric(f"Total Materiales [{_mon}]", f"{_total_mat:,.0f}")
 
-        # ─── SECCIÓN 2: Despiece de Acero con costos ─────────────────────────
+        #  SECCIÓN 2: Despiece de Acero con costos 
         st.markdown("####  Despiece de Acero de Refuerzo")
         db_mm_apu    = REBAR_DICT[bar_z]["db"]
         area_cm2_apu = REBAR_DICT[bar_z]["area"]
@@ -2833,7 +2782,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         _c_ace_L = peso_barras_L_apu * _p_ace
 
         _row_B = {
-            "Dir.": "B  (⟵ sobre L →)",
+            "Dir.": "B  ( sobre L →)",
             "Varilla": bar_z, "db [mm]": f"{db_mm_apu:.1f}",
             "N° Barras": n_barras_B, "Sep. [cm]": f"{sep_B:.1f}",
             "L gancho [cm]": f"{L_ext_gancho_cm:.1f}",
@@ -2841,7 +2790,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             "kg/m": f"{_kg_por_m:.3f}", "Peso [kg]": f"{peso_barras_B_apu:.2f}",
         }
         _row_L = {
-            "Dir.": "L  (⟵ sobre B →)",
+            "Dir.": "L  ( sobre B →)",
             "Varilla": bar_z, "db [mm]": f"{db_mm_apu:.1f}",
             "N° Barras": n_barras_L, "Sep. [cm]": f"{sep_L:.1f}",
             "L gancho [cm]": f"{L_ext_gancho_cm:.1f}",
@@ -2849,7 +2798,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             "kg/m": f"{_kg_por_m:.3f}", "Peso [kg]": f"{peso_barras_L_apu:.2f}",
         }
         _row_tot = {
-            "Dir.": "━━ TOTAL ━━",
+            "Dir.": " TOTAL ",
             "Varilla": "", "db [mm]": "",
             "N° Barras": n_barras_B + n_barras_L, "Sep. [cm]": "",
             "L gancho [cm]": "",
@@ -2864,7 +2813,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         st.dataframe(pd.DataFrame([_row_B, _row_L, _row_tot]), use_container_width=True, hide_index=True)
         st.caption(f"Gancho 90° ACI/NSR-10: D_doblez mín = {radio_doblez_cm*2:.1f} cm | ext. = {L_ext_gancho_cm:.1f} cm")
 
-        # ─── GRÁFICO: Despiece visual ────────────────────────────────────────
+        #  GRÁFICO: Despiece visual 
         st.markdown("####  Diagrama de Despiece")
         _items_g   = ["Excavación", "Cemento", "Arena", "Gravilla", "Acero Dir.B", "Acero Dir.L"]
         _qty_g     = [vol_excavacion, bultos_zap, vol_arena_z, vol_grava_z, peso_barras_B_apu, peso_barras_L_apu]
@@ -2947,13 +2896,13 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             data_zap_apu = {
                 "Concepto": [
                     "① Excavación", "② Cemento", "③ Acero Refuerzo", "④ Arena", "⑤ Grava",
-                    "━━ SUBTOTAL MATERIALES DIRECTOS",
+                    " SUBTOTAL MATERIALES DIRECTOS",
                     "⑥ Mano de Obra",
-                    "━━ COSTO DIRECTO (CD)",
+                    " COSTO DIRECTO (CD)",
                     f"⑦ Herramienta Menor ({apu.get('pct_herramienta', 0.05)*100:.1f}%)",
                     f"⑧ A.I.U. ({apu.get('pct_aui', 0.30)*100:.0f}%)",
                     f"⑨ IVA s/ Utilidad ({apu.get('iva', 0.19)*100:.0f}%)",
-                    "━━ GRAN TOTAL DEL PROYECTO",
+                    " GRAN TOTAL DEL PROYECTO",
                 ],
                 "Base de cálculo": [
                     f"{vol_excavacion:.2f} m³ × 25,000/m³",
@@ -3024,12 +2973,12 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         else:
             st.info("Ve a la página 'APU Mercado'para cargar los costos base de agregados, acero y cemento y que tu presupuesto se genere automáticamente.")
 
-    # ═══════════════════════════════════════════════════════════════════════════
+    # 
     # B5 — CUADRO DE MANDO MULTI-ZAPATA + C6 ASENTAMIENTO DIFERENCIAL
-    # ═══════════════════════════════════════════════════════════════════════════
+    # 
     st.markdown("---")
     
-    # ── FI-2: Factor de Interacción Biaxial (IFC) ───────────────────────────
+    #  FI-2: Factor de Interacción Biaxial (IFC) 
     st.write("#### Factor de Interacción (Carga y Momento)")
     # FI-2 φPn corregido: columna (no zapata) — NSR-10 C.10 / ACI 318 §22.4.2
     _Ag_col_mm2 = (c1_col * 10) * (c2_col * 10)     # área bruta columna en mm²
@@ -3051,11 +3000,11 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     st.markdown("##  Cuadro de Mando del Proyecto — Registro de Zapatas")
     st.caption("Registra varias zapatas del proyecto para comparación y verificación de asentamiento diferencial.")
 
-    # ── Inicializar lista en SessionState ───────────────────────────────────
+    #  Inicializar lista en SessionState 
     if "zapatas_proyecto" not in st.session_state:
         st.session_state["zapatas_proyecto"] = []
 
-    # ── Botón para agregar la zapata actual ──────────────────────────────────
+    #  Botón para agregar la zapata actual 
     _nombre_zap = st.text_input("Nombre / Etiqueta de esta zapata (ej. Z-1, Eje A-3)",
                                 value=f"Z-{len(st.session_state['zapatas_proyecto'])+1}",
                                 key="z_nombre_registro")
@@ -3080,7 +3029,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             "FSd":        round(FS_desl, 2) if 'FS_desl' in dir() else "—",
             "As_B [cm²]": round(As_req_B, 1),
             "As_L [cm²]": round(As_req_L, 1),
-            "Estado": " OK" if _is_ok else "⚠ Revisar",
+            "Estado": " OK" if _is_ok else " Revisar",
         }
         # evitar duplicado por nombre
         _nombres_existentes = [z["Nombre"] for z in st.session_state["zapatas_proyecto"]]
@@ -3096,7 +3045,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         st.session_state["zapatas_proyecto"] = []
         st.info("Registro limpiado.")
 
-    # ── Tabla comparativa ────────────────────────────────────────────────────
+    #  Tabla comparativa 
     if st.session_state["zapatas_proyecto"]:
         _df_proy = pd.DataFrame(st.session_state["zapatas_proyecto"])
         st.markdown("###  Comparativo de Zapatas del Proyecto")
@@ -3118,7 +3067,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                            file_name="Cuadro_Mando_Zapatas.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-        # ── C6 — ASENTAMIENTO DIFERENCIAL ──────────────────────────────────
+        #  C6 — ASENTAMIENTO DIFERENCIAL 
         if len(st.session_state["zapatas_proyecto"]) >= 2:
             st.markdown("---")
             st.markdown("###  C6 — Verificación de Asentamiento Diferencial (NSR-10 H.3)")
@@ -3157,10 +3106,10 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         st.info("ℹ Agrega al menos una zapata con el botón ** Agregar al proyecto** para activar el cuadro de mando.")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 # FUNCIÓN PRINCIPAL: render_medianera()
 # Tipos 2 (Medianera/Lindero), 3 (Esquina) y 4 (Con Viga de Amarre)
-# ══════════════════════════════════════════════════════════════════════════════
+# 
 def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap):
     """Flujo completo de diseño para zapata medianera, de esquina y con viga de amarre."""
     sn = _get_strap_norm(norma)
@@ -3178,7 +3127,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
     </div>
     """, unsafe_allow_html=True)
 
-    # ─── TABS DE TRABAJO ──────────────────────────────────────────────────────
+    #  TABS DE TRABAJO 
     tab_geo, tab_viga, tab_3d, tab_dxf, tab_docx = st.tabs([
         " Geometría y Presiones",
         f" {sn['nombre']}",
@@ -3187,9 +3136,9 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         " Memoria",
     ])
 
-    # ══════════════════════════════════════════════════════════════════════════
+    # 
     # TAB 1: GEOMETRÍA Y DISTRIBUCIÓN DE PRESIONES
-    # ══════════════════════════════════════════════════════════════════════════
+    # 
     with tab_geo:
         st.subheader("Geometría y Cargas")
         cA, cB, cC = st.columns(3)
@@ -3261,7 +3210,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                     st.error("No se encontró dimensión dentro del rango 0.5–6.0 m. Revisa q_adm o las cargas.")
 
         st.divider()
-        # ─── CÁLCULO DISTRIBUCIONES DE PRESIONES ──────────────────────────────
+        #  CÁLCULO DISTRIBUCIONES DE PRESIONES 
         st.subheader("Distribución de Presiones")
         col_pe, col_pi = st.columns(2)
 
@@ -3273,7 +3222,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                 B_p, L_p, A_p = calcular_area_efectiva_meyerhof(B, L, e_B, e_L)
                 qu_eff = P / A_p
                 meyerhof_data = {"B_prima": B_p, "L_prima": L_p, "qu_eff": qu_eff}
-                st.warning(f"⚠ **{label}**: qu_min = {qu_min:.1f} kPa < 0 — "
+                st.warning(f" **{label}**: qu_min = {qu_min:.1f} kPa < 0 — "
                            f"Área Efectiva Meyerhof → B'={B_p:.2f}m × L'={L_p:.2f}m → **qu_eff = {qu_eff:.1f} kPa**")
                 qu_avg_uso = qu_eff
             elif tipo_dist == "triangular":
@@ -3313,7 +3262,7 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         else:
             if qu_min_z >= 0:
                 st.warning(
-                    f"⚠ **Distribución trapezoidal** — "
+                    f" **Distribución trapezoidal** — "
                     f"qu_max = {qu_max_z:.1f} kPa | qu_min = {qu_min_z:.1f} kPa. "
                     f"Excentricidad activa en la zapata."
                 )
@@ -3348,9 +3297,9 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         st.session_state["zm_dist_i"] = dist_i
         st.session_state["zm_R_strap"] = R_strap_kN
 
-    # ══════════════════════════════════════════════════════════════════════════
+    # 
     # TAB 2: DISEÑO DE LA VIGA DE AMARRE
-    # ══════════════════════════════════════════════════════════════════════════
+    # 
     with tab_viga:
         st.subheader(f"Diseño de {sn['nombre']} — {norma}")
         st.markdown(f"> Artículo de referencia: **{sn['art']}** | "
@@ -3388,13 +3337,13 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         # EC-2: mostrar advertencia de levantamiento si R_int < 0
         if _adv_Rint:
             st.error(
-                f"⚠ **Levantamiento en zapata interior: R_int = {R_int:.2f} kN < 0** — "
+                f" **Levantamiento en zapata interior: R_int = {R_int:.2f} kN < 0** — "
                 "El peso propio de la viga supera la reacción de amarre. "
                 "Aumento de R_strap o reducción de L_libre requeridos."
             )
         # MC-4: aviso diferenciado para NTC-EM (México) con F_ax = 5%
         if "NTC" in norma:
-            st.info("🇲🇽 **NTC-EM México:** La fuerza axial sísmica requerida es **F_ax = 5% × ΣP**, "
+            st.info(" **NTC-EM México:** La fuerza axial sísmica requerida es **F_ax = 5% × ΣP**, "
                     "el doble del estándar ACI/NSR-10 (2.5%). Revisar el diseño.")
         F_ax_sism = sn["F_ax_pct"] * P_total_kN
 
@@ -3461,9 +3410,9 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
             "recub_cm": recub_v, "recub": recub_v, "fc": fc, "fy": fy,
         }
 
-    # ══════════════════════════════════════════════════════════════════════════
+    # 
     # TAB 3: VISTA 3D PLOTLY
-    # ══════════════════════════════════════════════════════════════════════════
+    # 
     with tab_3d:
         st.subheader("Vista 3D del Sistema")
         dis_3d  = st.session_state.get("zm_dis")
@@ -3477,379 +3426,125 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         else:
             st.info("ℹ Completa primero la pestaña **'Geometría y Presiones'** y el **'Diseño de Viga'** para generar la vista 3D.")
 
-    # ══════════════════════════════════════════════════════════════════════════
+    # 
     # TAB 4: EXPORTACIÓN DXF
-    # ══════════════════════════════════════════════════════════════════════════
+    # 
     with tab_dxf:
-        st.subheader("Planos DXF (3 Vistas + Rótulo)")
+        st.subheader("Plano DXF ICONTEC - Sistema y Detalles")
         dis_dxf  = st.session_state.get("zm_dis")
         viga_dxf = st.session_state.get("zm_viga_d")
-        dist_e_dxf = st.session_state.get("zm_dist_e")
-        dist_i_dxf = st.session_state.get("zm_dist_i")
         if dis_dxf and viga_dxf:
+            papel_opc_s = {"Carta (21x28cm)": (21.6,27.9,"CARTA"), "Oficio (21x33cm)": (21.6,33.0,"OFICIO"), "Pliego (70x100cm)": (70.7,100.0,"PLIEGO")}
+            papel_sel_s = st.selectbox("Formato de Papel (Sistema):", list(papel_opc_s.keys()), key="zs_papel")
+            W_P_S, H_P_S, LBL_P_S = papel_opc_s[papel_sel_s]
+            
             zap_ext_dxf = {"B_cm": Be*100, "L_cm": Le*100, "H_cm": He}
             zap_int_dxf = {"B_cm": Bi*100, "L_cm": Li*100, "H_cm": Hi}
-            if st.button("Generar DXF del Sistema", key="zm_gen_dxf", type="primary"):
+            
+            _buf_dxf = None
+            if st.button("Generar DXF ICONTEC del Sistema", key="zm_gen_dxf", type="primary"):
                 with st.spinner("Generando planos DXF..."):
                     try:
-                        doc_dxf = generar_dxf_sistema(zap_ext_dxf, zap_int_dxf, viga_dxf, dis_dxf, norma, fc, fy)
-                        _buf_dxf = io.BytesIO()
-                        doc_dxf.write(_buf_dxf)
-                        _buf_dxf.seek(0)
-                        st.download_button(
-                            f"⬇ Descargar DXF — {sn['nombre']}",
-                            data=_buf_dxf.getvalue(),
-                            file_name=f"zapata_{sn['nombre'].replace(' ','_').lower()}.dxf",
-                            mime="application/dxf",
-                            key="zm_dl_dxf"
-                        )
-                        st.success("DXF generado con: Planta general, Corte A-A longitudinal, Corte B-B transversal y Rótulo normativo.")
-                        st.markdown(f"""
-**Layers incluidos:**
-- `ZAPATA_EXT` (amarillo) — Zapata en lindero
-- `ZAPATA_INT` (verde) — Zapata interior
-- `VIGA_STRAP` (rojo) — {sn['nombre']}
-- `ACERO_LONG` (cian) — Barras longitudinales
-- `ACERO_EST` (blanco) — Estribos
-- `COTAS` (gris) — Dimensiones
-- `ROTULO` (magenta) — Rótulo normativo con norma {norma}
-""")
+                        doc_dxf = generar_dxf_sistema(zap_ext_dxf, zap_int_dxf, viga_dxf, dis_dxf, norma, fc, fy, W_P_S, H_P_S, LBL_P_S)
+                        import os, tempfile
+                        with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp:
+                            tmp_path = tmp.name
+                        doc_dxf.saveas(tmp_path)
+                        with open(tmp_path, 'rb') as f:
+                            _buf_dxf = f.read()
+                        os.unlink(tmp_path)
+                        st.success("DXF generado con Estándar Diamante N4.")
                     except Exception as _e_dxf:
                         st.error(f"Error generando DXF: {_e_dxf}")
+            
+            if _buf_dxf:
+                st.download_button(
+                    f"Descargar DXF — {sn['nombre']}",
+                    data=_buf_dxf,
+                    file_name=f"zapata_sistema_{sn['nombre'].replace(' ','_').lower()}.dxf",
+                    mime="application/dxf",
+                    key="zm_dl_dxf"
+                )
+
         else:
-            st.warning("⚠ Completa primero la pestaña **Geometría y Presiones** y el diseño de la viga.")
-        # FI-2: EXPORTACIÓN IFC (SISTEMA ZAPATA MEDIANERA / STRAP BEAM) ────────
+            st.warning(" Completa primero la pestaña **Geometría y Presiones** y el diseño de la viga.")
+        
+        # ── EXPORTACIÓN IFC AUTÓNOMA STRAP ──
         st.markdown("---")
         st.markdown("####  Exportar Modelo BIM (.ifc)")
-        st.caption("Requiere `ifcopenshell`. Si no está instalado, genera un IFC simplificado en texto plano.")
-        _c_ifc1, _c_ifc2 = st.columns(2)
-        _proyecto_ifc = _c_ifc1.text_input("Nombre del proyecto IFC", value="Proyecto NSR-10", key="zm_ifc_proy")
-        _edificio_ifc = _c_ifc2.text_input("Elemento (ej. Zapata Medianera Z-M1)", value=f"ZAP-M-{tipo_zap[:1]}", key="zm_ifc_elem")
-        if st.button("Generar IFC del sistema", key="zm_btn_ifc"):
+        st.caption("Implementación Nativa IFC4 para Sistema Medianero/Correa")
+        
+        def _make_ifc_sistema(z_ext, z_int, vig, fc, fy, norma, proy_nombre):
             try:
-                import ifc_export as _ifc_mod
-                # Usar la función ifc_zapata para la zapata exterior + viga como IfcBeam
-                _viga_d_ifc = st.session_state.get("zm_viga_d", {})
-                _be_ifc = st.session_state.get("zm_Be", 2.0) * 100  # m → cm
-                _le_ifc = st.session_state.get("zm_Le", 2.0) * 100
-                _he_ifc = st.session_state.get("zm_He", 50.0)
-                _buf_ifc = _ifc_mod.ifc_zapata(
-                    _be_ifc, _le_ifc, _he_ifc,
-                    fc, fy,
-                    "Ø16", 16.0, 4,
-                    "Ø16", 16.0, 4,
-                    4.0, 0.0, norma, _proyecto_ifc
-                )
-                st.download_button(
-                    " Descargar Modelo BIM (IFC)",
-                    data=_buf_ifc,
-                    file_name=f"zapata_medianera_{norma.replace(' ','_')}.ifc",
-                    mime="application/x-step",
-                    key="zm_dl_ifc"
-                )
-                st.success("IFC generado: IfcFooting (zapata ext.) + datos del sistema.")
+                import ifcopenshell
+                import ifcopenshell.api
             except ImportError:
-                # Fallback: IFC texto plano mínimo si ifcopenshell no está disponible
-                st.warning("⚠ `ifc_export` no disponible — generando IFC mínimo en texto plano.")
-                _vd = st.session_state.get("zm_viga_d", {})
-                _dd = st.session_state.get("zm_dis", {})
-                _ifc_txt = f"""ISO-10303-21;
-HEADER;
-FILE_DESCRIPTION(('StructuroPro — Zapata {tipo_zap}'),'2;1');
-FILE_SCHEMA(('IFC4'));
-ENDSEC;
-DATA;
-/* Sistema: {tipo_zap} | Norma: {norma} */
-/* Zapata ext: B={st.session_state.get('zm_Be',2.0):.2f}m x L={st.session_state.get('zm_Le',2.0):.2f}m x H={st.session_state.get('zm_He',50.0):.0f}cm */
-/* Zapata int: B={st.session_state.get('zm_Bi',2.0):.2f}m x L={st.session_state.get('zm_Li',2.0):.2f}m x H={st.session_state.get('zm_Hi',50.0):.0f}cm */
-/* Viga: {_vd.get('b_cm',30):.0f}cm x {_vd.get('h_cm',50):.0f}cm | f'c={fc}MPa | fy={fy}MPa */
-/* As_sup={_dd.get('As_sup',0):.2f}cm2 | As_inf={_dd.get('As_inf',0):.2f}cm2 */
-ENDSEC;
-END-ISO-10303-21;
-"""
-                st.download_button(
-                    " Descargar IFC mínimo (texto plano)",
-                    data=_ifc_txt.encode("utf-8"),
-                    file_name=f"zapata_medianera_{norma.replace(' ','_')}.ifc",
-                    mime="application/x-step",
-                    key="zm_dl_ifc_txt"
-                )
-        st.caption("Para IFC completo con geometría 3D, instala: `pip install ifcopenshell`")
-        # ────────────────────────────────────────────────────────────────────────
+                return None
+            
+            O = ifcopenshell.file(schema="IFC4")
 
+            
+            def p4(x,y,z): return O.createIfcCartesianPoint((float(x),float(y),float(z)))
+            def ax2(pt, z_dir=(0.,0.,1.), x_dir=(1.,0.,0.)):
+                return O.createIfcAxis2Placement3D(pt, O.createIfcDirection(z_dir), O.createIfcDirection(x_dir))
+            
+            ifcopenshell.api.run("project.create_project", O, name="Proyecto_StructoPro")
+            ctx  = ifcopenshell.api.run("context.add_context", O, context_type="Model")
+            body = ifcopenshell.api.run("context.add_context", O, context_type="Model", context_identifier="Body", target_view="MODEL_VIEW", parent=ctx)
+            proj = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject", Name=proy_nombre)
+            site = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite", Name="Sitio")
+            bldg = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", Name="Fundacion")
+            ifcopenshell.api.run("unit.assign_unit", O, units={"LENGTHUNIT": "METRE"})
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=proj, product=site)
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, product=bldg)
+            
+            # Z.EXT
+            z1 = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", Name="Zapata Exterior")
+            z1.PredefinedType = "PAD_FOOTING"
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, product=z1)
+            prf1 = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), z_ext['B_cm']/100, z_ext['L_cm']/100)
+            ex1  = O.createIfcExtrudedAreaSolid(prf1, ax2(p4(0,0,0)), O.createIfcDirection((0.,0.,1.)), z_ext['H_cm']/100)
+            ifcopenshell.api.run("geometry.assign_representation", O, product=z1, representation=O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [ex1]))
+            ifcopenshell.api.run("geometry.edit_object_placement", O, product=z1)
+            
+            # Z.INT
+            z2 = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", Name="Zapata Interior")
+            z2.PredefinedType = "PAD_FOOTING"
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, product=z2)
+            prf2 = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), z_int['B_cm']/100, z_int['L_cm']/100)
+            sep_m = vig["L_libre_m"]
+            ex2  = O.createIfcExtrudedAreaSolid(prf2, ax2(p4(z_ext['B_cm']/100 + sep_m,0,0)), O.createIfcDirection((0.,0.,1.)), z_int['H_cm']/100)
+            ifcopenshell.api.run("geometry.assign_representation", O, product=z2, representation=O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [ex2]))
+            ifcopenshell.api.run("geometry.edit_object_placement", O, product=z2)
+            
+            # VIGA
+            bv = vig['b_cm']/100; hv = vig['h_cm']/100
+            vg = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBeam", Name="Viga de Amarre")
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, product=vg)
+            prfv = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), bv, hv)
+            exv  = O.createIfcExtrudedAreaSolid(prfv, ax2(p4(z_ext['B_cm']/100,0,max(z_ext['H_cm']/100, z_int['H_cm']/100)), x_dir=(0.,1.,0.), z_dir=(1.,0.,0.)), O.createIfcDirection((0.,0.,1.)), sep_m)
+            ifcopenshell.api.run("geometry.assign_representation", O, product=vg, representation=O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [exv]))
+            ifcopenshell.api.run("geometry.edit_object_placement", O, product=vg)
+            
+            import os, tempfile
+            with tempfile.NamedTemporaryFile(suffix='.ifc', delete=False) as tmp:
+                tmp_path = tmp.name
+            O.write(tmp_path)
+            with open(tmp_path, 'rb') as f:
+                b_ifc = f.read()
+            os.unlink(tmp_path)
+            return b_ifc
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # TAB 5: MEMORIA DOCX
-    # ══════════════════════════════════════════════════════════════════════════
-    with tab_docx:
-        st.subheader(f"Memoria de Cálculo — {sn['nombre']}")
-        dis_doc  = st.session_state.get("zm_dis")
-        viga_doc = st.session_state.get("zm_viga_d")
-        dist_e_doc = st.session_state.get("zm_dist_e", {})
-        dist_i_doc = st.session_state.get("zm_dist_i", {})
-        fig_vm_doc = st.session_state.get("zm_fig_vm")
-        if dis_doc and viga_doc:
-            zap_ext_doc = {"B_cm": Be*100, "L_cm": Le*100, "H_cm": He}
-            zap_int_doc = {"B_cm": Bi*100, "L_cm": Li*100, "H_cm": Hi}
-            dist_d = {
-                "qu_max": dist_e_doc.get("qu_max", 0),
-                "qu_min": dist_e_doc.get("qu_min", 0),
-                "tipo": dist_e_doc.get("tipo", "—"),
-                "e_B": dist_e_doc.get("e_B", 0),
-                "e_L": dist_e_doc.get("e_L", 0),
-                "meyerhof": dist_e_doc.get("meyerhof"),
-            }
-            if st.button("Generar Memoria DOCX", key="zm_gen_docx", type="primary"):
-                with st.spinner("Generando memoria de cálculo..."):
-                    try:
-                        doc_word = generar_docx_ampliado(
-                            zap_ext_doc, zap_int_doc, viga_doc, dis_doc, dist_d, norma, fig_vm_doc)
-                        _buf_docx = io.BytesIO()
-                        doc_word.save(_buf_docx)
-                        _buf_docx.seek(0)
-                        st.download_button(
-                            f"⬇ Descargar Memoria — {sn['nombre']}",
-                            data=_buf_docx.getvalue(),
-                            file_name=f"memoria_{sn['nombre'].replace(' ','_').lower()}.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            key="zm_dl_docx"
-                        )
-                        st.success("Memoria generada: 4 secciones (Datos, Presiones, Diseño, Diagramas V/M)")
-                    except Exception as _e_doc:
-                        st.error(f"Error generando DOCX: {_e_doc}")
+        _buf_ifc_s = None
+        if dis_dxf and viga_dxf:
+            if st.button("Generar BIM IFC del sistema", key="zm_btn_ifc"):
+                with st.spinner("Construyendo geometrías 3D IFC4..."):
+                    _buf_ifc_s = _make_ifc_sistema(zap_ext_dxf, zap_int_dxf, viga_dxf, fc, fy, norma, "Sistema Medianero")
+                    if _buf_ifc_s:
+                        st.success("IFC4 nativo generado con éxito.")
+                    else:
+                        st.error("Error al generar IFC.")
+                        
+            if _buf_ifc_s:
+                st.download_button("Descargar Modelo BIM (IFC)", data=_buf_ifc_s, file_name="Sistema_Medianero.ifc", mime="application/x-step")
 
-            # Preview de armado en pantalla
-            if dis_doc:
-                st.divider()
-                st.subheader("Resumen de Diseño")
-                st.markdown(f"""
-| Elemento | Especificación |
-|---|---|
-| **{sn['nombre']}** | **{viga_doc['b_cm']:.0f} × {viga_doc['h_cm']:.0f} cm** |
-| **Acero superior** | {dis_doc['n_sup']} × {dis_doc['bar_long']} (As = {dis_doc['As_sup']:.2f} cm²) |
-| **Acero inferior** | {dis_doc['n_inf']} × {dis_doc['bar_long']} (As = {dis_doc['As_inf']:.2f} cm²) |
-| **Estribos** | {dis_doc['bar_est']} @ {dis_doc['s_crit_cm']:.0f} cm (zona crít.) / {dis_doc['s_est_cm']:.0f} cm (resto) |
-| **Norma** | {norma} — Art. {sn['art']} |
-| **h_min normativo** | L/{sn['h_factor']} = {dis_doc['h_min_cm']:.1f} cm {'' if dis_doc['ok_hmin'] else ''} |
-| **F. axial sísmica** | {sn['F_ax_pct']*100:.1f}% × ΣP = {dis_doc['F_ax_req']:.1f} kN {'' if dis_doc['ok_Fax'] else ''} |
-""")
-        else:
-            st.info("ℹ Completa las pestañas anteriores para activar la memoria de cálculo.")
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # APU — CANTIDADES VIGA DE AMARRE (expander fuera de tabs)
-    # ═══════════════════════════════════════════════════════════════════════════
-    # Crear APU dinámicamente añadido a continuación del flujo de trabajo
-    st.divider()
-    with st.expander("APU — Cantidades y Presupuesto del Sistema (Viga de Amarre)", expanded=False):
-        _vd_a = st.session_state.get("zm_viga_d", {})
-        _dd_a = st.session_state.get("zm_dis",    {})
-        if _vd_a and _dd_a:
-            import math as _math_apu
-            _gc_a   = 24.0                      # kN/m³
-            _gc_kg  = 2400.0                    # kg/m³
-            _Be_a   = st.session_state.get("zm_Be", 2.0)
-            _Le_a   = st.session_state.get("zm_Le", 2.0)
-            _He_a   = st.session_state.get("zm_He", 50.0) / 100.0
-            _Bi_a   = st.session_state.get("zm_Bi", 2.0)
-            _Li_a   = st.session_state.get("zm_Li", 2.0)
-            _Hi_a   = st.session_state.get("zm_Hi", 50.0) / 100.0
-            _bv_a   = _vd_a.get("b_cm", 30) / 100.0
-            _hv_a   = _vd_a.get("h_cm", 50) / 100.0
-            _Lv_a   = _vd_a.get("L_libre_m", 4.0)
-            _Df_a   = 1.5  # profundidad desplante aprox
-
-            # Volúmenes de concreto
-            _vol_ze   = _Be_a * _Le_a * _He_a
-            _vol_zi   = _Bi_a * _Li_a * _Hi_a
-            _vol_viga = _bv_a * _hv_a * _Lv_a
-            _vol_tot  = _vol_ze + _vol_zi + _vol_viga
-
-            # Excavación
-            _vol_exc_ze  = (_Be_a + 0.5) * (_Le_a + 0.5) * _Df_a
-            _vol_exc_zi  = (_Bi_a + 0.5) * (_Li_a + 0.5) * _Df_a
-            _vol_exc_v   = (_bv_a + 0.30) * _Lv_a * _Df_a
-            _vol_exc_tot = _vol_exc_ze + _vol_exc_zi + _vol_exc_v
-
-            # Acero — barras viga
-            _db_mm_a = REBAR_DICT.get(_dd_a.get("bar_long","#6"), {}).get("db", 19.05)
-            _area_a  = REBAR_DICT.get(_dd_a.get("bar_long","#6"), {}).get("area", 2.85)  # cm²
-            _kg_m_a  = _area_a * 1e-4 * 7850       # kg/m
-            _n_sup   = _dd_a.get("n_sup", 2)
-            _n_inf   = _dd_a.get("n_inf", 2)
-            _L_bar   = _Lv_a + 2*(30/100.0)        # con gancho aprox 30cm c/u
-            _kg_long = (_n_sup + _n_inf) * _L_bar * _kg_m_a
-
-            # Estribos
-            _db_est_mm = REBAR_DICT.get(_dd_a.get("bar_est","#3"), {}).get("db", 9.525)
-            _area_est  = REBAR_DICT.get(_dd_a.get("bar_est","#3"), {}).get("area", 0.71)
-            _kg_m_est  = _area_est * 1e-4 * 7850
-            _s_crit    = _dd_a.get("s_crit_cm", 15.0) / 100.0
-            _s_est     = _dd_a.get("s_est_cm",  25.0) / 100.0
-            _L_crit    = 2 * _hv_a                  # zona crítica = 2d aprox
-            _n_est_crit = max(1, int(_L_crit / _s_crit))
-            _n_est_cent = max(1, int((_Lv_a - 2*_L_crit) / _s_est))
-            _n_est_tot  = 2 * _n_est_crit + _n_est_cent
-            _L_est_1    = 2 * (_bv_a + _hv_a) - 4*0.03 + 0.30  # perímetro - rec + gancho
-            _kg_est     = _n_est_tot * _L_est_1 * _kg_m_est
-
-            _kg_tot_a  = _kg_long + _kg_est
-
-            # Cemento/arena/grava
-            _bultos_tot = _vol_tot * 350 / 50.0
-            _arena_tot  = _vol_tot * 0.55
-            _grava_tot  = _vol_tot * 0.80
-
-            # Precios
-            _apu_a  = st.session_state.get("apu_config", {})
-            _mon_a  = _apu_a.get("moneda", "COP")
-            _p_cem  = _apu_a.get("cemento",  32000.0)
-            _p_ace  = _apu_a.get("acero",     4500.0)
-            _p_are  = _apu_a.get("arena",    85000.0)
-            _p_gra  = _apu_a.get("grava",    95000.0)
-            _p_exc  = _apu_a.get("costo_excav_m3", 25000.0)
-            _p_dia  = _apu_a.get("costo_dia_mo",   69333.33)
-
-            # ── MÉTRICAS ──
-            st.markdown("####  Resumen de Cantidades — Sistema Viga de Amarre")
-            _cols = st.columns(4)
-            _cols[0].metric("⛏ Excavación", f"{_vol_exc_tot:.2f} m³")
-            _cols[1].metric(" Concreto Total", f"{_vol_tot:.3f} m³")
-            _cols[2].metric(" Acero Total", f"{_kg_tot_a:.1f} kg")
-            _cols[3].metric(" Cuantía", f"{_kg_tot_a/_vol_tot:.1f} kg/m³")
-
-            # ── TABLA DESGLOSE ──
-            _c_exc_a  = _vol_exc_tot * _p_exc
-            _c_cem_a  = _bultos_tot  * _p_cem
-            _c_are_a  = _arena_tot   * _p_are
-            _c_gra_a  = _grava_tot   * _p_gra
-            _c_ace_a  = _kg_tot_a    * _p_ace
-            _mat_tot  = _c_exc_a + _c_cem_a + _c_are_a + _c_gra_a + _c_ace_a
-
-            _t_dias = (_kg_tot_a * 0.04) + (_vol_tot * 0.4) + (_vol_exc_tot * 0.3)
-            _c_mo   = _t_dias * _p_dia
-            _cd     = _mat_tot + _c_mo
-            _herra  = _c_mo * _apu_a.get("pct_herramienta", 0.05)
-            _aiu    = _cd  * _apu_a.get("pct_aui",         0.30)
-            _util   = _cd  * _apu_a.get("pct_util",        0.05)
-            _iva    = _util * _apu_a.get("iva",            0.19)
-            _gran   = _cd + _herra + _aiu + _iva
-
-            st.markdown("####  Presupuesto Detallado")
-            _rows_apu = [
-                {"Concepto": "① Excavación total",
-                 "Cant.": f"{_vol_exc_tot:.2f} m³",
-                 "P.Unit.": f"{_p_exc:,.0f} {_mon_a}/m³",
-                 "Subtotal": f"{_c_exc_a:,.0f} {_mon_a}"},
-                {"Concepto": "② Cemento",
-                 "Cant.": f"{_bultos_tot:.1f} blt",
-                 "P.Unit.": f"{_p_cem:,.0f} {_mon_a}/blt",
-                 "Subtotal": f"{_c_cem_a:,.0f} {_mon_a}"},
-                {"Concepto": "③ Arena",
-                 "Cant.": f"{_arena_tot:.3f} m³",
-                 "P.Unit.": f"{_p_are:,.0f} {_mon_a}/m³",
-                 "Subtotal": f"{_c_are_a:,.0f} {_mon_a}"},
-                {"Concepto": "④ Grava",
-                 "Cant.": f"{_grava_tot:.3f} m³",
-                 "P.Unit.": f"{_p_gra:,.0f} {_mon_a}/m³",
-                 "Subtotal": f"{_c_gra_a:,.0f} {_mon_a}"},
-                {"Concepto": f"⑤ Acero ({_dd_a.get('bar_long','#?')} long + {_dd_a.get('bar_est','#?')} estr.)",
-                 "Cant.": f"{_kg_tot_a:.1f} kg",
-                 "P.Unit.": f"{_p_ace:,.0f} {_mon_a}/kg",
-                 "Subtotal": f"{_c_ace_a:,.0f} {_mon_a}"},
-                {"Concepto": "━━ MATERIALES DIRECTOS",
-                 "Cant.": "", "P.Unit.": "",
-                 "Subtotal": f"{_mat_tot:,.0f} {_mon_a}"},
-                {"Concepto": f"⑥ Mano de Obra ({_t_dias:.1f} días)",
-                 "Cant.": f"{_t_dias:.2f} días",
-                 "P.Unit.": f"{_p_dia:,.0f} {_mon_a}/día",
-                 "Subtotal": f"{_c_mo:,.0f} {_mon_a}"},
-                {"Concepto": "━━ COSTO DIRECTO",
-                 "Cant.": "", "P.Unit.": "",
-                 "Subtotal": f"{_cd:,.0f} {_mon_a}"},
-                {"Concepto": f"⑦ Herramienta ({_apu_a.get('pct_herramienta',0.05)*100:.1f}% MO)",
-                 "Cant.": "", "P.Unit.": "",
-                 "Subtotal": f"{_herra:,.0f} {_mon_a}"},
-                {"Concepto": f"⑧ A.I.U. ({_apu_a.get('pct_aui',0.30)*100:.0f}% CD)",
-                 "Cant.": "", "P.Unit.": "",
-                 "Subtotal": f"{_aiu:,.0f} {_mon_a}"},
-                {"Concepto": f"⑨ IVA ({_apu_a.get('iva',0.19)*100:.0f}% Util.)",
-                 "Cant.": "", "P.Unit.": "",
-                 "Subtotal": f"{_iva:,.0f} {_mon_a}"},
-                {"Concepto": "━━ GRAN TOTAL",
-                 "Cant.": "", "P.Unit.": "",
-                 "Subtotal": f"**{_gran:,.0f} {_mon_a}**"},
-            ]
-            st.dataframe(pd.DataFrame(_rows_apu), use_container_width=True, hide_index=True)
-            st.metric(f"Gran Total Sistema [{_mon_a}]", f"{_gran:,.0f}")
-
-            # Despiece de acero
-            st.markdown("####  Despiece de Acero — Viga de Amarre")
-            _rows_ace = [
-                {"Barra": f"{_dd_a.get('bar_long','#?')} longitudinal superior",
-                 "N°": _n_sup, "L [m]": f"{_L_bar:.3f}",
-                 "kg/m": f"{_kg_m_a:.3f}", "Peso [kg]": f"{_n_sup*_L_bar*_kg_m_a:.2f}"},
-                {"Barra": f"{_dd_a.get('bar_long','#?')} longitudinal inferior",
-                 "N°": _n_inf, "L [m]": f"{_L_bar:.3f}",
-                 "kg/m": f"{_kg_m_a:.3f}", "Peso [kg]": f"{_n_inf*_L_bar*_kg_m_a:.2f}"},
-                {"Barra": f"{_dd_a.get('bar_est','#?')} estribos",
-                 "N°": _n_est_tot, "L [m]": f"{_L_est_1:.3f}",
-                 "kg/m": f"{_kg_m_est:.3f}", "Peso [kg]": f"{_kg_est:.2f}"},
-                {"Barra": "━━ TOTAL",
-                 "N°": "", "L [m]": "",
-                 "kg/m": "", "Peso [kg]": f"{_kg_tot_a:.2f}"},
-            ]
-            st.dataframe(pd.DataFrame(_rows_ace), use_container_width=True, hide_index=True)
-        else:
-            st.info("ℹ Completa las pestañas **Geometría** y **Viga de Amarre** para ver el presupuesto.")
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # FI-5 — REGISTRAR EN CUADRO DE MANDO (Tipos 2/3/4)
-    # ═══════════════════════════════════════════════════════════════════════════
-    st.markdown("---")
-    st.markdown("##  Registrar en Cuadro de Mando del Proyecto")
-    st.caption("Agrega este sistema al registro multi-zapata para comparación y exportación.")
-
-    if "zapatas_proyecto" not in st.session_state:
-        st.session_state["zapatas_proyecto"] = []
-
-    _dis_fi5  = st.session_state.get("zm_dis", {})
-    _dist_fi5 = st.session_state.get("zm_dist_e", {})
-
-    _nom_zm = st.text_input(
-        "Nombre / Etiqueta (ej. Z-MA-1, Zapata Medianera Eje A)",
-        value=f"Z-M{len(st.session_state['zapatas_proyecto'])+1}",
-        key="zm_nombre_registro"
-    )
-    _ca, _cb = st.columns([1, 3])
-    if _ca.button(" Agregar al proyecto", type="primary", key="zm_btn_agregar"):
-        _entrada_m = {
-            "Nombre":         _nom_zm,
-            "Tipo":           tipo_zap,
-            "B_ext [m]":      round(st.session_state.get("zm_Be", 0.0), 2),
-            "L_ext [m]":      round(st.session_state.get("zm_Le", 0.0), 2),
-            "H_ext [cm]":     int(st.session_state.get("zm_He", 0)),
-            "B_int [m]":      round(st.session_state.get("zm_Bi", 0.0), 2),
-            "L_int [m]":      round(st.session_state.get("zm_Li", 0.0), 2),
-            "q_adm [kPa]":    round(st.session_state.get("zm_qadm", 0.0), 1),
-            "qu_max [kPa]":   round(_dist_fi5.get("qu_max", 0.0), 2),
-            "Asentam. [mm]":  0,
-            "Norma":          norma,
-        }
-        if _dis_fi5:
-            _entrada_m["h_viga [cm]"]  = _dis_fi5.get("h_cm", "—")
-            _entrada_m["As_sup [cm²]"] = round(_dis_fi5.get("As_sup", 0.0), 2)
-            _entrada_m["ok_hmin"]      = "" if _dis_fi5.get("ok_hmin") else ""
-            _entrada_m["ok_cort"]      = "" if _dis_fi5.get("ok_cort") else ""
-        st.session_state["zapatas_proyecto"].append(_entrada_m)
-        st.success(
-            f" **{_nom_zm}** registrada — "
-            f"Total acumulado: **{len(st.session_state['zapatas_proyecto'])}** zapata(s)."
-        )
-
-    _n_proy = len(st.session_state.get("zapatas_proyecto", []))
-    if _n_proy > 0:
-        st.info(
-            f" **{_n_proy}** zapata(s) en el proyecto.  "
-            "Ve a **Zapata Tipo 1** para ver el cuadro de mando y exportar a Excel."
-        )

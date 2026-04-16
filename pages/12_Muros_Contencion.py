@@ -11,12 +11,18 @@ from docx.shared import Inches, Pt
 import plotly.graph_objects as go
 from datetime import datetime
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
+norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+mostrar_referencias_norma(norma_sel, "muros_contencion")
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Muros de Contención", "Retaining Walls"), layout="wide")
 
@@ -24,22 +30,22 @@ st.image(r"assets/retaining_wall_header_1773256923525.png", use_container_width=
 st.title(_t("Muros de Contención y Estabilidad", "Retaining Walls and Stability"))
 st.markdown(_t("Herramientas para revisar la estabilidad al volcamiento y deslizamiento de muros de contención de gravedad y en voladizo, considerando empujes de tierras y sobrecargas, con diseño estructural completo y despiece de acero.", "Tools to verify overturning and sliding stability for gravity and cantilever retaining walls, considering earth pressures and surcharges, with full structural design and steel bending schedule."))
 
-# ─────────────────────────────────────────────
+# 
 # PIE DE PÁGINA / DERECHOS RESERVADOS
-# ─────────────────────────────────────────────
+# 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i> Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
+# 
 # DICCIONARIOS DE BARRAS
-# ─────────────────────────────────────────────
+# 
 REBAR_US = {
     "#3 (3/8\")": {"area": 0.71, "diam_mm": 9.53},
     "#4 (1/2\")": {"area": 1.29, "diam_mm": 12.70},
@@ -67,9 +73,9 @@ STIRRUP_MM = {
     "8 mm": {"area": 0.503, "diam_mm": 8.0},
 }
 
-# ─────────────────────────────────────────────
+# 
 # PARÁMETROS POR NORMA
-# ─────────────────────────────────────────────
+# 
 CODES = {
     "NSR-10 (Colombia)": {
         "phi_flex": 0.90, "phi_shear": 0.75, "lambda": 1.0,
@@ -140,10 +146,10 @@ def get_development_length(db_mm, fy, fc, lambda_=1.0, psi_t=1.0, psi_e=1.0, psi
     ld = (3/40) * (fy / (lambda_ * math.sqrt(fc))) * (psi_t * psi_e * psi_s * psi_g / cb_ktr) * db_mm
     return max(ld, 300)  # mínimo 300 mm
 
-# ─────────────────────────────────────────────
+# 
 # CONFIGURACIÓN GENERAL
-# ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙ Norma y Materiales", "⚙ Code and Materials"))
+# 
+st.sidebar.header(_t(" Norma y Materiales", " Code and Materials"))
 if "norma_sel" not in st.session_state:
     st.session_state.norma_sel = list(CODES.keys())[0]
 norma_sel = st.session_state.norma_sel

@@ -10,18 +10,24 @@ from docx.shared import Inches, Pt
 from datetime import datetime
 import json
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL Y NORMA
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+
+mostrar_referencias_norma(norma_sel, "analisis_2d")
 
 st.set_page_config(page_title=_t("StructMaster 2D", "StructMaster 2D"), layout="wide")
 st.title(_t("StructMaster 2D - Diseño Estructural Automatizado", "StructMaster 2D - Automated Structural Design"))
 st.markdown(_t(f"Análisis Matricial Interactivo con Recomendaciones Automáticas de Acero y Cimentación según **{norma_sel}**.", 
                f"Interactive Matrix Analysis with Automated Steel and Foundation Recommendations per **{norma_sel}**."))
 
-# ─────────────────────────────────────────────
+# 
 # CODES (φ factores)
 CODES = {
     "NSR-10 (Colombia)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"NSR-10"},
@@ -41,7 +47,7 @@ phi_shear = code["phi_shear"]
 phi_comp = code["phi_comp"]
 lam = code["lambda"]
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES AUXILIARES
 def get_beta1(fc):
     if fc <= 28: return 0.85
@@ -144,7 +150,7 @@ def design_column(Pu, Mu, b_cm, h_cm, fc, fy, recub=5):
         ok = True
     return As_min, ok
 
-# ─────────────────────────────────────────────
+# 
 # INICIALIZACIÓN DE DATOS (estado)
 if "nudos_df" not in st.session_state:
     st.session_state.nudos_df = pd.DataFrame([{"ID":1,"X (m)":0.0,"Y (m)":0.0}, {"ID":2,"X (m)":0.0,"Y (m)":3.0}, {"ID":3,"X (m)":4.0,"Y (m)":3.0}, {"ID":4,"X (m)":4.0,"Y (m)":0.0}])
@@ -161,7 +167,7 @@ if "cargas_nudo_df" not in st.session_state:
 if "resultados" not in st.session_state:
     st.session_state.resultados = None
 
-# ─────────────────────────────────────────────
+# 
 # TABS
 tab_geo, tab_cargas, tab_res, tab_dis = st.tabs([
     _t("1. Geometría", "1. Geometry"),
@@ -170,7 +176,7 @@ tab_geo, tab_cargas, tab_res, tab_dis = st.tabs([
     _t("4. Exportaciones", "4. Exports")
 ])
 
-# ─────────────────────────────────────────────
+# 
 # TAB 1: GEOMETRÍA
 with tab_geo:
     st.subheader(_t("Nudos", "Nodes"))
@@ -201,7 +207,7 @@ with tab_geo:
             st.session_state.cargas_nudo_df = pd.DataFrame(model["cargas_nudo"])
             st.rerun()
 
-# ─────────────────────────────────────────────
+# 
 # TAB 2: CARGAS Y SUELO
 with tab_cargas:
     st.subheader(_t("Cargas nodales", "Nodal loads"))
@@ -388,7 +394,7 @@ with tab_cargas:
             }
             st.success(_t("Análisis completado.", "Analysis completed."))
 
-# ─────────────────────────────────────────────
+# 
 # TAB 3: RESULTADOS (solo si existe)
 with tab_res:
     if st.session_state.resultados is None:
@@ -488,7 +494,7 @@ with tab_res:
                               plot_bgcolor='#1e1e1e', paper_bgcolor='#1e1e1e', font=dict(color='white'), height=600)
         st.plotly_chart(fig_bmd, use_container_width=True)
 
-# ─────────────────────────────────────────────
+# 
 # TAB 4: EXPORTACIONES (diseño automático y exportaciones)
 with tab_dis:
     if st.session_state.resultados is None:
@@ -499,7 +505,7 @@ with tab_dis:
         R = res["R"]
         id_to_idx = res["id_to_idx"]
 
-        st.header(_t("⚡ Diseño automático de elementos", "⚡ Automated element design"))
+        st.header(_t(" Diseño automático de elementos", " Automated element design"))
 
         # Preparar datos para exportación
         design_data = {

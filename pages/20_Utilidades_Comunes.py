@@ -5,8 +5,14 @@ import math
 import io
 from datetime import datetime
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
+norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+mostrar_referencias_norma(norma_sel, "utilidades")
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
@@ -15,9 +21,9 @@ st.set_page_config(page_title=_t("Utilidades Comunes", "Common Utilities"), layo
 st.title(_t("Herramientas Comunes", "Common Tools"))
 st.markdown(_t("Transformación de Unidades Estructurales, Conversión de Moneda y Utilidades Rápidas.", "Structural Unit Conversion, Currency Exchange, and Quick Utilities."))
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES AUXILIARES
-# ─────────────────────────────────────────────
+# 
 def get_exchange_rate(base_currency, target_currency):
     """
     Obtiene tasa de cambio desde una API gratuita (exchangerate-api.com).
@@ -53,9 +59,9 @@ def get_exchange_rate(base_currency, target_currency):
     }
     return backup_rates.get((base_currency, target_currency), 1.0)
 
-# ─────────────────────────────────────────────
+# 
 # DICCIONARIO DE CONVERSIONES (UNIDADES)
-# ─────────────────────────────────────────────
+# 
 CONV_DICT = {
     _t("Longitud", "Length"): {
         "Base": "m",
@@ -164,9 +170,9 @@ CONV_DICT = {
     },
 }
 
-# ─────────────────────────────────────────────
+# 
 # PESTAÑAS PRINCIPALES
-# ─────────────────────────────────────────────
+# 
 tab1, tab2, tab3 = st.tabs([
     _t(" 1. Conversor de Unidades", " 1. Unit Converter"),
     _t(" 2. Conversor de Moneda", " 2. Currency Converter"),
@@ -325,7 +331,7 @@ with tab3:
     sub_tab1, sub_tab2, sub_tab3 = st.tabs([
         _t(" Áreas de Figuras Simples", " Areas of Simple Shapes"),
         _t(" Propiedades de Perfiles Comunes", " Common Profile Properties"),
-        _t("⚡ Cálculos Rápidos", "⚡ Quick Calculations")
+        _t(" Cálculos Rápidos", " Quick Calculations")
     ])
     
     with sub_tab1:

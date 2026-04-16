@@ -11,11 +11,17 @@ from docx.shared import Inches, Pt
 import datetime
 import json
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+
+mostrar_referencias_norma(norma_sel, "generador_3d")
 
 st.set_page_config(page_title=_t("Generador Maestro 3D", "Master 3D Generator"), layout="wide")
 st.image(r"assets/generador_3d_header_1773257156151.png", use_container_width=True)
@@ -23,9 +29,9 @@ st.title(_t("Generador Maestro 3D Paramétrico", "Parametric Master 3D Generator
 st.markdown(_t("Construcción rápida de Edificios 3D con cálculos estructurales completos según la norma seleccionada, incluyendo análisis sísmico.", 
                "Rapid 3D Building generation with complete structural calculations per the selected code, including seismic analysis."))
 
-# ─────────────────────────────────────────────
+# 
 # PARÁMETROS POR NORMA (para diseño)
-# ─────────────────────────────────────────────
+# 
 CODES = {
     "NSR-10 (Colombia)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"NSR-10 Título C"},
     "ACI 318-25 (EE.UU.)": {"phi_flex":0.90, "phi_shear":0.75, "phi_comp":0.65, "lambda":1.0, "ref":"ACI 318-25"},
@@ -44,9 +50,9 @@ phi_shear = code["phi_shear"]
 phi_comp = code["phi_comp"]
 lam = code["lambda"]
 
-# ─────────────────────────────────────────────
+# 
 # BASES DE DATOS SÍSMICAS (extraídas del módulo de diseño sísmico)
-# ─────────────────────────────────────────────
+# 
 # (Se usa la misma estructura que en el módulo 10_Diseño_Sismico.py pero adaptada)
 
 # Definir ciudades para cada norma (solo ejemplos representativos)
@@ -108,9 +114,9 @@ if norma_sel not in SEISMIC_DATA:
     }
 seismic_info = SEISMIC_DATA[norma_sel]
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIONES AUXILIARES
-# ─────────────────────────────────────────────
+# 
 def get_beta1(fc):
     if fc <= 28: return 0.85
     return max(0.85 - 0.05*(fc-28)/7.0, 0.65)
@@ -570,9 +576,9 @@ def plot_edificio(nudos, cols, vigas_x, vigas_z, zaps, zap_dim=None):
     )
     return fig
 
-# ─────────────────────────────────────────────
+# 
 # INTERFAZ DE USUARIO
-# ─────────────────────────────────────────────
+# 
 # Barra lateral
 with st.sidebar:
     _iso = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}.get(norma_sel, "un")

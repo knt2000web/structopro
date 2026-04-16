@@ -10,33 +10,39 @@ from docx import Document
 from docx.shared import Inches, Pt
 import plotly.graph_objects as go
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
+norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+mostrar_referencias_norma(norma_sel, "otras_estructuras")
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Otras Estructuras", "Other Structures"), layout="wide")
 st.title(_t("Otras Estructuras — Suite Multi-Norma", "Other Structures — Multi-Code Suite"))
 st.markdown(_t("Módulo integrado para ménsulas, columnas, losas bidireccionales y otros elementos estructurales.", "Integrated module for corbels, columns, two-way slabs and other structural elements."))
 
-# ─────────────────────────────────────────────
+# 
 # PIE DE PÁGINA / DERECHOS RESERVADOS
-# ─────────────────────────────────────────────
+# 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i> Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════
+# 
 # CODES DICT (factores de resistencia)
-# ══════════════════════════════════════════
+# 
 CODES = {
     "NSR-10 (Colombia)": {
         "phi_flex": 0.90, "phi_shear": 0.75, "phi_comp": 0.65,
@@ -140,9 +146,9 @@ def sec_dark_fig(w, h, title=""):
 def qty_table(rows):
     st.dataframe(pd.DataFrame(rows, columns=["Concepto","Valor"]), use_container_width=True, hide_index=True)
 
-# ══════════════════════════════════════════
+# 
 # GLOBAL SIDEBAR (Materiales y Norma)
-# ══════════════════════════════════════════
+# 
 st.sidebar.header(_t(" Norma de Diseño", " Design Code"))
 if "norma_sel" not in st.session_state:
     st.session_state.norma_sel = list(CODES.keys())[0]
@@ -159,7 +165,7 @@ code = CODES.get(norma_sel, CODES["NSR-10 (Colombia)"])
 st.sidebar.markdown(f" `{code['ref']}`")
 st.sidebar.markdown(f"**φ flex:** {code['phi_flex']} | **φ cort:** {code['phi_shear']} | **φ comp:** {code['phi_comp']}")
 
-st.sidebar.header(_t("⚙ Materiales Globales", "⚙ Global Materials"))
+st.sidebar.header(_t(" Materiales Globales", " Global Materials"))
 fc_unit = st.sidebar.radio(_t("Unidad f'c:", "f'c Unit:"), ["MPa","PSI","kg/cm²"], horizontal=True, key="o_fc_unit")
 if fc_unit == "PSI":
     psi_options = ["2500","3000","3500","4000","4500","5000"]
@@ -258,7 +264,7 @@ with st.expander(_t("Cortante a una Distancia X del Apoyo (Vigas)", " Shear at a
         else:
             st.error(f"No aprobado: φVn = {phi_Vn:.2f} kN < Vu = {Vu_x:.2f} kN")
 
-        # ── 3D SECCIÓN TRANSVERSAL ─────────────────────────────────────
+        #  3D SECCIÓN TRANSVERSAL 
         st.markdown("---")
         st.markdown("####  Visualización 3D de la Sección con Estribos")
         _fig3d_cx = go.Figure()
@@ -320,38 +326,59 @@ with st.expander(_t("Cortante a una Distancia X del Apoyo (Vigas)", " Shear at a
         buf.seek(0)
         st.download_button("Descargar Memoria DOCX", data=buf, file_name="Cortante_X.docx")
     with tab_dxf:
-        try:
-            from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
-                                     dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
-            _USE_H3 = True
-        except ImportError:
-            _USE_H3 = False
-        doc_dxf = ezdxf.new('R2010')
-        doc_dxf.units = ezdxf.units.CM
-        if _USE_H3:
-            dxf_setup(doc_dxf, 20); dxf_add_layers(doc_dxf)
-        msp = doc_dxf.modelspace()
-        x0, y0 = 0, 0
-        msp.add_lwpolyline([(x0,y0),(x0+bw_cx,y0),(x0+bw_cx,y0+d_cx),(x0,y0+d_cx),(x0,y0)], close=True, dxfattribs={'layer':'CONCRETO'})
-        rec = 4
-        msp.add_lwpolyline([(x0+rec,y0+rec),(x0+bw_cx-rec,y0+rec),(x0+bw_cx-rec,y0+d_cx-rec),(x0+rec,y0+d_cx-rec),(x0+rec,y0+rec)], close=True, dxfattribs={'layer':'ACERO'})
-        if _USE_H3:
-            TH3 = 0.025*20
-            dxf_dim_horiz(msp, x0, x0+bw_cx, y0-8, f"b = {bw_cx:.0f} cm", 20)
-            dxf_dim_vert(msp, x0+bw_cx+5, y0, y0+d_cx, f"d = {d_cx:.0f} cm", 20)
-            dxf_text(msp, x0+bw_cx/2, y0+d_cx+5, f"Estribo {st_bar_cx} @ {s_diseno_cm:.1f} cm", "TEXTO", h=TH3*1.1, ha="center")
-            _cam3 = dxf_rotulo_campos(f"Secc. Viga {bw_cx:.0f}x{d_cx:.0f}cm – Cortante", norma_sel, "001")
-            dxf_rotulo(msp, _cam3, x0, y0-50, rot_w=max(bw_cx*2,20), rot_h=15, escala=20)
-        else:
-            msp.add_text(f"Estribo {st_bar_cx} @ {s_diseno_cm:.1f} cm", dxfattribs={'height':2, 'insert':(x0+bw_cx/2, y0+d_cx+3)})
-        import tempfile, os
-        with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp_out_str:
-            tmp_path_out_str = tmp_out_str.name
-        doc_dxf.saveas(tmp_path_out_str)
-        with open(tmp_path_out_str, 'rb') as f_out_str:
-            bytes_out_str = f_out_str.read()
-        os.unlink(tmp_path_out_str)
-        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Seccion_Cortante.dxf")
+        st.subheader("Plano DXF ICONTEC - Sección Cortante")
+        papel_opc_c = {"Carta (21x28cm)": (21.6,27.9,"CARTA"), "Oficio (21x33cm)": (21.6,33.0,"OFICIO"), "Pliego (70x100cm)": (70.7,100.0,"PLIEGO")}
+        papel_sel_c = st.selectbox("Tamaño Papel:", list(papel_opc_c.keys()), key="cx_papel")
+        W_P_C, H_P_C, LBL_P_C = papel_opc_c[papel_sel_c]
+
+        if st.button("Generar Plano DXF - Cortante"):
+            doc_dxf = ezdxf.new('R2010', setup=True)
+            doc_dxf.units = ezdxf.units.CM
+            LW_C = {'CONCRETO':70, 'ACERO_TRANS':35, 'COTAS':25, 'TEXTO':25, 'ROTULO':35, 'MARGEN':70}
+            COL_C = {'CONCRETO':7, 'ACERO_TRANS':4, 'COTAS':2, 'TEXTO':7, 'ROTULO':8, 'MARGEN':7}
+            for lay, lw in LW_C.items():
+                doc_dxf.layers.new(lay, dxfattribs={'color':COL_C[lay], 'lineweight':lw})
+            doc_dxf.styles.new('ROMANS', dxfattribs={'font':'romans.shx'})
+            msp = doc_dxf.modelspace()
+            
+            # Escala automatica
+            dim_max = max(bw_cx, d_cx)
+            escala_den = 50
+            for den in [100, 50, 25, 20, 10]:
+                if dim_max / den <= min(W_P_C, H_P_C)*0.4:
+                    escala_den = den; break
+            
+            # Margen y Rotulo
+            AW_C, AH_C = W_P_C - 2, H_P_C - 6
+            msp.add_lwpolyline([(1,1), (W_P_C-1,1), (W_P_C-1,H_P_C-1), (1,H_P_C-1), (1,1)], dxfattribs={'layer':'MARGEN'})
+            msp.add_lwpolyline([(1,1), (W_P_C-1,1), (W_P_C-1,5), (1,5), (1,1)], dxfattribs={'layer':'ROTULO'})
+            msp.add_text("SECCION TRANSVERSAL CORTANTE", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.4,'insert':(W_P_C/2, 3),'align_point':(W_P_C/2, 3),'halign':1,'valign':2})
+            msp.add_text(f"Papel: {LBL_P_C} | Escala: 1:{escala_den}", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.3,'insert':(W_P_C/2, 2),'align_point':(W_P_C/2, 2),'halign':1,'valign':2})
+            
+            # Dibujo
+            ESC_C = 1.0 / escala_den
+            bw_d = bw_cx * ESC_C;  d_d = d_cx * ESC_C
+            ox_c = W_P_C/2 - bw_d/2;  oy_c = 5 + (AH_C-d_d)/2
+            
+            msp.add_lwpolyline([(ox_c,oy_c),(ox_c+bw_d,oy_c),(ox_c+bw_d,oy_c+d_d),(ox_c,oy_c+d_d),(ox_c,oy_c)], dxfattribs={'layer':'CONCRETO'})
+            rec_d = 4 * ESC_C
+            msp.add_lwpolyline([(ox_c+rec_d,oy_c+rec_d),(ox_c+bw_d-rec_d,oy_c+rec_d),(ox_c+bw_d-rec_d,oy_c+d_d-rec_d),(ox_c+rec_d,oy_c+d_d-rec_d),(ox_c+rec_d,oy_c+rec_d)], dxfattribs={'layer':'ACERO_TRANS'})
+            
+            # Textos
+            msp.add_line((ox_c,oy_c-0.5), (ox_c+bw_d,oy_c-0.5), dxfattribs={'layer':'COTAS'})
+            msp.add_text(f"b={bw_cx:.0f}cm", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.25,'insert':(W_P_C/2,oy_c-0.8),'align_point':(W_P_C/2,oy_c-0.8),'halign':1,'valign':2})
+            msp.add_line((ox_c+bw_d+0.5,oy_c), (ox_c+bw_d+0.5,oy_c+d_d), dxfattribs={'layer':'COTAS'})
+            msp.add_text(f"d={d_cx:.0f}cm", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.25,'insert':(ox_c+bw_d+0.8, oy_c+d_d/2),'align_point':(ox_c+bw_d+0.8, oy_c+d_d/2),'halign':1,'valign':2,'rotation':90})
+            msp.add_text(f"Estribo {st_bar_cx} @ {s_diseno_cm:.1f} cm", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.3,'insert':(W_P_C/2, oy_c+d_d+1),'align_point':(W_P_C/2, oy_c+d_d+1),'halign':1,'valign':2})
+            
+            import tempfile, os
+            with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp:
+                tmp_path = tmp.name
+            doc_dxf.saveas(tmp_path)
+            with open(tmp_path, 'rb') as f:
+                b_dxf_c = f.read()
+            os.unlink(tmp_path)
+            st.download_button("Descargar DXF ICONTEC", data=b_dxf_c, file_name=f"Cortante_{bw_cx}x{d_cx}.dxf")
 
 # =============================================================================
 # 2. MÉNSULAS (CORBELS) – ACI 318
@@ -408,7 +435,7 @@ with st.expander(_t("Diseño de Ménsulas (Corbels / ACI 318)", " Corbel Design 
             ]
             qty_table(rows_men)
             
-            # ── 3D MÉNSULA REAL ──────────────────────────────────────────────
+            #  3D MÉNSULA REAL 
             st.markdown("---")
             st.markdown("####  Visualización 3D de la Ménsula (Corbel)")
             _fm = go.Figure()
@@ -507,36 +534,55 @@ with st.expander(_t("Diseño de Ménsulas (Corbels / ACI 318)", " Corbel Design 
             buf.seek(0)
             st.download_button("Descargar Memoria DOCX", data=buf, file_name="Corbel.docx")
         with tab_dxf:
-            try:
-                from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
-                                         dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
-                _USE_H3b = True
-            except ImportError:
-                _USE_H3b = False
-            doc_dxf = ezdxf.new('R2010')
-            doc_dxf.units = ezdxf.units.CM
-            if _USE_H3b:
-                dxf_setup(doc_dxf, 20); dxf_add_layers(doc_dxf)
-            msp = doc_dxf.modelspace()
-            x0, y0 = 0, 0
-            msp.add_lwpolyline([(x0,y0),(x0+a_men,y0),(x0+a_men,y0+h_men),(x0,y0+h_men),(x0,y0)], close=True, dxfattribs={'layer':'CONCRETO'})
-            if _USE_H3b:
-                TH3b = 0.025*20
-                dxf_dim_horiz(msp, x0, x0+a_men, y0-8, f"a = {a_men:.0f} cm", 20)
-                dxf_dim_vert(msp, x0+a_men+5, y0, y0+h_men, f"h = {h_men:.0f} cm", 20)
-                dxf_text(msp, a_men/2, y0+h_men+5, f"As = {As_prov_men:.2f} cm² ({n_bars}x{bar_men})", "TEXTO", h=TH3b*1.1, ha="center")
-                _cam3b = dxf_rotulo_campos(f"Mensula {a_men:.0f}x{h_men:.0f}cm – Corbel", norma_sel, "001")
-                dxf_rotulo(msp, _cam3b, x0, y0-50, rot_w=max(a_men*2,20), rot_h=15, escala=20)
-            else:
-                msp.add_text(f"As = {As_prov_men:.2f} cm²", dxfattribs={'height':2, 'insert':(a_men/2, y0+h_men+2)})
-            import tempfile, os
-            with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp_out_str:
-                tmp_path_out_str = tmp_out_str.name
-            doc_dxf.saveas(tmp_path_out_str)
-            with open(tmp_path_out_str, 'rb') as f_out_str:
-                bytes_out_str = f_out_str.read()
-            os.unlink(tmp_path_out_str)
-        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Corbel.dxf")
+            st.subheader("Plano DXF ICONTEC - Ménsula")
+            papel_opc_m = {"Carta (21x28cm)": (21.6,27.9,"CARTA"), "Oficio (21x33cm)": (21.6,33.0,"OFICIO"), "Pliego (70x100cm)": (70.7,100.0,"PLIEGO")}
+            papel_sel_m = st.selectbox("Tamaño Papel:", list(papel_opc_m.keys()), key="men_papel")
+            W_P_M, H_P_M, LBL_P_M = papel_opc_m[papel_sel_m]
+
+            if st.button("Generar Plano DXF - Ménsula (Corbel)"):
+                doc_dxf = ezdxf.new('R2010', setup=True)
+                doc_dxf.units = ezdxf.units.CM
+                LW_M = {'CONCRETO':70, 'ACERO_LONG':50, 'COTAS':25, 'TEXTO':25, 'ROTULO':35, 'MARGEN':70}
+                COL_M = {'CONCRETO':7, 'ACERO_LONG':1, 'COTAS':2, 'TEXTO':7, 'ROTULO':8, 'MARGEN':7}
+                for lay, lw in LW_M.items():
+                    doc_dxf.layers.new(lay, dxfattribs={'color':COL_M[lay], 'lineweight':lw})
+                doc_dxf.styles.new('ROMANS', dxfattribs={'font':'romans.shx'})
+                msp = doc_dxf.modelspace()
+                
+                # Escala
+                dim_max_m = max(a_men, h_men)
+                escala_den_m = 25
+                for den in [100, 50, 25, 20, 10]:
+                    if dim_max_m / den <= min(W_P_M, H_P_M)*0.4:
+                        escala_den_m = den; break
+                ESC_M = 1.0 / escala_den_m
+                
+                # Marco y Rotulo
+                AW_M, AH_M = W_P_M - 2, H_P_M - 6
+                msp.add_lwpolyline([(1,1), (W_P_M-1,1), (W_P_M-1,H_P_M-1), (1,H_P_M-1), (1,1)], dxfattribs={'layer':'MARGEN'})
+                msp.add_lwpolyline([(1,1), (W_P_M-1,1), (W_P_M-1,5), (1,5), (1,1)], dxfattribs={'layer':'ROTULO'})
+                msp.add_text("MENSULA (CORBEL)", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.4,'insert':(W_P_M/2, 3),'align_point':(W_P_M/2, 3),'halign':1,'valign':2})
+                msp.add_text(f"Papel: {LBL_P_M} | Escala: 1:{escala_den_m}", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.3,'insert':(W_P_M/2, 2),'align_point':(W_P_M/2, 2),'halign':1,'valign':2})
+                
+                am_d = a_men * ESC_M;  hm_d = h_men * ESC_M
+                ox_m = W_P_M/2 - am_d/2;  oy_m = 5 + (AH_M-hm_d)/2
+                
+                msp.add_lwpolyline([(ox_m,oy_m),(ox_m+am_d,oy_m),(ox_m+am_d,oy_m+hm_d),(ox_m,oy_m+hm_d),(ox_m,oy_m)], dxfattribs={'layer':'CONCRETO'})
+                rec_m = dp_men * ESC_M
+                msp.add_line((ox_m+rec_m, oy_m+hm_d-rec_m), (ox_m+am_d-rec_m, oy_m+hm_d-rec_m), dxfattribs={'layer':'ACERO_LONG'})
+                
+                msp.add_text(f"a={a_men:.0f}cm", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.25,'insert':(W_P_M/2, oy_m-0.8),'align_point':(W_P_M/2, oy_m-0.8),'halign':1,'valign':2})
+                msp.add_text(f"h={h_men:.0f}cm", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.25,'insert':(ox_m+am_d+0.8, oy_m+hm_d/2),'align_point':(ox_m+am_d+0.8, oy_m+hm_d/2),'halign':1,'valign':2,'rotation':90})
+                msp.add_text(f"As={n_bars}x{bar_men} ({As_prov_men:.2f}cm2)", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.3,'insert':(W_P_M/2, oy_m+hm_d+1),'align_point':(W_P_M/2, oy_m+hm_d+1),'halign':1,'valign':2})
+                
+                import tempfile, os
+                with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp:
+                    tmp_path = tmp.name
+                doc_dxf.saveas(tmp_path)
+                with open(tmp_path, 'rb') as f:
+                    b_dxf_m = f.read()
+                os.unlink(tmp_path)
+                st.download_button("Descargar DXF ICONTEC", data=b_dxf_m, file_name="Corbel.dxf")
 
 # =============================================================================
 # 3. PREDIMENSIONAMIENTO DE COLUMNAS
@@ -561,7 +607,7 @@ with st.expander(_t("Predimensionamiento de Columnas", "Column Preliminary Sizin
     st.write(f"- Área Bruta Requerida ($A_g$): **{Ag_req_cm2:.0f} cm²**")
     st.success(f"Sección Cuadrada Sugerida: **{b_round} cm × {b_round} cm**")
 
-    # ── 3D COLUMNA SUGERIDA ──────────────────────────────────────────
+    #  3D COLUMNA SUGERIDA 
     st.markdown("---")
     st.markdown("####  Visualización 3D de la Columna Sugerida")
     _h_col = pisos * 3.0 * 100  # cm = pisos * 3m
@@ -612,37 +658,49 @@ with st.expander(_t("Predimensionamiento de Columnas", "Column Preliminary Sizin
         buf.seek(0)
         st.download_button("Descargar Memoria DOCX", data=buf, file_name="Predimensionamiento.docx")
 
-        # DXF de la sección cuadrada
-        try:
-            from dxf_helpers import (dxf_setup, dxf_add_layers, dxf_text,
-                                     dxf_dim_horiz, dxf_dim_vert, dxf_rotulo, dxf_rotulo_campos)
-            _USE_H3c = True
-        except ImportError:
-            _USE_H3c = False
-        doc_dxf = ezdxf.new('R2010')
+        # DXF de la sección cuadrada (Estándar Diamante)
+        papel_opc_p = {"Carta (21x28cm)": (21.6,27.9,"CARTA"), "Oficio (21x33cm)": (21.6,33.0,"OFICIO"), "Pliego (70x100cm)": (70.7,100.0,"PLIEGO")}
+        papel_sel_p = st.selectbox("Tamaño Papel:", list(papel_opc_p.keys()), key="pre_papel")
+        W_P_P, H_P_P, LBL_P_P = papel_opc_p[papel_sel_p]
+        
+        doc_dxf = ezdxf.new('R2010', setup=True)
         doc_dxf.units = ezdxf.units.CM
-        if _USE_H3c:
-            dxf_setup(doc_dxf, 20); dxf_add_layers(doc_dxf)
+        LW_P = {'CONCRETO':70, 'COTAS':25, 'TEXTO':25, 'ROTULO':35, 'MARGEN':70}
+        COL_P = {'CONCRETO':7, 'COTAS':2, 'TEXTO':7, 'ROTULO':8, 'MARGEN':7}
+        for lay, lw in LW_P.items():
+            doc_dxf.layers.new(lay, dxfattribs={'color':COL_P[lay], 'lineweight':lw})
+        doc_dxf.styles.new('ROMANS', dxfattribs={'font':'romans.shx'})
         msp = doc_dxf.modelspace()
-        msp.add_lwpolyline([(0,0),(b_round,0),(b_round,b_round),(0,b_round),(0,0)], close=True, dxfattribs={'layer':'CONCRETO'})
-        if _USE_H3c:
-            TH3c = 0.025*20
-            dxf_dim_horiz(msp, 0, b_round, -8, f"b = {b_round} cm", 20)
-            dxf_dim_vert(msp, b_round+5, 0, b_round, f"h = {b_round} cm", 20)
-            dxf_text(msp, b_round/2, b_round+5, f"SECCION COLUMNA {b_round}x{b_round}cm", "EJES", h=TH3c*1.1, ha="center")
-            dxf_text(msp, b_round/2, b_round/2, f"kg={Pu_fact:.0f}kN", "TEXTO", h=TH3c*0.9, ha="center")
-            _cam3c = dxf_rotulo_campos(f"Columna Predim {b_round}x{b_round}cm – {pisos}P", norma_sel, "001")
-            dxf_rotulo(msp, _cam3c, 0, -50, rot_w=max(b_round*2,20), rot_h=15, escala=20)
-        else:
-            msp.add_text(f"{b_round}x{b_round} cm", dxfattribs={'height':3, 'insert':(b_round/2, b_round/2)})
+        
+        # Escala
+        escala_den_p = 50
+        for den in [100, 50, 25, 20, 10]:
+            if b_round / den <= min(W_P_P, H_P_P)*0.4:
+                escala_den_p = den; break
+        ESC_P = 1.0 / escala_den_p
+        
+        # Rotulo
+        msp.add_lwpolyline([(1,1), (W_P_P-1,1), (W_P_P-1,H_P_P-1), (1,H_P_P-1), (1,1)], dxfattribs={'layer':'MARGEN'})
+        msp.add_lwpolyline([(1,1), (W_P_P-1,1), (W_P_P-1,5), (1,5), (1,1)], dxfattribs={'layer':'ROTULO'})
+        msp.add_text("PREDIMENSIONAMIENTO COLUMNA", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.4,'insert':(W_P_P/2, 3),'align_point':(W_P_P/2, 3),'halign':1,'valign':2})
+        msp.add_text(f"Papel: {LBL_P_P} | Escala: 1:{escala_den_p}", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.3,'insert':(W_P_P/2, 2),'align_point':(W_P_P/2, 2),'halign':1,'valign':2})
+        
+        # Dibujo
+        bp_d = b_round * ESC_P
+        ox_p = W_P_P/2 - bp_d/2;  oy_p = 5 + (H_P_P-6-bp_d)/2
+        msp.add_lwpolyline([(ox_p,oy_p),(ox_p+bp_d,oy_p),(ox_p+bp_d,oy_p+bp_d),(ox_p,oy_p+bp_d),(ox_p,oy_p)], dxfattribs={'layer':'CONCRETO'})
+        
+        msp.add_text(f"SECCION {b_round}x{b_round}cm", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.35,'insert':(W_P_P/2, oy_p+bp_d+1),'align_point':(W_P_P/2, oy_p+bp_d+1),'halign':1,'valign':2})
+        msp.add_text(f"Pu = {Pu_fact:.0f} kN", dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.30,'insert':(W_P_P/2, oy_p+bp_d/2),'align_point':(W_P_P/2, oy_p+bp_d/2),'halign':1,'valign':2})
+        
         import tempfile, os
-        with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp_out_str:
-            tmp_path_out_str = tmp_out_str.name
-        doc_dxf.saveas(tmp_path_out_str)
-        with open(tmp_path_out_str, 'rb') as f_out_str:
-            bytes_out_str = f_out_str.read()
-        os.unlink(tmp_path_out_str)
-        st.download_button("Descargar DXF", data=bytes_out_str, file_name="Columna_Predim.dxf")
+        with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False) as tmp:
+            tmp_path = tmp.name
+        doc_dxf.saveas(tmp_path)
+        with open(tmp_path, 'rb') as f:
+            b_dxf_p = f.read()
+        os.unlink(tmp_path)
+        st.download_button("Descargar DXF ICONTEC", data=b_dxf_p, file_name="Columna_Predim.dxf")
 
 # =============================================================================
 # 4. CAPACIDAD AXIAL COLUMNAS CORTAS
@@ -754,5 +812,5 @@ st.markdown(f"""
 > Norma activa: `{norma_sel}`  
 > f'c = {fc:.2f} MPa | fy = {fy:.0f} MPa | Ec = {Ec:.0f} MPa  
 > **Referencia:** {code['ref']}  
-> ⚠ *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
+>  *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
 """)

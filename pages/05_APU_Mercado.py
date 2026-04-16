@@ -8,9 +8,13 @@ import pandas as pd
 import plotly.graph_objects as go
 import io
 
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 st.set_page_config(page_title="APU y Costos - Scraping en Vivo", layout="wide")
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
@@ -19,27 +23,27 @@ def _t(es, en):
 st.title(_t("Análisis de Precios Unitarios (APU) — En Vivo", " Unit Price Analysis (APU) — Live"))
 st.cache_data.clear()
 
-# ─────────────────────────────────────────────
+# 
 # PIE DE PÁGINA / DERECHOS RESERVADOS
-# ─────────────────────────────────────────────
+# 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i> Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown(_t("""
 Este módulo se conecta en tiempo real a las principales ferreterías de Latinoamérica para extraer **el precio del día** del Cemento y el Acero de refuerzo.
 > **Fuentes actuales:** Homecenter (Colombia), Promart (Perú), Sodimac (varios países), y costos base indexados para otras regiones.
-> ⚠ **Nota:** Algunas tiendas bloquean conexiones desde servidores en la nube (Streamlit Cloud). Si ves "N/A", ingresa el valor manualmente en la sección de "Cotizador Global".
+>  **Nota:** Algunas tiendas bloquean conexiones desde servidores en la nube (Streamlit Cloud). Si ves "N/A", ingresa el valor manualmente en la sección de "Cotizador Global".
 """, """
 This module connects in real time to major hardware stores in Latin America to extract **today's price** of Cement and Reinforcing Steel.
 > **Current sources:** Homecenter (Colombia), Promart (Perú), Sodimac (various countries), and baseline costs for other regions.
-> ⚠ **Note:** Some stores block connections from cloud servers (Streamlit Cloud). If you see "N/A", enter the value manually in the "Global Quoter" section.
+>  **Note:** Some stores block connections from cloud servers (Streamlit Cloud). If you see "N/A", enter the value manually in the "Global Quoter" section.
 """))
 
 # ------------------------------------------------------------------------------
@@ -362,6 +366,8 @@ def update_regional_prices(pais, cem_type, steel_diam):
 # UI principal
 # ------------------------------------------------------------------------------
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+
+mostrar_referencias_norma(norma_sel, "apu_mercado")
 pais_sugerido = "Colombia" if "NSR" in norma_sel else "Perú" if ("E.060" in norma_sel or "Perú" in norma_sel) else "México" if "NTC" in norma_sel else "Argentina" if "CIRSOC" in norma_sel else "Ecuador" if "NEC" in norma_sel else "Chile" if "CIRSOC" not in norma_sel and "ACI" in norma_sel else "Bolivia" if "NB" in norma_sel else "USA" if "ACI" in norma_sel else "Otro"
 
 st.subheader(_t(f"Contexto Regional: {pais_sugerido}", f"Regional Context: {pais_sugerido}"))
@@ -468,10 +474,10 @@ if pais_sugerido != "Otro" and pais_sugerido != "Bolivia":
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         
-        st.caption(_t("⚠ Nota: Los promedios se calculan automáticamente sobre las fuentes que respondieron con éxito.", "⚠ Note: Averages are automatically calculated from sources that responded successfully."))
+        st.caption(_t(" Nota: Los promedios se calculan automáticamente sobre las fuentes que respondieron con éxito.", " Note: Averages are automatically calculated from sources that responded successfully."))
 
 elif pais_sugerido == "Bolivia":
-    st.info(_t("🇧🇴 Bolivia: Las fuentes para Bolivia requieren cotización directa. Por favor ingresa los valores en el Cotizador Global.", "🇧🇴 Bolivia: Sources for Bolivia require direct quotation. Please enter values in the Global Quoter."))
+    st.info(_t(" Bolivia: Las fuentes para Bolivia requieren cotización directa. Por favor ingresa los valores en el Cotizador Global.", " Bolivia: Sources for Bolivia require direct quotation. Please enter values in the Global Quoter."))
 
 st.markdown("---")
 st.markdown(_t("###  Búsqueda y Cotización Personalizada", "###  Custom Search and Quote"))
@@ -558,7 +564,7 @@ with col_d3:
         st.caption(_t("Proporciones típicas para f'c=21 MPa: 1:2:3 (cemento:arena:grava). Ajuste según necesidad.", "Typical proportions for f'c=21 MPa: 1:2:3 (cement:sand:gravel). Adjust as needed."))
 
 # Botón para aplicar precios como default en otros módulos
-if st.button(_t("⚙ Aplicar estos precios como default en todos los módulos", "⚙ Apply these prices as default in all modules"), use_container_width=True):
+if st.button(_t(" Aplicar estos precios como default en todos los módulos", " Apply these prices as default in all modules"), use_container_width=True):
     st.session_state.apu_config = {
         "moneda": moneda,
         "cemento": val_cemento,

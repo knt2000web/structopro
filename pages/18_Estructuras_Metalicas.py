@@ -11,13 +11,19 @@ from docx import Document
 from docx.shared import Inches, Pt
 import datetime
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
 
 norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
+
+mostrar_referencias_norma(norma_sel, "estructuras_metalicas")
 _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}
 _iso = _PAIS_ISO.get(norma_sel, "un")
 
@@ -27,16 +33,16 @@ st.title(_t("Diseño de Estructuras Metálicas", "Steel Structure Design"))
 st.markdown(_t(f"Cálculo de Propiedades, Compresión y Flexión de Perfiles Laminados en Caliente y Conformados en Frío. Adaptado a la terminología de **{norma_sel}**.", 
                "Properties, Compression, and Flexure computation for Hot-Rolled and Cold-Formed Steel Sections."))
 
-# ─────────────────────────────────────────────
+# 
 # PIE DE PÁGINA / DERECHOS RESERVADOS
-# ─────────────────────────────────────────────
+# 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="text-align: center; color: gray; font-size: 11px;">
     © 2026 Todos los derechos reservados.<br>
     <b>Realizado por:</b><br>
     <br><br>
-    <i>⚠ Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
+    <i> Nota Legal: Esta herramienta es un apoyo profesional. El uso de los resultados es responsabilidad exclusiva del ingeniero diseñador.</i>
 </div>
 """, unsafe_allow_html=True)
 
@@ -62,10 +68,10 @@ else:
     term_C = "Perfil C"
     term_Tubo = "Perfil Tubular Rect."
 
-# ─────────────────────────────────────────────
+# 
 # CONFIGURACIÓN MATERIAL Y UNIDADES
-# ─────────────────────────────────────────────
-st.sidebar.header(_t("⚙ Preferencias", "⚙ Settings"))
+# 
+st.sidebar.header(_t(" Preferencias", " Settings"))
 sys_u = st.sidebar.radio(_t(" Sistema de Unidades", " Unit System"), 
                          ["Métrico (SI)", "Imperial (US)"], 
                          index=0 if st.session_state.get("unidades", "Métrico") == "Métrico" else 1, 
@@ -90,7 +96,7 @@ def show_mm4(v): return v / (f_mm**4)
 def show_kgm(v): return v / (f_kg / f_m)
 
 st.sidebar.markdown("---")
-st.sidebar.header(_t("⚙ Materiales", "⚙ Materials"))
+st.sidebar.header(_t(" Materiales", " Materials"))
 Fy_inp = st.sidebar.number_input(_t(f"Fluencia Fy [{t_MPa}]", f"Yield Fy [{t_MPa}]"), value=250.0 if is_m else 36.0, step=10.0 if is_m else 1.0, key="st_fy_i")
 Fu_inp = st.sidebar.number_input(_t(f"Último Fu [{t_MPa}]", f"Ultimate Fu [{t_MPa}]"), value=400.0 if is_m else 58.0, step=10.0 if is_m else 1.0, key="st_fu_i")
 E_inp = st.sidebar.number_input(_t(f"Elasticidad E [{t_MPa}]", f"Modulus E [{t_MPa}]"), value=200000.0 if is_m else 29000.0, step=1000.0 if is_m else 1000.0, key="st_E_i")
@@ -240,9 +246,9 @@ tab_P, tab_C, tab_F, tab_CF, tab_E = st.tabs([
     _t(" Exportaciones Globales", " Global Exports")
 ])
 
-# ─────────────────────────────────────────────
+# 
 # TAB 1: PROPIEDADES PERFIL W
-# ─────────────────────────────────────────────
+# 
 with tab_P:
     st.header(_t(f"Propiedades de Sección - {term_W}", f"Section Properties - {term_W}"))
     p1, p2, p3 = st.columns([1,2,1])
@@ -272,7 +278,7 @@ with tab_P:
         st.write(f"**Momento Inercia Eje Débil (Iy):** {show_mm4(Iy_w):.2f} {t_mm}⁴")
         st.write(f"**Radio de Giro (rx):** {show_mm(rx_w):.2f} {t_mm}  |  **(ry):** {show_mm(ry_w):.2f} {t_mm}")
         st.write(f"**Módulo Plástico Fuerte (Zx):** {show_mm3(Zx_w):.2f} {t_mm}³")
-        st.write(f"⚖ **Peso Lineal Estimado:** {show_kgm(peso_lin):.2f} {t_kg}/{t_m}")
+        st.write(f" **Peso Lineal Estimado:** {show_kgm(peso_lin):.2f} {t_kg}/{t_m}")
         st.write(f"**Peso total para L={L_ref_i:.2f} {t_m}:** {show_kg(peso_total):.2f} {t_kg}")
 
         # Opción para agregar al despiece
@@ -295,9 +301,9 @@ with tab_P:
         fig3d = plot_3d_W(dw, bfw, tww, tfw, L_ref)
         st.plotly_chart(fig3d, use_container_width=True)
 
-# ─────────────────────────────────────────────
+# 
 # TAB 2: LAMINADOS - COMPRESIÓN
-# ─────────────────────────────────────────────
+# 
 with tab_C:
     st.header(_t(f"Resistencia a Compresión Axial", f"Axial Compression Resistance"))
     comp_opts = [term_W, "Perfil T", "Perfil L (Angular)"]
@@ -376,9 +382,9 @@ with tab_C:
             )
             st.success(_t("Elemento agregado", "Element added"))
 
-# ─────────────────────────────────────────────
+# 
 # TAB 3: LAMINADOS - FLEXIÓN (PERFIL W)
-# ─────────────────────────────────────────────
+# 
 with tab_F:
     st.header(_t(f"Resistencia a Flexión - {term_W}", f"Flexural Resistance - {term_W}"))
     st.write(_t("Evaluación del momento flector considerando Pandeo Lateral Torsional (LTB).", "Bending moment evaluation considering Lateral Torsional Buckling (LTB)."))
@@ -442,7 +448,7 @@ with tab_F:
         A_f = 2 * (bf_f * tf_f) + (d_f - 2*tf_f)*tw_f
         peso_lin_f = (A_f / 1e6) * peso_esp_acero
         peso_total_f = peso_lin_f * L_viga
-        st.write(f"⚖ **Peso estimado de la viga:** {show_kg(peso_total_f):.2f} {t_kg}")
+        st.write(f" **Peso estimado de la viga:** {show_kg(peso_total_f):.2f} {t_kg}")
 
         if st.button(_t("Agregar esta viga al despiece", "Add this beam to the list")):
             mem_text = f"Momento Flector Solicitante (Mu): {Mu_i:.1f} {t_kNm}\nLongitud Total (L): {L_viga_i:.2f} {t_m}\nLongitud No Arriostrada (Lb): {show_m(Lb_m):.2f} {t_m}\nLímites LTB: Lp={show_m(Lp):.2f} {t_m}, Lr={show_m(Lr):.2f} {t_m}\nMomento Plástico (Mp): {show_kNm(Mp):.1f} {t_kNm}\nMódulo de Sección Elástico (Sx): {show_mm3(Sx_f):.1f} {t_mm}³\nZona de Comportamiento LTB: {estado}\nResistencia Nominal Equivalente (Mn): {show_kNm(Mn):.1f} {t_kNm}\nResistencia de Diseño a Flexión (φMn): {show_kNm(phi_Mn):.1f} {t_kNm}\nEstado de Evaluación: {'CUMPLE' if Mu <= phi_Mn else 'FALLA'} (Factor de Seguridad LRFD = {phi_Mn/max(Mu, 0.001):.2f})"
@@ -456,9 +462,9 @@ with tab_F:
             )
             st.success(_t("Viga agregada al despiece", "Beam added to list"))
 
-# ─────────────────────────────────────────────
+# 
 # TAB 4: CONFORMADOS EN FRÍO (Cold-Formed)
-# ─────────────────────────────────────────────
+# 
 with tab_CF:
     st.header(_t("Perfiles Conformados en Frío (Cold-Formed)", "Cold-Formed Sections"))
     cf_opts = [f"{term_C} con labios (rígido)", f"{term_C} sin labios (U)", term_Tubo]
@@ -490,7 +496,7 @@ with tab_CF:
         peso_lin_cf = (A_cf / 1e6) * peso_esp_acero
         peso_total_cf = peso_lin_cf * L_cf
         st.write(f"**Área Bruta (A):** {show_mm2(A_cf):.2f} {t_mm}²")
-        st.write(f"⚖ **Peso Lineal Estimado:** {show_kgm(peso_lin_cf):.2f} {t_kg}/{t_m}")
+        st.write(f" **Peso Lineal Estimado:** {show_kgm(peso_lin_cf):.2f} {t_kg}/{t_m}")
         st.write(f"**Peso total:** {show_kg(peso_total_cf):.2f} {t_kg}")
     with col_cf2:
         st.subheader("Verificación de Compresión")
@@ -498,7 +504,7 @@ with tab_CF:
         Pu_cf = Pu_cf_i * f_kN
         w_t_ratio = max(h_cf/t_cf, b_cf/t_cf)
         if w_t_ratio > 200:
-            st.warning("⚠ Relación ancho/espesor > 200. Riesgo de pandeo local muy severo.")
+            st.warning(" Relación ancho/espesor > 200. Riesgo de pandeo local muy severo.")
             Ae = 0.5 * A_cf
         elif w_t_ratio > 50:
             Ae = 0.8 * A_cf
@@ -538,9 +544,9 @@ with tab_CF:
             )
             st.success(_t("Perfil agregado al despiece", "Profile added to list"))
 
-# ─────────────────────────────────────────────
+# 
 # TAB 5: EXPORTACIONES GLOBALES
-# ─────────────────────────────────────────────
+# 
 with tab_E:
     st.header(_t("Exportaciones Globales", "Global Exports"))
 

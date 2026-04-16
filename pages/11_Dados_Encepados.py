@@ -1,4 +1,21 @@
 import streamlit as st
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
+
+#  Utilidad: Color AutoCAD segun # de cuartos de pulgada 
+def _color_acero_dxf(db_mm: float) -> int:
+    """Retorna color AutoCAD (1-255) segun diametro nominal en mm (ASTM/NTC)."""
+    if   db_mm <  7.5: return 2   # #2 1/4"   - Amarillo
+    elif db_mm < 11.1: return 3   # #3 3/8"   - Verde
+    elif db_mm < 14.3: return 4   # #4 1/2"   - Cian
+    elif db_mm < 17.5: return 5   # #5 5/8"   - Azul
+    elif db_mm < 20.6: return 6   # #6 3/4"   - Magenta
+    elif db_mm < 23.8: return 30  # #7 7/8"   - Naranja
+    elif db_mm < 27.0: return 1   # #8 1"     - Rojo
+    else:              return 10  # #9+ 1-1/8" - Verde oscuro (pesado)
+# 
 import pandas as pd
 import numpy as np
 import math
@@ -34,15 +51,15 @@ try:
 except ImportError:
     _IFC_AVAILABLE = False
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
-# ─────────────────────────────────────────────
+# 
 # PERSISTENCIA SUPABASE
-# ─────────────────────────────────────────────
+# 
 import requests
 import json
 
@@ -115,7 +132,7 @@ def capturar_estado_module(ref):
     match = ["fc_dado", "fy_acero", "peso_conc", "recub_dado", "db_dado", "plantilla", "Pu_", "Mux_", "Muy_"]
     return {k: st.session_state[k] for k in st.session_state if any(k.startswith(m) for m in match) or k == "registro_dados"}
 
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Dados de Pilotes (Encepados)", "Pile Caps"), layout="wide")
 
@@ -125,12 +142,19 @@ st.markdown(_t(
     "<p style='margin:0; padding:0; color:#aaa; font-size:14px;'>Comprehensive ACI-318 module (Flexure, Column Punching, Pile Punching, Strut and Tie).</p><hr>"
 ), unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
+# 
 # SIDEBAR
-# ─────────────────────────────────────────────
+# 
 with st.sidebar:
     st.header(_t("Configuración Global", "Global Settings"))
-    
+    norma_sel = st.sidebar.selectbox(
+        _t("Norma de diseño", "Design Code"),
+        ["NSR-10 (Colombia)", "ACI 318-25 (EE.UU.)", "ACI 318-19 (EE.UU.)",
+         "ACI 318-14 (EE.UU.)", "NEC-SE-HM (Ecuador)", "E.060 (Perú)",
+         "NTC-EM (México)", "COVENIN 1753-2006 (Venezuela)"],
+        key="dados_norma_sel"
+    )
+    mostrar_referencias_norma(norma_sel, "dados_encepados")
     st.markdown("---")
     st.subheader(" Guardar / Cargar Proyecto")
     nombre_producido = st.session_state.get(f"np_dados", "")
@@ -193,9 +217,9 @@ with st.sidebar:
         Mux = st.number_input(_t("Momento Mux (kN.m)", "Moment Mux (kN.m)"), value=250.0, step=50.0)
         Muy = st.number_input(_t("Momento Muy (kN.m)", "Moment Muy (kN.m)"), value=150.0, step=50.0)
 
-# ─────────────────────────────────────────────
+# 
 # CUERPO PRINCIPAL (TABS)
-# ─────────────────────────────────────────────
+# 
 tab_geo, tab_des, tab_apu, tab_bim = st.tabs([
     _t("1. Configuración de Grupo", "1. Group Configuration"),
     _t("2. Punzonamiento y Flexión", "2. Punching & Flexure"),
@@ -331,7 +355,7 @@ with tab_des:
     
     c_des1, c_des2, c_des3, c_des4 = st.columns(4)
     
-    # ─── 1. PUNZONAMIENTO COLUMNA CENTRAL ──────────────────────────
+    #  1. PUNZONAMIENTO COLUMNA CENTRAL 
     b_o = 2 * ((c1_m + d_m) + (c2_m + d_m))
     Vu_punz = Pu
     # Reducción por pilotes dentro del perímetro crítico
@@ -356,7 +380,7 @@ with tab_des:
         if ok_punz: st.success("CUMPLE")
         else: st.error("FALLA PERALTE")
 
-    # ─── 2. PUNZONAMIENTO PILOTE (ESQUINA/CRÍTICO) ─────────────────
+    #  2. PUNZONAMIENTO PILOTE (ESQUINA/CRÍTICO) 
     # Evaluamos el pilote con mayor carga P_ui
     Pu_pilote_max = df_pilotes["Carga Axial P_ui [kN]"].max() if n_pil > 0 else 0
     # Perímetro crítico iterativo (asumimos interior o de borde truncado)
@@ -373,7 +397,7 @@ with tab_des:
         if ok_pilz: st.success("CUMPLE")
         else: st.error("FALLA PERALTE")
         
-    # ─── 3. CORTANTE UNIDIRECCIONAL (VIGA) ─────────────────────────
+    #  3. CORTANTE UNIDIRECCIONAL (VIGA) 
     def descuento_por_ubicacion(dist_centro, cara_col, d_efectivo, d_pil):
         dist_cara = dist_centro - cara_col
         if dist_cara >= d_efectivo + d_pil/2.0: return 1.0 # 100% genera cortante
@@ -399,7 +423,7 @@ with tab_des:
         st.metric("Vu (Y) Reducido", f"{Vu_vy:.1f} kN")
         st.write(f"φVc Resistencia = {phiVc_vy:.1f} kN {'OK' if ok_vy else 'FALLA'}")
 
-    # ─── 4. FLEXIÓN Y ACERO DE REFUERZO ────────────────────────────
+    #  4. FLEXIÓN Y ACERO DE REFUERZO 
     Mu_flex_x = 0; Mu_flex_y = 0
     for idx, r in df_pilotes.iterrows():
         if abs(r["X [m]"]) > c1_m/2: Mu_flex_x += r["Carga Axial P_ui [kN]"] * (abs(r["X [m]"]) - c1_m/2)
@@ -419,7 +443,7 @@ with tab_des:
     As_x = req_as(Mu_flex_x, L_sugerido, d_m)
     As_y = req_as(Mu_flex_y, B_sugerido, d_m)
 
-    # ── Seleccion de barras en pulgadas (ASTM A615 / NSR-10) ─────────────────
+    #  Seleccion de barras en pulgadas (ASTM A615 / NSR-10) 
     BARRAS_IN = {
         "#3 (3/8\"": {"db_mm":9.5,  "As_cm2":0.71},
         "#4 (1/2\"": {"db_mm":12.7, "As_cm2":1.27},
@@ -793,12 +817,12 @@ with tab_bim:
             doc_dxf.layers.add(_l, color=_c)
         msp = doc_dxf.modelspace()
 
-        # ── Normalizar recubrimiento a metros ─────────────────────────────────
+        #  Normalizar recubrimiento a metros 
         _rec_m = (recub_dado if recub_dado >= 1 else recub_dado * 100) / 100
         _lh_m  = max(0.15, 12 * db_dado / 100)   # hook length: m
         _rec_cm_val = _rec_m * 100
 
-        # ── Zonas del plano ───────────────────────────────────────────────────
+        #  Zonas del plano 
         _PXc = B_sugerido / 2 + 1.5        # plan center X
         _PYc = L_sugerido / 2 + 17.5       # plan center Y
         # Section zone: dado at (1.5, 10) bottom-left
@@ -819,9 +843,9 @@ with tab_bim:
         def _P(x, y): return (x + _PXc, y + _PYc)   # translate to plan zone
         def _S(x, y): return (x + _SX0, y + _SY0)   # translate to section zone
 
-        # ════════════════════════════════════════════════════════════════════
+        # 
         # ZONA 1 — PLANTA ENCEPADO
-        # ════════════════════════════════════════════════════════════════════
+        # 
         _dado_pts_p = [_P(x, y) for (x, y) in contorno_dado]
         msp.add_lwpolyline(_dado_pts_p, close=True,
                            dxfattribs={"layer":"DADO","lineweight":50})
@@ -849,11 +873,11 @@ with tab_bim:
         _ymax_p = _PYc + L_sugerido/2 - _rec_m
         _y_ac = _ymin_p + sep_y_calc/200
         while _y_ac < _ymax_p:
-            msp.add_line((_xmin_p, _y_ac), (_xmax_p, _y_ac), dxfattribs={"layer":"ACERO"})
+            msp.add_line((_xmin_p, _y_ac), (_xmax_p, _y_ac), dxfattribs={"layer":"ACERO","color":_color_acero_dxf(db_dado*10)})
             _y_ac += sep_y_calc / 100
         _x_ac = _xmin_p + sep_x_calc/200
         while _x_ac < _xmax_p:
-            msp.add_line((_x_ac, _ymin_p), (_x_ac, _ymax_p), dxfattribs={"layer":"ACERO"})
+            msp.add_line((_x_ac, _ymin_p), (_x_ac, _ymax_p), dxfattribs={"layer":"ACERO","color":_color_acero_dxf(db_dado*10)})
             _x_ac += sep_x_calc / 100
         # Cotas planta
         _th = 0.09
@@ -874,9 +898,9 @@ with tab_bim:
                      dxfattribs={"height":0.09,"layer":"TEXTO"}).set_placement(
             (_PXc - 0.20, _PYc - L_sugerido/2 - 0.60))
 
-        # ════════════════════════════════════════════════════════════════════
+        # 
         # ZONA 2 — CORTE A-A
-        # ════════════════════════════════════════════════════════════════════
+        # 
         # Dado en corte: de (0,0) a (B, H)
         msp.add_lwpolyline([_S(0,0),_S(B_sugerido,0),
                             _S(B_sugerido,H_dado),_S(0,H_dado)],
@@ -927,7 +951,7 @@ with tab_bim:
             for _ci in range(1, _n_int + 1):
                 _zz = _SY0 + 0.10 + _ci * 0.30
                 msp.add_line((_x_bar_l, _zz), (_x_bar_r, _zz),
-                             dxfattribs={"layer":"ACERO"})
+                             dxfattribs={"layer":"ACERO","color":_color_acero_dxf(db_dado*10)})
             msp.add_text(f"Piel: #3@30cm",
                          dxfattribs={"height":0.08,"layer":"ACERO"}).set_placement(
                 (_x_bar_r + 0.10, _SY0 + H_dado / 2))
@@ -948,9 +972,9 @@ with tab_bim:
                      dxfattribs={"height":0.09,"layer":"TEXTO"}).set_placement(
             (_SX0 + B_sugerido/2 - 0.18, _SY0 - 0.58))
 
-        # ════════════════════════════════════════════════════════════════════
+        # 
         # ZONA 3 — FIGURADO DE BARRAS
-        # ════════════════════════════════════════════════════════════════════
+        # 
         _bar_a_len = B_sugerido - 2*_rec_m   # longitud neta barra X (m)
         _bar_b_len = L_sugerido - 2*_rec_m   # longitud neta barra Y (m)
         _scale_fig = 1.0 / 20.0              # escala figurado 1:20
@@ -1034,9 +1058,9 @@ with tab_bim:
                          dxfattribs={"height":0.09,"layer":"TEXTO"}).set_placement(
                 (fx_c+0.10, fy_c+0.15))
 
-        # ════════════════════════════════════════════════════════════════════
+        # 
         # ZONA 4 — CUADRO DE CANTIDADES
-        # ════════════════════════════════════════════════════════════════════
+        # 
         _vol_c = B_sugerido * L_sugerido * H_dado
         _long_bx = _bar_a_len + 2 * _lh_m
         _long_by = _bar_b_len + 2 * _lh_m
@@ -1102,9 +1126,9 @@ with tab_bim:
                     (_cxa2+0.06, _ry2+0.08))
                 _cxa2 += _cwa
 
-        # ════════════════════════════════════════════════════════════════════
+        # 
         # ZONA 5 — ROTULO ICONTEC (franja derecha fija)
-        # ════════════════════════════════════════════════════════════════════
+        # 
         # Marco doble
         msp.add_lwpolyline(
             [(_RX0,_RY0),(_RX0+_RW,_RY0),(_RX0+_RW,_RY0+_RH),(_RX0,_RY0+_RH)],
@@ -1179,25 +1203,27 @@ with tab_bim:
             msp.add_text(_tt, dxfattribs={"height":_th2,"layer":"ROTULO"}).set_placement(
                 (_RX0+_tx, _RY0+_ty))
 
-        # ── DESCARGA DXF ─────────────────────────────────────────────────────
+        #  DESCARGA DXF 
         bio_dxf = io.StringIO()
         doc_dxf.write(bio_dxf)
         col_exp2.download_button(_t("Descargar DXF","Download DXF"),
                                  data=bio_dxf.getvalue(),
                                  file_name="Plano_Encepado.dxf")
 
-        # ── DESCARGA PDF (via ezdxf drawing addon + matplotlib) ───────────────
+        #  DESCARGA PDF (via ezdxf drawing addon + matplotlib) 
         try:
             from ezdxf.addons.drawing import RenderContext, Frontend
             from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
+            from ezdxf.addons.drawing.config import Configuration, BackgroundPolicy
             import matplotlib
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
             _fig, _ax = plt.subplots(figsize=(33.11, 23.39))  # A1 inches
             _ax.set_aspect("equal")
             _ax.axis("off")
+            _config_dp = Configuration.defaults().with_changes(background_policy=BackgroundPolicy.WHITE)
             _backend_pdf = MatplotlibBackend(_ax)
-            Frontend(RenderContext(doc_dxf), _backend_pdf).draw_layout(msp, finalize=True)
+            Frontend(RenderContext(doc_dxf), _backend_pdf, config=_config_dp).draw_layout(msp, finalize=True)
             _bio_pdf = io.BytesIO()
             _fig.savefig(_bio_pdf, format="pdf", bbox_inches="tight", dpi=150)
             plt.close(_fig)
@@ -1208,7 +1234,7 @@ with tab_bim:
                 file_name="Plano_Encepado.pdf",
                 mime="application/pdf")
         except Exception as _ep:
-            col_exp2.info(f"PDF: instale matplotlib para activar ({type(_ep).__name__})")
+            col_exp2.info(f"PDF no disponible: {str(_ep)}")
 
     if _IFC_AVAILABLE:
         try:
@@ -1227,7 +1253,7 @@ with tab_bim:
     else:
         col_exp3.warning("ifcopenshell no disponible.")
 
-# ─── REGISTRO DE DADOS (CUADRO DE MANDO) ────────────────────
+#  REGISTRO DE DADOS (CUADRO DE MANDO) 
 with st.sidebar:
     st.markdown("---")
     st.header(_t("Cuadro de Mando", "Dashboard"))

@@ -10,6 +10,7 @@ from io import BytesIO
 import json
 import os
 
+from normas_referencias import mostrar_referencias_norma
 STATE_FILE = "konte_state.json"
 
 def save_state():
@@ -30,14 +31,14 @@ def load_state():
             pass
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # PAGE CONFIG
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 st.set_page_config(page_title="Konte — Calculadora de Materiales", layout="wide", page_icon="")
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # GLOBAL CONFIGURATION (LANGUAGE & UNITS)
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 if "idioma" not in st.session_state: st.session_state["idioma"] = "Español"
 if "unidades" not in st.session_state: st.session_state["unidades"] = "Métrico"
 _lang = st.session_state["idioma"]
@@ -46,9 +47,9 @@ _unit = st.session_state["unidades"]
 def _t(es, en): return en if _lang == "English" else es
 def _u(metric, imperial): return imperial if _unit == "Imperial" else metric
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # REGIONAL TERMINOLOGY per norm
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 REGIONAL_RAW = {
     "NSR-10 (Colombia)": {
         "pais": "Colombia", "moneda": "COP $", "moneda_code": "COP", "imperial": False,
@@ -212,10 +213,10 @@ for norm, dic in REGIONAL_RAW.items():
         else:
             REGIONAL[norm][k] = v
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # CONCRETE MIX DESIGNS DATABASE (from CM-V3.0)
 # Key: dosification ratio, Values: per 1 m³
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 MIX_DESIGNS = [
     {"dos": "1:2:2",   "fc_kgcm2": 280, "fc_mpa": 27.5, "cem_kg": 420, "arena_m3": 0.67, "grava_m3": 0.67, "agua_lt": 190, "agua_bolsa": 9.45},
     {"dos": "1:2:2.5", "fc_kgcm2": 240, "fc_mpa": 23.5, "cem_kg": 380, "arena_m3": 0.60, "grava_m3": 0.76, "agua_lt": 180, "agua_bolsa": 9.45},
@@ -231,9 +232,9 @@ MIX_DESIGNS = [
     {"dos": "1:4:8",   "fc_kgcm2": 99,  "fc_mpa": 9.7,  "cem_kg": 160, "arena_m3": 0.55, "grava_m3": 1.03, "agua_lt": 125, "agua_bolsa": 9.45},
 ]
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # REBAR DATABASE (from CM-V3.0) - Weight per 6m bar
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 VARILLAS = [
     {"nombre": "N2 - 1/4\"",  "diam_mm": 6.35,  "diam_pulg": "1/4\"",   "kg_6m": 1.49,  "kg_m": 0.248},
     {"nombre": "N3 - 3/8\"",  "diam_mm": 9.52,  "diam_pulg": "3/8\"",   "kg_6m": 3.35,  "kg_m": 0.558},
@@ -248,9 +249,9 @@ VARILLAS = [
     {"nombre": "N16 - 2\"",   "diam_mm": 50.80, "diam_pulg": "2\"",     "kg_6m": 94.82, "kg_m": 15.803},
 ]
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # BLOCKS DATABASE
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 BLOQUES = {
     "Bloque 10x20x40 cm": {"ancho": 0.10, "alto": 0.20, "largo": 0.40, "und_m2": 12.5, "mortero_m3_m2": 0.015},
     "Bloque 12x20x40 cm": {"ancho": 0.12, "alto": 0.20, "largo": 0.40, "und_m2": 12.5, "mortero_m3_m2": 0.016},
@@ -260,9 +261,9 @@ BLOQUES = {
     "Ladrillo perforado (25x12x6 cm)": {"ancho": 0.12, "alto": 0.060, "largo": 0.250, "und_m2": 60.0, "mortero_m3_m2": 0.024},
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # PRICE SCRAPING URLS (like APU_Mercado)
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 PRICE_URLS = {
     "Colombia": {
         "cemento": [
@@ -326,9 +327,9 @@ PRICE_URLS = {
     },
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # SCRAPING HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 def _clean_price(text):
     nums = re.findall(r"\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?", text)
     if not nums: return None
@@ -408,9 +409,9 @@ def get_live_prices(pais, ref_prices):
     return result
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # HELPER: EXCEL EXPORT (RESUMEN)
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 def build_excel_resumen(rows, precios, R):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -443,9 +444,9 @@ def build_excel_resumen(rows, precios, R):
     output.seek(0)
     return output
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # HELPER: EXCEL EXPORT (PRESUPUESTO)
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 def build_excel_presupuesto(df_pres, cliente, proyecto):
     # Try to load template, if not found create a basic workbook
     template_path = None
@@ -522,9 +523,9 @@ def build_excel_presupuesto(df_pres, cliente, proyecto):
     buffer.seek(0)
     return buffer
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # SALARIOS MÍNIMOS POR PAÍS (2026) — actualización manual cada año
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 SALARIOS_MIN = {
     "Colombia": {
         "moneda": "COP $",
@@ -600,7 +601,7 @@ SALARIOS_MIN = {
         "factor_prestacional": 1.25,
         "dias_mes": 30,
         "horas_dia": 8,
-        "nota": "⚠ Referencia estimada USD 2026 • Verificar con LOTTT y IVSS vigentes",
+        "nota": " Referencia estimada USD 2026 • Verificar con LOTTT y IVSS vigentes",
         "prestaciones": {
             "Utilidades":             "15 días mín/año",
             "Vacaciones":             "15 días + bono",
@@ -628,7 +629,7 @@ SALARIOS_MIN = {
         "factor_prestacional": 1.50,        # Cargas sociales ~21%, SAC, vacaciones
         "dias_mes": 30,
         "horas_dia": 8,
-        "nota": "⚠ Ref. 2026 • Actualizar por alta inflación • SMVM INDEC",
+        "nota": " Ref. 2026 • Actualizar por alta inflación • SMVM INDEC",
         "prestaciones": {
             "SAC (Aguinaldo)":         "8.33% s/salario",
             "Vacaciones":             "8.33% s/salario",
@@ -652,9 +653,9 @@ SALARIOS_MIN = {
     },
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # HISTÓRICO SMLMV COLOMBIA (últimos 5 años) — para liquidaciones laborales
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 HIST_SAL = {
     "Colombia": {
         2026: {"salario_base": 1_750_905, "auxilio_transporte": 249_095, "nota": "Decreto 2513/2025 • Incremento 23.%"},
@@ -693,9 +694,9 @@ HIST_SAL = {
     },
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # STATE INIT
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 if "kc_rows" not in st.session_state:
     st.session_state.kc_rows = []
     load_state()
@@ -705,9 +706,9 @@ else:
         st.session_state.state_loaded = True
 if "kc_precios" not in st.session_state: st.session_state.kc_precios={}
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # HEADER
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 st.markdown("""
 <div style="background:linear-gradient(135deg,#0d1b2a 0%,#1e3a5f 60%,#2e6da4 100%);
     padding:28px 36px;border-radius:16px;margin-bottom:18px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
@@ -720,18 +721,20 @@ st.markdown("""
   </div>
 </div>""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # SIDEBAR - CONFIGURACIÓN KONTE
-# ─────────────────────────────────────────────────────────────────────────────
-st.sidebar.markdown(f"## ⚙ {_t('Configuración Konte', 'Konte Settings')}")
+# 
+st.sidebar.markdown(f"##  {_t('Configuración Konte', 'Konte Settings')}")
 
-# ── Selector de Normativa ──────────────────────────────────────────────────
+#  Selector de Normativa 
 NORMAS_LIST = list(REGIONAL.keys())
 _norma_prev = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 _norma_idx  = NORMAS_LIST.index(_norma_prev) if _norma_prev in NORMAS_LIST else 0
 
 norma_sel = st.sidebar.selectbox(
-    f" {_t('Normativa / País', 'Code / Country')}",
+    f" {_t('Normativa / País', 'Code / Country')
+mostrar_referencias_norma(norma_sel, "calculadora_materiales")
+}",
     NORMAS_LIST,
     index=_norma_idx,
     key="sel_norma_kc_ui",
@@ -815,7 +818,7 @@ if st.sidebar.button(f" {_t('Restablecer precios por defecto', 'Reset default pr
 
 st.sidebar.markdown("---")
 
-# ── Resumen de precios vigentes (siempre visible) ──────────────────────
+#  Resumen de precios vigentes (siempre visible) 
 st.sidebar.markdown("###  Precios vigentes")
 st.sidebar.markdown(f"""
 <div style="background:#0d1b2a;border:1px solid #1e4d8c;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.8;">
@@ -829,12 +832,12 @@ st.sidebar.markdown(f"""
   <div> Cerámica: <b>{moneda} {p.get('ceramica',0):,.0f}</b> / m²</div>
 </div>
 <div style="margin-top:6px;font-size:10px;color:#ff8f00;">
-  ⚠ Si los valores parecen incorrectos (ej: 30 en vez de 30.000), cambia los precios arriba.
+   Si los valores parecen incorrectos (ej: 30 en vez de 30.000), cambia los precios arriba.
 </div>
 """, unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-st.sidebar.markdown('<div style="text-align:center;color:gray;font-size:10px;">© 2026 Konte — <br><i>⚠ Uso profesional exclusivo</i></div>',unsafe_allow_html=True)
+st.sidebar.markdown('<div style="text-align:center;color:gray;font-size:10px;">© 2026 Konte — <br><i> Uso profesional exclusivo</i></div>',unsafe_allow_html=True)
 
 RENDIMIENTOS_MO = [
     {'Actividad': 'Excavación Zanja Drenaje a negras PVC', 'Cantidad': 1.75, 'Unidad': 'm³/día/peón'},
@@ -973,9 +976,9 @@ import io
 import openpyxl
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # MAIN TABS
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 st.markdown("""
 <style>
 div[data-testid="stTabs"] div[role="tablist"] {
@@ -992,7 +995,7 @@ div[data-testid="stTabs"] button[role="tab"] {
 tabs=st.tabs([f"{R['concreto']}","Mampostería","Columna","Viga","Losa","Cimiento","Muro Contención","Techo","Pisos","Cielo Raso",f"{R['varilla']}",
               "Pintura","Cubierta","Importar Excel","Salario Mínimo / Liq.","Configuración","Rendimientos MO","Presupuesto","Resumen y Exportar"])
 
-# ══════════ TAB 1 — CONCRETO ══════════
+#  TAB 1 — CONCRETO 
 with tabs[0]:
     st.subheader(f"Calculadora de {R['concreto']}")
     st.caption(f"Dosificaciones CM-V3.0 | Norma: {norma_sel}")
@@ -1098,7 +1101,7 @@ with tabs[0]:
         f'<span style="color:#90caf9;">+ {desp_pct}% desperdicio = <b>{vol_t:.4f} m³</b></span>'
         f'&nbsp;&nbsp; <span style="color:#ffcc80;">Dosificación: <b>{mix["dos"]}</b> | f\'c = <b>{mix["fc_kgcm2"]} kg/cm²</b> ({mix["fc_mpa"]} MPa)</span>'
         f'</div>', unsafe_allow_html=True)
-    # ── Panel de precios aplicados (diagnóstico rápido) ──────────────────
+    #  Panel de precios aplicados (diagnóstico rápido) 
     with st.expander("Precios unitarios aplicados en este cálculo", expanded=False):
         _pr = st.session_state.kc_precios
         st.markdown(f"""
@@ -1128,7 +1131,7 @@ with tabs[0]:
   </div>
 </div>
 <div style="margin-top:8px;padding:6px 10px;background:#1a1000;border-left:3px solid #ff8f00;border-radius:4px;font-size:11px;color:#ffcc80;">
-  ⚠ Si los precios se ven muy bajos o muy altos, verifica la moneda en el sidebar (<b>{moneda}</b>).
+   Si los precios se ven muy bajos o muy altos, verifica la moneda en el sidebar (<b>{moneda}</b>).
   Los precios se pueden ajustar manualmente en <b> Precios de Materiales</b> (panel izquierdo).
 </div>
 """, unsafe_allow_html=True)
@@ -1143,7 +1146,7 @@ with tabs[0]:
         save_state()
         st.success(f" {label} — {bolsas} bolsas | {arena_c:.2f}m³ arena | {grava_c:.2f}m³ grava | {agua_c:.0f} lt")
 
-# ══════════ TAB 2 — PARED / MAMPOSTERÍA (7 modos) ══════════
+#  TAB 2 — PARED / MAMPOSTERÍA (7 modos) 
 with tabs[1]:
     st.subheader("Calculadora de Pared")
     st.caption(f"CM-V3.0 | 7 tipos | {norma_sel}")
@@ -1152,7 +1155,7 @@ with tabs[1]:
     modo_pared = st.radio("Tipo:", MODOS_PARED, horizontal=True, key="kc_pared_modo")
     st.markdown("---")
 
-    # ─── datos mortar helper ───
+    #  datos mortar helper 
     DOS_MORT = {"1:3":{"ratio":3,"kg_cem_m3":490},"1:4":{"ratio":4,"kg_cem_m3":370},
                 "1:5":{"ratio":5,"kg_cem_m3":300},"1:6":{"ratio":6,"kg_cem_m3":250}}
     def mortero_mats(dos_key, vol_m3, peso_bolsa):
@@ -1305,7 +1308,7 @@ with tabs[1]:
     <div style="color:#ffcc80;font-size:11px;"> TOTAL</div>
     <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
   </div>
-</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda activa: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;"> Moneda activa: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
         if st.button("Agregar al Resumen",key="kc_add_b",type="primary"):
             lb = desc_pared or f"Muro {tipo_b}"
             st.session_state.kc_rows.extend([
@@ -1376,7 +1379,7 @@ with tabs[1]:
     <div style="color:#ffcc80;font-size:11px;"> TOTAL</div>
     <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
   </div>
-</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda activa: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;"> Moneda activa: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
         if st.button("Agregar al Resumen",key="kc_add_l",type="primary"):
             lb=desc_pared or f"Muro {tipo_l}"
             st.session_state.kc_rows.extend([
@@ -1450,7 +1453,7 @@ with tabs[1]:
     <div style="color:#ffcc80;font-size:11px;"> TOTAL</div>
     <b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b>
   </div>
-</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda activa: <b>{moneda}</b></div>""", unsafe_allow_html=True)
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;"> Moneda activa: <b>{moneda}</b></div>""", unsafe_allow_html=True)
         if st.button("Agregar al Resumen",key="kc_add_c",type="primary"):
             lb=desc_pared or "Muro Ciclópeo"
             st.session_state.kc_rows.extend([
@@ -1522,7 +1525,7 @@ with tabs[1]:
     <div style="color:#90caf9;font-size:11px;"> Acero/kg</div><b>{moneda} {_pr.get('acero_kg',0):,.0f}</b></div>
   <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
     <div style="color:#ffcc80;font-size:11px;"> TOTAL</div><b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b></div>
-</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;"> Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
         if st.button("Agregar al Resumen",key="kc_add_pca",type="primary"):
             lb=desc_pared or f"Muro CA Por%"
             st.session_state.kc_rows.extend([
@@ -1620,7 +1623,7 @@ with tabs[1]:
     <div style="color:#90caf9;font-size:11px;"> Acero/kg</div><b>{moneda} {_pr.get('acero_kg',0):,.0f}</b></div>
   <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
     <div style="color:#ffcc80;font-size:11px;"> TOTAL</div><b style="color:#ffdd57;">{moneda} {costo_base+costo_acabados:,.0f}</b></div>
-</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;"> Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
         if st.button("Agregar al Resumen",key="kc_add_dim",type="primary"):
             lb=desc_pared or "Muro CA Dimensión"
             st.session_state.kc_rows.extend([
@@ -1664,7 +1667,7 @@ with tabs[1]:
         costo_py = n_paneles*_precio("ceramica")*2 + n_canales*_precio("grava")*0.1 + n_masilla*_precio("pintura")*0.5
         st.markdown("---")
         rpy1,rpy2,rpy3,rpy4,rpy5,rpy6=st.columns(6)
-        rpy1.metric(" Paneles",f"{n_paneles} und"); rpy2.metric("⚙ Canales",f"{n_canales} und"); rpy3.metric(" Parantes",f"{n_parantes} und")
+        rpy1.metric(" Paneles",f"{n_paneles} und"); rpy2.metric(" Canales",f"{n_canales} und"); rpy3.metric(" Parantes",f"{n_parantes} und")
         rpy4.metric(" Masilla",f"{n_masilla} cubetas"); rpy5.metric(" T. Estructura",f"{t_estr} und"); rpy6.metric(" T. Panel",f"{t_pan} und")
         st.info(f"Área: {area_py:.2f} m² | Perímetro: {perim_py:.2f} m | Tipo: {doble}")
         if st.button("Agregar Panel Yeso al Resumen",key="kc_add_py",type="primary"):
@@ -1710,32 +1713,32 @@ with tabs[1]:
             st.session_state.kc_rows.extend(rows_pp); st.success(f" {lt_pp} lt de pintura + {len(extras)} extras")
 
 
-# ══════════ TAB 3 — COLUMNA (7 secciones CM-V3.0) ══════════
+#  TAB 3 — COLUMNA (7 secciones CM-V3.0) 
 with tabs[2]:
     st.subheader("Calculadora de Columna")
     st.caption(f"CM-V3.0 | 7 tipos de sección | {norma_sel}")
 
     SECCION_TIPOS = [
-        "■ Sec.1  V1·E.1","■■ Sec.2  V1+V2·E.1","■■ Sec.3  V1+V2·E.1+E.2",
-        "■■ Sec.4  V1+V2·E.1 cruzado","■■■ Sec.5  V1+V2·E.1+E.2+E.3",
-        "n  Ilimitado","□ Castillo",
+        " Sec.1  V1·E.1"," Sec.2  V1+V2·E.1"," Sec.3  V1+V2·E.1+E.2",
+        " Sec.4  V1+V2·E.1 cruzado"," Sec.5  V1+V2·E.1+E.2+E.3",
+        "n  Ilimitado"," Castillo",
     ]
     # Imágenes SVG inline para cada tipo de sección
     _SEC_SVG = {
-        "■ Sec.1  V1·E.1": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Sec.1  V1·E.1": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <circle cx='9' cy='9' r='3.5' fill='#ff6b35'/><circle cx='45' cy='9' r='3.5' fill='#ff6b35'/>
           <circle cx='9' cy='45' r='3.5' fill='#ff6b35'/><circle cx='45' cy='45' r='3.5' fill='#ff6b35'/>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='none' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='4,3'/>
         </svg>""",
-        "■■ Sec.2  V1+V2·E.1": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Sec.2  V1+V2·E.1": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <circle cx='9' cy='9' r='3.5' fill='#ff6b35'/><circle cx='45' cy='9' r='3.5' fill='#ff6b35'/>
           <circle cx='9' cy='45' r='3.5' fill='#ff6b35'/><circle cx='45' cy='45' r='3.5' fill='#ff6b35'/>
           <circle cx='9' cy='27' r='3.5' fill='#ffd700'/><circle cx='45' cy='27' r='3.5' fill='#ffd700'/>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='none' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='4,3'/>
         </svg>""",
-        "■■ Sec.3  V1+V2·E.1+E.2": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Sec.3  V1+V2·E.1+E.2": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <circle cx='9' cy='9' r='3.5' fill='#ff6b35'/><circle cx='45' cy='9' r='3.5' fill='#ff6b35'/>
           <circle cx='9' cy='45' r='3.5' fill='#ff6b35'/><circle cx='45' cy='45' r='3.5' fill='#ff6b35'/>
@@ -1743,7 +1746,7 @@ with tabs[2]:
           <line x1='27' y1='9' x2='27' y2='45' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='3,2'/>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='none' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='4,3'/>
         </svg>""",
-        "■■ Sec.4  V1+V2·E.1 cruzado": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Sec.4  V1+V2·E.1 cruzado": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <circle cx='9' cy='9' r='3.5' fill='#ff6b35'/><circle cx='45' cy='9' r='3.5' fill='#ff6b35'/>
           <circle cx='9' cy='45' r='3.5' fill='#ff6b35'/><circle cx='45' cy='45' r='3.5' fill='#ff6b35'/>
@@ -1753,7 +1756,7 @@ with tabs[2]:
           <line x1='9' y1='27' x2='45' y2='27' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='3,2'/>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='none' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='4,3'/>
         </svg>""",
-        "■■■ Sec.5  V1+V2·E.1+E.2+E.3": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Sec.5  V1+V2·E.1+E.2+E.3": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='2' y='2' width='50' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <circle cx='9' cy='9' r='3.5' fill='#ff6b35'/><circle cx='45' cy='9' r='3.5' fill='#ff6b35'/>
           <circle cx='9' cy='45' r='3.5' fill='#ff6b35'/><circle cx='45' cy='45' r='3.5' fill='#ff6b35'/>
@@ -1766,7 +1769,7 @@ with tabs[2]:
           <rect x='2' y='2' width='50' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <text x='27' y='34' text-anchor='middle' font-size='22' font-weight='bold' fill='#90caf9' font-family='serif'>n</text>
         </svg>""",
-        "□ Castillo": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Castillo": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='6' y='6' width='42' height='42' rx='3' fill='none' stroke='#4a9eff' stroke-width='2.5'/>
           <rect x='12' y='12' width='30' height='30' rx='2' fill='none' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='4,3'/>
           <circle cx='13' cy='13' r='3' fill='#ff6b35'/><circle cx='41' cy='13' r='3' fill='#ff6b35'/>
@@ -1790,7 +1793,7 @@ with tabs[2]:
                 <span style='font-size:0.65rem;color:#ccc;'>{_lbl}</span></div>""",
                 unsafe_allow_html=True
             )
-            if st.button(""if _selected else "○", key=f"kc_sec_btn_{_i}",
+            if st.button(""if _selected else "", key=f"kc_sec_btn_{_i}",
                          help=_stype, use_container_width=True):
                 st.session_state["kc_col_sec"] = _stype
                 st.rerun()
@@ -1807,7 +1810,7 @@ with tabs[2]:
           </div>
        </div>
        <div style="text-align:center; min-width: 250px;">
-          <h4 style="color:#90caf9; margin-bottom:15px; font-size:1.05rem; letter-spacing: 0.5px;">Elevación ({'Uniforme' if sec_tipo == '□ Castillo' else 'NSR-10 / ACI'})</h4>
+          <h4 style="color:#90caf9; margin-bottom:15px; font-size:1.05rem; letter-spacing: 0.5px;">Elevación ({'Uniforme' if sec_tipo == ' Castillo' else 'NSR-10 / ACI'})</h4>
           <svg width="280" height="340" viewBox="0 0 280 340" xmlns="http://www.w3.org/2000/svg">
              <!-- Losas superior e inferior -->
              <rect x="80" y="10" width="120" height="30" fill="#2d4a6e" opacity="0.6"/>
@@ -1818,9 +1821,9 @@ with tabs[2]:
              <line x1="112" y1="2" x2="112" y2="338" stroke="#ff6b35" stroke-width="2.5"/>
              <line x1="168" y1="2" x2="168" y2="338" stroke="#ff6b35" stroke-width="2.5"/>
 """
-    if "V2" in sec_tipo or sec_tipo.startswith("■■■"):
+    if "V2" in sec_tipo or sec_tipo.startswith(""):
         _html_elevation += '<line x1="140" y1="2" x2="140" y2="338" stroke="#ffd700" stroke-width="2.5"/>'
-    if sec_tipo == "□ Castillo":
+    if sec_tipo == " Castillo":
         for y in range(40, 300, 15):
             _html_elevation += f'<line x1="112" y1="{y}" x2="168" y2="{y}" stroke="#00d4ff" stroke-width="1.5"/>'
         _html_elevation += '<text x="70" y="175" font-size="12" fill="#ccc" text-anchor="end">Estribos uniformes</text>'
@@ -1863,9 +1866,9 @@ with tabs[2]:
     desc_col = st.text_input("Descripción", placeholder="Ej: Columna C1", key="kc_col_desc")
 
     _N_BARS = {
-        "■ Sec.1  V1·E.1":(4,0),"■■ Sec.2  V1+V2·E.1":(4,2),
-        "■■ Sec.3  V1+V2·E.1+E.2":(4,2),"■■ Sec.4  V1+V2·E.1 cruzado":(4,4),
-        "■■■ Sec.5  V1+V2·E.1+E.2+E.3":(4,4),"n  Ilimitado":(0,0),"□ Castillo":(4,0),
+        " Sec.1  V1·E.1":(4,0)," Sec.2  V1+V2·E.1":(4,2),
+        " Sec.3  V1+V2·E.1+E.2":(4,2)," Sec.4  V1+V2·E.1 cruzado":(4,4),
+        " Sec.5  V1+V2·E.1+E.2+E.3":(4,4),"n  Ilimitado":(0,0)," Castillo":(4,0),
     }
     n_v1_default, n_v2_default = _N_BARS[sec_tipo]
 
@@ -1902,27 +1905,27 @@ with tabs[2]:
         rec_col = st.number_input("Recubrimiento [m]",0.0,value=0.05,step=0.01,key="kc_col_rec")
 
     with col_z:
-        if sec_tipo!="□ Castillo":
+        if sec_tipo!=" Castillo":
             st.markdown("** Zonas**")
             zona_conf = st.number_input("Confinada ZC [m]",0.0,value=2.0,step=0.1,key="kc_col_zc")
             zona_cent = st.number_input("Central [m]",0.0,value=3.0,step=0.1,key="kc_col_zce")
             nudo_sup  = st.number_input("Nudo sup. [m]",0.0,value=0.50,step=0.05,key="kc_col_ns")
             nudo_inf  = st.number_input("Nudo inf. [m]",0.0,value=0.50,step=0.05,key="kc_col_ni")
-        st.markdown("**⚙ Estribos E.1**")
+        st.markdown("** Estribos E.1**")
         long_e1 = st.number_input("Long. E.1 [m]",0.0,value=round(2*(a_col+b_col)-8*max(rec_col,0.05)+0.30,3),step=0.01,key="kc_col_le1")
         var_e1  = st.selectbox("Ø E.1:",[v["nombre"] for v in VARILLAS],index=1,key="kc_col_ve1"); vkd_e1=next(v for v in VARILLAS if v["nombre"]==var_e1)
-        if sec_tipo=="□ Castillo":
+        if sec_tipo==" Castillo":
             sep_cast=st.number_input("Separación [m]",0.0,value=0.12,step=0.01,key="kc_col_scast")
         else:
             sep_ZC   = st.number_input("Sep. ZC [m]",0.0,value=0.12,step=0.01,key="kc_col_szc")
             sep_cent = st.number_input("Sep. Centro [m]",0.0,value=0.12,step=0.01,key="kc_col_scen")
             sep_nudo = st.number_input("Sep. Nudo [m]",0.0,value=0.12,step=0.01,key="kc_col_snud")
         if "E.2" in sec_tipo:
-            st.markdown("**⚙ Estribos E.2**")
+            st.markdown("** Estribos E.2**")
             long_e2=st.number_input("Long. E.2 [m]",0.0,value=round((a_col-2*max(rec_col,0.05))+0.20,3),step=0.01,key="kc_col_le2")
             var_e2=st.selectbox("Ø E.2:",[v["nombre"] for v in VARILLAS],index=1,key="kc_col_ve2"); vkd_e2=next(v for v in VARILLAS if v["nombre"]==var_e2)
         if "E.3" in sec_tipo:
-            st.markdown("**⚙ Estribos E.3**")
+            st.markdown("** Estribos E.3**")
             long_e3=st.number_input("Long. E.3 [m]",0.0,value=round((b_col-2*max(rec_col,0.05))+0.20,3),step=0.01,key="kc_col_le3")
             var_e3=st.selectbox("Ø E.3:",[v["nombre"] for v in VARILLAS],index=0,key="kc_col_ve3"); vkd_e3=next(v for v in VARILLAS if v["nombre"]==var_e3)
 
@@ -1934,7 +1937,7 @@ with tabs[2]:
     kg_v1 = n_v1*long_bar*vkd_v1["kg_m"]*cant_col*(1+desp_long_col/100)
     kg_v2 = (n_v2*long_bar*vkd_v2["kg_m"]*cant_col*(1+desp_long_col/100)) if vkd_v2 else 0
     kg_long = kg_v1+kg_v2
-    if sec_tipo=="□ Castillo":
+    if sec_tipo==" Castillo":
         n_est_e1 = math.floor(alt_col/max(sep_cast,0.01))+1
     else:
         n_est_e1 = math.floor(zona_conf/max(sep_ZC,0.01))*2 + math.floor(zona_cent/max(sep_cent,0.01))
@@ -1944,7 +1947,7 @@ with tabs[2]:
     kg_est = kg_e1+kg_e2+kg_e3; kg_ace_total=kg_long+kg_est
     costo_col = bol_col*float(p.get("cemento",0))+arena_col*float(p.get("arena",0))+grava_col*float(p.get("grava",0))+kg_ace_total*float(p.get("acero_kg",0))
 
-    # ── Costos unitarios ──
+    #  Costos unitarios 
     _cp_cem  = float(p.get("cemento", 0))
     _cp_are  = float(p.get("arena", 0))
     _cp_gra  = float(p.get("grava", 0))
@@ -2028,7 +2031,7 @@ with tabs[2]:
   <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
     <div style="color:#ffcc80;font-size:11px;"> COSTO TOTAL</div>
     <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_col:,.0f}</b></div>
-</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;"> Moneda: <b>{moneda}</b> | Norma: {norma_sel}</div>""", unsafe_allow_html=True)
 
     if st.button("Agregar Columna al Resumen", key="kc_add_col", type="primary"):
         lb = desc_col or "Columna"
@@ -2043,26 +2046,26 @@ with tabs[2]:
         st.success(f" {lb}: {bol_col} bultos cemento | {kg_long:.1f} kg long. | {kg_est:.1f} kg estrib. | {moneda} {costo_col:,.0f}")
 
 
-# ══════════ TAB 4 — VIGA (4 secciones CM-V3.0) ══════════
+#  TAB 4 — VIGA (4 secciones CM-V3.0) 
 with tabs[3]:
     st.subheader("Calculadora de Viga")
     st.caption(f"CM-V3.0 | 4 tipos | Acero +/- | {norma_sel}")
 
-    SEC_VIGA = ["■ Sec.1  A+:2 A-:2", "■■ Sec.2  A+:3 A-:2", "■■■ Sec.3  A+:4 A-:2", "n  Ilimitado"]
+    SEC_VIGA = [" Sec.1  A+:2 A-:2", " Sec.2  A+:3 A-:2", " Sec.3  A+:4 A-:2", "n  Ilimitado"]
     _VIGA_SVG = {
-        "■ Sec.1  A+:2 A-:2": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Sec.1  A+:2 A-:2": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='8' y='2' width='38' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <circle cx='15' cy='9' r='3.5' fill='#ff6b35'/><circle cx='39' cy='9' r='3.5' fill='#ff6b35'/>
           <circle cx='15' cy='45' r='3.5' fill='#ff6b35'/><circle cx='39' cy='45' r='3.5' fill='#ff6b35'/>
           <rect x='8' y='2' width='38' height='50' rx='3' fill='none' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='4,3'/>
         </svg>""",
-        "■■ Sec.2  A+:3 A-:2": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Sec.2  A+:3 A-:2": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='8' y='2' width='38' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <circle cx='15' cy='9' r='3.5' fill='#ff6b35'/><circle cx='39' cy='9' r='3.5' fill='#ff6b35'/>
           <circle cx='15' cy='45' r='3.5' fill='#ff6b35'/><circle cx='27' cy='45' r='3.5' fill='#ff6b35'/><circle cx='39' cy='45' r='3.5' fill='#ff6b35'/>
           <rect x='8' y='2' width='38' height='50' rx='3' fill='none' stroke='#00d4ff' stroke-width='1.5' stroke-dasharray='4,3'/>
         </svg>""",
-        "■■■ Sec.3  A+:4 A-:2": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
+        " Sec.3  A+:4 A-:2": """<svg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'>
           <rect x='8' y='2' width='38' height='50' rx='3' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2.5'/>
           <circle cx='15' cy='9' r='3.5' fill='#ff6b35'/><circle cx='39' cy='9' r='3.5' fill='#ff6b35'/>
           <circle cx='13' cy='45' r='3' fill='#ff6b35'/><circle cx='22' cy='45' r='3' fill='#ff6b35'/><circle cx='32' cy='45' r='3' fill='#ff6b35'/><circle cx='41' cy='45' r='3' fill='#ff6b35'/>
@@ -2090,7 +2093,7 @@ with tabs[3]:
                 <span style='font-size:0.65rem;color:#ccc;'>{_lbl}</span></div>""",
                 unsafe_allow_html=True
             )
-            if st.button(""if _selected else "○", key=f"kc_vsec_btn_{_i}",
+            if st.button(""if _selected else "", key=f"kc_vsec_btn_{_i}",
                          help=_stype, use_container_width=True):
                 st.session_state["kc_viga_sec"] = _stype
                 st.rerun()
@@ -2182,7 +2185,7 @@ with tabs[3]:
     _stc.html(_html_viga_elevation, height=280, scrolling=False)
     desc_viga = st.text_input("Descripción", placeholder="Ej: Viga V-101", key="kc_viga_desc")
 
-    _NBV = {"■ Sec.1  A+:2 A-:2":(2,2),"■■ Sec.2  A+:3 A-:2":(3,2),"■■■ Sec.3  A+:4 A-:2":(4,2),"n  Ilimitado":(0,0)}
+    _NBV = {" Sec.1  A+:2 A-:2":(2,2)," Sec.2  A+:3 A-:2":(3,2)," Sec.3  A+:4 A-:2":(4,2),"n  Ilimitado":(0,0)}
     nb_pos_def, nb_neg_def = _NBV[sec_viga]
 
     vi1, vi2, vi3 = st.columns(3)
@@ -2224,7 +2227,7 @@ with tabs[3]:
         st.markdown("** Zonas**")
         zona_conf_v = st.number_input("Confinada ZC [m]", 0.0, value=1.0, step=0.1, key="kc_viga_zc")
         zona_cent_v = st.number_input("Central [m]", 0.0, value=max(largo_viga - 2*zona_conf_v, 0.0), step=0.1, key="kc_viga_zce")
-        st.markdown("**⚙ Estribos E.1**")
+        st.markdown("** Estribos E.1**")
         long_e1_v = st.number_input("Long. E.1 [m]", 0.0, value=round(2*(a_viga + b_viga) - 8*max(rec_viga,0.05) + 0.30, 3), step=0.01, key="kc_viga_le1")
         var_e1_v = st.selectbox("Ø E.1:", [v["nombre"] for v in VARILLAS], index=1, key="kc_viga_ve1")
         vkd_e1_v = next(v for v in VARILLAS if v["nombre"] == var_e1_v)
@@ -2267,7 +2270,7 @@ with tabs[3]:
         st.metric("N° estribos ZC×2", f"{n_zc_v}")
         st.metric("N° estribos centro", f"{n_cen_v}")
         st.metric("N° total", f"{n_est_v}")
-        st.metric("⚙ Peso E.1", f"{kg_est_v:.2f} kg")
+        st.metric(" Peso E.1", f"{kg_est_v:.2f} kg")
     with rv4:
         st.markdown("**Totales**")
         st.metric("Acero total", f"{kg_ace_v:.2f} kg")
@@ -2302,7 +2305,7 @@ with tabs[3]:
   <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
     <div style="color:#ffcc80;font-size:11px;"> COSTO TOTAL</div>
     <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_v:,.0f}</b></div>
-</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;"> Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
     if st.button("Agregar Viga al Resumen", key="kc_add_viga", type="primary"):
         lb = desc_viga or "Viga"
         st.session_state.kc_rows.extend([
@@ -2316,15 +2319,15 @@ with tabs[3]:
         st.success(f" {lb}: {bol_viga} bultos cemento | {kg_long_v:.1f} kg long. | {kg_est_v:.1f} kg estrib. | Costo: {moneda} {costo_v:,.0f}")
 
 
-# ══════════ TAB 5 — LOSA (CM-V3.0) ══════════
+#  TAB 5 — LOSA (CM-V3.0) 
 with tabs[4]:
     st.subheader("Calculadora de Losa")
     st.caption(f"CM-V3.0 | Maciza · Nervada · Ilimitado | {norma_sel}")
 
-    TIPOS_LOSA = ["■ Maciza (1 capa)", "■■ Maciza (2 capas)", "▤ Nervada", "⊞ Casetonada", "n Ilimitado"]
+    TIPOS_LOSA = [" Maciza (1 capa)", " Maciza (2 capas)", " Nervada", "⊞ Casetonada", "n Ilimitado"]
 
     _LOSA_SVG = {
-        "■ Maciza (1 capa)": """<svg width='64' height='36' viewBox='0 0 64 36' xmlns='http://www.w3.org/2000/svg'>
+        " Maciza (1 capa)": """<svg width='64' height='36' viewBox='0 0 64 36' xmlns='http://www.w3.org/2000/svg'>
           <rect x='4' y='6' width='56' height='22' rx='2' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2'/>
           <line x1='12' y1='22' x2='18' y2='22' stroke='#ff6b35' stroke-width='2'/>
           <line x1='24' y1='22' x2='30' y2='22' stroke='#ff6b35' stroke-width='2'/>
@@ -2332,7 +2335,7 @@ with tabs[4]:
           <line x1='48' y1='22' x2='54' y2='22' stroke='#ff6b35' stroke-width='2'/>
           <line x1='4' y1='22' x2='60' y2='22' stroke='#00d4ff' stroke-width='1' stroke-dasharray='3,3'/>
         </svg>""",
-        "■■ Maciza (2 capas)": """<svg width='64' height='36' viewBox='0 0 64 36' xmlns='http://www.w3.org/2000/svg'>
+        " Maciza (2 capas)": """<svg width='64' height='36' viewBox='0 0 64 36' xmlns='http://www.w3.org/2000/svg'>
           <rect x='4' y='6' width='56' height='22' rx='2' fill='#1e3a5f' stroke='#4a9eff' stroke-width='2'/>
           <line x1='12' y1='12' x2='18' y2='12' stroke='#ff6b35' stroke-width='2'/>
           <line x1='24' y1='12' x2='30' y2='12' stroke='#ff6b35' stroke-width='2'/>
@@ -2343,7 +2346,7 @@ with tabs[4]:
           <line x1='36' y1='22' x2='42' y2='22' stroke='#ff6b35' stroke-width='2'/>
           <line x1='48' y1='22' x2='54' y2='22' stroke='#ff6b35' stroke-width='2'/>
         </svg>""",
-        "▤ Nervada": """<svg width='64' height='36' viewBox='0 0 64 36' xmlns='http://www.w3.org/2000/svg'>
+        " Nervada": """<svg width='64' height='36' viewBox='0 0 64 36' xmlns='http://www.w3.org/2000/svg'>
           <rect x='4' y='6' width='56' height='8' rx='1' fill='#1e3a5f' stroke='#4a9eff' stroke-width='1.5'/>
           <rect x='8'  y='14' width='10' height='16' rx='1' fill='#1e3a5f' stroke='#4a9eff' stroke-width='1.5'/>
           <rect x='27' y='14' width='10' height='16' rx='1' fill='#1e3a5f' stroke='#4a9eff' stroke-width='1.5'/>
@@ -2392,15 +2395,15 @@ with tabs[4]:
                 <span style='font-size:0.65rem;color:#ccc;'>{_lbl}</span></div>""",
                 unsafe_allow_html=True
             )
-            if st.button(""if _selected else "○", key=f"kc_lsec_btn_{_i}",
+            if st.button(""if _selected else "", key=f"kc_lsec_btn_{_i}",
                          help=_ltype, use_container_width=True):
                 st.session_state["kc_losa_tipo"] = _ltype
                 st.rerun()
     tipo_losa = st.session_state.get("kc_losa_tipo", TIPOS_LOSA[0])
 
     # ======= DIAGRAMA SVG DE LOSA =======
-    _is_nervada    = tipo_losa == "▤ Nervada"
-    _is_2capas     = tipo_losa == "■■ Maciza (2 capas)"
+    _is_nervada    = tipo_losa == " Nervada"
+    _is_2capas     = tipo_losa == " Maciza (2 capas)"
     _is_casetonada = tipo_losa == "⊞ Casetonada"
     _html_losa_diag = f"""
     <div style="background:#0a192f; padding:16px; border-radius:8px; border:1px solid #1e3a5f;
@@ -2501,7 +2504,7 @@ with tabs[4]:
         fc_l     = st.selectbox("Resistencia [kg/cm²]:", [m["fc_kgcm2"] for m in MIX_DESIGNS], index=3, key="kc_losa_fc")
         mix_l    = next(m for m in MIX_DESIGNS if m["fc_kgcm2"] == fc_l)
         rec_l    = st.number_input("Recubrimiento [m]", 0.0, value=0.03, step=0.01, key="kc_losa_rec")
-        if tipo_losa == "▤ Nervada":
+        if tipo_losa == " Nervada":
             ancho_nrv = st.number_input("Ancho nervio [m]", 0.0, value=0.10, step=0.01, key="kc_losa_anrv")
             sep_nrv   = st.number_input("Separación nervios [m]", 0.0, value=0.60, step=0.05, key="kc_losa_snrv")
             esp_losa_nrv = st.number_input("Espesor capa superficial [m]", 0.0, value=0.05, step=0.01, key="kc_losa_esnrv")
@@ -2530,7 +2533,7 @@ with tabs[4]:
         long_x = largo_l + 2*rec_l
         var_x  = st.selectbox("Ø acero X:", [v["nombre"] for v in VARILLAS], index=2, key="kc_losa_varx")
         vkd_x  = next(v for v in VARILLAS if v["nombre"] == var_x)
-        if tipo_losa in ["■■ Maciza (2 capas)", "n Ilimitado"]:
+        if tipo_losa in [" Maciza (2 capas)", "n Ilimitado"]:
             st.markdown("** Acero Dirección X (capa sup.)**")
             if tipo_losa == "n Ilimitado":
                 n_barras_x2 = st.number_input("N° barras X superior", min_value=0, value=5, step=1, key="kc_losa_nbx2")
@@ -2556,7 +2559,7 @@ with tabs[4]:
         long_y = ancho_l + 2*rec_l
         var_y  = st.selectbox("Ø acero Y:", [v["nombre"] for v in VARILLAS], index=2, key="kc_losa_vary")
         vkd_y  = next(v for v in VARILLAS if v["nombre"] == var_y)
-        if tipo_losa in ["■■ Maciza (2 capas)", "n Ilimitado"]:
+        if tipo_losa in [" Maciza (2 capas)", "n Ilimitado"]:
             st.markdown("** Acero Dirección Y (capa sup.)**")
             if tipo_losa == "n Ilimitado":
                 n_barras_y2 = st.number_input("N° barras Y superior", min_value=0, value=5, step=1, key="kc_losa_nby2")
@@ -2568,9 +2571,9 @@ with tabs[4]:
         else:
             n_barras_y2 = 0; vkd_y2 = None; var_y2 = None
 
-    # ── Calculations ──
+    #  Calculations 
     area_l = largo_l * ancho_l * cant_l
-    if tipo_losa == "▤ Nervada":
+    if tipo_losa == " Nervada":
         # Nervada 1 dirección: chapa sup + nervios
         n_nervios_x  = math.ceil(largo_l  / max(sep_nrv, 0.01)) + 1
         n_nervios_y  = math.ceil(ancho_l  / max(sep_nrv, 0.01)) + 1
@@ -2601,7 +2604,7 @@ with tabs[4]:
     kg_ace_l = kg_x + kg_x2 + kg_y + kg_y2 + kg_temp
     costo_l = bol_l*float(p.get("cemento",0)) + arena_l*float(p.get("arena",0)) + grava_l*float(p.get("grava",0)) + kg_ace_l*float(p.get("acero_kg",0))
 
-    # ── Results ──
+    #  Results 
     st.markdown("---"); st.markdown("####  Resumen de Resultados")
     rl1,rl2,rl3,rl4 = st.columns(4)
     with rl1:
@@ -2650,7 +2653,7 @@ with tabs[4]:
   <div style="background:#1a1a0d;border:1px solid #6d6000;border-radius:8px;padding:6px 12px;min-width:130px;">
     <div style="color:#ffcc80;font-size:11px;"> COSTO TOTAL</div>
     <b style="color:#ffdd57;font-size:1.1em;">{moneda} {costo_l:,.0f}</b></div>
-</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;">⚠ Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
+</div><div style="margin-top:5px;font-size:10px;color:#ff8f00;"> Moneda: <b>{moneda}</b></div>""", unsafe_allow_html=True)
     if st.button("Agregar Losa al Resumen", key="kc_add_losa", type="primary"):
         lb = desc_losa or f"Losa {tipo_losa[:5]}"
         st.session_state.kc_rows.extend([
@@ -2663,7 +2666,7 @@ with tabs[4]:
         st.success(f" {lb}: {bol_l} bultos cemento | {kg_ace_l:.1f} kg acero | Vol {vol_neto:.2f}m³ | Costo: {moneda} {costo_l:,.0f}")
 
 
-# ══════════ TAB 6 — CIMIENTO (CM-V3.0 · 11 modos) ══════════
+#  TAB 6 — CIMIENTO (CM-V3.0 · 11 modos) 
 with tabs[5]:
     st.subheader("Calculadora de Cimiento")
     st.caption(f"CM-V3.0 | 11 modos | {norma_sel}")
@@ -2680,9 +2683,9 @@ with tabs[5]:
 
     MODOS_CIM = [
         " Ciclópeo Cúbico"," Ciclópeo Central"," Ciclópeo Lateral",
-        "⬜ Zapata Central","⬜ Zapata Lateral","⬜ Zapata Esquinera",
+        " Zapata Central"," Zapata Lateral"," Zapata Esquinera",
         "% Losa Cim · Por %","D Losa Cim · Dimensión",
-        "→ Zapata Corrida","⚡ Electromalla"," Suelo Cemento",
+        "→ Zapata Corrida"," Electromalla"," Suelo Cemento",
     ]
     modo_cim = st.radio("Modo:", MODOS_CIM, horizontal=True, key="kc_cim_modo")
     st.markdown("---")
@@ -2807,7 +2810,7 @@ with tabs[5]:
     ci1, ci2, ci3 = st.columns(3)
 
 
-    # ─────── CICLÓPEO ───────
+    #  CICLÓPEO 
     if modo_cim in [" Ciclópeo Cúbico"," Ciclópeo Central"," Ciclópeo Lateral"]:
         with ci1:
             st.markdown("** Dimensiones**")
@@ -2854,8 +2857,8 @@ with tabs[5]:
         with rci2:
             st.metric("Dosif.",dos_mort); st.metric("% Piedra",f"{pct_piedra}%"); st.metric("Vol Piedra",f"{vol_piedra:.2f}m³"); st.metric("Vol Mortero",f"{vol_mort:.2f}m³")
 
-    # ─────── ZAPATAS AISLADAS ───────
-    elif modo_cim in ["⬜ Zapata Central","⬜ Zapata Lateral","⬜ Zapata Esquinera"]:
+    #  ZAPATAS AISLADAS 
+    elif modo_cim in [" Zapata Central"," Zapata Lateral"," Zapata Esquinera"]:
         with ci1:
             st.markdown("** Losa / Concreto**")
             esp_z  = st.number_input("Espesor [m]",0.0,value=0.30,step=0.05,key="kc_cim_ez")
@@ -2903,7 +2906,7 @@ with tabs[5]:
         with rz3: st.metric(f"Acero Y ({n_bars_y_z}brs)",f"{kg_y_z:.2f} kg")
         with rz4: st.metric("Acero total",f"{kg_ace_z:.2f} kg"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
-    # ─────── LOSA CIMENTACIÓN POR % ───────
+    #  LOSA CIMENTACIÓN POR % 
     elif modo_cim == "% Losa Cim · Por %":
         with ci1:
             st.markdown("** Dimensiones**")
@@ -2927,7 +2930,7 @@ with tabs[5]:
         with rp1: st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Arena",f"{arena_cim:.2f}m³"); st.metric("Grava",f"{grava_cim:.2f}m³"); st.metric("Agua",f"{agua_cim:.0f}lt")
         with rp2: st.metric("Acero",f"{kg_ace_lc:.2f} kg"); st.metric("Dosif",mix_lc["dos"]); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
-    # ─────── LOSA CIMENTACIÓN DIMENSIÓN ───────
+    #  LOSA CIMENTACIÓN DIMENSIÓN 
     elif modo_cim == "D Losa Cim · Dimensión":
         with ci1:
             st.markdown("** Losa / Concreto**")
@@ -2971,7 +2974,7 @@ with tabs[5]:
         with rd3: st.metric(f"Ya ({nb_ya}brs)",f"{kg_ya:.2f}kg"); st.metric(f"Yb ({nb_yb}brs)",f"{kg_yb:.2f}kg")
         with rd4: st.metric("Total Acero",f"{kg_ace_ld:.2f}kg"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
-    # ─────── ZAPATA CORRIDA ───────
+    #  ZAPATA CORRIDA 
     elif modo_cim == "→ Zapata Corrida":
         with ci1:
             st.markdown("** Dimensiones**")
@@ -3006,8 +3009,8 @@ with tabs[5]:
         with rzc3: st.metric(f"Acero Y ({nb_yzc}brs)",f"{kg_yzc:.2f}kg")
         with rzc4: st.metric("Total",f"{kg_ace_zc:.2f}kg"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
-    # ─────── ELECTROMALLA ───────
-    elif modo_cim == "⚡ Electromalla":
+    #  ELECTROMALLA 
+    elif modo_cim == " Electromalla":
         kg_ace_lc = 0
         with ci1:
             st.markdown("** Dimensiones**")
@@ -3019,7 +3022,7 @@ with tabs[5]:
             mix_em=next(m for m in MIX_DESIGNS if m["fc_kgcm2"]==fc_em)
             desp_cem=st.select_slider("Desp.Concreto [%]",[1,2,3,4,5,6,8],value=4,key="kc_cim_dcem"); desp_aem=st.select_slider("Desp.Electromalla [%]",[1,2,3,4,5,6,8],value=5,key="kc_cim_daem")
         with ci2:
-            st.markdown("**⚡ Electromalla**")
+            st.markdown("** Electromalla**")
             tipo_em=st.selectbox("Tipo:",list(_ELECTROMALLA_AREA.keys()),key="kc_cim_tem")
         area_em=anc_em*lar_em*cant_cim
         vol_em=area_em*esp_em*(1+desp_cem/100)
@@ -3029,9 +3032,9 @@ with tabs[5]:
         st.markdown("---"); st.markdown("####  Resultados")
         rem1,rem2=st.columns(2)
         with rem1: st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Arena",f"{arena_cim:.2f}m³"); st.metric("Grava",f"{grava_cim:.2f}m³"); st.metric("Agua",f"{agua_cim:.0f}lt")
-        with rem2: st.metric("⚡ Electromalla",f"{n_piezas_em} piezas"); st.metric("Dosif.",mix_em["dos"]); st.metric("Volumen",f"{vol_em:.2f}m³"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
+        with rem2: st.metric(" Electromalla",f"{n_piezas_em} piezas"); st.metric("Dosif.",mix_em["dos"]); st.metric("Volumen",f"{vol_em:.2f}m³"); st.metric("Costo",f"{moneda} {costo_c:,.0f}")
 
-    # ─────── SUELO CEMENTO ───────
+    #  SUELO CEMENTO 
     elif modo_cim == " Suelo Cemento":
         kg_ace_lc = 0; arena_cim = 0; grava_cim = 0
         with ci1:
@@ -3054,7 +3057,7 @@ with tabs[5]:
         with rsc1: st.metric("Cemento",f"{bol_cim} bultos"); st.metric("Suelo Selecto",f"{vol_suelo:.2f} m³")
         with rsc2: st.metric("Dosif.",dos_sc); st.metric("Volumen",f"{vol_suelo:.2f} m³"); st.metric("Costo cem",f"{moneda} {costo_c:,.0f}")
 
-    # ─────── BOTÓN AGREGAR ───────
+    #  BOTÓN AGREGAR 
     # Summary strip
     st.markdown(
         f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;">'
@@ -3068,7 +3071,7 @@ with tabs[5]:
         st.success(f" {lb} agregado al resumen")
 
 
-# ══════════ TAB 7 — MURO DE CONTENCIÓN (CM-V3.0 · 11 modos) ══════════
+#  TAB 7 — MURO DE CONTENCIÓN (CM-V3.0 · 11 modos) 
 with tabs[6]:
     st.subheader("Calculadora de Muro de Contención")
     st.caption(f"CM-V3.0 | Ciclópeo (6) + Estructural (4) | {norma_sel}")
@@ -3085,9 +3088,9 @@ with tabs[6]:
     MODOS_MURO = [
         " Ciclópeo Trapecio",
         " Ciclópeo Trapecio+Pie",
-        "▮  Ciclópeo Rectangular",
-        "▮ Dos Secciones",
-        "▮ Dos Secciones+Pie",
+        "  Ciclópeo Rectangular",
+        " Dos Secciones",
+        " Dos Secciones+Pie",
         "m³ Volumen Directo",
         " Estructural L-básico",
         " Estructural L-completo",
@@ -3181,10 +3184,10 @@ with tabs[6]:
         import streamlit.components.v1 as _stc_m
         _stc_m.html(_html_muro_diag, height=270, scrolling=False)
 
-    # ─────── CICLÓPEO SHAPES ───────
+    #  CICLÓPEO SHAPES 
     if modo_m in [" Ciclópeo Trapecio"," Ciclópeo Trapecio+Pie",
-                  "▮  Ciclópeo Rectangular","▮ Dos Secciones",
-                  "▮ Dos Secciones+Pie","m³ Volumen Directo"]:
+                  "  Ciclópeo Rectangular"," Dos Secciones",
+                  " Dos Secciones+Pie","m³ Volumen Directo"]:
         mc1,mc2,mc3 = st.columns(3)
         with mc1:
             st.markdown("** Dimensiones**")
@@ -3194,16 +3197,16 @@ with tabs[6]:
                 vol_muro_neto = vol_base_m * cant_m
             else:
                 corona_m = st.number_input("Corona C [m]",0.0,value=0.30,step=0.05,key="kc_muro_C")
-                if modo_m != "▮  Ciclópeo Rectangular":
+                if modo_m != "  Ciclópeo Rectangular":
                     base_m = st.number_input("Base B [m]",0.0,value=1.0,step=0.1,key="kc_muro_B")
                 else:
                     base_m = corona_m
                 alt_m = st.number_input("Altura H [m]",0.0,value=1.50,step=0.1,key="kc_muro_H")
-                if modo_m in [" Ciclópeo Trapecio+Pie","▮ Dos Secciones+Pie"]:
+                if modo_m in [" Ciclópeo Trapecio+Pie"," Dos Secciones+Pie"]:
                     pie_m = st.number_input("Pie I [m]",0.0,value=0.30,step=0.05,key="kc_muro_I")
                 else:
                     pie_m = 0.0
-                if modo_m in ["▮ Dos Secciones","▮ Dos Secciones+Pie"]:
+                if modo_m in [" Dos Secciones"," Dos Secciones+Pie"]:
                     base2_m = st.number_input("Base 2 B [m]",0.0,value=2.0,step=0.1,key="kc_muro_B2")
                     alt2_m  = st.number_input("Altura 2 H [m]",0.0,value=0.30,step=0.05,key="kc_muro_H2")
                 else:
@@ -3211,13 +3214,13 @@ with tabs[6]:
                 largo_m = st.number_input("Largo [m]",0.0,value=5.0,step=0.5,key="kc_muro_L")
                 cant_m  = st.number_input("Cantidad",min_value=1,value=1,key="kc_muro_qty_2")
                 # Volume formula by shape
-                if modo_m == "▮  Ciclópeo Rectangular":
+                if modo_m == "  Ciclópeo Rectangular":
                     vol_muro_neto = corona_m * alt_m * largo_m * cant_m
                 elif modo_m in [" Ciclópeo Trapecio"," Ciclópeo Trapecio+Pie"]:
                     vol_muro_neto = ((corona_m+base_m)/2 * alt_m + corona_m*pie_m) * largo_m * cant_m
                 else:  # Dos secciones
                     vol_muro_neto = ((corona_m+base_m)/2 * alt_m + base2_m*alt2_m) * largo_m * cant_m
-                    if modo_m == "▮ Dos Secciones+Pie":
+                    if modo_m == " Dos Secciones+Pie":
                         vol_muro_neto += corona_m * pie_m * largo_m * cant_m
                 st.caption(f"Vol neto: {vol_muro_neto:.2f}m³")
         with mc2:
@@ -3252,7 +3255,7 @@ with tabs[6]:
             st.metric("Vol Piedra",f"{vol_p_neto:.2f} m³"); st.metric("Vol Mortero",f"{vol_mort_n:.2f} m³")
             st.metric("Costo est.",f"{moneda} {costo_m:,.0f}")
 
-    # ─────── ESTRUCTURAL ───────
+    #  ESTRUCTURAL 
     else:
         is_2capas = "2 Cap" in modo_m
         has_hcim  = "H.Cim" in modo_m
@@ -3336,7 +3339,7 @@ with tabs[6]:
         with re3: st.metric("Long. Muro",f"{kg_lm:.2f}kg"); st.metric("Long. Cim.",f"{kg_lc:.2f}kg"); st.metric("H.Cim.",f"{kg_hc:.2f}kg")
         with re4: st.metric("Acero Total",f"{kg_ace_m:.2f}kg"); st.metric("Vol.Concreto",f"{vol_e:.2f}m³"); st.metric("Costo",f"{moneda} {costo_m:,.0f}")
 
-    # ─────── BOTÓN AGREGAR ───────
+    #  BOTÓN AGREGAR 
     st.markdown(f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;"><span style="color:#ffcc80;">{modo_m}</span></div>',unsafe_allow_html=True)
     if st.button("Agregar Muro al Resumen", key="kc_add_muro", type="primary"):
         lb = desc_m or f"Muro {modo_m[:10]}"
@@ -3348,7 +3351,7 @@ with tabs[6]:
         st.success(f" {lb}: {bol_m} bultos cemento | {kg_ace_m:.1f} kg acero | Costo: {moneda} {costo_m:,.0f}")
 
 
-# ══════════ TAB 14 — SALARIO MÍNIMO Y LIQUIDACIÓN ══════════
+#  TAB 14 — SALARIO MÍNIMO Y LIQUIDACIÓN 
 with tabs[14]:
     sal = SALARIOS_MIN.get(pais)
     if sal:
@@ -3388,7 +3391,7 @@ with tabs[14]:
             f'<span style="color:#a8e6cf;font-weight:500;"> Jornal diario</span>'
             f'<span style="color:#81d4fa;">{moneda} {(devengado/30):,.0f}/día</span></div>'
             f'<div style="display:flex;justify-content:space-between;">'
-            f'<span style="color:#a8e6cf;font-weight:500;">⏱ Costo por hora</span>'
+            f'<span style="color:#a8e6cf;font-weight:500;"> Costo por hora</span>'
             f'<span style="color:#81d4fa;">{moneda} {(devengado/240):,.0f}/h</span></div>'
             f'</div>', unsafe_allow_html=True
         )
@@ -3406,7 +3409,7 @@ with tabs[14]:
             
         if fecha_salida >= fecha_ingreso:
             dias_trabajados = (fecha_salida - fecha_ingreso).days + 1
-            st.info(f"⏳ **Tiempo laborado:** {dias_trabajados} días")
+            st.info(f" **Tiempo laborado:** {dias_trabajados} días")
             
             # Cálculo genérico proporcional al salario
             base_liq = devengado
@@ -3462,12 +3465,12 @@ with tabs[14]:
             import pandas as pd
             st.dataframe(pd.DataFrame(filas_h).set_index("Año"), use_container_width=True)
 
-# ══════════ TAB 16 — CONFIGURACIÓN (13 subtabs) ══════════
+#  TAB 16 — CONFIGURACIÓN (13 subtabs) 
 with tabs[15]:
-    st.subheader("⚙ Configuración del Sistema")
+    st.subheader(" Configuración del Sistema")
     st.caption(f"Personalice dosificaciones, materiales y costos | {norma_sel} | {moneda}")
 
-    # ── Init config session state ──
+    #  Init config session state 
     import pandas as pd
 
     def _init_cfg(key, default_df):
@@ -3580,7 +3583,7 @@ with tabs[15]:
     _init_cfg("kc_cfg_adh_pn",  pd.DataFrame([{"Material":"AD Porcelanato","REN(m²/bol)":2.0,"Agua(lt/bol)":9.45}]))
     _init_cfg("kc_cfg_boq_pn",  pd.DataFrame([{"Material":"BQ Porcelanato","REN(m²/bol)":5.0,"Agua(lt/bol)":8.50}]))
 
-    # ── Aproximaciones init ──
+    #  Aproximaciones init 
     _init_cfg("kc_cfg_aprox", pd.DataFrame([
         {"Material":"Bolsas Cemento y Afinado","Aprox":"no"},
         {"Material":"m3/m2/m","Aprox":"no"},
@@ -3641,12 +3644,12 @@ with tabs[15]:
         {"Material": f"BQ Porcelanato (bolsa)",        "Costo": 7.0  if not _is_cop else 22000},
     ]))
 
-    # ── 13 CONFIG SUB-TABS ──
+    #  13 CONFIG SUB-TABS 
     cfg_tabs = st.tabs(["Concreto","Mortero"," Cemento/Afinado"," Unidades"," Aproximaciones",
                          f" Costos ({moneda})"," Mampostería"," Acero"," Losa"," Perfiles",
                          " Panel Yeso"," Techo"," Piso"])
 
-    # ─ 0: Concreto ─
+    #  0: Concreto 
     with cfg_tabs[0]:
         st.markdown(f"**Dosificaciones del Concreto para 1m³** — Bolsa: {R['peso_bolsa']}kg")
         st.caption("Verifique las dosificaciones según su normativa local.")
@@ -3654,7 +3657,7 @@ with tabs[15]:
         if st.button("Guardar Concreto",key="cfg_sv_mix"):
             st.session_state.kc_cfg_mix = edited_mix; st.success("Dosificaciones guardadas")
 
-    # ─ 1: Mortero ─
+    #  1: Mortero 
     with cfg_tabs[1]:
         st.markdown("**Dosificaciones del Mortero para 1m³**")
         st.caption("Configure las mezclas de mortero para su región.")
@@ -3662,7 +3665,7 @@ with tabs[15]:
         if st.button("Guardar Mortero",key="cfg_sv_mort"):
             st.session_state.kc_cfg_mort = edited_mort; st.success("Mortero guardado")
 
-    # ─ 2: Cemento/Afinado ─
+    #  2: Cemento/Afinado 
     with cfg_tabs[2]:
         ca1, ca2 = st.columns(2)
         with ca1:
@@ -3680,7 +3683,7 @@ with tabs[15]:
             ])
             st.data_editor(afinado_df, use_container_width=True, key="de_afinado")
 
-    # ─ 3: Unidades ─
+    #  3: Unidades 
     with cfg_tabs[3]:
         st.markdown("**Unidades de Agua**")
         agua_opt = st.selectbox("Unidades de Agua:", ["lt","barr","gal"], key="cfg_agua_ud")
@@ -3689,7 +3692,7 @@ with tabs[15]:
         if st.button("Guardar Unidades",key="cfg_sv_ud"):
             st.session_state.kc_cfg_agua_ud = agua_opt; st.success(f"Unidad de agua: {agua_opt}")
 
-    # ─ 4: Aproximaciones ─
+    #  4: Aproximaciones 
     with cfg_tabs[4]:
         st.markdown("**Aproximación de Unidades**")
         st.caption('"no" = ninguna aproximación | "entero" = aproximar al entero más próximo')
@@ -3702,7 +3705,7 @@ with tabs[15]:
         if st.button("Guardar Aproximaciones",key="cfg_sv_aprox"):
             st.session_state.kc_cfg_aprox = edited_aprox; st.success("Aproximaciones guardadas")
 
-    # ─ 5: Costos ─
+    #  5: Costos 
     with cfg_tabs[5]:
         st.markdown(f"**Costos de Materiales — {moneda}**")
         st.caption(f"País: **{pais}** | Los costos están en **{moneda}**. Actualice según los precios actuales de su región.")
@@ -3728,7 +3731,7 @@ with tabs[15]:
                     elif "bloque" in nm and "10x20" in nm: p["bloque"] = float(row.Costo)
                 st.session_state.kc_precios = p; st.success(f"Costos en {moneda} guardados y aplicados")
 
-    # ─ 6: Mampostería ─
+    #  6: Mampostería 
     with cfg_tabs[6]:
         m1, m2 = st.columns(2)
         with m1:
@@ -3743,7 +3746,7 @@ with tabs[15]:
             if st.button("Guardar Ladrillos",key="cfg_sv_lad"):
                 st.session_state.kc_cfg_mamp_lad = edited_lad; st.success("Ladrillos guardados")
 
-    # ─ 7: Acero ─
+    #  7: Acero 
     with cfg_tabs[7]:
         st.markdown("**Configuración de Acero / Varillas**")
         st.caption("DIÁMETRO: nombre de la varilla | m/var: longitud de cada varilla | Kg/m: peso por metro.")
@@ -3751,7 +3754,7 @@ with tabs[15]:
         if st.button("Guardar Acero",key="cfg_sv_ace"):
             st.session_state.kc_cfg_acero = edited_acer; st.success("Acero guardado")
 
-    # ─ 8: Losa ─
+    #  8: Losa 
     with cfg_tabs[8]:
         l1, l2 = st.columns(2)
         with l1:
@@ -3766,7 +3769,7 @@ with tabs[15]:
             if st.button("Guardar Electromalla",key="cfg_sv_elm"):
                 st.session_state.kc_cfg_electromalla = edited_elm; st.success("Electromalla guardada")
 
-    # ─ 9: Perfiles ─
+    #  9: Perfiles 
     with cfg_tabs[9]:
         p1, p2 = st.columns(2)
         with p1:
@@ -3786,7 +3789,7 @@ with tabs[15]:
             st.number_input('Tornillo Estructura 6x1" [Tor/m²]', value=10.0, key="cfg_torn_est_cr")
             st.number_input('Tornillo Panel 7x7/16" [Tor/m²]',  value=5.0,  key="cfg_torn_pan_cr")
 
-    # ─ 10: Panel Yeso ─
+    #  10: Panel Yeso 
     with cfg_tabs[10]:
         py1, py2, py3 = st.columns(3)
         with py1:
@@ -3809,7 +3812,7 @@ with tabs[15]:
             st.markdown("**Aislante Termo-Acústico**")
             st.number_input("m² por unidad", value=10.0, key="cfg_aisl_m2")
 
-    # ─ 11: Techo ─
+    #  11: Techo 
     with cfg_tabs[11]:
         t1, t2 = st.columns(2)
         with t1:
@@ -3824,7 +3827,7 @@ with tabs[15]:
             if st.button("Guardar Tejas",key="cfg_sv_tja"):
                 st.session_state.kc_cfg_tejas = edited_tja; st.success("Tejas guardadas")
 
-    # ─ 12: Piso ─
+    #  12: Piso 
     with cfg_tabs[12]:
         ps1, ps2 = st.columns(2)
         with ps1:
@@ -3849,7 +3852,7 @@ with tabs[15]:
                 st.success("Constantes de instalación guardadas")
 
 
-# ══════════ TAB RESUMEN — TECHO (CM-V3.0 · 7 modos) ══════════
+#  TAB RESUMEN — TECHO (CM-V3.0 · 7 modos) 
 with tabs[7]:
     st.subheader("Calculadora de Techo")
     st.caption(f"CM-V3.0 | Tejas (1A/2A/4A/Área) + Láminas (1/2/3 Filas) | {norma_sel}")
@@ -3879,7 +3882,7 @@ with tabs[7]:
     st.markdown("---")
     desc_t = st.text_input("Descripción", placeholder="Ej: Techo bloque 2", key="kc_techo_desc")
 
-    # ─────── TEJAS (4 modos) ───────
+    #  TEJAS (4 modos) 
     if "1A" in modo_t or "2A" in modo_t or "4A" in modo_t or "Área" in modo_t:
         tc1, tc2 = st.columns(2)
         with tc1:
@@ -3920,7 +3923,7 @@ with tabs[7]:
         with rt3: st.metric("Costo",f"{moneda} {costo_t:,.0f}")
         mat_res = [{"elemento":f"{desc_t or 'Techo'} — {tipo_t}","unidad":"unidad","cant":n_tejas,"precio":precio_teja}]
 
-    # ─────── LÁMINAS (3 modos) ───────
+    #  LÁMINAS (3 modos) 
     else:
         n_filas = 1 if "1 Fila" in modo_t else (2 if "2 Filas" in modo_t else 3)
         tl1, tl2 = st.columns(2)
@@ -3955,14 +3958,14 @@ with tabs[7]:
         with rl3: st.metric("$/m",f"{moneda} {precio_m_lam:.2f}"); st.metric("Costo",f"{moneda} {costo_t:,.0f}")
         mat_res = [{"elemento":f"{desc_t or 'Techo'} — {tipo_lam}","unidad":"m","cant":round(metros_laminas,2),"precio":precio_m_lam}]
 
-    # ─────── BOTÓN AGREGAR ───────
+    #  BOTÓN AGREGAR 
     st.markdown(f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;"><span style="color:#ffcc80;">{modo_t}</span></div>',unsafe_allow_html=True)
     if st.button("Agregar Techo al Resumen", key="kc_add_techo", type="primary"):
         st.session_state.kc_rows.extend(mat_res)
         st.success(f" {desc_t or 'Techo'} agregado al resumen")
 
 
-# ══════════ TAB 9 — PISOS (CM-V3.0 · 6 modos) ══════════
+#  TAB 9 — PISOS (CM-V3.0 · 6 modos) 
 with tabs[8]:
     st.subheader("Calculadora de Pisos")
     st.caption(f"CM-V3.0 | Cerámica · Porcelanato · Zócalo | {norma_sel} | {moneda}")
@@ -3994,12 +3997,12 @@ with tabs[8]:
     _BOQ_LT_BOL  = 8.68    # litros agua por bolsa boquilla
 
     MODOS_PISO = [
-        "⬜ Cerámica — Dimensiones",
-        "⬜ Cerámica — m²",
+        " Cerámica — Dimensiones",
+        " Cerámica — m²",
         " Porcelanato — Dimensiones",
         " Porcelanato — m²",
-        "▮  Zócalo Cerámica",
-        "▮  Zócalo Porcelanato",
+        "  Zócalo Cerámica",
+        "  Zócalo Porcelanato",
     ]
     modo_pi = st.radio("Modo:", MODOS_PISO, horizontal=True, key="kc_piso_modo")
     st.markdown("---")
@@ -4072,7 +4075,7 @@ with tabs[8]:
     import streamlit.components.v1 as _stc_piso
     _stc_piso.html(_html_piso_diag, height=270, scrolling=False)
 
-    # ─────── CERÁMICA / PORCELANATO PISO ───────
+    #  CERÁMICA / PORCELANATO PISO 
     if "Zócalo" not in modo_pi:
         is_pn  = "Porcelanato" in modo_pi
         is_dim = "Dimensiones" in modo_pi
@@ -4135,7 +4138,7 @@ with tabs[8]:
             {"elemento":f"{desc_pi or 'Piso'} — Boquilla","unidad":"bol","cant":boq_bol,"precio":float(p.get("boquilla",0))},
         ]
 
-    # ─────── ZÓCALO ───────
+    #  ZÓCALO 
     else:
         is_pn_z = "Porcelanato" in modo_pi
         tipos_z = TIPOS_PN if is_pn_z else TIPOS_CER
@@ -4196,14 +4199,14 @@ with tabs[8]:
             {"elemento":f"{desc_pi or 'Zócalo'} — Boquilla","unidad":"bol","cant":boq_bol_z,"precio":float(p.get("boquilla",0))},
         ]
 
-    # ─────── BOTÓN AGREGAR ───────
+    #  BOTÓN AGREGAR 
     st.markdown(f'<div style="background:#0d2137;border-radius:8px;padding:8px 16px;"><span style="color:#ffcc80;">{modo_pi} | {moneda}</span></div>',unsafe_allow_html=True)
     if st.button("Agregar Piso al Resumen", key="kc_add_piso_1", type="primary"):
         st.session_state.kc_rows.extend(mat_res)
         st.success(f" {desc_pi or 'Piso'} agregado | {moneda}")
 
 
-# ══════════ TAB 10 — CIELO RASO (CM-V3.0 · Panel Yeso) ══════════
+#  TAB 10 — CIELO RASO (CM-V3.0 · Panel Yeso) 
 with tabs[9]:
     st.subheader("Calculadora de Cielo Raso")
     st.caption(f"CM-V3.0 | Panel Yeso / Drywall | {norma_sel} | {moneda}")
@@ -4301,7 +4304,7 @@ with tabs[9]:
     import streamlit.components.v1 as _stc_cr
     _stc_cr.html(_html_cr_diag, height=270, scrolling=False)
 
-    # ── Calculations ──
+    #  Calculations 
     # Panels
     n_panels     = area_cr / (panel_W * panel_H)
     n_panels_desp = n_panels * (1+desp_panel/100)
@@ -4364,7 +4367,7 @@ with tabs[9]:
         st.success(f" {lb}: {n_panels_desp:.1f} paneles | {n_viguetas}+{n_omegas} estruct. | {moneda} {costo_cr:,.0f}")
 
 
-# ══════════ TAB 3 — VARILLAS ══════════
+#  TAB 3 — VARILLAS 
 with tabs[10]:
     st.subheader(f"Calculadora de {R['varilla']}"); st.caption(f"Base de datos CM-V3.0 | {norma_sel}")
     v1,v2,v3,v4=st.columns(4)
@@ -4379,7 +4382,7 @@ with tabs[10]:
         bars_by_length=st.radio("Long. barra en obra:",["6 m","9 m","12 m"],index=0,key="kc_var_bar_len")
         bar_len=float(bars_by_length.split()[0])
     with v4:
-        st.metric("⚖ Peso por metro",f"{vkd['kg_m']:.3f} kg/m")
+        st.metric(" Peso por metro",f"{vkd['kg_m']:.3f} kg/m")
         st.metric("Peso por barra",f"{vkd['kg_m']*bar_len:.2f} kg/{int(bar_len)}m")
     
     # ======= DIAGRAMA TÉCNICO PROFESIONAL DE VARILLA =======
@@ -4398,7 +4401,7 @@ with tabs[10]:
     barras_total=math.ceil(long_total/bar_len); costo_acero=kg_total*p["acero_kg"]
     st.markdown("---"); va1,va2,va3,va4,va5=st.columns(5)
     va1.metric(" Longitud + traslape",f"{long_total:.2f} m"); va2.metric(f" Barras {int(bar_len)}m",f"{barras_total}")
-    va3.metric("⚖ Peso total",f"{kg_total:.2f} kg"); va4.metric("⚖ Toneladas",f"{kg_total/1000:.3f} ton")
+    va3.metric(" Peso total",f"{kg_total:.2f} kg"); va4.metric(" Toneladas",f"{kg_total/1000:.3f} ton")
     va5.metric(" Costo est.",f"{moneda} {costo_acero:,.0f}")
     with st.expander("Tabla completa de varillas"):
         df_var=pd.DataFrame(VARILLAS)
@@ -4408,7 +4411,7 @@ with tabs[10]:
         st.session_state.kc_rows.append({"elemento":f"{R['varilla']} {var_sel}","unidad":"kg","cant":round(kg_total,2),"precio":p["acero_kg"]})
         st.success(f" {kg_total:.2f} kg de {var_sel} agregados")
 
-# ══════════ TAB 4 — PINTURA ══════════
+#  TAB 4 — PINTURA 
 with tabs[11]:
     st.subheader(f" {_t('Calculadora de', 'Calculator for')} {R['pintura']}")
     p1,p2,p3=st.columns(3)
@@ -4428,7 +4431,7 @@ with tabs[11]:
         tipos_pin = [_t("Interior vinílico", "Interior Latex"), _t("Exterior acrílico", "Exterior Acrylic"), _t("Epóxico", "Epoxy"), _t("Impermeabilizante", "Waterproofing")]
         tipo_pin=st.selectbox(_t("Tipo:", "Type:"),tipos_pin,key="kc_tipo_pin")
     
-    # ── CÁLCULO (antes del iframe para evitar lag por rerender) ──
+    #  CÁLCULO (antes del iframe para evitar lag por rerender) 
     galones_exactos = (area_pin * manos / rend_gal) * (1 + desp_pin)
     cunetes = math.floor(galones_exactos / 5)
     resto_5 = galones_exactos - (cunetes * 5)
@@ -4472,7 +4475,7 @@ with tabs[11]:
         st.success(f" {galones_comerciales:g} {_t('galones de', 'gallons of')} {tipo_pin} {_t('agregados', 'added')}")
 
 
-# ══════════ TAB 6 — CUBIERTA ══════════
+#  TAB 6 — CUBIERTA 
 with tabs[12]:
     st.subheader(f"Calculadora de {R['cubierta']}")
     CUBIERTA_TIPOS={"Lámina ZincAlum (0.80m útil)":{"ancho_util":0.80,"tipo":"lamina"},"Lámina Galvanizada (0.80m útil)":{"ancho_util":0.80,"tipo":"lamina"},
@@ -4509,7 +4512,7 @@ with tabs[12]:
         if st.button("Agregar Cubierta al Resumen",key="kc_add_cub2",type="primary"):
             st.session_state.kc_rows.append({"elemento":f"Cubierta — {cub_tipo}","unidad":"und","cant":und_cub,"precio":p.get("teja",p["ceramica"]*0.3)}); st.success(f" {und_cub} tejas agregadas")
 
-# ══════════ TAB 7 — IMPORTAR EXCEL ══════════
+#  TAB 7 — IMPORTAR EXCEL 
 with tabs[13]:
     st.subheader("Importar desde Excel")
     template_rows=[
@@ -4543,11 +4546,11 @@ with tabs[13]:
             if new_rows: st.session_state.kc_rows.extend(new_rows); st.success(f" {len(new_rows)} materiales importados"); st.dataframe(pd.DataFrame(new_rows),use_container_width=True)
         except Exception as e: st.error(f"Error: {e}")
 
-# ══════════ TAB RESUMEN — RESUMEN Y EXPORTAR ══════════
+#  TAB RESUMEN — RESUMEN Y EXPORTAR 
 
-# ══════════ TAB 16 — RENDIMIENTOS MO ══════════
+#  TAB 16 — RENDIMIENTOS MO 
 with tabs[16]:
-    st.subheader("♂ Factor de Rendimiento (Mano de Obra)")
+    st.subheader(" Factor de Rendimiento (Mano de Obra)")
     st.caption("Consulte tiempos requeridos (días) según volumen de obra, basados en 'Rendimientos.xlsx'.")
     search_rend = st.text_input("Buscar actividad:")
     
@@ -4558,7 +4561,7 @@ with tabs[16]:
     st.dataframe(df_rend, use_container_width=True, hide_index=True)
     
     st.markdown("---")
-    st.markdown("#### ⏱ Calculadora Rápida de Tiempos")
+    st.markdown("####  Calculadora Rápida de Tiempos")
     calc_col1, calc_col2 = st.columns([3, 1])
     with calc_col1:
         actividad_sel = st.selectbox("Seleccione la Actividad:", df_rend['Actividad'].tolist())
@@ -4573,12 +4576,12 @@ with tabs[16]:
         dias_req = qty_val / factor if factor > 0 else 0
         st.success(f"**Resultado:** Para {qty_val:,.2f} unidades, se requieren **{dias_req:,.2f} días** (Rendimiento: {factor} {ud})")
 
-# ══════════ TAB 17 — PRESUPUESTO ══════════
+#  TAB 17 — PRESUPUESTO 
 with tabs[17]:
     st.subheader("Generador de Presupuestos APU")
     st.caption("Presupuesto preconfigurado con precios unitarios, mano de obra, IVA y AIU según la región seleccionada.")
 
-    # ─ Parametros regionales ─────────────────────────────────────────────────
+    #  Parametros regionales 
     APU_CONFIG = {
         "Colombia": {
             "smmlv_mes": 1423500, "aux_trans": 162000, "iva": 0.19, "aiu": 0.20,
@@ -4599,7 +4602,7 @@ with tabs[17]:
     _iva = cfg_apu["iva"]
     _aiu = cfg_apu["aiu"]
 
-    # ─ Terminologia regional ──────────────────────────────────────────────────
+    #  Terminologia regional 
     term = {
         "Colombia":  {"exc":"Excavación manual","cim":"Cimiento corrido","col":"Columna","viga":"Viga","losa":"Placa maciza","muro":"Muro de mampostería","piso":"Piso en cerámica","fachada":"Pecto / Estuco","pint":"Pintura de caucho","inst_hid":"Instalaciones hidráulicas","inst_el":"Instalaciones eléctricas","cubierta":"Cubierta en teja","adm":"Administración, Imprevistos y Utilidad (AIU)"},
         "Ecuador":   {"exc":"Excavación a mano","cim":"Cimiento corrido H°S","col":"Columna de hormigón","viga":"Cadena / Viga","losa":"Losa plana","muro":"Muro de bloque","piso":"Piso en cerámica","fachada":"Revoque / Enlucido","pint":"Pintura látex","inst_hid":"Instalaciones sanitarias","inst_el":"Instalaciones eléctricas","cubierta":"Cubierta en zinc","adm":"Administración e Imprevistos (AIU)"},
@@ -4612,7 +4615,7 @@ with tabs[17]:
     }
     T = term.get(pais, term["Colombia"])
 
-    # ─ Precios unitarios base ──────────────────────────
+    #  Precios unitarios base 
     _cem  = float(p.get("cemento", 34000 if _iva else 30))
     _are  = float(p.get("arena", 80000 if _iva else 50))
     _gra  = float(p.get("grava", 90000 if _iva else 60))
@@ -4626,7 +4629,7 @@ with tabs[17]:
         base = mat + (mo_dias * jd)
         return round(base * (1 + aiu_pct) * (1 + iva_pct), 0)
 
-    # ─ Tabla APU preconfigurada ───────────────────────────────────────────────
+    #  Tabla APU preconfigurada 
     APU_ROWS = [
         {"N°":"1", "DESCRIPCIÓN":"CAPITULO 1 — PRELIMINARES", "UDS":"", "CANTIDAD":0, "PU":0},
         {"N°":"1.1","DESCRIPCIÓN":"Limpieza y demarcación del terreno","UDS":"m²","CANTIDAD":1.0, "PU": pu(0, 0.02)},
@@ -4663,7 +4666,7 @@ with tabs[17]:
         {"N°":"9", "DESCRIPCIÓN":f'CAPITULO 9 — {T["adm"].upper()} ({_aiu*100:.0f}%)', "UDS":"%","CANTIDAD":_aiu*100, "PU":0},
     ]
 
-    # ─ Init session ────────────────────────────────────────────
+    #  Init session 
     if "kc_presupuesto" not in st.session_state or st.session_state.get("kc_pres_pais","") != pais:
         st.session_state.kc_presupuesto = pd.DataFrame(APU_ROWS)
         st.session_state.kc_pres_pais = pais
@@ -4719,14 +4722,14 @@ with tabs[17]:
     st.markdown("---")
     excel_buf = build_excel_presupuesto(edited_pres, cliente_p, proyecto_p)
     st.download_button(
-        "⬇ Descargar Presupuesto.xlsx",
+        " Descargar Presupuesto.xlsx",
         data=excel_buf,
         file_name=f"Presupuesto_{pais}_{datetime.datetime.now().strftime('%Y%m%d')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         type="primary", use_container_width=True
     )
 
-# ══════════ TAB 18 — RESUMEN Y EXPORTAR ══════════
+#  TAB 18 — RESUMEN Y EXPORTAR 
 with tabs[18]:
     st.subheader("Resumen de Materiales y Exportación")
     if not st.session_state.kc_rows:

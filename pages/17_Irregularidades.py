@@ -8,11 +8,15 @@ from docx import Document
 from docx.shared import Inches
 import datetime
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Irregularidades Estructurales", "Structural Irregularities"), layout="wide")
 st.title(" " + _t("Verificación de Irregularidades Estructurales", "Structural Irregularities Check"))
@@ -103,6 +107,8 @@ def get_irr_factors(norma_sel, tipo):
 st.sidebar.header(_t("Norma de Diseño", "Design Code"))
 norma_disp = st.sidebar.selectbox(
     _t("Seleccione la norma para irregularidades:", "Select code for irregularities:"),
+
+mostrar_referencias_norma(norma_disp, "irregularidades")
     list(NORMA_IRR.keys()),
     key="irr_norma"
 )
@@ -498,12 +504,12 @@ with tab_resumen:
                            file_name=f"Irregularidades_{nombre_proyecto}.docx",
                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
-# ─────────────────────────────────────────────
+# 
 # FOOTER
-# ─────────────────────────────────────────────
+# 
 st.markdown("---")
 st.markdown(f"""
 > **{_t('Módulo de Irregularidades', 'Irregularities Module')}**  
 > {_t('Norma activa:', 'Active code:')} `{norma_disp}`  
-> ⚠ *Los resultados deben ser verificados por un ingeniero estructural calificado.*
+>  *Los resultados deben ser verificados por un ingeniero estructural calificado.*
 """)

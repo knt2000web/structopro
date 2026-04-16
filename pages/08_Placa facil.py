@@ -18,11 +18,15 @@ from reportlab.lib import colors as rl_colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 
-# ─────────────────────────────────────────────
+# 
 # IDIOMA GLOBAL
+try:
+    from normas_referencias import mostrar_referencias_norma
+except ImportError:
+    def mostrar_referencias_norma(*a, **kw): pass
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
-# ─────────────────────────────────────────────
+# 
 
 st.set_page_config(page_title=_t("Placa Fácil", "Easy Slab"), layout="wide")
 st.title(_t("Placa Fácil – Sistema de Vigueta y Bloques", "Easy Slab – Joist & Block System"))
@@ -70,7 +74,7 @@ def profile_inertia():
     I_total=(I_web+A_web*d_web**2)+2*(I_flange+A_flange*d_flange**2)
     return I_total/10000
 
-# ─── SELECCIÓN AUTOMÁTICA DE VARILLAS (NSR-10) ───
+#  SELECCIÓN AUTOMÁTICA DE VARILLAS (NSR-10) 
 def select_rebars(As_req_cm2):
     rebar_table = [
         {"nom": '#3 (3/8")', "area": 0.71},
@@ -91,8 +95,10 @@ def select_rebars(As_req_cm2):
         best = {"b1": rebar_table[-1], "b2": rebar_table[-1], "total": rebar_table[-1]["area"]*2}
     return best
 
-# ─── SIDEBAR ───
+#  SIDEBAR 
 norma_sel = st.sidebar.selectbox(_t("Norma de diseño","Design code"), list(NORMAS_PLACA.keys()), index=0)
+
+mostrar_referencias_norma(norma_sel, "placa_facil")
 norma = NORMAS_PLACA[norma_sel]
 st.sidebar.header(_t("Datos del proyecto","Project data"))
 proyecto_nombre   = st.sidebar.text_input(_t("Nombre del proyecto","Project name"), "Placa Fácil - Ejemplo")
@@ -113,7 +119,7 @@ incluir_vigas   = st.sidebar.checkbox(_t("Incluir vigas de borde","Include edge 
 viga_b = st.sidebar.number_input(_t("Ancho viga borde (cm)","Edge beam width (cm)"), 10.0, 30.0, 15.0, 1.0) / 100.0
 viga_h = st.sidebar.number_input(_t("Altura viga borde (cm)","Edge beam height (cm)"), 15.0, 40.0, 20.0, 1.0) / 100.0
 
-# ─── PARÁMETROS SÍSMICOS (NSR-10 C.21) ───
+#  PARÁMETROS SÍSMICOS (NSR-10 C.21) 
 st.sidebar.header(_t("Parámetros sísmicos","Seismic parameters"))
 zona_sismica = st.sidebar.selectbox(_t("Zona sísmica (Aa)","Seismic zone"),
     ["I (Aa<0.10)","II (0.10≤Aa<0.20)","III (0.20≤Aa<0.30)","IV (Aa≥0.30)"], index=1)
@@ -121,8 +127,8 @@ sistema_estructural = st.sidebar.selectbox(_t("Sistema estructural","Structural 
     ["DMO (Desempeño Mínimo)","DES (Desempeño Especial)","DMI (Desempeño Intermedio)"], index=0)
 is_high_seismic = ("IV" in zona_sismica) or ("III" in zona_sismica)
 if is_high_seismic and "DMO" in sistema_estructural:
-    st.sidebar.warning(_t("⚠ Zona alta: DMO no permitido según NSR-10 C.21. Use DES o DMI.",
-                          "⚠ High seismic zone: DMO not allowed per NSR-10 C.21. Use DES or DMI."))
+    st.sidebar.warning(_t(" Zona alta: DMO no permitido según NSR-10 C.21. Use DES o DMI.",
+                          " High seismic zone: DMO not allowed per NSR-10 C.21. Use DES or DMI."))
 
 st.sidebar.header(_t("Factores de desperdicio","Waste factors"))
 desp_bloques  = st.sidebar.number_input(_t("Bloques (%)","Blocks (%)"), 0.0, 20.0, 5.0, 1.0) / 100.0
@@ -146,9 +152,9 @@ escala_plano = st.sidebar.text_input(_t("Escala","Scale"), "1:50")
 elaboro      = st.sidebar.text_input(_t("Elaborado por","Prepared by"), "")
 revisado     = st.sidebar.text_input(_t("Revisado por","Reviewed by"), "")
 aprobado     = st.sidebar.text_input(_t("Aprobado por","Approved by"), "")
-# ─────────────────────────────────────────────
+# 
 # CÁLCULOS DE CANTIDADES
-# ─────────────────────────────────────────────
+# 
 area_total = Lx * Ly * num_pisos
 if orientacion == "Paralelo a X":
     perfil_largo = Lx; perfil_ancho = Ly
@@ -186,13 +192,13 @@ total_cemento_kg = CONCRETE_DATA["cemento_por_m3"] * vol_concreto_total_desp
 bultos_cemento   = math.ceil(total_cemento_kg / 50)
 
 if perfil_largo > 3.5 and perfil_largo <= 4.2:
-    st.warning(f"⚠ La luz de los perfiles es {perfil_largo:.2f} m. Está cerca del máximo de {norma['luz_max']} m.")
+    st.warning(f" La luz de los perfiles es {perfil_largo:.2f} m. Está cerca del máximo de {norma['luz_max']} m.")
 elif perfil_largo > norma["luz_max"]:
     st.error(f"La luz de los perfiles ({perfil_largo:.2f} m) excede el máximo permitido ({norma['luz_max']} m). Se requiere viga intermedia.")
 
-# ─────────────────────────────────────────────
+# 
 # CÁLCULOS ESTRUCTURALES
-# ─────────────────────────────────────────────
+# 
 g = 9.81
 Wd_kg  = carga_muerta_kgm2
 Wd_kn  = Wd_kg * g / 1000
@@ -216,9 +222,9 @@ Vu = Wu_lin * perfil_largo / 2
 Vc = 0.17 * math.sqrt(fc_concreto * 1000) * BLOCK_DATA["ancho"] * (BLOCK_DATA["alto"] + espesor_torta) / 1000
 cumple_cortante = Vu <= Vc
 
-# ─────────────────────────────────────────────
+# 
 # DISEÑO DE LA VIGA DE BORDE
-# ─────────────────────────────────────────────
+# 
 W_beam_kn = Wu_kn * (perfil_espaciado/2 + 0.5)
 beam_span  = max(Lx, Ly)
 Mu_beam    = W_beam_kn * beam_span**2 / 8
@@ -254,9 +260,9 @@ x_vals = np.linspace(0, beam_span, 100)
 M_vals = W_beam_kn * x_vals * (beam_span - x_vals) / 2
 V_vals = W_beam_kn * (beam_span/2 - x_vals)
 
-# ─────────────────────────────────────────────
+# 
 # SECCIÓN COMPUESTA – NSR-10 C.17
-# ─────────────────────────────────────────────
+# 
 beff        = perfil_espaciado
 E_acero     = 200e9
 n_modular   = E_acero / E_concreto
@@ -273,18 +279,18 @@ I_comp      = (I_profile_own * n_modular + A_profile_trans * (y_profile - y_c_co
                I_slab_own + A_slab * (y_slab - y_c_comp)**2)
 S_comp      = I_comp / y_c_comp if y_c_comp > 0 else 0.0
 
-# ─────────────────────────────────────────────
+# 
 # LONGITUD DE DESARROLLO – NSR-10 C.12.2.2
-# ─────────────────────────────────────────────
+# 
 fy       = 420.0
 db_ref   = 0.0127
 lambda_conc = 1.0
 ld = (fy * db_ref) / (1.1 * lambda_conc * math.sqrt(fc_concreto)) / 1000.0
 ld = max(ld, 12 * db_ref, 0.30)
 
-# ─────────────────────────────────────────────
+# 
 # VERIFICACIONES NORMATIVAS
-# ─────────────────────────────────────────────
+# 
 verificaciones = []
 verificaciones.append({"item":"Luz máxima de perfiles","referencia":norma['ref'],
     "requerido":f"≤ {norma['luz_max']:.2f} m","calculado":f"{perfil_largo:.2f} m",
@@ -325,11 +331,11 @@ verificaciones.append({"item":"Zona sísmica y confinamiento","referencia":"NSR-
     "requerido":f"Estribos {'d/4' if is_high_seismic and 'DMO' not in sistema_estructural else 'd/2'} @ {s_beam*100:.0f} cm",
     "calculado":f"Zona {zona_sismica} | Sistema {sistema_estructural}",
     "cumple": not (is_high_seismic and "DMO" in sistema_estructural),
-    "obs":"Confinamiento requerido" if is_high_seismic and "DMO" not in sistema_estructural else ("⚠ Cambiar sistema" if is_high_seismic and "DMO" in sistema_estructural else "Ok")})
+    "obs":"Confinamiento requerido" if is_high_seismic and "DMO" not in sistema_estructural else (" Cambiar sistema" if is_high_seismic and "DMO" in sistema_estructural else "Ok")})
 
-# ─────────────────────────────────────────────
+# 
 # PRESUPUESTO APU
-# ─────────────────────────────────────────────
+# 
 costo_bloques  = n_bloques_desp * precio_bloque
 costo_perfiles = longitud_total_perfiles_desp * precio_perfil
 costo_malla    = area_malla * precio_malla
@@ -349,9 +355,9 @@ sobrecosto     = total_proyecto - costo_maciza if total_proyecto > costo_maciza 
 actividades    = ["Instalación de perfiles","Colocación de bloques","Colocación de malla","Fundida de concreto","Curado"]
 duracion_dias  = [0.5*area_total/100, 1.0*area_total/100, 0.3*area_total/100, 1.5*area_total/100, 0.5]
 cronograma     = pd.DataFrame({"Actividad": actividades, "Duración (días)": [max(1, round(d)) for d in duracion_dias]})
-# ─────────────────────────────────────────────
+# 
 # FUNCIÓN MODELO 3D
-# ─────────────────────────────────────────────
+# 
 def create_3d_model(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo,
                     espesor_torta, incluir_vigas, viga_b, viga_h):
     fig = go.Figure()
@@ -400,9 +406,9 @@ def create_3d_model(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_la
         margin=dict(l=0,r=0,b=0,t=0),height=500,plot_bgcolor='black',paper_bgcolor='#1e1e1e')
     return fig
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIÓN DXF
-# ─────────────────────────────────────────────
+# 
 def generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo,
                  incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente,
                  plano_numero, escala_plano, elaboro, revisado, aprobado, ref_beam,
@@ -510,9 +516,9 @@ def generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo
     doc_dxf.write(out)
     return out.getvalue()
 
-# ─────────────────────────────────────────────
+# 
 # FUNCIÓN MEMORIA DOCX
-# ─────────────────────────────────────────────
+# 
 def generate_memory():
     doc=Document()
     doc.add_heading("Memoria de Cálculo – Placa Fácil",0)
@@ -565,9 +571,9 @@ def generate_memory():
     doc.save(buf)
     buf.seek(0)
     return buf
-# ─────────────────────────────────────────────
+# 
 # FUNCIÓN PDF RESUMEN EJECUTIVO
-# ─────────────────────────────────────────────
+# 
 def generate_pdf():
     buffer = io.BytesIO()
     doc_pdf = SimpleDocTemplate(buffer, pagesize=letter,
@@ -609,9 +615,9 @@ def generate_pdf():
     buffer.close()
     return pdf_data
 
-# ─────────────────────────────────────────────
+# 
 # INTERFAZ PRINCIPAL – PESTAÑAS
-# ─────────────────────────────────────────────
+# 
 tab_res, tab_3d, tab_dxf, tab_mem, tab_qty, tab_apu, tab_resumen = st.tabs([
     " Resultados", " Modelo 3D", " DXF", " Memoria", " Cantidades", " APU", " Resumen Ejecutivo"
 ])
@@ -755,7 +761,7 @@ with tab_resumen:
         st.metric("Verificaciones cumplidas", f"{cumplidas}/{len(verificaciones)}")
     with col_r2:
         if sobrecosto > 0:
-            st.warning(f"⚠ Sobrecosto vs placa maciza: {moneda} {sobrecosto:,.0f}")
+            st.warning(f" Sobrecosto vs placa maciza: {moneda} {sobrecosto:,.0f}")
         else:
             st.success(f"Ahorro vs placa maciza: {moneda} {ahorro:,.0f}")
         st.metric("Deflexión", f"{'OK'if cumple_deflexion else ' EXCEDE'} — {delta_calc*1000:.1f} mm")
