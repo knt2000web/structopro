@@ -23,7 +23,26 @@ import matplotlib.patches as patches
 import pandas as pd
 import math
 from docx import Document
-from utils_docx import fig_to_docx_white
+try:
+    from utils_docx import fig_to_docx_white
+except ImportError:
+    try:
+        from pages.utils_docx import fig_to_docx_white
+    except ImportError:
+        def fig_to_docx_white(fig):
+            import io as _iow
+            if not fig.get_axes():
+                b=_iow.BytesIO(); b.seek(0); return b
+            fig.patch.set_facecolor('white'); fig.patch.set_alpha(1.0)
+            for ax in fig.get_axes():
+                ax.set_facecolor('white'); ax.title.set_color('black')
+                ax.xaxis.label.set_color('black'); ax.yaxis.label.set_color('black')
+                ax.tick_params(colors='black')
+                for sp in ax.spines.values(): sp.set_edgecolor('black')
+            b = _iow.BytesIO()
+            fig.savefig(b, format='png', dpi=150, bbox_inches='tight', transparent=False)
+            b.seek(0)
+            return b
 from docx.shared import Pt, Cm, Inches
 import ezdxf
 from datetime import datetime
