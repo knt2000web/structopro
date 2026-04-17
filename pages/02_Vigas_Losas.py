@@ -303,6 +303,21 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
 
 st.title(_t("Suite de Diseño — Vigas y Losas", "Design Suite — Beams & Slabs"))
 
+with st.expander(" ¿Cómo usar este módulo? — Guía Rápida para Principiantes", expanded=False):
+    st.markdown('''
+    ### ¡Bienvenido a la Suite de Vigas y Losas!
+    Este es el motor principal para diseñar los elementos horizontales de cualquier edificación de concreto armado. Aquí podrás calcular el acero y verificar las dimensiones de Vigas (las "costillas" de la casa) y Losas (los "pisos" o "techos").
+    
+    ####  Paso a Paso
+    1. **Navega por el Menú:** A tu izquierda (y en la caja selectora de abajo), verás submódulos como *Flexión*, *Cortante*, *Losas*, etc. Puedes diseñarlos pieza a pieza o ir al *Cuadro de Mando General*.
+    2. **Define tus Materiales:** En la barra lateral siempre asegúrate de tener bien la resistencia de tu Concreto (ej. 21 o 28 MPa) y tu Acero (ej. 420 MPa para varillas figuradas).
+    3. **¿Flexión o Cortante?**
+       - En el módulo de **Flexión**, el sistema te dirá cuántas varillas largas (longitudinales) debes meterle a tu Viga Rectangular o en "T" para que no se flexione de más y aguante su carga.
+       - En el módulo de **Cortante**, el sistema calculará tus "*Estribos*" (flejes). Los anillos de varilla redonda de 3/8" que evitan que la viga se quiebre bruscamente por cizalladura.
+    4. **Losas y Punzonamiento:** Si diseñas una *Losa en Una Dirección* (maciza o aligerada), ingresa aquí y la trataremos automáticamente como una viga ancha. Además, en Punzonamiento puedes verificar si el peso de la losa agujero una columna (como un lápiz perforando un papel).
+    5. **El Súper-Módulo (Generador DXF):** Finalmente, si corres el submódulo *"Diseño Sísmico Integral y Plano DXF"*, juntará cortante y flexión, evaluará si la viga aguanta el impacto de un terremoto (NSR-10) y dibujará instantáneamente los planos puros para AutoCAD y tu modelo BIM 3D.
+    ''')
+
 #  PERSISTENCIA DE MÓDULO VÍA URL (sobrevive F5) 
 _modulos_disponibles = [
     " Tabla de Secciones de Acero de Refuerzo",
