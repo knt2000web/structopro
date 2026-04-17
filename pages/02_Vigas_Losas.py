@@ -206,7 +206,6 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
   <rect x="0" y="0" width="1100" height="3" fill="#10b981" opacity="0.9"/>
   <rect x="0" y="217" width="1100" height="3" fill="#3b82f6" opacity="0.7"/>
-
   <!--  VIGA RECTANGULAR (seccion)  -->
   <g transform="translate(60,50)">
     <text x="35" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">RECTANGULAR</text>
@@ -226,22 +225,18 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
     <line x1="0" y1="107" x2="0" y2="113" stroke="#64748b" stroke-width="1"/>
     <line x1="70" y1="107" x2="70" y2="113" stroke="#64748b" stroke-width="1"/>
     <text x="35" y="122" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">b</text>
-    
     <line x1="80" y1="0" x2="80" y2="100" stroke="#64748b" stroke-width="1"/>
     <line x1="77" y1="0" x2="83" y2="0" stroke="#64748b" stroke-width="1"/>
     <line x1="77" y1="100" x2="83" y2="100" stroke="#64748b" stroke-width="1"/>
     <text x="90" y="54" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">h</text>
   </g>
-
   <!--  VIGA T  -->
   <g transform="translate(190,50)">
     <text x="60" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">SECCION T</text>
     <!-- Concreto -->
     <path d="M0,0 L120,0 L120,25 L80,25 L80,100 L40,100 L40,25 L0,25 Z" fill="#1e293b" stroke="#475569" stroke-width="2" stroke-linejoin="round"/>
-    
     <!-- Estribo Alma -->
     <rect x="48" y="30" width="24" height="62" rx="3" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="3,2" opacity="0.8"/>
-    
     <!-- Refuerzo Superior (Ala) -->
     <circle cx="15" cy="12" r="3.5" fill="#f59e0b"/><circle cx="35" cy="12" r="3.5" fill="#f59e0b"/>
     <circle cx="56" cy="12" r="4.5" fill="#f59e0b"/><circle cx="64" cy="12" r="4.5" fill="#f59e0b"/>
@@ -249,17 +244,14 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
     <!-- Inferior Alma -->
     <circle cx="56" cy="84" r="5.5" fill="#f59e0b"/>
     <circle cx="64" cy="84" r="5.5" fill="#f59e0b"/>
-    
     <!-- Cotas -->
     <line x1="0" y1="-8" x2="120" y2="-8" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2"/>
     <text x="60" y="-12" text-anchor="middle" font-family="monospace" font-size="10" fill="#34d399">beff</text>
-    
     <line x1="40" y1="110" x2="80" y2="110" stroke="#64748b" stroke-width="1"/>
     <line x1="40" y1="107" x2="40" y2="113" stroke="#64748b" stroke-width="1"/>
     <line x1="80" y1="107" x2="80" y2="113" stroke="#64748b" stroke-width="1"/>
     <text x="60" y="122" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">bw</text>
   </g>
-
   <!--  LOSA UNIDIRECCIONAL  -->
   <g transform="translate(370,75)">
     <text x="75" y="-35" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">LOSA UNIDIRECCIONAL</text>
@@ -272,10 +264,8 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
       <line x1="108" y1="-22" x2="108" y2="-6"/><polygon points="108,-6 105,-11 111,-11" fill="#ef4444"/>
       <line x1="140" y1="-22" x2="140" y2="-6"/><polygon points="140,-6 137,-11 143,-11" fill="#ef4444"/>
     </g>
-    
     <!-- Seccion Losa -->
     <rect x="0" y="0" width="150" height="40" rx="3" fill="#1e293b" stroke="#475569" stroke-width="2"/>
-    
     <!-- Refuerzo principal (puntos) y temperatura (linea base) -->
     <line x1="10" y1="30" x2="140" y2="30" stroke="#0ea5e9" stroke-width="2" opacity="0.8"/>
     <circle cx="20" cy="30" r="4.5" fill="#f59e0b"/><circle cx="56" cy="30" r="4.5" fill="#f59e0b"/>
@@ -283,14 +273,12 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
     <!-- Retraccion -->
     <circle cx="20" cy="10" r="3" fill="#b45309"/><circle cx="56" cy="10" r="3" fill="#b45309"/>
     <circle cx="93" cy="10" r="3" fill="#b45309"/><circle cx="130" cy="10" r="3" fill="#b45309"/>
-    
     <!-- Cota Altura -->
     <line x1="160" y1="0" x2="160" y2="40" stroke="#64748b" stroke-width="1"/>
     <line x1="157" y1="0" x2="163" y2="0" stroke="#64748b" stroke-width="1"/>
     <line x1="157" y1="40" x2="163" y2="40" stroke="#64748b" stroke-width="1"/>
     <text x="170" y="24" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">h</text>
   </g>
-
   <!--  TEXT BLOCK  -->
   <g transform="translate(622,0)">
     <rect x="0" y="28" width="4" height="165" rx="2" fill="#10b981"/>
