@@ -136,11 +136,103 @@ def capturar_estado_module(ref):
 
 st.set_page_config(page_title=_t("Dados de Pilotes (Encepados)", "Pile Caps"), layout="wide")
 
-st.title(_t("Diseño de Dados (Encepados) - ACI 318 / NSR-10", "Pile Cap Design - ACI 318 / NSR-10"))
-st.markdown(_t(
-    "<p style='margin:0; padding:0; color:#aaa; font-size:14px;'>Módulo integral ACI-318 (Flexión, Punzonamiento Columna, Punzonamiento Pilote, Bielas y Tirantes).</p><hr>",
-    "<p style='margin:0; padding:0; color:#aaa; font-size:14px;'>Comprehensive ACI-318 module (Flexure, Column Punching, Pile Punching, Strut and Tie).</p><hr>"
-), unsafe_allow_html=True)
+# 1. Banner SVG premium
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;">
+<svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#020617 0%,#0f172a 100%);">
+  <g opacity="0.08" stroke="#14b8a6" stroke-width="0.5">
+    <line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/>
+    <line x1="0" y1="165" x2="1100" y2="165"/>
+    <line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/>
+    <line x1="660" y1="0" x2="660" y2="220"/>
+  </g>
+  <rect x="0" y="0" width="1100" height="3" fill="#0d9488" opacity="0.9"/>
+  <rect x="0" y="217" width="1100" height="3" fill="#14b8a6" opacity="0.7"/>
+
+  <!-- DADO PARAMETRICO -->
+  <g transform="translate(60,40)">
+    <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">DADO / ENCEPADO</text>
+    <!-- Columna -->
+    <rect x="35" y="0" width="30" height="40" fill="#334155" stroke="#475569" stroke-width="2"/>
+    <path d="M35,10 L65,10 M35,20 L65,20 M35,30 L65,30" stroke="#14b8a6" stroke-width="1.5" opacity="0.8"/>
+    <!-- Dado -->
+    <path d="M0,40 L100,40 L110,80 L-10,80 Z" fill="#1e293b" stroke="#64748b" stroke-width="2" stroke-linejoin="round"/>
+    <!-- Acero Malla -->
+    <line x1="-5" y1="70" x2="105" y2="70" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2"/>
+    <line x1="-5" y1="75" x2="105" y2="75" stroke="#f59e0b" stroke-width="2"/>
+    <!-- Pilotes Cortados -->
+    <rect x="10" y="80" width="15" height="30" fill="#cbd5e1" stroke="#475569" stroke-width="1.5"/>
+    <rect x="75" y="80" width="15" height="30" fill="#cbd5e1" stroke="#475569" stroke-width="1.5"/>
+    <!-- Gancho ACI -->
+    <path d="M25,75 L25,45 M25,45 L15,45 M85,75 L85,45 M85,45 L75,45" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+  </g>
+
+  <!-- STRUT AND TIE (MECANISMO) -->
+  <g transform="translate(250,50)">
+    <text x="50" y="-20" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">STRUT & TIE (STM)</text>
+    <!-- Columna Nodo Top -->
+    <rect x="35" y="0" width="30" height="20" fill="#334155"/>
+    <!-- Nodos Pilotes Bottom -->
+    <rect x="0" y="70" width="20" height="20" fill="#475569" opacity="0.5"/>
+    <rect x="80" y="70" width="20" height="20" fill="#475569" opacity="0.5"/>
+    
+    <!-- Struts (Bielas compresion) -->
+    <line x1="50" y1="20" x2="10" y2="70" stroke="#38bdf8" stroke-width="4"/>
+    <line x1="50" y1="20" x2="90" y2="70" stroke="#38bdf8" stroke-width="4"/>
+    <!-- Ties (Tirantes tension) -->
+    <line x1="10" y1="70" x2="90" y2="70" stroke="#ef4444" stroke-width="3" stroke-dasharray="4,2"/>
+    
+    <!-- Texto Info -->
+    <text x="110" y="25" font-family="monospace" font-size="9" fill="#7dd3fc">C: Compresión</text>
+    <text x="110" y="75" font-family="monospace" font-size="9" fill="#fca5a5">T: Tensión (Acero)</text>
+    <text x="50" y="45" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="bold" fill="#ffffff">θ</text>
+  </g>
+
+  <!-- TEXT BLOCK -->
+  <g transform="translate(560,0)">
+    <rect x="0" y="28" width="4" height="165" rx="2" fill="#14b8a6"/>
+    <text x="18" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#ffffff">DADOS ESPACIALES</text>
+    <text x="18" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="300" fill="#5eead4" letter-spacing="2">CABEZALES DE PILOTES ACI-318</text>
+    <rect x="18" y="100" width="480" height="1" fill="#14b8a6" opacity="0.5"/>
+    
+    <!-- Tags -->
+    <rect x="18" y="111" width="100" height="22" rx="11" fill="#0f2e21" stroke="#10b981" stroke-width="1"/>
+    <text x="68" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#34d399">PUNZONAMIENTO</text>
+    
+    <rect x="126" y="111" width="90" height="22" rx="11" fill="#301515" stroke="#ef4444" stroke-width="1"/>
+    <text x="171" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#f87171">FLEXIÓN 2D</text>
+    
+    <rect x="224" y="111" width="130" height="22" rx="11" fill="#0c1a2e" stroke="#38bdf8" stroke-width="1"/>
+    <text x="289" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">STRUT-AND-TIE (STM)</text>
+    
+    <rect x="362" y="111" width="76" height="22" rx="11" fill="#2d1c07" stroke="#f59e0b" stroke-width="1"/>
+    <text x="400" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fbbf24">APU / IFC</text>
+    
+    <!-- Description -->
+    <text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Analisis tridimensional y bidireccional rigido para cabezales de 2 a 6 pilotes.</text>
+    <text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Revisión de punzonamiento complejo integrado y alerta temprana para uso normativo</text>
+    <text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">del metodo de Bielas y Tirantes (Strut-And-Tie). Incluye despiece grafico 3D.</text>
+  </g>
+</svg></div>""", unsafe_allow_html=True)
+
+# 2. Panel global "Guía Rápida"
+with st.expander(" ¿Cómo usar este módulo? — Guía Rápida para Principiantes", expanded=False):
+    st.markdown('''
+    ### ¡Bienvenido al diseño de Dados de Pilotes! 
+    Un "Dado" o "Encepado" es la mole de concreto que sirve de transición para conectar las columnas del edificio con los pilotes profundos. Este módulo automatiza ese diseño.
+    
+    ####  Paso a Paso
+    1. **Configura tus Materiales (Barra a la izquierda):** Elige la resistencia del concreto ($f'c$), tu acero ($fy$) y sobre todo, las medidas de la Columna y los esfuerzos últimos ($Pu$, $Mu$).
+    2. **Busca la Pestaña "1. Configuración de Grupo":** 
+       - Selecciona cuántos pilotes necesitas (ej. 2, 3, 4 pilotes).
+       - Observa cómo la aplicación dibuja la placa y calcula qué Pilote recibe más carga (Cinemática).
+       - *Objetivo:* Ningún pilote debe aparecer en **ROJO** (fallo por exceso de carga admisible). Si falla, separa más los pilotes o agrega más pilotes.
+    3. **Avanza a la Pestaña "2. Punzonamiento y Flexión":**
+       - Verifica el cálculo de **Cortante y Punzonamiento**: El programa te dirá si la mole de concreto es lo suficientemente gruesa.
+       - Determina la cantidad de Varillas necesarias (Área de Acero) en los ejes X y Y y elige el calibre de la varilla (ej. "#6 (3/4\")").
+       - *Alerta Avanzada (Capa profunda):* Si el dado es tan chato que los pilotes están muy cerca a la columna, el módulo te advertirá que debes usar el método avanzado **Bielas y Tirantes (STM)** para garantizar su integridad, algo fundamental en ACI 318.
+    4. **Mira tu BIM 3D y tu Presupuesto A.I.U:** Pasa a la Pestaña 3 y 4 para ver tu armadura en vivo en 3D (con ganchos exactos y refuerzos térmicos si se necesitan) y determinar tu costo unitario preciso.
+    ''')
+
 
 # 
 # SIDEBAR
