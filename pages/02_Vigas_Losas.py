@@ -4261,16 +4261,21 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                 [(ox_v,oy_v),(ox_v+sw_v,oy_v),(ox_v+sw_v,oy_v+sh_v),(ox_v,oy_v+sh_v),(ox_v,oy_v)],
                 dxfattribs={'layer':'CONCRETO'})
 
-        # Estribo cerrado con gancho 135 sismico
+        # Estribo cerrado con gancho 135° sismico NSR-10 — esquina inf-izq
         re_sv = dp_vc * esc_sec_v
         xm_v, xM_v = ox_v+re_sv, ox_v+sw_v-re_sv
         ym_v, yM_v = oy_v+re_sv, oy_v+sh_v-re_sv
-        hl_v = min(0.4, re_sv*0.6)
+        hl_v = min(0.5, re_sv * 0.8)   # longitud visual del gancho
+        _hgx = hl_v * 0.707;  _hgy = hl_v * 0.707  # 45 grados
         pts_est_v = [
-            (xm_v+hl_v*0.7, yM_v+hl_v*0.7),
-            (xm_v, yM_v), (xm_v, ym_v), (xM_v, ym_v), (xM_v, yM_v),
-            (xm_v+hl_v*0.3, yM_v),
-            (xm_v+hl_v*0.9, yM_v-hl_v*0.9)]
+            (xm_v + _hgx, ym_v + _hgy),  # P1: cola entrada → interior ✓
+            (xm_v, ym_v),                 # P2: esquina inf-izq (vértice del gancho)
+            (xm_v, yM_v),                 # P3: esquina sup-izq
+            (xM_v, yM_v),                 # P4: esquina sup-der
+            (xM_v, ym_v),                 # P5: esquina inf-der
+            (xm_v, ym_v),                 # P6: cierre (vuelve inf-izq)
+            (xm_v + _hgx, ym_v + _hgy),  # P7: cola salida → interior ✓
+        ]
         msp.add_lwpolyline(pts_est_v,
             dxfattribs={'layer':'ACERO_TRANS','color':_color_acero_dxf(db_est_mm_d)})
 
