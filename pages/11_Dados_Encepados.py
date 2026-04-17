@@ -147,7 +147,6 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
   <rect x="0" y="0" width="1100" height="3" fill="#0d9488" opacity="0.9"/>
   <rect x="0" y="217" width="1100" height="3" fill="#14b8a6" opacity="0.7"/>
-
   <!-- DADO PARAMETRICO -->
   <g transform="translate(60,40)">
     <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">DADO / ENCEPADO</text>
@@ -165,48 +164,39 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
     <!-- Gancho ACI -->
     <path d="M25,75 L25,45 M25,45 L15,45 M85,75 L85,45 M85,45 L75,45" fill="none" stroke="#ef4444" stroke-width="1.5"/>
   </g>
-
   <!-- STRUT AND TIE (MECANISMO) -->
   <g transform="translate(250,50)">
-    <text x="50" y="-20" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">STRUT & TIE (STM)</text>
+    <text x="50" y="-20" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">STRUT &amp; TIE (STM)</text>
     <!-- Columna Nodo Top -->
     <rect x="35" y="0" width="30" height="20" fill="#334155"/>
     <!-- Nodos Pilotes Bottom -->
     <rect x="0" y="70" width="20" height="20" fill="#475569" opacity="0.5"/>
     <rect x="80" y="70" width="20" height="20" fill="#475569" opacity="0.5"/>
-    
     <!-- Struts (Bielas compresion) -->
     <line x1="50" y1="20" x2="10" y2="70" stroke="#38bdf8" stroke-width="4"/>
     <line x1="50" y1="20" x2="90" y2="70" stroke="#38bdf8" stroke-width="4"/>
     <!-- Ties (Tirantes tension) -->
     <line x1="10" y1="70" x2="90" y2="70" stroke="#ef4444" stroke-width="3" stroke-dasharray="4,2"/>
-    
     <!-- Texto Info -->
     <text x="110" y="25" font-family="monospace" font-size="9" fill="#7dd3fc">C: Compresión</text>
     <text x="110" y="75" font-family="monospace" font-size="9" fill="#fca5a5">T: Tensión (Acero)</text>
-    <text x="50" y="45" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="bold" fill="#ffffff">θ</text>
+    <text x="50" y="45" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="bold" fill="#ffffff">&#952;</text>
   </g>
-
   <!-- TEXT BLOCK -->
   <g transform="translate(560,0)">
     <rect x="0" y="28" width="4" height="165" rx="2" fill="#14b8a6"/>
     <text x="18" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#ffffff">DADOS ESPACIALES</text>
     <text x="18" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="300" fill="#5eead4" letter-spacing="2">CABEZALES DE PILOTES ACI-318</text>
     <rect x="18" y="100" width="480" height="1" fill="#14b8a6" opacity="0.5"/>
-    
     <!-- Tags -->
     <rect x="18" y="111" width="100" height="22" rx="11" fill="#0f2e21" stroke="#10b981" stroke-width="1"/>
     <text x="68" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#34d399">PUNZONAMIENTO</text>
-    
     <rect x="126" y="111" width="90" height="22" rx="11" fill="#301515" stroke="#ef4444" stroke-width="1"/>
     <text x="171" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#f87171">FLEXIÓN 2D</text>
-    
     <rect x="224" y="111" width="130" height="22" rx="11" fill="#0c1a2e" stroke="#38bdf8" stroke-width="1"/>
     <text x="289" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">STRUT-AND-TIE (STM)</text>
-    
     <rect x="362" y="111" width="76" height="22" rx="11" fill="#2d1c07" stroke="#f59e0b" stroke-width="1"/>
     <text x="400" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fbbf24">APU / IFC</text>
-    
     <!-- Description -->
     <text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Analisis tridimensional y bidireccional rigido para cabezales de 2 a 6 pilotes.</text>
     <text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Revisión de punzonamiento complejo integrado y alerta temprana para uso normativo</text>
