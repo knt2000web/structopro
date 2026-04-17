@@ -2230,7 +2230,8 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
 
         # 0. Portada
         p0 = doc_zap.add_paragraph()
-        p0.add_run(f"Proyecto: \nElemento: Zapata {tipo_zap}\nNorma: {norma_sel}\nNivel Sísmico: {nivel_sismico}\nMateriales: Concreto f'c = {fc_basico:.1f} MPa, Acero fy = {fy_basico:.1f} MPa\nFecha: {_dt_dxf.datetime.now().strftime('%d/%m/%Y')}").bold = True
+        _ns = st.session_state.get("nivel_sismico", "N/A - General")
+        p0.add_run(f"Proyecto: \nElemento: Zapata {tipo_zap}\nNorma: {norma_sel}\nNivel Sísmico: {_ns}\nMateriales: Concreto f'c = {fc_basico:.1f} MPa, Acero fy = {fy_basico:.1f} MPa\nFecha: {_dt_dxf.datetime.now().strftime('%d/%m/%Y')}").bold = True
 
         # 1. Parámetros de Diseño
         doc_zap.add_heading("1. PARÁMETROS DE DISEÑO", level=1)
