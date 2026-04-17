@@ -26,9 +26,101 @@ def _t(es, en):
 
 st.set_page_config(page_title=_t("Muros de Contención", "Retaining Walls"), layout="wide")
 
-st.image(r"assets/retaining_wall_header_1773256923525.png", use_container_width=True)
-st.title(_t("Muros de Contención y Estabilidad", "Retaining Walls and Stability"))
-st.markdown(_t("Herramientas para revisar la estabilidad al volcamiento y deslizamiento de muros de contención de gravedad y en voladizo, considerando empujes de tierras y sobrecargas, con diseño estructural completo y despiece de acero.", "Tools to verify overturning and sliding stability for gravity and cantilever retaining walls, considering earth pressures and surcharges, with full structural design and steel bending schedule."))
+# 1. Banner SVG premium
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;">
+<svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#070604 0%,#241910 100%);">
+  <g opacity="0.08" stroke="#ca8a04" stroke-width="0.5">
+    <line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/>
+    <line x1="0" y1="165" x2="1100" y2="165"/>
+    <line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/>
+    <line x1="660" y1="0" x2="660" y2="220"/>
+  </g>
+  <rect x="0" y="0" width="1100" height="3" fill="#ca8a04" opacity="0.9"/>
+  <rect x="0" y="217" width="1100" height="3" fill="#eab308" opacity="0.7"/>
+
+  <!-- GRAFICO: MURO Y EMPUJE -->
+  <g transform="translate(60,50)">
+    <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">MURO VOLADIZO</text>
+    <!-- Base -->
+    <rect x="-10" y="90" width="120" height="20" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <!-- Pantalla -->
+    <path d="M20,90 L40,90 L35,-10 L25,-10 Z" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <!-- Acero (Talón a Pantalla) -->
+    <path d="M100,100 L30,100 L30,-5" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3,2"/>
+    <!-- Suelo y Empuje -->
+    <polygon points="45,-10 120,-10 120,90 45,90" fill="#78350f" opacity="0.4"/>
+    <polygon points="45,-10 85,90 45,90" fill="#ef4444" opacity="0.6"/>
+    <text x="55" y="75" font-family="monospace" font-size="20" font-weight="bold" fill="#fca5a5">&#9668;</text>
+  </g>
+
+  <!-- GRAFICO: ESTABILIDAD -->
+  <g transform="translate(280,50)">
+    <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">ESTABILIDAD</text>
+    <!-- Muro Abstraccion -->
+    <rect x="10" y="0" width="20" height="80" fill="#334155"/>
+    <rect x="-10" y="80" width="80" height="20" fill="#334155"/>
+    <!-- Fuerzas Volcamiento -->
+    <path d="M40,30 Q10,10 0,0" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="4,2"/>
+    <path d="M0,0 L10,-5 L5,5 Z" fill="#ef4444"/>
+    <circle cx="-10" cy="100" r="4" fill="#38bdf8"/>
+    <text x="-35" y="103" font-family="monospace" font-size="10" fill="#38bdf8">Pivote</text>
+    <!-- Fuerza Restituyente -->
+    <line x1="45" y1="50" x2="45" y2="90" stroke="#10b981" stroke-width="3"/>
+    <polygon points="45,90 41,80 49,80" fill="#10b981"/>
+    <!-- Deslizamiento -->
+    <line x1="80" y1="90" x2="110" y2="90" stroke="#ef4444" stroke-width="3"/>
+    <polygon points="110,90 100,86 100,94" fill="#ef4444"/>
+    <line x1="-15" y1="90" x2="-45" y2="90" stroke="#10b981" stroke-width="3"/>
+    <polygon points="-45,90 -35,86 -35,94" fill="#10b981"/>
+  </g>
+
+  <!-- TEXT BLOCK -->
+  <g transform="translate(560,0)">
+    <rect x="0" y="28" width="4" height="165" rx="2" fill="#eab308"/>
+    <text x="18" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#ffffff">MUROS DE CONTENCIÓN</text>
+    <text x="18" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="300" fill="#fde047" letter-spacing="2">ESTABILIDAD Y DISEÑO NSR-10</text>
+    <rect x="18" y="100" width="480" height="1" fill="#eab308" opacity="0.5"/>
+    
+    <!-- Tags -->
+    <rect x="18" y="111" width="90" height="22" rx="11" fill="#2d1c07" stroke="#eab308" stroke-width="1"/>
+    <text x="63" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fde047">VOLCAMIENTO</text>
+    
+    <rect x="116" y="111" width="100" height="22" rx="11" fill="#301515" stroke="#ef4444" stroke-width="1"/>
+    <text x="166" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#f87171">DESLIZAMIENTO</text>
+    
+    <rect x="224" y="111" width="116" height="22" rx="11" fill="#0f2e21" stroke="#10b981" stroke-width="1"/>
+    <text x="282" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#34d399">ACERO Y CORTANTE</text>
+    
+    <rect x="348" y="111" width="76" height="22" rx="11" fill="#0c1a2e" stroke="#38bdf8" stroke-width="1"/>
+    <text x="386" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">PLANO DXF</text>
+    
+    <!-- Description -->
+    <text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Revisión de Estabilidad Externa Geotécnica (Suelo) y Diseño Interno</text>
+    <text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Estructural (Concreto) para Muros en Voladizo y de Gravedad.</text>
+    <text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Evalúa Rankine / Coulomb, Acero, y exporta Planos Listos.</text>
+  </g>
+</svg></div>""", unsafe_allow_html=True)
+
+# 2. Panel global "Guía Rápida"
+with st.expander(" ¿Cómo usar este módulo? — Guía Rápida para Principiantes", expanded=False):
+    st.markdown('''
+    ### ¡Bienvenido al Módulo de Muros de Contención! 
+    Aquí diseñamos las estructuras que retienen grandes presiones de tierra o agua para que no se derrumben sobre carreteras, sótanos o desniveles.
+    
+    ####  Paso a Paso
+    1. **Geometría y Suelo (Barra Izquierda):**
+       - Primero establece la altura total que necesitas ($H$). Luego define cuánto mide la Base (zapata) y cómo se reparte en el 'Pie' (el frente) y la 'Pantalla' (el muro vertical).
+       - Introduce las propiedades del Suelo de Relleno (γ, Angulo de fricción $\\phi$) que empujarán el muro.
+    2. **Estabilidad (La primera pestaña):** 
+       - Trata el muro como una caja rígida gigante. El programa mira 3 cosas: 
+         * ¿Se Volteará? (FS Volcamiento) 
+         * ¿Se Resbalará? (FS Deslizamiento) 
+         * ¿Se hundirá en la tierra? (Capacidad Portante).
+       - Si algo de esto falla en **ROJO**, el muro se va a caer en la vida real. Debes ensanchar la base o ponerle un dentellón abajo.
+    3. **Acero del Muro y Base (Pestañas Estructurales):**
+       - Si la Estabilidad da **VERDE**, el muro no se caerá, pero ¿se quebrará por dentro? Aquí verificamos si la Pantalla (en voladizo) requiere más calibre de Acero en su cara que toca la tierra.
+    4. **Planos y Curva:** Explora las opciones de "Generar DXF" o las Memorias DOCX y APUs para entregar tu diseño inmediatamente al constructor con su plano CAD milimétrico.
+    ''')
 
 # 
 # PIE DE PÁGINA / DERECHOS RESERVADOS

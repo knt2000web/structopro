@@ -29,9 +29,103 @@ def _t(es, en): return en if lang == "English" else es
 # 
 
 st.set_page_config(page_title=_t("Placa Fácil", "Easy Slab"), layout="wide")
-st.title(_t("Placa Fácil – Sistema de Vigueta y Bloques", "Easy Slab – Joist & Block System"))
-st.markdown(_t("Diseño de losas con vigueta metálica y bloques de concreto (Placa Fácil). Verificación según NSR-10 (Colombia) y normas internacionales.", 
-               "Design of slabs with metal joists and concrete blocks (Easy Slab). Verification according to NSR-10 (Colombia) and international codes."))
+# 1. Banner SVG premium
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;">
+<svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#060608 0%,#1a101f 100%);">
+  <g opacity="0.06" stroke="#c084fc" stroke-width="0.5">
+    <line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/>
+    <line x1="0" y1="165" x2="1100" y2="165"/>
+    <line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/>
+    <line x1="660" y1="0" x2="660" y2="220"/>
+  </g>
+  <rect x="0" y="0" width="1100" height="3" fill="#c084fc" opacity="0.9"/>
+  <rect x="0" y="217" width="1100" height="3" fill="#a855f7" opacity="0.7"/>
+
+  <!-- GRAFICO: PERFIL Y BLOQUES -->
+  <g transform="translate(60,50)">
+    <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">SECCIÓN TRANSVERSAL</text>
+    
+    <!-- Bloques (Arcilla/Concreto) -->
+    <rect x="-30" y="20" width="40" height="40" fill="#a16207" stroke="#713f12" stroke-width="2"/>
+    <rect x="90" y="20" width="40" height="40" fill="#a16207" stroke="#713f12" stroke-width="2"/>
+    <!-- Perfil Colmena (Metalico) -->
+    <path d="M25,60 L25,0 L75,0 L75,60 L60,60 L60,10 L40,10 L40,60 Z" fill="#64748b" stroke="#334155" stroke-width="2"/>
+    
+    <!-- Torta de Concreto -->
+    <rect x="-30" y="-15" width="160" height="35" rx="3" fill="#334155" opacity="0.8"/>
+    <!-- Malla Electrosoldada -->
+    <line x1="-25" y1="0" x2="125" y2="0" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3,2"/>
+    
+    <!-- Cotas -->
+    <text x="50" y="75" text-anchor="middle" font-family="monospace" font-size="12" fill="#c084fc">Perfil</text>
+  </g>
+
+  <!-- GRAFICO: ELEMENTOS -->
+  <g transform="translate(290,50)">
+    <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">ARMADO PLACA</text>
+    
+    <!-- Viguetas prospectiva -->
+    <line x1="0" y1="0" x2="30" y2="80" stroke="#94a3b8" stroke-width="6"/>
+    <line x1="50" y1="0" x2="80" y2="80" stroke="#94a3b8" stroke-width="6"/>
+    <line x1="100" y1="0" x2="130" y2="80" stroke="#94a3b8" stroke-width="6"/>
+    
+    <!-- Bloquelones atravesados -->
+    <polygon points="12,30 62,30 70,50 20,50" fill="#ca8a04" opacity="0.8"/>
+    <polygon points="20,50 70,50 78,70 28,70" fill="#a16207" opacity="0.8"/>
+    
+    <polygon points="62,30 112,30 120,50 70,50" fill="#ca8a04" opacity="0.8"/>
+    <polygon points="70,50 120,50 128,70 78,70" fill="#a16207" opacity="0.8"/>
+    
+    <circle cx="28" cy="70" r="3" fill="#10b981"/>
+    <text x="18" y="85" font-family="monospace" font-size="9" fill="#10b981">Bloquelón</text>
+  </g>
+
+  <!-- TEXT BLOCK -->
+  <g transform="translate(560,0)">
+    <rect x="0" y="28" width="4" height="165" rx="2" fill="#c084fc"/>
+    <text x="18" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#ffffff">PLACA FÁCIL</text>
+    <text x="18" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="300" fill="#d8b4fe" letter-spacing="2">VIGUETA Y BLOQUE ALIGERADO</text>
+    <rect x="18" y="100" width="480" height="1" fill="#c084fc" opacity="0.5"/>
+    
+    <!-- Tags -->
+    <rect x="18" y="111" width="90" height="22" rx="11" fill="#2d1c3a" stroke="#c084fc" stroke-width="1"/>
+    <text x="63" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#d8b4fe">DEFLEXIÓN L/360</text>
+    
+    <rect x="116" y="111" width="100" height="22" rx="11" fill="#301515" stroke="#ef4444" stroke-width="1"/>
+    <text x="166" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#f87171">VIGA DE BORDE</text>
+    
+    <rect x="224" y="111" width="116" height="22" rx="11" fill="#0f2e21" stroke="#10b981" stroke-width="1"/>
+    <text x="282" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#34d399">MALLA ELECTROSOL.</text>
+    
+    <rect x="348" y="111" width="76" height="22" rx="11" fill="#2e140d" stroke="#f97316" stroke-width="1"/>
+    <text x="386" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fdba74">COSTO APU</text>
+    
+    <!-- Description -->
+    <text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Software para dimensionar Losas Aligeradas con perfiles metálicos y</text>
+    <text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">bloquelones huecos. Valida espesores mínimos NSR-10, cuantía de malla</text>
+    <text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">superior, sismo-resistencia de apoyos y genera planos estructurales.</text>
+  </g>
+</svg></div>""", unsafe_allow_html=True)
+
+# 2. Panel global "Guía Rápida"
+with st.expander(" ¿Cómo usar este módulo? — Guía Rápida para Principiantes", expanded=False):
+    st.markdown('''
+    ### ¡Bienvenido al Módulo de Placa Fácil! 
+    Este sistema es súper popular. Consiste en *Perfiles Metálicos* (rieles) puestos a distancias regulares, y entre ellos encajamos piezas de arcilla o concreto (Bloquelón). Arriba le echamos una *Torta de Concreto* con una malla de acero liviana. ¡Sin formaletas largas!
+    
+    ####  Paso a Paso
+    1. **Parámetros Geométricos:**
+       - En la barra lateral pon las dimensiones de tu techo/Entrepiso (Luz X y Luz Y).
+       - Dile en qué dirección se acostarán los perfiles (si en X o en Y). ¡Por regla general se apuntan a la luz más CORTA para que de menos "barriga"!
+    2. **¿Pondremos vigas de borde perimetral?** 
+       - Si tu casa es sismo-resistente, debes amarrar el borde del techo con una viga de concreto clásica para cumplir las normas. Dile a la app si quieres incluir material para ellas.
+    3. **Torta y Materiales:**
+       - Usualmente la *Torta de Concreto* (el vaciado superior) es de 4 cm a 5 cm. 
+       - Especifíca qué Resistencia de concreto pedirás a la concretera o mezclarás en obra.
+    4. **Resultados e Ingeniería:**
+       - Las columnas verdes y rojas de "Verificaciones Normativas" examinarán si el techo tiene exceso de longitud (si los perfiles sobrepasan 4.2 metros, vibrarán feo y necesitas vigas maestras a la mitad). Mostrará si la deformación / barriga (Deflexión L/360) es segura.
+       - Por último la pestaña de **APU** y Resumen contarán exactamente cuántos bloquelones comprar, arena, grava y cemento con el factor de desperdicio que introdujiste.
+    ''')
 
 BLOCK_DATA = {
     "nombre": "Bloquelón Santafé",
