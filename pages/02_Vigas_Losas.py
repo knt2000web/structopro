@@ -235,14 +235,15 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
     <text x="60" y="-24" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">SECCION T</text>
     <!-- Concreto -->
     <path d="M0,0 L120,0 L120,30 L80,30 L80,100 L40,100 L40,30 L0,30 Z" fill="#1e293b" stroke="#475569" stroke-width="2" stroke-linejoin="round"/>
-    <!-- Estribo Alma -->
-    <rect x="48" y="38" width="24" height="54" rx="3" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="3,2" opacity="0.8"/>
+    <!-- Estribo Alma completo -->
+    <rect x="48" y="10" width="24" height="82" rx="3" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="3,2" opacity="0.8"/>
     <!-- Refuerzo Superior (Ala) -->
-    <circle cx="20" cy="15" r="3.5" fill="#f59e0b"/><circle cx="35" cy="15" r="3.5" fill="#f59e0b"/>
-    <circle cx="85" cy="15" r="3.5" fill="#f59e0b"/><circle cx="100" cy="15" r="3.5" fill="#f59e0b"/>
+    <circle cx="15" cy="15" r="3.5" fill="#f59e0b"/><circle cx="30" cy="15" r="3.5" fill="#f59e0b"/>
+    <circle cx="56" cy="15" r="3.5" fill="#f59e0b"/><circle cx="64" cy="15" r="3.5" fill="#f59e0b"/>
+    <circle cx="90" cy="15" r="3.5" fill="#f59e0b"/><circle cx="105" cy="15" r="3.5" fill="#f59e0b"/>
     <!-- Inferior Alma -->
-    <circle cx="56" cy="84" r="5.5" fill="#f59e0b"/>
-    <circle cx="64" cy="84" r="5.5" fill="#f59e0b"/>
+    <circle cx="56" cy="84" r="3.5" fill="#f59e0b"/>
+    <circle cx="64" cy="84" r="3.5" fill="#f59e0b"/>
     <!-- Cotas -->
     <line x1="0" y1="-8" x2="120" y2="-8" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2"/>
     <text x="60" y="-12" text-anchor="middle" font-family="monospace" font-size="10" fill="#34d399">beff</text>
