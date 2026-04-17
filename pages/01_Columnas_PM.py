@@ -2152,28 +2152,25 @@ with tab2:
                         [(ox, oy), (ox + sec_w, oy), (ox + sec_w, oy + sec_h), (ox, oy + sec_h), (ox, oy)],
                         dxfattribs={'layer': 'CONCRETO'})
 
-                    # Estribo cerrado con ganchos 135 (sismico)
+                    # Estribo cerrado con ganchos 135° sismico NSR-10 C.21.6.4.2
                     re_s = recub_cm * escala_sec
                     r_bar = rebar_diam / 20 * escala_sec
                     dp_s  = d_prime * escala_sec
                     xm, xM = ox + re_s, ox + sec_w - re_s
                     ym, yM = oy + re_s, oy + sec_h - re_s
-                    # 2. Gancho a 135 grados exactos con 8 cm minimo (visibles dentro del nucleo)
-                    # 2. GANCHO A 135° (Lógica Maestra NSR-10)
-                    L_gancho = max(7.5, 6.0 * stirrup_diam/10) * escala_sec
-                    # ══ GANCHO SÍSMICO 135° NSR-10 C.21.6.4.2 — polilínea 7 puntos ══
-                    # Gancho en esquina sup-izq apuntando hacia núcleo (interior, 45° hacia abajo-der)
+                    # Longitud gancho: max(7.5cm, 6*db) según NSR-10
                     L_gancho = max(7.5, 6.0 * stirrup_diam / 10) * escala_sec
-                    _gx = L_gancho * math.cos(math.radians(45))  # componente hacia interior
+                    _gx = L_gancho * math.cos(math.radians(45))
                     _gy = L_gancho * math.sin(math.radians(45))
+                    # Gancho en esquina INF-IZQ: ambas colas apuntan al INTERIOR (+X, +Y desde esquina)
                     pts_estribo = [
-                        (xm + _gx, yM - _gy),  # P1: extensión gancho 135° → hacia núcleo
-                        (xm, yM),               # P2: esquina sup-izq
-                        (xm, ym),               # P3: esquina inf-izq
-                        (xM, ym),               # P4: esquina inf-der
-                        (xM, yM),               # P5: esquina sup-der
-                        (xm, yM),               # P6: cierre (vuelve sup-izq)
-                        (xm + _gx, yM + _gy),  # P7: cola exterior gancho 135°
+                        (xm + _gx, ym + _gy),   # P1: cola de entrada → hacia núcleo ✓
+                        (xm, ym),                # P2: esquina inf-izq (vértice del gancho)
+                        (xm, yM),                # P3: esquina sup-izq
+                        (xM, yM),                # P4: esquina sup-der
+                        (xM, ym),                # P5: esquina inf-der
+                        (xm, ym),                # P6: cierre (vuelve inf-izq)
+                        (xm + _gx, ym + _gy),   # P7: cola de salida → hacia núcleo ✓ (igual que P1)
                     ]
                     msp.add_lwpolyline(pts_estribo, dxfattribs={'layer': 'ACERO_TRANS', 'color': _color_acero_dxf_col(stirrup_diam)})
 
@@ -3044,10 +3041,6 @@ with tab4:
                         ]
 
                     polyline_st = O.createIfcPolyline(Points=pts_est)
-                    st_profile = O.createIfcCircleProfileDef(
-                        ProfileType="AREA", Radius=dst_m/2)
-                    # Estribo se representa como tubería circular en el plano
-                    st_rep_item = O.createIfcIndexedPolyCurve(o=polyline_st) if False else polyline_st
 
                     # Volumen físico para que Revit lo reconozca como Armadura
                     st_swept = O.createIfcSweptDiskSolid(Directrix=polyline_st, Radius=dst_m/2)
