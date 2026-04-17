@@ -232,15 +232,14 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
   <!--  VIGA T  -->
   <g transform="translate(190,50)">
-    <text x="60" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">SECCION T</text>
+    <text x="60" y="-24" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">SECCION T</text>
     <!-- Concreto -->
-    <path d="M0,0 L120,0 L120,25 L80,25 L80,100 L40,100 L40,25 L0,25 Z" fill="#1e293b" stroke="#475569" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M0,0 L120,0 L120,30 L80,30 L80,100 L40,100 L40,30 L0,30 Z" fill="#1e293b" stroke="#475569" stroke-width="2" stroke-linejoin="round"/>
     <!-- Estribo Alma -->
-    <rect x="48" y="30" width="24" height="62" rx="3" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="3,2" opacity="0.8"/>
+    <rect x="48" y="38" width="24" height="54" rx="3" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="3,2" opacity="0.8"/>
     <!-- Refuerzo Superior (Ala) -->
-    <circle cx="15" cy="12" r="3.5" fill="#f59e0b"/><circle cx="35" cy="12" r="3.5" fill="#f59e0b"/>
-    <circle cx="56" cy="12" r="4.5" fill="#f59e0b"/><circle cx="64" cy="12" r="4.5" fill="#f59e0b"/>
-    <circle cx="85" cy="12" r="3.5" fill="#f59e0b"/><circle cx="105" cy="12" r="3.5" fill="#f59e0b"/>
+    <circle cx="20" cy="15" r="3.5" fill="#f59e0b"/><circle cx="35" cy="15" r="3.5" fill="#f59e0b"/>
+    <circle cx="85" cy="15" r="3.5" fill="#f59e0b"/><circle cx="100" cy="15" r="3.5" fill="#f59e0b"/>
     <!-- Inferior Alma -->
     <circle cx="56" cy="84" r="5.5" fill="#f59e0b"/>
     <circle cx="64" cy="84" r="5.5" fill="#f59e0b"/>
