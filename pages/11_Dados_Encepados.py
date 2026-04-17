@@ -204,23 +204,27 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
 </svg></div>""", unsafe_allow_html=True)
 
-# 2. Panel global "Guía Rápida"
-with st.expander(" ¿Cómo usar este módulo? — Guía Rápida para Principiantes", expanded=False):
+# 2. Panel global "Guía Profesional"
+with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=False):
     st.markdown('''
-    ### ¡Bienvenido al diseño de Dados de Pilotes! 
-    Un "Dado" o "Encepado" es la mole de concreto que sirve de transición para conectar las columnas del edificio con los pilotes profundos. Este módulo automatiza ese diseño.
+    ### Metodología y Flujo de Diseño (Cabezales de Pilotes)
+    Konte evalúa la integridad y dimensionamiento de dados/encepados mediante análisis de rigidez bidireccional y modelado tridimensional cinemático.
     
-    ####  Paso a Paso
-    1. **Configura tus Materiales (Barra a la izquierda):** Elige la resistencia del concreto ($f'c$), tu acero ($fy$) y sobre todo, las medidas de la Columna y los esfuerzos últimos ($Pu$, $Mu$).
-    2. **Busca la Pestaña "1. Configuración de Grupo":** 
-       - Selecciona cuántos pilotes necesitas (ej. 2, 3, 4 pilotes).
-       - Observa cómo la aplicación dibuja la placa y calcula qué Pilote recibe más carga (Cinemática).
-       - *Objetivo:* Ningún pilote debe aparecer en **ROJO** (fallo por exceso de carga admisible). Si falla, separa más los pilotes o agrega más pilotes.
-    3. **Avanza a la Pestaña "2. Punzonamiento y Flexión":**
-       - Verifica el cálculo de **Cortante y Punzonamiento**: El programa te dirá si la mole de concreto es lo suficientemente gruesa.
-       - Determina la cantidad de Varillas necesarias (Área de Acero) en los ejes X y Y y elige el calibre de la varilla (ej. "#6 (3/4\")").
-       - *Alerta Avanzada (Capa profunda):* Si el dado es tan chato que los pilotes están muy cerca a la columna, el módulo te advertirá que debes usar el método avanzado **Bielas y Tirantes (STM)** para garantizar su integridad, algo fundamental en ACI 318.
-    4. **Mira tu BIM 3D y tu Presupuesto A.I.U:** Pasa a la Pestaña 3 y 4 para ver tu armadura en vivo en 3D (con ganchos exactos y refuerzos térmicos si se necesitan) y determinar tu costo unitario preciso.
+    ####  1. Cinemática y Distribución Esfuerzos (Por Pilote)
+    - Especifica configuraciones geométricas de grupos de pilotes (2 a 6 elementos).
+    - Ingresa las cargas últimas ($P_u$, $M_{ux}$, $M_{uy}$). Konte resolverá la distribución tensional asumiendo el cabezal rígido.
+    - **Criterio de Aceptación:** La reacción individual máxima en servicio y última no debe exceder las especificaciones del geotécnico (Pilote en rojo indica estado de falla portante).
+    
+    ####  2. Verificación Dinámica de Cortante (Aceros)
+    - **Punzonamiento Complejo:** Se chequean los perímetros críticos ($d/2$) de columnas y pilotes de esquina/borde, ajustando la capacidad resistente concéntrica frente al espesor útil ($d$).
+    - **Flexión y Cortante como Viga Ancha:** Se analizan los cuellos de botella de compresión diagonal, determinando la cuantía requerida para las parrillas de flexión X y Y.
+    
+    ####  3. Alerta Strut-And-Tie (STM)
+    - **Aviso Normativo Crítico (ACI 318):** Si la relación a/d (distancia al pilote / peralte) es menor a $2.0$, la teoría de viga falla. El módulo audita automáticamente estas geometrías tipo "D-Region" advirtiendo el requerimiento del método de Bielas y Tirantes para el diseño seguro de compresión local.
+    
+    ####  4. Integración BIM y APU Estructural
+    - Despliegue interactivo en 3D de parrillas bases, estribos de confinamiento, ganchos estándar ACI y arranques de columna.
+    - Cuadro de APU (KonteAnalytics) con factor de desperdicio incorporado y listado paramétrico de despachos (DXF/IFC).
     ''')
 
 
