@@ -1398,265 +1398,77 @@ def capturar_estado_module(ref):
 
 
 
-st.markdown('''
-
-
-
-
-
-
-
-
-<div style="display:flex; align-items:center; gap:20px; margin-bottom:10px; background:#1e2530; padding:15px; border-radius:10px; border-left:5px solid #29b6f6;">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="80" height="48">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<line x1="10" y1="20" x2="90" y2="20" stroke="#29b6f6" stroke-width="4"/>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<rect x="35" y="5" width="30" height="15" fill="#29b6f6" opacity="0.8"/>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<line x1="40" y1="20" x2="40" y2="55" stroke="#29b6f6" stroke-width="6" stroke-linecap="round"/>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<line x1="60" y1="20" x2="60" y2="55" stroke="#29b6f6" stroke-width="6" stroke-linecap="round"/>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<line x1="10" y1="35" x2="90" y2="35" stroke="#fff" stroke-width="1" stroke-dasharray="2,2" opacity="0.3"/>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<line x1="10" y1="50" x2="90" y2="50" stroke="#fff" stroke-width="1" stroke-dasharray="2,2" opacity="0.3"/>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</svg>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h1 style="margin:0; padding:0; font-size:28px;">Cimentaciones Profundas: Pilotes</h1>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<p style="margin:0; padding:0; color:#aaa; font-size:14px;">Módulo integral NSR-10 / ACI 318 (Diseño por capas, eficiencia de grupo, APU e IFC)</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-''', unsafe_allow_html=True)
+# 1. Banner SVG premium
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;">
+<svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#05101a 0%,#091d36 100%);">
+  <g opacity="0.08" stroke="#38bdf8" stroke-width="0.5">
+    <line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/>
+    <line x1="0" y1="165" x2="1100" y2="165"/>
+    <line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/>
+    <line x1="660" y1="0" x2="660" y2="220"/>
+  </g>
+  <rect x="0" y="0" width="1100" height="3" fill="#0ea5e9" opacity="0.9"/>
+  <rect x="0" y="217" width="1100" height="3" fill="#38bdf8" opacity="0.7"/>
+  <!-- PILOTE SIMPLE (Perfiles de suelo) -->
+  <g transform="translate(60,40)">
+    <text x="45" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#94a3b8" letter-spacing="1">PILOTE INDIVIDUAL</text>
+    <!-- Estratos Suelo -->
+    <rect x="-15" y="10" width="120" height="35" fill="#1e293b" opacity="0.6"/>
+    <text x="-5" y="32" font-family="monospace" font-size="8" fill="#475569">E1</text>
+    <rect x="-15" y="45" width="120" height="45" fill="#334155" opacity="0.6"/>
+    <text x="-5" y="70" font-family="monospace" font-size="8" fill="#64748b">E2</text>
+    <!-- Pilote -->
+    <rect x="40" y="0" width="10" height="110" fill="#cbd5e1" stroke="#475569" stroke-width="1.5"/>
+    <!-- Friccion flechas -->
+    <g stroke="#38bdf8" stroke-width="1.2">
+      <line x1="32" y1="30" x2="38" y2="25"/><line x1="32" y1="30" x2="38" y2="35"/><line x1="38" y1="30" x2="38" y2="30"/>
+      <line x1="58" y1="30" x2="52" y2="25"/><line x1="58" y1="30" x2="52" y2="35"/><line x1="52" y1="30" x2="52" y2="30"/>
+      <line x1="32" y1="70" x2="38" y2="65"/><line x1="32" y1="70" x2="38" y2="75"/><line x1="38" y1="70" x2="38" y2="70"/>
+      <line x1="58" y1="70" x2="52" y2="65"/><line x1="58" y1="70" x2="52" y2="75"/><line x1="52" y1="70" x2="52" y2="70"/>
+    </g>
+    <!-- Resistencia por punta -->
+    <polygon points="45,115 40,130 50,130" fill="#f43f5e"/>
+    <text x="55" y="125" font-family="monospace" font-size="8" fill="#fb7185">Qp</text>
+  </g>
+  <!-- GRUPO DE PILOTES & DADO -->
+  <g transform="translate(260,35)">
+    <text x="65" y="-10" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#94a3b8" letter-spacing="1">DADO DE PILOTES</text>
+    <!-- Columna -->
+    <rect x="50" y="0" width="30" height="30" fill="#334155" stroke="#475569" stroke-width="2"/>
+    <line x1="65" y1="-10" x2="65" y2="0" stroke="#f43f5e" stroke-width="2"/>
+    <polygon points="65,0 62,-5 68,-5" fill="#f43f5e"/>
+    <!-- Dado / Encepado -->
+    <rect x="15" y="30" width="100" height="25" rx="2" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+    <!-- Pilotes -->
+    <rect x="25" y="55" width="10" height="60" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
+    <rect x="60" y="55" width="10" height="60" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
+    <rect x="95" y="55" width="10" height="60" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
+    <!-- Lineas interaccion -->
+    <line x1="30" y1="120" x2="65" y2="135" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2,2"/>
+    <line x1="100" y1="120" x2="65" y2="135" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2,2"/>
+    <text x="65" y="145" text-anchor="middle" font-family="monospace" font-size="8" fill="#7dd3fc">BULBO PRESION</text>
+  </g>
+  <!-- TEXT BLOCK -->
+  <g transform="translate(560,0)">
+    <rect x="0" y="28" width="4" height="165" rx="2" fill="#0ea5e9"/>
+    <text x="18" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#ffffff">PILOTES Y ENCEPADOS</text>
+    <text x="18" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="300" fill="#bae6fd" letter-spacing="2">CIMENTACIONES PROFUNDAS NSR-10</text>
+    <rect x="18" y="100" width="480" height="1" fill="#0ea5e9" opacity="0.5"/>
+    <!-- Tags -->
+    <rect x="18" y="111" width="110" height="22" rx="11" fill="#0c2a1a" stroke="#10b981" stroke-width="1"/>
+    <text x="73" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#34d399">CAPACIDAD AXIAL</text>
+    <rect x="136" y="111" width="116" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/>
+    <text x="194" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fbbf24">FRICCION Y PUNTA</text>
+    <rect x="260" y="111" width="126" height="22" rx="11" fill="#1e1b2e" stroke="#8b5cf6" stroke-width="1"/>
+    <text x="323" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#a78bfa">GRUPO / CONVERSE-L</text>
+    <rect x="394" y="111" width="70" height="22" rx="11" fill="#1a150a" stroke="#ef4444" stroke-width="1"/>
+    <text x="429" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#f87171">BIM IFC</text>
+    <!-- Description -->
+    <text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Analisis de comportamiento multietapa para pilotes a partir de sondeos SPT.</text>
+    <text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Diseno estructural de dados de cimentacion segun espesor y punzonamiento,</text>
+    <text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">con evaluacion de eficiencia Converse-Labarre y despiece espacial acoplado.</text>
+  </g>
+</svg></div>""", unsafe_allow_html=True)
 
 
 

@@ -147,20 +147,75 @@ def capturar_estado_module(ref):
 # 
 
 
-# 1. Banner SVG compacto
-st.markdown('''
-<div style="display:flex; align-items:center; gap:20px; margin-bottom:10px; background:#1e2530; padding:15px; border-radius:10px; border-left:5px solid #ffaa00;">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="80" height="48">
-        <path d="M40,10 L60,10 L60,35 L85,35 L90,50 L10,50 L15,35 L40,35 Z" fill="none" stroke="#ffaa00" stroke-width="2"/>
-        <line x1="10" y1="50" x2="90" y2="50" stroke="#ffaa00" stroke-width="4"/>
-        <line x1="50" y1="10" x2="50" y2="35" stroke="#ffaa00" stroke-width="1" stroke-dasharray="2,2"/>
-    </svg>
-    <div>
-        <h1 style="margin:0; padding:0; font-size:28px;">Cimentaciones: Zapatas y Geotecnia</h1>
-        <p style="margin:0; padding:0; color:#aaa; font-size:14px;">Módulo integral NSR-10 / ACI 318 (Diseño, punzonamiento, APU, IFC y Memorias)</p>
-    </div>
-</div>
-''', unsafe_allow_html=True)
+# 1. Banner SVG premium
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;">
+<svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#110a01 0%,#241503 100%);">
+  <g opacity="0.08" stroke="#fbbf24" stroke-width="0.5">
+    <line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/>
+    <line x1="0" y1="165" x2="1100" y2="165"/>
+    <line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/>
+    <line x1="660" y1="0" x2="660" y2="220"/>
+  </g>
+  <rect x="0" y="0" width="1100" height="3" fill="#f59e0b" opacity="0.9"/>
+  <rect x="0" y="217" width="1100" height="3" fill="#fbbf24" opacity="0.7"/>
+  <!-- ZAPATA CONCENTRICA -->
+  <g transform="translate(60,60)">
+    <text x="50" y="-20" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#d1d5db" letter-spacing="1">AISLADA</text>
+    <!-- Columna -->
+    <rect x="35" y="0" width="30" height="40" fill="#2d3748" stroke="#4a5568" stroke-width="2"/>
+    <path d="M35,10 L65,10 M35,20 L65,20 M35,30 L65,30" stroke="#f59e0b" stroke-width="1.5" opacity="0.8"/>
+    <!-- Zapata -->
+    <path d="M10,40 L90,40 L100,70 L0,70 Z" fill="#1e293b" stroke="#64748b" stroke-width="2" stroke-linejoin="round"/>
+    <line x1="5" y1="65" x2="95" y2="65" stroke="#38bdf8" stroke-width="2"/>
+    <circle cx="20" cy="65" r="2.5" fill="#f59e0b"/><circle cx="40" cy="65" r="2.5" fill="#f59e0b"/><circle cx="60" cy="65" r="2.5" fill="#f59e0b"/><circle cx="80" cy="65" r="2.5" fill="#f59e0b"/>
+    <!-- Presion -->
+    <g stroke="#ef4444" stroke-width="1.2">
+      <line x1="15" y1="85" x2="15" y2="75"/><polygon points="15,75 12,80 18,80" fill="#ef4444"/>
+      <line x1="50" y1="85" x2="50" y2="75"/><polygon points="50,75 47,80 53,80" fill="#ef4444"/>
+      <line x1="85" y1="85" x2="85" y2="75"/><polygon points="85,75 82,80 88,80" fill="#ef4444"/>
+    </g>
+    <text x="50" y="98" text-anchor="middle" font-family="monospace" font-size="9" fill="#f87171">qmax</text>
+  </g>
+  <!-- ZAPATA MEDIANERA & VIGA -->
+  <g transform="translate(250,60)">
+    <text x="85" y="-20" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#d1d5db" letter-spacing="1">MEDIANERA + AMARRE</text>
+    <!-- Zapata 1 (Med) -->
+    <rect x="0" y="0" width="30" height="40" fill="#2d3748" stroke="#4a5568" stroke-width="2"/>
+    <path d="M0,40 L70,40 L70,70 L0,70 Z" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+    <!-- Viga -->
+    <rect x="30" y="45" width="90" height="20" fill="#334155" stroke="#475569" stroke-width="1.5" stroke-dasharray="2,2"/>
+    <!-- Zapata 2 (Ais) -->
+    <rect x="120" y="0" width="30" height="40" fill="#2d3748" stroke="#4a5568" stroke-width="2"/>
+    <path d="M100,40 L170,40 L180,70 L90,70 Z" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+    <!-- Reb -->
+    <line x1="5" y1="65" x2="65" y2="65" stroke="#38bdf8" stroke-width="1.5"/>
+    <line x1="100" y1="65" x2="170" y2="65" stroke="#38bdf8" stroke-width="1.5"/>
+    <line x1="30" y1="60" x2="120" y2="60" stroke="#f59e0b" stroke-width="1.5"/>
+    <!-- Linea de Propiedad -->
+    <line x1="-5" y1="-10" x2="-5" y2="100" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="-12" y="10" text-anchor="end" font-family="monospace" font-size="8" fill="#fb7185" transform="rotate(-90,-12,10)">LINDERO</text>
+  </g>
+  <!-- TEXT BLOCK -->
+  <g transform="translate(560,0)">
+    <rect x="0" y="28" width="4" height="165" rx="2" fill="#f59e0b"/>
+    <text x="18" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#ffffff">ZAPATAS Y GEOTECNIA</text>
+    <text x="18" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="300" fill="#fcd34d" letter-spacing="2">CIMENTACIONES NSR-10 / ACI 318</text>
+    <rect x="18" y="100" width="480" height="1" fill="#f59e0b" opacity="0.5"/>
+    <!-- Tags -->
+    <rect x="18" y="111" width="130" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/>
+    <text x="83" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fbbf24">CAPACIDAD PORTANTE</text>
+    <rect x="156" y="111" width="90" height="22" rx="11" fill="#1e1b2e" stroke="#8b5cf6" stroke-width="1"/>
+    <text x="201" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#a78bfa">PUNZONAMIENTO</text>
+    <rect x="254" y="111" width="106" height="22" rx="11" fill="#1c1416" stroke="#ef4444" stroke-width="1"/>
+    <text x="307" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#f87171">FLEXO-COMPRESION</text>
+    <rect x="368" y="111" width="88" height="22" rx="11" fill="#0c1f2e" stroke="#38bdf8" stroke-width="1"/>
+    <text x="412" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">PLANO DXF / IFC</text>
+    <!-- Description -->
+    <text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Analisis de interaccion suelo-estructura para zapatas aisladas y medianeras.</text>
+    <text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Calculo Terzaghi, Meyerhof o Vesic con exportacion BIM de refuerzo tridimensional,</text>
+    <text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">verificando excentricidades biaxiales, presiones admisibles, momentos y cortante.</text>
+  </g>
+</svg></div>""", unsafe_allow_html=True)
 
 # 2. Panel global "Guía Rápida"
 with st.expander(" ¿Qué hace este módulo? — Guía rápida", expanded=False):
