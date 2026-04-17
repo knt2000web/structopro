@@ -2859,36 +2859,33 @@ with tab4:
                 # ── Cabecera de proyecto ────────────────────────────────────
 
 
+                # ── Proyecto / Sitio / Edificio / Piso ─────────────────────
+                project  = ifcopenshell.api.run("root.create_entity",    O, ifc_class="IfcProject",  name=proyecto)
+
                 # ── Contexto geométrico ─────────────────────────────────────
-                ifcopenshell.api.run("project.create_project", O, name=st.session_state.get("cpm_proyecto_nombre","Proyecto"))
                 context = ifcopenshell.api.run("context.add_context", O, context_type="Model")
                 body    = ifcopenshell.api.run("context.add_context", O,
                     context_type="Model", context_identifier="Body",
                     target_view="MODEL_VIEW", parent=context)
 
-                # ── Proyecto / Sitio / Edificio / Piso ─────────────────────
-                project  = ifcopenshell.api.run("root.create_entity",    O, ifc_class="IfcProject",  Name=proyecto)
-                site     = ifcopenshell.api.run("root.create_entity",    O, ifc_class="IfcSite",     Name="Sitio")
-                building = ifcopenshell.api.run("root.create_entity",    O, ifc_class="IfcBuilding", Name="Edificio")
-                storey   = ifcopenshell.api.run("root.create_entity",    O, ifc_class="IfcBuildingStorey", Name="Piso 1")
-                ifcopenshell.api.run("unit.assign_unit", O, units={"LENGTHUNIT": "METRE"})
-                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project,  product=site)
-                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site,     product=building)
-                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, product=storey)
+                site     = ifcopenshell.api.run("root.create_entity",    O, ifc_class="IfcSite",     name="Sitio")
+                building = ifcopenshell.api.run("root.create_entity",    O, ifc_class="IfcBuilding", name="Edificio")
+                storey   = ifcopenshell.api.run("root.create_entity",    O, ifc_class="IfcBuildingStorey", name="Piso 1")
+                _u = ifcopenshell.api.run("unit.add_si_unit", O, unit_type="LENGTHUNIT"); ifcopenshell.api.run("unit.assign_unit", O, units=[_u])
+                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project, products=[site])
+                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, products=[building])
+                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, products=[storey])
 
                 L_m = L_cm / 100.0;  b_m = b_cm / 100.0;  h_m = h_cm / 100.0
                 D_m = D_cm / 100.0;  r_m = recub / 100.0
 
                 # ── Materiales ──────────────────────────────────────────────
-                mat_conc = ifcopenshell.api.run("material.add_material", O,
-                    Name=f"CONCRETO_fc{fc_mpa:.0f}MPa")
-                mat_acero = ifcopenshell.api.run("material.add_material", O,
-                    Name=f"ACERO_fy{fy_mpa:.0f}MPa")
+                mat_conc = ifcopenshell.api.run("material.add_material", O, name=f"CONCRETO_fc{fc_mpa:.0f}MPa")
+                mat_acero = ifcopenshell.api.run("material.add_material", O, name=f"ACERO_fy{fy_mpa:.0f}MPa")
 
                 # ── IfcColumn (geometría extrusión) ─────────────────────────
                 column = ifcopenshell.api.run("root.create_entity", O,
-                    ifc_class="IfcColumn",
-                    Name=f"COL-{'CIRC' if es_circ else f'{b_cm:.0f}x{h_cm:.0f}'}")
+                    ifc_class="IfcColumn", name=f"COL-{'CIRC' if es_circ else f'{b_cm:.0f}x{h_cm:.0f}'}")
                 column.PredefinedType = "COLUMN"
 
                 # Perfil de la sección según tipo
@@ -2915,22 +2912,14 @@ with tab4:
                 shape_rep = O.createIfcShapeRepresentation(
                     ContextOfItems=body, RepresentationIdentifier="Body",
                     RepresentationType="SweptSolid", Items=[solid])
-                product_shape = O.createIfcProductDefinitionShape(Representations=[shape_rep])
-                column.Representation = product_shape
-
-                # Ubicación global del elemento
-                col_origin = O.createIfcCartesianPoint([0.0, 0.0, 0.0])
-                col_place3D = O.createIfcAxis2Placement3D(
-                    Location=col_origin, Axis=z_dir, RefDirection=x_dir)
-                col_local = O.createIfcLocalPlacement(RelativePlacement=col_place3D)
-                column.ObjectPlacement = col_local
+                ifcopenshell.api.run("geometry.assign_representation", O, product=column, representation=shape_rep)
+                ifcopenshell.api.run("geometry.edit_object_placement", O, product=column)
 
                 # Asignar al piso
                 ifcopenshell.api.run("spatial.assign_container", O,
-                    relating_structure=storey, product=column)
+                    relating_structure=storey, products=[column])
                 # Asignar material al concreto
-                ifcopenshell.api.run("material.assign_material", O,
-                    product=column, material=mat_conc)
+                ifcopenshell.api.run("material.assign_material", O, products=[column], material=mat_conc)
 
                 # ── Barras Longitudinales (IfcReinforcingBar) ───────────────
                 import math as _m
@@ -2969,13 +2958,11 @@ with tab4:
                 long_bars = []
                 for i, (bx, by) in enumerate(bar_positions):
                     bar = ifcopenshell.api.run("root.create_entity", O,
-                        ifc_class="IfcReinforcingBar",
-                        Name=f"L{i+1}")
+                        ifc_class="IfcReinforcingBar", name=f"L{i+1}")
                     bar.NominalDiameter = db_m
                     bar.SteelGrade      = f"fy={fy_mpa:.0f}MPa"
-                    bar.BarSurface      = "DEFORMED"
-                    bar.BarRole         = "LONGITUDINAL"
-                    bar.PredefinedType  = "STANDARD"
+                    bar.BarSurface      = "TEXTURED"
+                    bar.PredefinedType  = "MAIN"
 
                     # Geometría: línea vertical (poly-line extruida)
                     p0 = O.createIfcCartesianPoint([bx, by, 0.0])
@@ -2996,24 +2983,16 @@ with tab4:
                         ReflectanceMethod="FLAT")
                     surface_style = O.createIfcSurfaceStyle(
                         Name=f"AceroLong_{db_mm:.0f}mm", Side="BOTH", Styles=[style])
+                    O.createIfcStyledItem(Item=bar_solid, Styles=[surface_style])
                     bar_rep = O.createIfcShapeRepresentation(
                         ContextOfItems=body, RepresentationIdentifier="Body",
                         RepresentationType="SweptSolid", Items=[bar_solid])
-                    bar_shape = O.createIfcProductDefinitionShape(Representations=[bar_rep])
-                    bar.Representation = bar_shape
-
-                    # Ubicación bar coincide con columna
-                    bar_place_local = O.createIfcAxis2Placement3D(
-                        Location=O.createIfcCartesianPoint([0.0, 0.0, 0.0]),
-                        Axis=O.createIfcDirection([0.0, 0.0, 1.0]),
-                        RefDirection=O.createIfcDirection([1.0, 0.0, 0.0]))
-                    bar.ObjectPlacement = O.createIfcLocalPlacement(
-                        PlacementRelTo=col_local, RelativePlacement=bar_place_local)
+                    ifcopenshell.api.run("geometry.assign_representation", O, product=bar, representation=bar_rep)
+                    ifcopenshell.api.run("geometry.edit_object_placement", O, product=bar)
 
                     ifcopenshell.api.run("spatial.assign_container", O,
-                        relating_structure=storey, product=bar)
-                    ifcopenshell.api.run("material.assign_material", O,
-                        product=bar, material=mat_acero)
+                        relating_structure=storey, products=[bar])
+                    ifcopenshell.api.run("material.assign_material", O, products=[bar], material=mat_acero)
                     long_bars.append(bar)
 
                 # ── Estribos / Espiral (IfcReinforcingBar cerrado) ──────────
@@ -3032,12 +3011,11 @@ with tab4:
 
                 for j, y_z in enumerate(y_positions):
                     st_bar = ifcopenshell.api.run("root.create_entity", O,
-                        ifc_class="IfcReinforcingBar", Name=f"E{j+1}")
+                        ifc_class="IfcReinforcingBar", name=f"E{j+1}")
                     st_bar.NominalDiameter = dst_m
                     st_bar.SteelGrade      = f"fy={fy_mpa:.0f}MPa"
-                    st_bar.BarSurface      = "DEFORMED"
-                    st_bar.BarRole         = "SHEAR"
-                    st_bar.PredefinedType  = "STANDARD"
+                    st_bar.BarSurface      = "TEXTURED"
+                    st_bar.PredefinedType  = "MAIN"
 
                     # Polilínea cerrada del estribo
                     if es_circ:
@@ -3049,15 +3027,20 @@ with tab4:
                             for k in range(n_pts + 1)]
                     else:
                         bx2 = b_m/2 - r_m;  hy2 = h_m/2 - r_m
+                        hk = max(dst_m * 6, 0.075)
+                        hk_dx = hk * _m.cos(_m.radians(45))
+                        hk_dy = hk * _m.sin(_m.radians(45))
+                        # Gancho: cola 1 entra por esquina inf-izq hacia el nucleo
+                        # Polilínea: cola1 -> perimetro completo -> cola2 con offset Z
+                        # El offset en Z evita la geometría degenerada en SweptDiskSolid
                         pts_est = [
+                            O.createIfcCartesianPoint([-bx2 + hk_dx, -hy2 + hk_dy, y_z + dst_m/2]),
                             O.createIfcCartesianPoint([-bx2, -hy2, y_z]),
                             O.createIfcCartesianPoint([ bx2, -hy2, y_z]),
                             O.createIfcCartesianPoint([ bx2,  hy2, y_z]),
                             O.createIfcCartesianPoint([-bx2,  hy2, y_z]),
                             O.createIfcCartesianPoint([-bx2, -hy2, y_z]),
-                            # Gancho 135 grados (sismico)
-                            O.createIfcCartesianPoint([-bx2 + dst_m*6*_m.cos(_m.radians(45)),
-                                                        hy2 + dst_m*6*_m.sin(_m.radians(45)), y_z]),
+                            O.createIfcCartesianPoint([-bx2 + hk_dx, -hy2 + hk_dy, y_z - dst_m/2]),
                         ]
 
                     polyline_st = O.createIfcPolyline(Points=pts_est)
@@ -3066,36 +3049,26 @@ with tab4:
                     # Estribo se representa como tubería circular en el plano
                     st_rep_item = O.createIfcIndexedPolyCurve(o=polyline_st) if False else polyline_st
 
-                    # Representación simplificada: extruir un pequeño disco en cada punto
-                    # (full swept-disk along polyline requiere IfcSweptDiskSolid)
-                    try:
-                        st_swept = O.createIfcSweptDiskSolid(
-                            Directrix=polyline_st,
-                            Radius=dst_m/2,
-                            StartParam=None, EndParam=None)
-                        st_rep = O.createIfcShapeRepresentation(
-                            ContextOfItems=body, RepresentationIdentifier="Body",
-                            RepresentationType="AdvancedSweptSolid", Items=[st_swept])
-                    except Exception:
-                        # Fallback: curva simple
-                        st_rep = O.createIfcShapeRepresentation(
-                            ContextOfItems=body, RepresentationIdentifier="Axis",
-                            RepresentationType="Curve3D", Items=[polyline_st])
+                    # Volumen físico para que Revit lo reconozca como Armadura
+                    st_swept = O.createIfcSweptDiskSolid(Directrix=polyline_st, Radius=dst_m/2)
+                    
+                    st_style_rend = O.createIfcSurfaceStyleRendering(
+                        SurfaceColour=O.createIfcColourRgb(Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
+                        ReflectanceMethod="FLAT")
+                    st_surface_style = O.createIfcSurfaceStyle(
+                        Name=f"Estribo_{dst_mm:.0f}mm", Side="BOTH", Styles=[st_style_rend])
+                    O.createIfcStyledItem(Item=st_swept, Styles=[st_surface_style])
 
-                    st_shape = O.createIfcProductDefinitionShape(Representations=[st_rep])
-                    st_bar.Representation = st_shape
+                    st_rep = O.createIfcShapeRepresentation(
+                        ContextOfItems=body, RepresentationIdentifier="Body",
+                        RepresentationType="AdvancedSweptSolid", Items=[st_swept])
 
-                    bar_place_local2 = O.createIfcAxis2Placement3D(
-                        Location=O.createIfcCartesianPoint([0.0, 0.0, 0.0]),
-                        Axis=O.createIfcDirection([0.0, 0.0, 1.0]),
-                        RefDirection=O.createIfcDirection([1.0, 0.0, 0.0]))
-                    st_bar.ObjectPlacement = O.createIfcLocalPlacement(
-                        PlacementRelTo=col_local, RelativePlacement=bar_place_local2)
+                    ifcopenshell.api.run("geometry.assign_representation", O, product=st_bar, representation=st_rep)
+                    ifcopenshell.api.run("geometry.edit_object_placement", O, product=st_bar)
 
                     ifcopenshell.api.run("spatial.assign_container", O,
-                        relating_structure=storey, product=st_bar)
-                    ifcopenshell.api.run("material.assign_material", O,
-                        product=st_bar, material=mat_acero)
+                        relating_structure=storey, products=[st_bar])
+                    ifcopenshell.api.run("material.assign_material", O, products=[st_bar], material=mat_acero)
                     stirrup_bars.append(st_bar)
 
                 # ── Pset_NSR10 y Pset_ColGeometry ──────────────────────────
@@ -3104,38 +3077,38 @@ with tab4:
                         "ConstructionMethod":      "CastInPlace",
                         "StructuralClass":         "Column",
                         "StrengthClass":           f"f'c {fc_mpa:.1f} MPa",
-                        "ReinforcementVolumeRatio": f"{rho_pct:.3f}%",
-                        "ReinforcementAreaRatio":  f"{As_cm2:.2f} cm2"
+                        "ReinforcementVolumeRatio": float(rho_pct) / 100.0,
+                        "ReinforcementAreaRatio":   float(As_cm2)
                     },
                     "Pset_NSR10": {
                         "Norma":                norma,
                         "Nivel_Sismico":        nivel_sis,
-                        "fc_MPa":               str(round(fc_mpa, 1)),
-                        "fy_MPa":               str(round(fy_mpa, 1)),
-                        "As_cm2":               str(round(As_cm2, 2)),
-                        "Rho_pct":              str(round(rho_pct, 3)),
-                        "n_barras_long":        str(n_long_total),
-                        "diametro_barra_mm":    str(db_mm),
-                        "diametro_estribo_mm":  str(dst_mm),
-                        "sep_estrib_conf_cm":   str(round(s_conf_cm, 1)),
-                        "sep_estrib_basica_cm": str(round(s_bas_cm, 1)),
-                        "Lo_conf_cm":           str(round(Lo_cm, 1)),
-                        "n_estribos_total":     str(n_estrib),
-                        "Pu_kN":                str(round(Pu_kN, 1)),
-                        "phi_Pni_kN":           str(round(phiPn_kN, 1)),
-                        "Bresler_ratio":        str(round(bresler_ratio, 4)),
+                        "fc_MPa":               float(fc_mpa),
+                        "fy_MPa":               float(fy_mpa),
+                        "As_cm2":               float(As_cm2),
+                        "Rho_pct":              float(rho_pct),
+                        "n_barras_long":        int(n_long_total),
+                        "diametro_barra_mm":    float(db_mm),
+                        "diametro_estribo_mm":  float(dst_mm),
+                        "sep_estrib_conf_cm":   float(s_conf_cm),
+                        "sep_estrib_basica_cm": float(s_bas_cm),
+                        "Lo_conf_cm":           float(Lo_cm),
+                        "n_estribos_total":     int(n_estrib),
+                        "Pu_kN":                float(Pu_kN),
+                        "phi_Pni_kN":           float(phiPn_kN),
+                        "Bresler_ratio":        float(bresler_ratio),
                         "Bresler_CUMPLE":       "SI" if bresler_ok else "NO",
                         "Ash_CUMPLE":           "SI" if ash_ok_flag else "NO",
-                        "Vol_concreto_m3":      str(round(vol_m3, 4)),
-                        "Peso_acero_kg":        str(round(peso_kg, 1)),
+                        "Vol_concreto_m3":      float(vol_m3),
+                        "Peso_acero_kg":        float(peso_kg),
                     },
                     "Pset_ColGeom": {
                         "Tipo":       "Circular" if es_circ else "Rectangular",
-                        "b_cm":       str(b_cm),
-                        "h_cm":       str(h_cm),
-                        "D_cm":       str(D_cm) if es_circ else "N/A",
-                        "L_cm":       str(L_cm),
-                        "Recub_cm":   str(recub),
+                        "b_cm":       float(b_cm),
+                        "h_cm":       float(h_cm),
+                        "D_cm":       float(D_cm) if es_circ else 0.0,
+                        "L_cm":       float(L_cm),
+                        "Recub_cm":   float(recub),
                     },
                 }
 
@@ -3155,48 +3128,50 @@ with tab4:
                 _os.unlink(tmp_path)
                 return buf
 
-            # Llamar la función con todos los parámetros
-            phiPn_max = cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0
-            buf_ifc_col = _make_ifc_columna(
-                b_cm        = b   if not es_circular else 0,
-                h_cm        = h   if not es_circular else 0,
-                D_cm        = D   if es_circular     else 0,
-                L_cm        = L_col,
-                es_circ     = es_circular,
-                fc_mpa      = fc, fy_mpa = fy,
-                n_bars      = n_barras if es_circular else n_barras_total,
-                db_mm       = rebar_diam, dst_mm = stirrup_diam,
-                n_long_total= n_barras if es_circular else n_barras_total,
-                As_cm2      = Ast, rho_pct = cuantia,
-                recub       = recub_cm,
-                s_conf_cm   = s_conf  if not es_circular else paso_espiral,
-                s_bas_cm    = s_basico if not es_circular else paso_espiral,
-                Lo_cm       = Lo_conf,
-                n_estrib    = n_estribos_total if not es_circular else 1,
-                Pu_kN       = Pu_input * factor_fuerza,
-                phiPn_kN    = phiPn_max * factor_fuerza,
-                bresler_ratio = bresler['ratio'],
-                bresler_ok  = bresler['ok'],
-                ash_ok_flag = ash_ok,
-                vol_m3      = vol_concreto_m3,
-                peso_kg     = peso_total_acero_kg,
-                empresa     = st.session_state.get("cpm_empresa","________________"),
-                proyecto    = st.session_state.get("cpm_proyecto_nombre","________________"),
-                norma       = norma_sel,
-                nivel_sis   = nivel_sismico,
-            )
-            if not O.by_type("IfcColumn"):
-                raise ValueError("IFC generado sin IfcColumn. Verifique datos de sección.")
-            _ifc_fname = f"Columna_{'Circ_D'+str(int(D)) if es_circular else str(int(b))+'x'+str(int(h))}_IFC4.ifc"
-            st.download_button(
-                label=_t("Exportar IFC4 (BIM completo)", "Export IFC4 (full BIM)"),
-                data=buf_ifc_col,
-                file_name=_ifc_fname,
-                mime="application/x-step",
-                key="ifc_col_btn")
-            st.caption(_t(
-                f"IFC4: IfcColumn + {len(long_bars) if 'long_bars' in dir() else 'N'} barras long. + estribos 3D + Pset_NSR10",
-                f"IFC4: IfcColumn + longitudinal bars + 3D stirrups + Pset_NSR10"))
+            # Botón para generar — solo ejecuta la función al hacer clic
+            if st.button("⬇️ " + _t("Generar y Exportar IFC4 (BIM completo)", "Generate & Export IFC4 (full BIM)"), key="btn_gen_ifc_col"):
+                phiPn_max = cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0
+                buf_ifc_col = _make_ifc_columna(
+                    b_cm        = b   if not es_circular else 0,
+                    h_cm        = h   if not es_circular else 0,
+                    D_cm        = D   if es_circular     else 0,
+                    L_cm        = L_col,
+                    es_circ     = es_circular,
+                    fc_mpa      = fc, fy_mpa = fy,
+                    n_bars      = n_barras if es_circular else n_barras_total,
+                    db_mm       = rebar_diam, dst_mm = stirrup_diam,
+                    n_long_total= n_barras if es_circular else n_barras_total,
+                    As_cm2      = Ast, rho_pct = cuantia,
+                    recub       = recub_cm,
+                    s_conf_cm   = s_conf  if not es_circular else paso_espiral,
+                    s_bas_cm    = s_basico if not es_circular else paso_espiral,
+                    Lo_cm       = Lo_conf,
+                    n_estrib    = n_estribos_total if not es_circular else 1,
+                    Pu_kN       = Pu_input * factor_fuerza,
+                    phiPn_kN    = phiPn_max * factor_fuerza,
+                    bresler_ratio = bresler['ratio'],
+                    bresler_ok  = bresler['ok'],
+                    ash_ok_flag = ash_ok,
+                    vol_m3      = vol_concreto_m3,
+                    peso_kg     = peso_total_acero_kg,
+                    empresa     = st.session_state.get("cpm_empresa","________________"),
+                    proyecto    = st.session_state.get("cpm_proyecto_nombre","________________"),
+                    norma       = norma_sel,
+                    nivel_sis   = nivel_sismico,
+                )
+                if buf_ifc_col:
+                    _ifc_fname = f"Columna_{'Circ_D'+str(int(D)) if es_circular else str(int(b))+'x'+str(int(h))}_IFC4.ifc"
+                    st.success(_t("✅ IFC4 generado correctamente.", "✅ IFC4 generated successfully."))
+                    st.download_button(
+                        label=_t("⬇️ Descargar IFC4", "⬇️ Download IFC4"),
+                        data=buf_ifc_col,
+                        file_name=_ifc_fname,
+                        mime="application/x-step",
+                        key="ifc_col_btn")
+                    st.caption(_t(
+                        f"IFC4: IfcColumn + barras long. + estribos 3D + Pset_NSR10",
+                        f"IFC4: IfcColumn + longitudinal bars + 3D stirrups + Pset_NSR10"))
+
 
         except ImportError as e_imp:
             import sys as _sys_ifc

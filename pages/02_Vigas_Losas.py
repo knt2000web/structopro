@@ -3750,26 +3750,25 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                 O = ifcopenshell.file(schema="IFC4")
 
 
-                ifcopenshell.api.run("project.create_project", O, name="Proyecto_StructoPro")
+                project  = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject",  name=proyecto)
                 context = ifcopenshell.api.run("context.add_context", O, context_type="Model")
                 body    = ifcopenshell.api.run("context.add_context", O,
                     context_type="Model", context_identifier="Body",
                     target_view="MODEL_VIEW", parent=context)
 
-                project  = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject",  Name=proyecto)
-                site     = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite",     Name="Sitio")
-                building = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", Name="Edificio")
-                storey   = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuildingStorey", Name="Piso 1")
-                ifcopenshell.api.run("unit.assign_unit", O, units={"LENGTHUNIT": "METRE"})
-                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project,  product=site)
-                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site,     product=building)
-                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, product=storey)
+                site     = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite",     name="Sitio")
+                building = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", name="Edificio")
+                storey   = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuildingStorey", name="Piso 1")
+                _u = ifcopenshell.api.run("unit.add_si_unit", O, unit_type="LENGTHUNIT"); ifcopenshell.api.run("unit.assign_unit", O, units=[_u])
+                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project, products=[site])
+                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, products=[building])
+                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, products=[storey])
 
                 bw_m = bw_cm/100; h_m = h_cm/100; bf_m = bf_cm/100; hf_m = hf_cm/100
                 r_m  = recub/100
 
-                mat_conc  = ifcopenshell.api.run("material.add_material", O, Name=f"CONCRETO_fc{fc_mpa:.0f}MPa")
-                mat_steel = ifcopenshell.api.run("material.add_material", O, Name=f"ACERO_fy{fy_mpa:.0f}MPa")
+                mat_conc  = ifcopenshell.api.run("material.add_material", O, name=f"CONCRETO_fc{fc_mpa:.0f}MPa")
+                mat_steel = ifcopenshell.api.run("material.add_material", O, name=f"ACERO_fy{fy_mpa:.0f}MPa")
 
                 # Perfil de la seccion
                 if es_t:
@@ -3797,19 +3796,13 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                     ContextOfItems=body, RepresentationIdentifier="Body",
                     RepresentationType="SweptSolid", Items=[solid])
                 beam = ifcopenshell.api.run("root.create_entity", O,
-                    ifc_class="IfcBeam",
-                    Name=f"VIG-{'T' if es_t else 'R'}_{bw_cm:.0f}x{h_cm:.0f}")
+                    ifc_class="IfcBeam", name=f"VIG-{'T' if es_t else 'R'}_{bw_cm:.0f}x{h_cm:.0f}")
                 beam.PredefinedType = "BEAM"
-                beam.Representation = O.createIfcProductDefinitionShape(Representations=[shape_rep])
+                ifcopenshell.api.run("geometry.assign_representation", O, product=beam, representation=shape_rep)
+                ifcopenshell.api.run("geometry.edit_object_placement", O, product=beam)
 
-                beam_place3d = O.createIfcAxis2Placement3D(
-                    Location=O.createIfcCartesianPoint([0.0, 0.0, 0.0]),
-                    Axis=z_dir, RefDirection=x_dir)
-                beam_local = O.createIfcLocalPlacement(RelativePlacement=beam_place3d)
-                beam.ObjectPlacement = beam_local
-
-                ifcopenshell.api.run("spatial.assign_container", O, relating_structure=storey, product=beam)
-                ifcopenshell.api.run("material.assign_material", O, product=beam, material=mat_conc)
+                ifcopenshell.api.run("spatial.assign_container", O, relating_structure=storey, products=[beam])
+                ifcopenshell.api.run("material.assign_material", O, products=[beam], material=mat_conc)
 
                 def _color_diam(d):
                     c = {8:(0.8,0.9,1.0), 10:(0.4,0.8,1.0), 12:(0.1,0.7,0.2),
@@ -3829,12 +3822,11 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                           if n_b > 1 else [0.0])
                     for i, xb in enumerate(xs):
                         bar = ifcopenshell.api.run("root.create_entity", O,
-                            ifc_class="IfcReinforcingBar", Name=f"{tag}{i+1}")
+                            ifc_class="IfcReinforcingBar", name=f"{tag}{i+1}")
                         bar.NominalDiameter = db_m
                         bar.SteelGrade      = f"fy={fy_mpa:.0f}MPa"
-                        bar.BarSurface      = "DEFORMED"
-                        bar.BarRole         = "LONGITUDINAL"
-                        bar.PredefinedType  = "STANDARD"
+                        bar.BarSurface      = "TEXTURED"
+                        bar.PredefinedType  = "MAIN"
 
                         p0 = O.createIfcCartesianPoint([0.0,  xb, y_pos])
                         p1 = O.createIfcCartesianPoint([L_m,  xb, y_pos])
@@ -3851,14 +3843,19 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                         b_rep = O.createIfcShapeRepresentation(
                             ContextOfItems=body, RepresentationIdentifier="Body",
                             RepresentationType="SweptSolid", Items=[b_solid])
-                        bar.Representation = O.createIfcProductDefinitionShape(Representations=[b_rep])
-                        bar.ObjectPlacement = O.createIfcLocalPlacement(
-                            PlacementRelTo=beam_local,
-                            RelativePlacement=O.createIfcAxis2Placement3D(
-                                Location=O.createIfcCartesianPoint([0.0, 0.0, 0.0]),
-                                Axis=z_dir, RefDirection=x_dir))
-                        ifcopenshell.api.run("spatial.assign_container", O, relating_structure=storey, product=bar)
-                        ifcopenshell.api.run("material.assign_material", O, product=bar, material=mat_steel)
+                        
+                        rebar_color = _color_diam(db_m * 1000)
+                        style = O.createIfcSurfaceStyleRendering(
+                            SurfaceColour=O.createIfcColourRgb(Red=rebar_color[0], Green=rebar_color[1], Blue=rebar_color[2]),
+                            ReflectanceMethod="FLAT")
+                        surface_style = O.createIfcSurfaceStyle(
+                            Name=f"AceroLong_{db_m*1000:.0f}mm", Side="BOTH", Styles=[style])
+                        O.createIfcStyledItem(Item=b_solid, Styles=[surface_style])
+
+                        ifcopenshell.api.run("geometry.assign_representation", O, product=bar, representation=b_rep)
+                        ifcopenshell.api.run("geometry.edit_object_placement", O, product=bar)
+                        ifcopenshell.api.run("spatial.assign_container", O, relating_structure=storey, products=[bar])
+                        ifcopenshell.api.run("material.assign_material", O, products=[bar], material=mat_steel)
 
                 # Estribos: polilínea cerrada en plano YZ a cada posicion X
                 dst_m = dst_mm/1000
@@ -3878,74 +3875,74 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                 bx2 = bw_m/2 - r_m;  hy2 = h_m/2 - r_m
                 for j, x_pos in enumerate(st_positions):
                     st_bar = ifcopenshell.api.run("root.create_entity", O,
-                        ifc_class="IfcReinforcingBar", Name=f"E{j+1}")
+                        ifc_class="IfcReinforcingBar", name=f"E{j+1}")
                     st_bar.NominalDiameter = dst_m
                     st_bar.SteelGrade      = f"fy={fy_mpa:.0f}MPa"
-                    st_bar.BarSurface      = "DEFORMED"
-                    st_bar.BarRole         = "SHEAR"
-                    st_bar.PredefinedType  = "STANDARD"
+                    st_bar.BarSurface      = "TEXTURED"
+                    st_bar.PredefinedType  = "MAIN"
 
+                    hk = max(dst_m * 6, 0.075)
+                    hk_dx = hk * _m.cos(_m.radians(45))
+                    hk_dy = hk * _m.sin(_m.radians(45))
                     pts = [
+                        O.createIfcCartesianPoint([x_pos + dst_m/2, -bx2 + hk_dx, -hy2 + hk_dy]),
                         O.createIfcCartesianPoint([x_pos, -bx2, -hy2]),
                         O.createIfcCartesianPoint([x_pos,  bx2, -hy2]),
                         O.createIfcCartesianPoint([x_pos,  bx2,  hy2]),
                         O.createIfcCartesianPoint([x_pos, -bx2,  hy2]),
                         O.createIfcCartesianPoint([x_pos, -bx2, -hy2]),
-                        # Gancho sismico 135
-                        O.createIfcCartesianPoint([x_pos,
-                            -bx2 + dst_m*6*_m.cos(_m.radians(45)),
-                             hy2 + dst_m*6*_m.sin(_m.radians(45))]),
+                        O.createIfcCartesianPoint([x_pos - dst_m/2, -bx2 + hk_dx, -hy2 + hk_dy]),
                     ]
                     polyline_st = O.createIfcPolyline(Points=pts)
-                    try:
-                        st_swept = O.createIfcSweptDiskSolid(
-                            Directrix=polyline_st, Radius=dst_m/2)
-                        st_rep = O.createIfcShapeRepresentation(
-                            ContextOfItems=body, RepresentationIdentifier="Body",
-                            RepresentationType="AdvancedSweptSolid", Items=[st_swept])
-                    except Exception:
-                        st_rep = O.createIfcShapeRepresentation(
-                            ContextOfItems=body, RepresentationIdentifier="Axis",
-                            RepresentationType="Curve3D", Items=[polyline_st])
-                    st_bar.Representation = O.createIfcProductDefinitionShape(Representations=[st_rep])
-                    st_bar.ObjectPlacement = O.createIfcLocalPlacement(
-                        PlacementRelTo=beam_local,
-                        RelativePlacement=O.createIfcAxis2Placement3D(
-                            Location=O.createIfcCartesianPoint([0.0, 0.0, 0.0]),
-                            Axis=z_dir, RefDirection=x_dir))
-                    ifcopenshell.api.run("spatial.assign_container", O, relating_structure=storey, product=st_bar)
-                    ifcopenshell.api.run("material.assign_material", O, product=st_bar, material=mat_steel)
+                    # Volumen físico para que Revit lo reconozca como Armadura
+                    st_swept = O.createIfcSweptDiskSolid(Directrix=polyline_st, Radius=dst_m/2)
+                    
+                    stirrup_color = _color_diam(dst_m * 1000)
+                    st_style_rend = O.createIfcSurfaceStyleRendering(
+                        SurfaceColour=O.createIfcColourRgb(Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
+                        ReflectanceMethod="FLAT")
+                    st_surface_style = O.createIfcSurfaceStyle(
+                        Name=f"Estribo_{dst_m*1000:.0f}mm", Side="BOTH", Styles=[st_style_rend])
+                    O.createIfcStyledItem(Item=st_swept, Styles=[st_surface_style])
+
+                    st_rep = O.createIfcShapeRepresentation(
+                        ContextOfItems=body, RepresentationIdentifier="Body",
+                        RepresentationType="AdvancedSweptSolid", Items=[st_swept])
+                    ifcopenshell.api.run("geometry.assign_representation", O, product=st_bar, representation=st_rep)
+                    ifcopenshell.api.run("geometry.edit_object_placement", O, product=st_bar)
+                    ifcopenshell.api.run("spatial.assign_container", O, relating_structure=storey, products=[st_bar])
+                    ifcopenshell.api.run("material.assign_material", O, products=[st_bar], material=mat_steel)
 
                 # Pset_NSR10_Viga
                 pset = ifcopenshell.api.run("pset.add_pset", O, product=beam, name="Pset_NSR10_Viga")
                 ifcopenshell.api.run("pset.edit_pset", O, pset=pset, properties={
                     "Norma":                norma,
                     "Nivel_Sismico":        nivel_sis,
-                    "fc_MPa":               str(round(fc_mpa, 1)),
-                    "fy_MPa":               str(round(fy_mpa, 1)),
-                    "bw_cm":                str(round(bw_cm, 1)),
-                    "h_cm":                 str(round(h_cm, 1)),
-                    "L_m":                  str(round(L_m, 2)),
-                    "recub_cm":             str(round(recub, 1)),
-                    "n_barras_sup":         str(n_sup),
-                    "db_sup_mm":            str(db_sup_mm),
-                    "As_sup_cm2":           str(round(As_sup_cm2, 2)),
-                    "n_barras_inf":         str(n_inf),
-                    "db_inf_mm":            str(db_inf_mm),
-                    "As_inf_cm2":           str(round(As_inf_cm2, 2)),
-                    "db_estribo_mm":        str(dst_mm),
-                    "s_conf_cm":            str(round(s_conf_cm2, 1)),
-                    "s_centro_cm":          str(round(s_centro_cm2, 1)),
-                    "zona_conf_cm":         str(round(zona_conf_cm2, 1)),
-                    "n_estribos":           str(len(st_positions)),
-                    "Mu_kNm":               str(round(Mu_kNm, 2)),
-                    "phi_Mn_kNm":           str(round(phi_Mn_kNm, 2)),
+                    "fc_MPa":               float(fc_mpa),
+                    "fy_MPa":               float(fy_mpa),
+                    "bw_cm":                float(bw_cm),
+                    "h_cm":                 float(h_cm),
+                    "L_m":                  float(L_m),
+                    "recub_cm":             float(recub),
+                    "n_barras_sup":         int(n_sup),
+                    "db_sup_mm":            float(db_sup_mm),
+                    "As_sup_cm2":           float(As_sup_cm2),
+                    "n_barras_inf":         int(n_inf),
+                    "db_inf_mm":            float(db_inf_mm),
+                    "As_inf_cm2":           float(As_inf_cm2),
+                    "db_estribo_mm":        float(dst_mm),
+                    "s_conf_cm":            float(s_conf_cm2),
+                    "s_centro_cm":          float(s_centro_cm2),
+                    "zona_conf_cm":         float(zona_conf_cm2),
+                    "n_estribos":           len(st_positions),
+                    "Mu_kNm":               float(Mu_kNm),
+                    "phi_Mn_kNm":           float(phi_Mn_kNm),
                     "phi_Mn_CUMPLE":        "SI" if phi_Mn_kNm >= Mu_kNm else "NO",
-                    "Vu_kN":               str(round(Vu_kN, 2)),
-                    "phi_Vn_kN":            str(round(phi_Vn_kN, 2)),
+                    "Vu_kN":                float(Vu_kN),
+                    "phi_Vn_kN":            float(phi_Vn_kN),
                     "phi_Vn_CUMPLE":        "SI" if phi_Vn_kN >= Vu_kN else "NO",
-                    "Vol_concreto_m3":      str(round(vol_m3, 4)),
-                    "Peso_acero_kg":        str(round(peso_kg, 1)),
+                    "Vol_concreto_m3":      float(vol_m3),
+                    "Peso_acero_kg":        float(peso_kg),
                 })
 
                 # Pset_ConcreteElementGeneral (estándar OpenBIM IFC4)
@@ -3959,8 +3956,8 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                     "StrengthClass":            f"f'c {fc_mpa:.1f} MPa",
                     "CompressiveStrength":      float(fc_mpa),
                     "YieldStress":              float(fy_mpa),
-                    "ReinforcementVolumeRatio": f"{rho_vol_pct:.3f}%",
-                    "ReinforcementAreaRatio":   f"{as_total_cm2:.2f} cm2",
+                    "ReinforcementVolumeRatio": float(rho_vol_pct) / 100.0,
+                    "ReinforcementAreaRatio":   float(as_total_cm2),
                 })
 
                 with tempfile.NamedTemporaryFile(suffix='.ifc', delete=False) as tmp2:

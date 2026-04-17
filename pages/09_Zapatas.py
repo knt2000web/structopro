@@ -2434,20 +2434,19 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             def ax2(pt, z_dir=(0.,0.,1.), x_dir=(1.,0.,0.)):
                 return O.createIfcAxis2Placement3D(pt, O.createIfcDirection(z_dir), O.createIfcDirection(x_dir))
             
-            ifcopenshell.api.run("project.create_project", O, name="Proyecto_StructoPro")
+            project = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject", name=proyecto)
             context = ifcopenshell.api.run("context.add_context", O, context_type="Model")
             body    = ifcopenshell.api.run("context.add_context", O, context_type="Model", context_identifier="Body", target_view="MODEL_VIEW", parent=context)
-            project = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject", Name=proyecto)
-            site    = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite", Name="Sitio")
-            building= ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", Name="Edificio")
-            ifcopenshell.api.run("unit.assign_unit", O, units={"LENGTHUNIT": "METRE"})
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project, product=site)
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, product=building)
+            site    = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite", name="Sitio")
+            building= ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", name="Edificio")
+            _u = ifcopenshell.api.run("unit.add_si_unit", O, unit_type="LENGTHUNIT"); ifcopenshell.api.run("unit.assign_unit", O, units=[_u])
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project, products=[site])
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, products=[building])
             
             # Zapata Geom
-            zapata = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", Name="Zapata Aislada")
+            zapata = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", name="Zapata Aislada")
             zapata.PredefinedType = "PAD_FOOTING"
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, product=zapata)
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, products=[zapata])
             
             rect_prof = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), B_m, L_m)
             extr_zap  = O.createIfcExtrudedAreaSolid(rect_prof, ax2(p4(0,0,0)), O.createIfcDirection((0.,0.,1.)), H_m)
@@ -2456,8 +2455,8 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             ifcopenshell.api.run("geometry.edit_object_placement", O, product=zapata)
             
             # Pedestal Geom
-            pedestal = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcColumn", Name="Pedestal Corto")
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, product=pedestal)
+            pedestal = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcColumn", name="Pedestal Corto")
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, products=[pedestal])
             rect_ped = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), c1_m, c2_m)
             extr_ped = O.createIfcExtrudedAreaSolid(rect_ped, ax2(p4(0,0,H_m)), O.createIfcDirection((0.,0.,1.)), 0.5)
             shape_ped= O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [extr_ped])
@@ -3488,29 +3487,28 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
             def ax2(pt, z_dir=(0.,0.,1.), x_dir=(1.,0.,0.)):
                 return O.createIfcAxis2Placement3D(pt, O.createIfcDirection(z_dir), O.createIfcDirection(x_dir))
             
-            ifcopenshell.api.run("project.create_project", O, name="Proyecto_StructoPro")
+            proj = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject", name=proy_nombre)
             ctx  = ifcopenshell.api.run("context.add_context", O, context_type="Model")
             body = ifcopenshell.api.run("context.add_context", O, context_type="Model", context_identifier="Body", target_view="MODEL_VIEW", parent=ctx)
-            proj = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject", Name=proy_nombre)
-            site = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite", Name="Sitio")
-            bldg = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", Name="Fundacion")
-            ifcopenshell.api.run("unit.assign_unit", O, units={"LENGTHUNIT": "METRE"})
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=proj, product=site)
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, product=bldg)
+            site = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite", name="Sitio")
+            bldg = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", name="Fundacion")
+            _u = ifcopenshell.api.run("unit.add_si_unit", O, unit_type="LENGTHUNIT"); ifcopenshell.api.run("unit.assign_unit", O, units=[_u])
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=proj, products=[site])
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, products=[bldg])
             
             # Z.EXT
-            z1 = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", Name="Zapata Exterior")
+            z1 = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", name="Zapata Exterior")
             z1.PredefinedType = "PAD_FOOTING"
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, product=z1)
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, products=[z1])
             prf1 = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), z_ext['B_cm']/100, z_ext['L_cm']/100)
             ex1  = O.createIfcExtrudedAreaSolid(prf1, ax2(p4(0,0,0)), O.createIfcDirection((0.,0.,1.)), z_ext['H_cm']/100)
             ifcopenshell.api.run("geometry.assign_representation", O, product=z1, representation=O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [ex1]))
             ifcopenshell.api.run("geometry.edit_object_placement", O, product=z1)
             
             # Z.INT
-            z2 = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", Name="Zapata Interior")
+            z2 = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", name="Zapata Interior")
             z2.PredefinedType = "PAD_FOOTING"
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, product=z2)
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, products=[z2])
             prf2 = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), z_int['B_cm']/100, z_int['L_cm']/100)
             sep_m = vig["L_libre_m"]
             ex2  = O.createIfcExtrudedAreaSolid(prf2, ax2(p4(z_ext['B_cm']/100 + sep_m,0,0)), O.createIfcDirection((0.,0.,1.)), z_int['H_cm']/100)
@@ -3519,8 +3517,8 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
             
             # VIGA
             bv = vig['b_cm']/100; hv = vig['h_cm']/100
-            vg = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBeam", Name="Viga de Amarre")
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, product=vg)
+            vg = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBeam", name="Viga de Amarre")
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=bldg, products=[vg])
             prfv = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), bv, hv)
             exv  = O.createIfcExtrudedAreaSolid(prfv, ax2(p4(z_ext['B_cm']/100,0,max(z_ext['H_cm']/100, z_int['H_cm']/100)), x_dir=(0.,1.,0.), z_dir=(1.,0.,0.)), O.createIfcDirection((0.,0.,1.)), sep_m)
             ifcopenshell.api.run("geometry.assign_representation", O, product=vg, representation=O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [exv]))
