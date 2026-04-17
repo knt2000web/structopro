@@ -257,11 +257,10 @@ with st.sidebar.expander(" Norma y Idioma", expanded=False):
     with c1:
         norma_sel = st.selectbox("Norma de diseño", [
             "NSR-10 (Colombia)","ACI 318-25 (USA)","E.060 (Perú)",
-
-mostrar_referencias_norma(norma_sel, "kontewall")
             "NEC-SE-HM (Ecuador)","NTC-EM (México)","COVENIN 1753 (Venezuela)",
             "NB 1225001 (Bolivia)","CIRSOC 201 (Argentina)"
         ], key="norma_sel")
+        mostrar_referencias_norma(norma_sel, "kontewall")
     with c2:
         st.caption("Código de diseño")
     c1, c2 = st.columns([2, 1])
