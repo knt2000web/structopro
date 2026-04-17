@@ -93,25 +93,27 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
 </svg></div>""", unsafe_allow_html=True)
 
-# 2. Panel global "Guía Rápida"
-with st.expander(" ¿Cómo usar este módulo? — Guía Rápida para Principiantes", expanded=False):
+# 2. Panel global "Guía Profesional"
+with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=False):
     st.markdown('''
-    ### ¡Bienvenido al Módulo de Muros de Contención! 
-    Aquí diseñamos las estructuras que retienen grandes presiones de tierra o agua para que no se derrumben sobre carreteras, sótanos o desniveles.
+    ### Metodología y Verificación Geotécnica/Estructural (Muros en Voladizo)
+    Konte evalúa integralmente la estabilidad global del conjunto suelo-muro, así como la demanda interna de los elementos de concreto reforzado.
     
-    ####  Paso a Paso
-    1. **Geometría y Suelo (Barra Izquierda):**
-       - Primero establece la altura total que necesitas ($H$). Luego define cuánto mide la Base (zapata) y cómo se reparte en el 'Pie' (el frente) y la 'Pantalla' (el muro vertical).
-       - Introduce las propiedades del Suelo de Relleno (γ, Angulo de fricción $\\phi$) que empujarán el muro.
-    2. **Estabilidad (La primera pestaña):** 
-       - Trata el muro como una caja rígida gigante. El programa mira 3 cosas: 
-         * ¿Se Volteará? (FS Volcamiento) 
-         * ¿Se Resbalará? (FS Deslizamiento) 
-         * ¿Se hundirá en la tierra? (Capacidad Portante).
-       - Si algo de esto falla en **ROJO**, el muro se va a caer en la vida real. Debes ensanchar la base o ponerle un dentellón abajo.
-    3. **Acero del Muro y Base (Pestañas Estructurales):**
-       - Si la Estabilidad da **VERDE**, el muro no se caerá, pero ¿se quebrará por dentro? Aquí verificamos si la Pantalla (en voladizo) requiere más calibre de Acero en su cara que toca la tierra.
-    4. **Planos y Curva:** Explora las opciones de "Generar DXF" o las Memorias DOCX y APUs para entregar tu diseño inmediatamente al constructor con su plano CAD milimétrico.
+    ####  1. Geometría y Empujes (Suelo)
+    - En el panel de control define la topología de la Pantalla ($H$) y la conformación de su zapata (Pie y Talón).
+    - Ingresa los parámetros geotécnicos de relleno ($\\gamma$, $\\phi$, Cohesión). La plataforma aplica automáticamente la teoría de presiones Activas (Rankine/Coulomb) para cuantificar la carga horizontal.
+    
+    ####  2. Chequeo de Estabilidad Externa (Mecánica)
+    - **Volcamiento:** Se determina el Factor de Seguridad balanceando Momentos Volcadores (Empuje) contra Estabilizadores (Peso propio + Tierra sobre talón).
+    - **Deslizamiento:** Verificación de resistencia friccional basal. Si F.S $<$ 1.5, evalúa la implementación de un **Dentellón (Llave de corte)**.
+    - **Portante:** Revisión estricta de las presiones de contacto ($q_1, q_2$) versus la capacidad admisible ($q_a$), garantizando que la resultante recaiga en el tercio medio central.
+    
+    ####  3. Diseño Interno: Pantalla y Base (Acero)
+    - Validada la estabilidad externa, cada componente (Pantalla, Punta, Talón) se trata independiente como un elemento en voladizo estructural.
+    - El software entrega las cuantías exigidas para flexión máxima (cara traccionada) e integra armadura por retracción/temperatura (Caras expuestas).
+    
+    ####  4. Memorias, Planimetría y BIM
+    - En la última fase, descarga sin fricciones: Presupuestos APU, Memorias analíticas DOCX sustentadas e interables DXF para trazado en AutoCAD.
     ''')
 
 # 

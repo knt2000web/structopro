@@ -339,6 +339,31 @@ def plot_edificio(nudos, cols, vigas_x, vigas_z, zaps, zap_dim_dict=None):
 # 
 # SIDEBAR – CONFIGURACIÓN (se mantiene igual que en la versión anterior)
 # 
+# ─── BANNER SVG ESTÁNDAR DIAMANTE ───────────────────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#7c3aed" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#7c3aed" opacity="0.7"/><g transform="translate(50,35)"><rect x="0" y="70" width="140" height="55" rx="2" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/><rect x="10" y="93" width="16" height="32" fill="#7c3aed" opacity="0.6"/><rect x="35" y="88" width="16" height="37" fill="#a78bfa" opacity="0.7"/><rect x="60" y="83" width="16" height="42" fill="#c4b5fd" opacity="0.8"/><rect x="85" y="90" width="16" height="35" fill="#a78bfa" opacity="0.7"/><rect x="110" y="96" width="16" height="29" fill="#7c3aed" opacity="0.6"/><text x="70" y="62" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">SECCIONES</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#7c3aed"/><text x="18" y="68" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">PREDIMENSIONAMIENTO</text><text x="18" y="96" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">LOSAS · VIGAS · COLUMNAS · CIMENTACION</text><rect x="18" y="104" width="480" height="1" fill="#7c3aed" opacity="0.5"/><rect x="18" y="115" width="108" height="22" rx="11" fill="#1e1b4b" stroke="#7c3aed" stroke-width="1"/><text x="72" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">LOSAS ACI/NSR</text><rect x="132" y="115" width="90" height="22" rx="11" fill="#0c1a2e" stroke="#0ea5e9" stroke-width="1"/><text x="177" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">VIGAS T/L</text><rect x="228" y="115" width="106" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="281" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">COLUMNAS P-M</text><rect x="340" y="115" width="110" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="395" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">CIMENTACION</text><text x="18" y="158" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Determinacion sistematizada de secciones de arranque conforme a NSR-10 y ACI 318.</text><text x="18" y="174" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Relaciones H/L para losas macizas, nervadas y aligeradas; beff para seccion T.</text><text x="18" y="190" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Verificacion de cuantias minimas, espectros sismicos y cimentaciones superficiales.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" \u00bfC\u00f3mo usar este m\u00f3dulo? \u2014 Gu\u00eda Profesional", expanded=False):
+    st.markdown("""
+    ### Metodolog\u00eda de Predimensionamiento Estructural
+    Calcula secciones de primera iteraci\u00f3n para los elementos estructurales seg\u00fan las relaciones de esbeltez normalizadas en ACI 318 y NSR-10.
+
+    ####  1. Losas (Macizas y Aligeradas)
+    - Para losas **macizas en dos direcciones**, el m\u00f3dulo eval\u00faa el coeficiente de forma en funci\u00f3n de la relaci\u00f3n $L_y/L_x$ y condiciones de borde (libre, continua, empotrada).
+    - Para losas **aligeradas/nervadas**: $h \\ge L/21$ para dos extremos continuos (NSR-10 C.9).
+
+    ####  2. Vigas (Rectangular y Secci\u00f3n T)
+    - Profundidad m\u00ednima $h_{min}$ desde $L/16$ (simplemente apoyada) hasta $L/21$ (dos extremos continuos).
+    - Aplica el ancho efectivo $b_{eff}$ conforme ACI 318-19 \u00a76.3.2 para secciones compuestas losa-viga.
+
+    ####  3. Columnas (Cuadradas / Circulares)
+    - Pre-dimensionamiento: $A_g = P_u / (0.40 \\cdot f_c)$. Valide que $\\rho = A_{st}/A_g \\in [1\\%, 4\\%]$.
+    - Permite ingresar los datos de excentricidad m\u00ednima para el an\u00e1lisis biaxial posterior.
+
+    ####  4. Zapatas y Cimentaci\u00f3n
+    - Pre-dimensiona la planta de la zapata a partir de las cargas de servicio y $q_{adm}$, incluyendo chequeo de punzonamiento y excentricidad.
+    """)
+
+# ────────────────────────────────────────────────────────────────────────────
 _PAIS_ISO = {"NSR-10 (Colombia)":"co","ACI 318-25 (EE.UU.)":"us","ACI 318-19 (EE.UU.)":"us","ACI 318-14 (EE.UU.)":"us","NEC-SE-HM (Ecuador)":"ec","E.060 (Perú)":"pe","NTC-EM (México)":"mx","COVENIN 1753-2006 (Venezuela)":"ve","NB 1225001-2020 (Bolivia)":"bo","CIRSOC 201-2025 (Argentina)":"ar"}
 _iso = _PAIS_ISO.get(norma_sel, "un")
 st.sidebar.markdown(f'<div style="background:#1e3a1e;border-radius:6px;padding:8px;margin-bottom:10px;"><img src="https://flagpedia.net/data/flags/mini/{_iso}.png" style="vertical-align:middle;margin-right:8px;"><span style="color:#7ec87e;font-weight:600;">{_t("Normativa Activa:","Code:")} {norma_sel}</span></div>', unsafe_allow_html=True)

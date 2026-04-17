@@ -107,7 +107,7 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
 </svg></div>""", unsafe_allow_html=True)
 
-# 2. Panel global "Guía Rápida"
+# 2. Panel global "Guía Profesional"
 with st.expander(" ¿Cómo usar KonteWall? — Guía Profesional", expanded=False):
     st.markdown('''
     ### Configuración y Flujo de Diseño

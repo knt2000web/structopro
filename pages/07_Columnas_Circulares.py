@@ -184,34 +184,85 @@ def capturar_estado_actual():
     ]
     return {k: st.session_state[k] for k in claves if k in st.session_state}
 
-# 
-# FIX BUG #4: Manejo seguro de BASE_DIR para Streamlit Cloud
-# 
-try:
-    BASE_DIR = Path(__file__).parent.parent
-except NameError:
-    BASE_DIR = Path(os.getcwd())
+# 1. Banner SVG premium
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;">
+<svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);">
+  <g opacity="0.1" stroke="#38bdf8" stroke-width="0.5">
+    <line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/>
+    <line x1="0" y1="165" x2="1100" y2="165"/>
+    <line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/>
+    <line x1="660" y1="0" x2="660" y2="220"/>
+  </g>
+  <rect x="0" y="0" width="1100" height="3" fill="#3b82f6" opacity="0.9"/>
+  <rect x="0" y="217" width="1100" height="3" fill="#60a5fa" opacity="0.7"/>
+  <!-- COLUMNA CIRCULAR & ESPIRAL -->
+  <g transform="translate(60,40)">
+    <circle cx="50" cy="50" r="40" fill="#2d3748" stroke="#4a5568" stroke-width="2"/>
+    <circle cx="50" cy="50" r="30" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="2,2"/>
+    <!-- Barras longitudinales -->
+    <circle cx="50" cy="20" r="3" fill="#f87171"/><circle cx="50" cy="80" r="3" fill="#f87171"/>
+    <circle cx="20" cy="50" r="3" fill="#f87171"/><circle cx="80" cy="50" r="3" fill="#f87171"/>
+    <circle cx="28.7" cy="28.7" r="3" fill="#f87171"/><circle cx="71.3" cy="28.7" r="3" fill="#f87171"/>
+    <circle cx="28.7" cy="71.3" r="3" fill="#f87171"/><circle cx="71.3" cy="71.3" r="3" fill="#f87171"/>
+    <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">SECCION CIRCULAR</text>
+  </g>
+  <!-- DIAGRAMA P-M BIAXIAL REDUCIDO -->
+  <g transform="translate(250,60)">
+    <text x="60" y="-30" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">INTERACCION BIAXIAL</text>
+    <!-- Ejes -->
+    <line x1="0" y1="80" x2="120" y2="80" stroke="#475569" stroke-width="1.5"/>
+    <line x1="20" y1="100" x2="20" y2="0" stroke="#475569" stroke-width="1.5"/>
+    <text x="125" y="83" font-family="monospace" font-size="9" fill="#94a3b8">Mn</text>
+    <text x="18" y="-5" font-family="monospace" font-size="9" fill="#94a3b8">Pn</text>
+    <!-- Curva P-M -->
+    <path d="M20,10 Q60,10 80,40 T90,80 Q70,95 20,95" fill="#3b82f6" opacity="0.3" stroke="#60a5fa" stroke-width="2"/>
+    <!-- Punto Demanda -->
+    <circle cx="65" cy="55" r="3" fill="#f87171"/>
+    <text x="72" y="60" font-family="monospace" font-size="9" fill="#fca5a5">Pu, Mu</text>
+  </g>
+  <!-- TEXT BLOCK -->
+  <g transform="translate(560,0)">
+    <rect x="0" y="28" width="4" height="165" rx="2" fill="#3b82f6"/>
+    <text x="18" y="68" font-family="Arial,sans-serif" font-size="34" font-weight="bold" fill="#ffffff">COLUMNAS CIRCULARES</text>
+    <text x="18" y="96" font-family="Arial,sans-serif" font-size="18" font-weight="300" fill="#93c5fd" letter-spacing="2">DIAGRAMAS P-M BIAXIAL (ZUNCHO)</text>
+    <rect x="18" y="104" width="440" height="1" fill="#3b82f6" opacity="0.5"/>
+    <!-- Tags -->
+    <rect x="18" y="115" width="108" height="22" rx="11" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1"/>
+    <text x="72" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#60a5fa">NSR-10 / ACI 318</text>
+    <rect x="132" y="115" width="112" height="22" rx="11" fill="#2d1f4e" stroke="#8b5cf6" stroke-width="1"/>
+    <text x="188" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#a78bfa">CONFINAMIENTO ZUNCHO</text>
+    <rect x="250" y="115" width="98" height="22" rx="11" fill="#1a3a2a" stroke="#10b981" stroke-width="1"/>
+    <text x="299" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#34d399">IFC / DXF ICONTEC</text>
+    <text x="18" y="158" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Herramienta integral de analisis bidimensional de interacción (Flexocompresion)</text>
+    <text x="18" y="174" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">confinamiento en espiral para pilares huecos y solidos. Exporta memorias, cantidades</text>
+    <text x="18" y="190" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">y despiece BIM 3D directo a Autodesk y Navisworks.</text>
+  </g>
+</svg></div>""", unsafe_allow_html=True)
 
-header_img_path = BASE_DIR / "assets" / "columnas_circulares_header.png"
-if header_img_path.exists():
-    st.image(str(header_img_path), use_container_width=False, width=700)
-else:
-    st.image("https://via.placeholder.com/700x100?text=Columnas+PM+Biaxial", width=700)
+st.title(_t("Columna Circular: Interacción P–M & Espiral", "Circular Columns P-M Interaction"))
 
-st.title(_t("Diagrama de Interacción P–M (Biaxial) y Diseño de Estribos", " P-M (Biaxial) Interaction Diagram & Tie Design"))
-st.markdown(_t(
-    "Generador interactivo de capacidad a flexocompresión **biaxial** para **Columnas Cuadradas, Rectangulares y Circulares**.",
-    "Interactive **biaxial** flexure-compression capacity generator for **Square, Rectangular and Circular Columns**."
-))
-
-with st.expander(" ¿Cómo usar esta herramienta?"):
+with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=False):
     st.markdown("""
-    **Modo de Uso:**
-    1. ** Sidebar:** Selecciona Norma, nivel sísmico, f'c, fy, geometría (cuadrada, rectangular o circular)
-    2. ** Armadura:** Define varillas longitudinales y estribos (o espiral)
-    3. ** Solicitaciones:** Ingresa Momentos (Mux, Muy) y Carga Axial (Pu)
-    4. ** Resultados:** Diagrama P-M biaxial 3D + verificación Bresler
-    5. ** Exportar:** Memoria DOCX completa, DXF con rótulo ICONTEC, Excel, etc.
+    ### Metodología y Flujo de Diseño (Columnas Circulares ACI/NSR)
+    Este módulo evalúa la capacidad bidireccional y el confinamiento superior (zunchos) propio de las columnas circulares.
+    
+    ####  1. Geometría Radial y Armado
+    - En el panel izquierdo, establezca el diámetro $D$ de la sección.
+    - Seleccione la cantidad de barras perimetrales (Mínimo $6$ normativamente) y su calibre.
+    - El módulo aplica las fórmulas exactas de rebanadas circulares ($dx$) para encontrar la compresión real del bloque de Whitney.
+    
+    ####  2. Demanda Biaxial Estricta LRFD
+    - Ingrese la Carga Axial ($P_{u}$) y los Momentos ($M_{ux}$, $M_{uy}$). Aunque la columna es isotrópica perimetralmente, la resultante $M_{u} = \\sqrt{M_{ux}^2 + M_{uy}^2}$ se verifica contra la curva $P-M_r$.
+    - Verifique la esbeltez $k_{u}$ y las amplificaciones de momento por $P-\\Delta$ si aplican.
+    
+    ####  3. Evaluación de Capacidad
+    - Compruebe que el Índice de Capacidad (IFC - Ratio) sea $\\leq 1.0$.
+    - Para zunchos, el factor de mitigación por falla dúctil es más permisivo ($\\phi = 0.75$) frente a los estribos ($\\phi = 0.65$).
+    
+    ####  4. Diseño de Espiral Continua (Zuncho)
+    - Verifique visualmente el **Paso (pitch)** del zuncho en el esquema.
+    - La cuantía volumétrica $\\rho_s$ debe superar el requerimiento mínimo: $\\rho_s \\ge 0.45 \\left(\\frac{A_g}{A_{ch}} - 1\\right) \\frac{f'c}{f_y}$.
+    - Exporte su APU parametrizado, hoja de cálculo y visualización BIM/DXF al modelo master.
     """)
 
 # 

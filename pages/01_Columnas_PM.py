@@ -326,35 +326,29 @@ st.markdown(_t(
     "Interactive **biaxial** flexure-compression capacity generator for **Square, Rectangular and Circular Columns**."
 ))
 
-with st.expander("Guía Rápida — Flujo de trabajo recomendado", expanded=False):
+with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=False):
     st.markdown("""
-    ### Flujo de trabajo recomendado
-
-    **Paso 1 — Materiales y sección**  
-    Seleccione la norma (NSR-10 / ACI 318), f'c y fy en el panel lateral.  
-    Ingrese las dimensiones **b** y **h** de la sección transversal (o diámetro **D** para circular).
-
-    **Paso 2 — Armado longitudinal y confinamiento**  
-    Defina el número de barras, diámetro y recubrimiento libre.  
-    La cuantía **ρ** se calcula automáticamente.  
-    Rango admisible: `1% ≤ ρ ≤ 4%` (NSR-10 DES/DMO) · `1% ≤ ρ ≤ 8%` (ACI • DMI).  
-    Configure el tipo de confinamiento: **Estribos rectangulares** o **Espiral continua**.
-
-    **Paso 3 — Cargas de diseño**  
-    Ingrese **Pu** [kN], **Mux** [kN·m] y **Muy** [kN·m] mayorados (combinaciones LRFD/CCR).  
-    Si hay carga horizontal, revise también la **esbeltez** (factor k y longitud libre).
-
-    **Paso 4 — Verificación biaxial**  
-    El punto de demanda **(Pu, Mu)** debe quedar **dentro** del diagrama de interacción.  
-    Se usa el método de Bresler reciproco:  
-    `1/φPni = 1/φPnx + 1/φPny − 1/φP₀`  
-    El índice de capacidad **IFC = Pu / φPni ≤ 1.0** confirma el cumplimiento.
-
-    **Paso 5 — Exportar entregables**  
-    Descargue la **Memoria de Cálculo DOCX**, el **Plano DXF** con rótulo ICONTEC,  
-    el **modelo BIM (IFC4)**, o el **presupuesto en Excel** desde las pestañas correspondientes.
+    ### Metodología y Flujo de Diseño (Flexocompresión Biaxial)
+    Este módulo evalúa la capacidad resistente de columnas (Cuadradas, Rectangulares y Circulares) modelando la topología tridimensional del acero bajo las prescripciones normativas NSR-10 y ACI-318.
+    
+    ####  1. Geometría y Cuantías Base
+    - Determina las dimensiones de la sección transversal ($b$, $h$ o $D$) en función del predimensionamiento.
+    - Distribuye el acero longitudinal perimetralmente (Caras X, Y o contorno circular).
+    - **Criterio Normativo:** Asegure que la cuantía $\\rho$ se ubique entre el $1\%$ mínimo y el límite sísmico según su grado de disipación de energía ($4\%$ a $6\%$).
+    
+    ####  2. Demanda Biaxial LRFD
+    - Ingrese los esfuerzos últimos factorados: Carga Axial ($P_{u}$), Momento $X$ ($M_{ux}$) y Momento $Y$ ($M_{uy}$).
+    - Evalúe efectos de esbeltez global ajustando el factor $k_{u}$ y luz libre $L_{c}$ si su estructura es desplazable.
+    
+    ####  3. Evaluación de Capacidad e Interacción (DCR)
+    - El módulo traza las gráficas de interacción Uniaxiales puras (Planos $P-M_x$ y $P-M_y$).
+    - Ejecuta el criterio de la **Superficie de Carga Biaxial** ($1/\\phi P_{ni} = 1/\\phi P_{nx} + 1/\\phi P_{ny} - 1/\\phi P_0$) para certificar si el punto de solicitación tridimensional queda dentro de la cebolla de falla.
+    - **Índice de Capacidad (IFC):** Busque mantener un $DCR$ (Demanda/Capacidad) $\\leq 1.0$.
+    
+    ####  4. Diseño Transversal C.21
+    - En base al Nivel de Amenaza Sísmica (DES, DMO, DMI), genere el despiece preciso para Estribos Cerrados, Ganchos C a 135° o Zunchos en espiral continua en las zonas confinadas ($l_o$).
+    - Exporte Memorias DOCX y modelos IFC de alto LOD (Nivel de Desarrollo).
     """)
-    st.info("Referencia: **NSR-10 Título C §C.10 / ACI 318-19 §22** — Flexocompresión biaxial")
 
 # 
 # DICCIONARIOS DE BARRAS

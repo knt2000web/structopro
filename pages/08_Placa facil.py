@@ -92,24 +92,28 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
 </svg></div>""", unsafe_allow_html=True)
 
-# 2. Panel global "Guía Rápida"
-with st.expander(" ¿Cómo usar este módulo? — Guía Rápida para Principiantes", expanded=False):
+# 2. Panel global "Guía Profesional"
+with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=False):
     st.markdown('''
-    ### ¡Bienvenido al Módulo de Placa Fácil! 
-    Este sistema es súper popular. Consiste en *Perfiles Metálicos* (rieles) puestos a distancias regulares, y entre ellos encajamos piezas de arcilla o concreto (Bloquelón). Arriba le echamos una *Torta de Concreto* con una malla de acero liviana. ¡Sin formaletas largas!
+    ### Metodología y Verificación de Losa de Perfil Metálico y Bloque (Placa Fácil)
+    Módulo orientado al análisis de placas aligeradas ortotrópicas, verificando deflexiones, cuellos de botella en perfiles y transferencia de cargas a las vigas de borde perimetral.
     
-    ####  Paso a Paso
-    1. **Parámetros Geométricos:**
-       - En la barra lateral pon las dimensiones de tu techo/Entrepiso (Luz X y Luz Y).
-       - Dile en qué dirección se acostarán los perfiles (si en X o en Y). ¡Por regla general se apuntan a la luz más CORTA para que de menos "barriga"!
-    2. **¿Pondremos vigas de borde perimetral?** 
-       - Si tu casa es sismo-resistente, debes amarrar el borde del techo con una viga de concreto clásica para cumplir las normas. Dile a la app si quieres incluir material para ellas.
-    3. **Torta y Materiales:**
-       - Usualmente la *Torta de Concreto* (el vaciado superior) es de 4 cm a 5 cm. 
-       - Especifíca qué Resistencia de concreto pedirás a la concretera o mezclarás en obra.
-    4. **Resultados e Ingeniería:**
-       - Las columnas verdes y rojas de "Verificaciones Normativas" examinarán si el techo tiene exceso de longitud (si los perfiles sobrepasan 4.2 metros, vibrarán feo y necesitas vigas maestras a la mitad). Mostrará si la deformación / barriga (Deflexión L/360) es segura.
-       - Por último la pestaña de **APU** y Resumen contarán exactamente cuántos bloquelones comprar, arena, grava y cemento con el factor de desperdicio que introdujiste.
+    ####  1. Geometría Funcional
+    - Ingresa la luz en X y la luz en Y del diafragma.
+    - Se recomienda orientar los apoyos de la lámina/perfil en la dirección de la luz más corta para minimizar las exigencias por $M_u$ y la flecha acumulada.
+    - El módulo cuantifica automáticamente los Bloquelones considerando sus dimensiones estándar y pestañas de apoyo.
+    
+    ####  2. Chequeo de Vigas de Amarre y Confinamiento
+    - Selecciona las dimensiones del anillo perimetral y cintas de amarre.
+    - Estas vigas maestras son mandatarias para transmitir el sismo (diafragma rígido) y evitar vibraciones locales por luces excesivas (mayor a $4.2\\text{ m}$).
+    
+    ####  3. Evaluación Normativa NSR-10 (L/360)
+    - Verificación del peso propio y de la Carga Viva temporal.
+    - Análisis de servicio (Deflexiones): Control activo del límite $\\Delta \\le L/360$. Si el perfil rompe esta restricción, se advierte el requerimiento de apoyos intermedios.
+    - Análisis de cuantía: Verifica el requisito mínimo para la malla electrosoldada de la torta de comprensión (repartición de retracción de fraguado).
+    
+    ####  4. Presupuesto y Consolidado Dinámico
+    - El panel genera las métricas en tiempo real, agrupando el total de perfiles metálicos [Und de $6\\text{m}$], bultos de cemento y área de malla de retracción.
     ''')
 
 BLOCK_DATA = {

@@ -303,19 +303,26 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
 
 st.title(_t("Suite de Diseño — Vigas y Losas", "Design Suite — Beams & Slabs"))
 
-with st.expander(" ¿Cómo usar este módulo? — Guía Rápida para Principiantes", expanded=False):
+with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=False):
     st.markdown('''
-    ### ¡Bienvenido a la Suite de Vigas y Losas!
-    Este es el motor principal para diseñar los elementos horizontales de cualquier edificación de concreto armado. Aquí podrás calcular el acero y verificar las dimensiones de Vigas (las "costillas" de la casa) y Losas (los "pisos" o "techos").
+    ### Suite de Flexión y Cortante – Verificaciones Estructurales
+    Este núcleo engloba las herramientas fundamentales para diseñar elementos horizontales de concreto armado mediante metodologías del ACI 318 y NSR-10.
     
-    ####  Paso a Paso
-    1. **Navega por el Menú:** A tu izquierda (y en la caja selectora de abajo), verás submódulos como *Flexión*, *Cortante*, *Losas*, etc. Puedes diseñarlos pieza a pieza o ir al *Cuadro de Mando General*.
-    2. **Define tus Materiales:** En la barra lateral siempre asegúrate de tener bien la resistencia de tu Concreto (ej. 21 o 28 MPa) y tu Acero (ej. 420 MPa para varillas figuradas).
-    3. **¿Flexión o Cortante?**
-       - En el módulo de **Flexión**, el sistema te dirá cuántas varillas largas (longitudinales) debes meterle a tu Viga Rectangular o en "T" para que no se flexione de más y aguante su carga.
-       - En el módulo de **Cortante**, el sistema calculará tus "*Estribos*" (flejes). Los anillos de varilla redonda de 3/8" que evitan que la viga se quiebre bruscamente por cizalladura.
-    4. **Losas y Punzonamiento:** Si diseñas una *Losa en Una Dirección* (maciza o aligerada), ingresa aquí y la trataremos automáticamente como una viga ancha. Además, en Punzonamiento puedes verificar si el peso de la losa agujero una columna (como un lápiz perforando un papel).
-    5. **El Súper-Módulo (Generador DXF):** Finalmente, si corres el submódulo *"Diseño Sísmico Integral y Plano DXF"*, juntará cortante y flexión, evaluará si la viga aguanta el impacto de un terremoto (NSR-10) y dibujará instantáneamente los planos puros para AutoCAD y tu modelo BIM 3D.
+    ####  1. Navegación Modular y Flujo
+    - El menú selector inferior enruta a submódulos especializados: *Flexión Pura*, *Cortante*, *Inercia Fisurada*, y *Longitud de Desarrollo*.
+    - Define las especificaciones de Resistencia a la Compresión ($f'c$) y Fluencia ($f_y$) globalmente en la barra lateral.
+    
+    ####  2. Análisis de Flexión y Cortante (DCR)
+    - **Flexión (Rectangular y T):** Determina las cuantías requeridas ($\rho$) garantizando que no se exceda $\rho_{max}$ para asegurar sección sub-reforzada y dúctil.
+    - **Cortante:** El sistema verifica si $V_u > \phi V_c$ para exigir esfuerzo de acero ($V_s$) y calcula el espaciamiento de estribos por confinamiento normativo.
+    
+    ####  3. Evaluación de Losas y Mecanismos de Falla
+    - **Losa en Una Dirección:** Tratamiento analítico como viga ancha de $1 \text{ m}$ con verificación de espesor mínimo por deflexión.
+    - **Punzonamiento:** Comprobación del cortante bidireccional alrededor de columnas y cargas puntuales.
+    
+    ####  4. Módulo Integral DXF y Sismo (DMO/DES)
+    - Al seleccionar *"Diseño Sísmico Integral"*, se unifican las verificaciones de cortante y flexión añadiendo estipulaciones de ductilidad (Capítulo C.21).
+    - Resulta en la generación paramétrica del despiece (BBS), Planos DXF con estándares de dibujo 2D (Capas y Colores) y la codificación de armadura para OpenBIM (IFC).
     ''')
 
 #  PERSISTENCIA DE MÓDULO VÍA URL (sobrevive F5) 

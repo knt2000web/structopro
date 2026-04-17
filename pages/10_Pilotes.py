@@ -1486,88 +1486,27 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
 
 
 
-with st.expander(_t(" ¿Qué hace este módulo? — Guía rápida", "Quick Guide"), expanded=False):
-
-
-
-
-
-
-
-
-    st.markdown('''
-
-
-
-
-
-
-
-
-    ###  Pilotes — Verificaciones Geotécnicas y Estructurales
-
-
-
-
-
-
-
-
-    | Módulo | Qué calcula | Métodos |
-
-
-
-
-
-
-
-
-    |--------|------------|-------|
-
-
-
-
-
-
-
-
-    | **Geotécnico** | Capacidad por punta y fuste por cada estrato | Meyerhof, Vesic, α, β |
-
-
-
-
-
-
-
-
-    | **Grupo** | Distribución de cargas y eficiencia de conjunto | Converse-Labarre |
-
-
-
-
-
-
-
-
-    | **Estructural** | Refuerzo de pilote (circular/cuadrado), cortante | ACI 318-14 §18.7 |
-
-
-
-
-
-
-
-
-    | **Encepado** | Dimensionamiento del dado de pilotes | ACI 318 / NSR-10 |
-
-
-
-
-
-
-
-
-    ''')
+with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=False):
+    st.markdown("""
+    ### Metodología de Diseño: Pilotes y Cimentaciones Profundas
+    Estimación dual de capacidad portante geotécnica profunda (Fuste + Punta) e integridad transversal como elemento de concreto reforzado sometido a cortante y flexión.
+
+    ####  1. Exploración y Capacidad Portante
+    - Ingrese la topología de la perforación (Circular o Cuadrada) y defina la estratigrafía SPT del suelo.
+    - Konte computa automáticamente la resistencia por punta y fricción lateral capa a capa según Meyerhof y la mecánica de suelos aplicada.
+
+    ####  2. Verificación de Grupo de Pilotes
+    - Determina la eficiencia global del bloque (E_g) según la formulación de Converse-Labarre al ingresar la matriz de separación.
+    - Contraste las cargas transmitidas actuantes versus la suma de resistencia de grupo.
+
+    ####  3. Diseño Estructural NSR-10 / ACI 318
+    - Verificación a flexo-compresión (P-M) del fuste del pilote tratándolo como pilar esbelto continuo.
+    - Cuantificación exacta del acero longitudinal y especificación del zuncho en espiral por requerimiento de confinamiento DMO/DES.
+
+    ####  4. Memorias y Exportación BIM IFC
+    - En la última fase del módulo, compile automáticamente una memoria descriptiva exhaustiva en DOCX.
+    - Genere y visualice la armadura tridimensional en formato OpenBIM (.ifc) para cruce de interferencias directas con Navisworks/Revit.
+    """)
 
 
 
