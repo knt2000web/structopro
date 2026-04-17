@@ -1,4 +1,31 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#3b82f6" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#3b82f6" opacity="0.7"/><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#3b82f6"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">UTILIDADES COMUNES</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">CONVERSIONES · TABLAS NORMATIVAS · CALCULADORA</text><rect x="18" y="102" width="480" height="1" fill="#3b82f6" opacity="0.5"/><rect x="18" y="115" width="127" height="22" rx="11" fill="#0c1a2e" stroke="#3b82f6" stroke-width="1"/><text x="81" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#93c5fd">CONVERSIONES SI</text><rect x="153" y="115" width="106" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="206" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">TABLAS REBAR</text><rect x="267" y="115" width="92" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="313" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">MATERIALES</text><rect x="367" y="115" width="99" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="416" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">CALCULADORA</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Herramientas de soporte para el suite estructural: tablas de propiedades de acero</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">de refuerzo (ASTM A615/A706), conversion de unidades SI-Imperial, propiedades</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">de materiales por norma (concretos, aceros, maderas) y calculadora cientifica.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Utilidades y Tablas de Referencia", expanded=False):
+    st.markdown("""
+    ### Herramientas de Soporte del Suite Estructural
+    Modulo auxiliar que centraliza tablas de referencia, conversores de unidades y datos de materiales necesarios para el diseño en cualquiera de los modulos del suite.
+
+    ####  1. Tablas de Varillas de Refuerzo
+    - Propiedades completas de barras ASTM A615 Gr40/60/80 y A706: diametro nominal, area transversal y peso por metro lineal.
+    - Tabla de doblado: radios minimos de doblez en ganchos estandar y de gancho sismico (NSR-10 C.7.2).
+
+    ####  2. Conversion de Unidades SI / Imperial
+    - Convertidor bidireccional para: fuerzas (kN, tonf, kip, lbf), longitudes (m, cm, ft, in), presiones (MPa, kPa, psi, kgf/cm2) y momentos.
+    - Especialmente util para verificar datos de informes de laboratorio en unidades distintas a la norma activa.
+
+    ####  3. Propiedades de Materiales
+    - Tabla de f'c vs f'r (modulo de ruptura) segun norma seleccionada (NSR-10, ACI, E.060).
+    - Modulo de elasticidad del concreto: Ec = 4700*sqrt(f'c) [MPa] y variaciones segun peso unitario.
+    - Propiedades del acero estructural (A36, A572 Gr50, A588) para el modulo de Estructuras Metalicas.
+
+    ####  4. Calculadora Cientifica y Formulario
+    - Calculadora de propiedades de seccion: A, I, Z, S para secciones rectangulares, circulares, T, I y L.
+    - Formulario interactivo de ecuaciones de diseño frecuentes (NSR-10, ACI, AISC).
+""")
+
 import pandas as pd
 import requests
 import math

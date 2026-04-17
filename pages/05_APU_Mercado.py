@@ -1,4 +1,30 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#10b981" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#10b981" opacity="0.7"/><g transform="translate(50,25)"><rect x="0" y="30" width="140" height="110" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="2"/><rect x="0" y="30" width="140" height="18" rx="4" fill="#10b981" opacity="0.8"/><text x="70" y="43" text-anchor="middle" font-family="monospace" font-size="8" fill="#ffffff">PRESUPUESTO</text><line x1="10" y1="60" x2="130" y2="60" stroke="#334155" stroke-width="1"/><line x1="10" y1="80" x2="130" y2="80" stroke="#334155" stroke-width="1"/><line x1="10" y1="100" x2="130" y2="100" stroke="#334155" stroke-width="1"/><text x="15" y="72" font-family="monospace" font-size="7" fill="#94a3b8">Concreto f'c=28</text><text x="100" y="72" text-anchor="end" font-family="monospace" font-size="7" fill="#6ee7b7">$450,000</text><text x="15" y="92" font-family="monospace" font-size="7" fill="#94a3b8">Acero fy=420</text><text x="100" y="92" text-anchor="end" font-family="monospace" font-size="7" fill="#6ee7b7">$7,500/kg</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#10b981"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">APU Y PRECIOS DE MERCADO</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">ANALISIS DE PRECIOS UNITARIOS · PRESUPUESTO</text><rect x="18" y="102" width="480" height="1" fill="#10b981" opacity="0.5"/><rect x="18" y="115" width="106" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="71" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">APU CONCRETO</text><rect x="132" y="115" width="85" height="22" rx="11" fill="#3a0000" stroke="#ef4444" stroke-width="1"/><text x="174" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fca5a5">APU ACERO</text><rect x="225" y="115" width="148" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="299" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">PRECIOS REGIONALES</text><rect x="381" y="115" width="113" height="22" rx="11" fill="#0c1a2e" stroke="#3b82f6" stroke-width="1"/><text x="437" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#93c5fd">EXPORTAR XLSX</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Generador de Analisis de Precios Unitarios (APU) parametrizado por norma,</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">region y materiales. Actualiza precios de mercado por m3 de concreto,</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">kg de acero, mano de obra y AIU. Exporta presupuesto en Excel avanzado.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — APU y Presupuesto", expanded=False):
+    st.markdown("""
+    ### Metodologia: Construccion de APU Parametrizados (ICONTEC/SENA)
+    Generacion de Analisis de Precios Unitarios estructurados para entregas formales a entidades publicas (INVIAS, gobernaciones) y privadas.
+
+    ####  1. Configuracion de Precios Base
+    - Ingrese los precios de material: cemento ($/bulto), acero ($/kg), arena, grava, agua y aditivos.
+    - El modulo aplica los rendimientos estandar ICONTEC para cada actividad (vaciado, encofrado, figurado).
+
+    ####  2. Mano de Obra y Prestaciones
+    - Defina el costo de jornada oficial segun categoria: Peon, Ayudante, Oficial, Tornero, Soldador.
+    - El porcentaje de prestaciones sociales (Ley 100/PILA) se aplica automaticamente sobre el basico.
+
+    ####  3. Costos Indirectos y AIU
+    - Administracion, Imprevistos y Utilidad (AIU) se calculan como porcentaje del costo directo total.
+    - El IVA sobre la Utilidad se discrimina segun regimen aplicable (Contribuyente / Regimen Simple).
+
+    ####  4. Exportacion a Excel y SICE
+    - Exporta el presupuesto completo en formato XLSX con hojas diferenciadas por capitulo de obra.
+    - Genera el resumen ejecutivo (hoja de portada) y el cronograma de inversiones (curva S).
+""")
+
 import requests
 from bs4 import BeautifulSoup
 import re

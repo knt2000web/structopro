@@ -1,4 +1,31 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#ef4444" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#ef4444" opacity="0.7"/><g transform="translate(50,25)"><rect x="20" y="30" width="100" height="80" rx="3" fill="#1e293b" stroke="#ef4444" stroke-width="2" opacity="0.8"/><rect x="70" y="70" width="60" height="40" rx="3" fill="#3a0000" stroke="#ef4444" stroke-width="2" opacity="0.9"/><text x="45" y="75" font-family="monospace" font-size="8" fill="#fca5a5">Masa</text><text x="45" y="90" font-family="monospace" font-size="8" fill="#fca5a5">irregular</text><text x="70" y="15" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">PLANTA</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#ef4444"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">IRREGULARIDADES SISMICAS</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">NSR-10 A.3 · PLANTA Y ALTURA · PENALIZACION R</text><rect x="18" y="102" width="480" height="1" fill="#ef4444" opacity="0.5"/><rect x="18" y="115" width="162" height="22" rx="11" fill="#3a0000" stroke="#ef4444" stroke-width="1"/><text x="99" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fca5a5">IRREGULARIDAD PLANTA</text><rect x="188" y="115" width="162" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="269" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">IRREGULARIDAD ALTURA</text><rect x="358" y="115" width="120" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="418" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">PENALIZACION R</text><rect x="486" y="115" width="92" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="532" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">DCR GLOBAL</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Verificacion sistematica de las 5 irregularidades en planta y 6 en altura segun NSR-10 A.3.2.</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Calculo automatico de la penalizacion al factor R y la rigidez de piso requerida.</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Determinacion de la necesidad de analisis dinamico modal espectral vs. estatico equivalente.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Irregularidades Sismicas", expanded=False):
+    st.markdown("""
+    ### Metodologia: Clasificacion de Irregularidades NSR-10 A.3
+    Evaluacion formal de la regularidad del sistema estructural, requisito previo indispensable para seleccionar el metodo de analisis sismorresistente.
+
+    ####  1. Irregularidades en Planta (A.3.2.1)
+    - **Irregularidad de Torsion:** Verifica que el desplazamiento maximo de piso no supere 1.2 veces el promedio.
+    - **Esquinas Entrantes:** Identifica si la saliente de la planta supera el 15% de la dimension total.
+    - **Discontinuidad de Diafragma:** Detecta aberturas mayores al 50% del area de piso.
+
+    ####  2. Irregularidades en Altura (A.3.2.2)
+    - **Irregularidad de Rigidez (Piso Blando):** Rigidez lateral < 70% del piso inmediato superior.
+    - **Irregularidad de Masa:** Peso del piso > 150% del peso del piso adyacente.
+    - **Irregularidad de Resistencia (Piso Debil):** Resistencia lateral < 80% del piso superior.
+
+    ####  3. Penalizacion al Factor R y Metodo de Analisis
+    - Segun el tipo e intensidad de irregularidades, el modulo ajusta (penaliza) el factor R.
+    - Determina si se requiere analisis dinamico modal espectral (DME) en lugar del metodo estatico equivalente (MEE).
+
+    ####  4. Reportes
+    - Genera un informe de irregularidades con semaforo de cumplimiento (Verde/Amarillo/Rojo) para cada criterio normativo.
+""")
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

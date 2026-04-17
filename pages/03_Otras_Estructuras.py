@@ -1,4 +1,30 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#0ea5e9" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#0ea5e9" opacity="0.7"/><g transform="translate(55,30)"><path d="M10,120 Q65,30 130,120" fill="none" stroke="#0ea5e9" stroke-width="3"/><line x1="10" y1="120" x2="130" y2="120" stroke="#475569" stroke-width="1.5"/><circle cx="10" cy="120" r="4" fill="#0ea5e9"/><circle cx="130" cy="120" r="4" fill="#0ea5e9"/><circle cx="70" cy="45" r="4" fill="#7dd3fc"/><text x="70" y="15" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">ARCO</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#0ea5e9"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">OTRAS ESTRUCTURAS</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">CABLES · ARCOS · RETICULADOS · CASCARAS</text><rect x="18" y="102" width="480" height="1" fill="#0ea5e9" opacity="0.5"/><rect x="18" y="115" width="113" height="22" rx="11" fill="#0c1a2e" stroke="#0ea5e9" stroke-width="1"/><text x="74" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">CABLES NSR-10</text><rect x="139" y="115" width="127" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="202" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">ARCO PARABOLICO</text><rect x="274" y="115" width="99" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="323" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">RETICULADOS</text><rect x="381" y="115" width="82" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="422" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">CASCARAS</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Analisis de sistemas estructurales no convencionales: cables pretensados,</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">arcos parabolicos, reticulados espaciales y estructuras laminar-cascara.</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Verificacion segun NSR-10 Titulo F y AISC 360 para acero estructural.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Estructuras Especiales", expanded=False):
+    st.markdown("""
+    ### Metodologia: Verificacion de Sistemas No Convencionales
+    Modulo para el analisis de tipologias estructurales fuera del alcance de los modulos standard (columnas, vigas, muros).
+
+    ####  1. Cables y Estructuras Tensadas
+    - Ingrese la geometria del cable (flecha, longitud horizontal, cargas distribuidas uniformes y concentradas).
+    - El modulo computa el esfuerzo axial real considerando la variacion de pendiente a lo largo del cable.
+    - Verifique la tension admisible segun el grado del cable (ASTM A603, A416) y el factor de seguridad minimo.
+
+    ####  2. Arcos Parabolicos y de Tres Articulaciones
+    - Analisis por equilibrio de empuje horizontal (H) y construccion del diagrama de momentos.
+    - Verificacion de estabilidad lateral del arco y requerimiento de arriostramiento transversal.
+
+    ####  3. Reticulados Planos y Espaciales
+    - Analisis matricial de nudos articulados (metodo de la rigidez o de flexibilidad).
+    - Exporta tabla de fuerzas en barras (Tension/Compresion) y DCR por elemento.
+
+    ####  4. Exportacion Tecnica
+    - Genere memorias DOCX con diagrama de barras, tabla de resultados y planos en DXF.
+""")
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches

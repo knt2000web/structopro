@@ -1,4 +1,30 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#0ea5e9" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#0ea5e9" opacity="0.7"/><g transform="translate(35,15)"><line x1="20" y1="120" x2="80" y2="80" stroke="#0ea5e9" stroke-width="3"/><line x1="80" y1="80" x2="140" y2="120" stroke="#0ea5e9" stroke-width="3"/><line x1="140" y1="120" x2="80" y2="40" stroke="#38bdf8" stroke-width="3"/><line x1="80" y1="40" x2="20" y2="120" stroke="#38bdf8" stroke-width="3"/><line x1="20" y1="120" x2="140" y2="120" stroke="#0ea5e9" stroke-width="3"/><circle cx="20" cy="120" r="5" fill="#0ea5e9"/><circle cx="80" cy="40" r="5" fill="#7dd3fc"/><circle cx="140" cy="120" r="5" fill="#0ea5e9"/><circle cx="80" cy="80" r="5" fill="#38bdf8"/><text x="80" y="8" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">MARCO 3D</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#0ea5e9"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">ANALISIS ESTRUCTURAL 3D</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">MARCOS ESPACIALES · MEF 3D · BIM IFC</text><rect x="18" y="102" width="480" height="1" fill="#0ea5e9" opacity="0.5"/><rect x="18" y="115" width="120" height="22" rx="11" fill="#0c1a2e" stroke="#0ea5e9" stroke-width="1"/><text x="78" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">MARCO ESPACIAL</text><rect x="146" y="115" width="92" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="192" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">MEF 12 GDL</text><rect x="246" y="115" width="99" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="295" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">MODOS VIBR.</text><rect x="353" y="115" width="82" height="22" rx="11" fill="#3a0000" stroke="#ef4444" stroke-width="1"/><text x="394" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fca5a5">BIM IFC4</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Analisis tridimensional de marcos espaciales mediante el MEF con 12 GDL por elemento.</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Calculo de modos y frecuencias de vibracion natural (analisis modal espectral).</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Exportacion de modelo BIM IFC4 con propiedades estructurales LOD 300.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Analisis Estructural 3D", expanded=False):
+    st.markdown("""
+    ### Metodologia: Analisis Matricial de Marcos Espaciales (12 GDL/elemento)
+    Modelado y analisis de estructuras tridimensionales con contribucion de los tres grados de traslacion y tres de rotacion por nudo.
+
+    ####  1. Topologia Espacial y Materiales
+    - Define la malla 3D del modelo: coordenadas XYZ de todos los nudos, conectividad elemento-nudo y propiedades de seccion (A, Ix, Iy, J, E, G).
+    - Permite secciones personalizadas o importadas desde tablas AISC/CISC de perfiles laminados.
+
+    ####  2. Analisis Estatico 3D
+    - Ensamble de la matriz de rigidez global 12x12 y solucion bajo patrones de carga gravitacional, lateral y de temperatura.
+    - Calculo de reacciones, desplazamientos nodales y esfuerzos internos (Mx, My, Mz, N, Vy, Vz, T) por elemento.
+
+    ####  3. Analisis Modal Espectral
+    - Calculo de los primeros N modos de vibracion: frecuencias naturales, masas participativas y formas modales.
+    - Combinacion modal por SRSS o CQC y confrontacion contra el espectro de diseño NSR-10/ASCE 7.
+
+    ####  4. Exportacion BIM
+    - Exporta el modelo 3D al formato IFC4 con propiedades de carga y material asignadas a cada elemento.
+    - Genera reporte de elementos criticos (DCR > 0.85) para revisiones rapidas en Navisworks.
+""")
+
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go

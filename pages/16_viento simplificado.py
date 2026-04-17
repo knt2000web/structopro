@@ -1,4 +1,30 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#0ea5e9" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#0ea5e9" opacity="0.7"/><g transform="translate(40,20)"><path d="M0,80 Q40,50 80,60 T160,55" fill="none" stroke="#0ea5e9" stroke-width="3"/><path d="M0,95 Q40,65 80,75 T160,70" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.6"/><path d="M0,110 Q40,80 80,90 T160,85" fill="none" stroke="#7dd3fc" stroke-width="1.5" opacity="0.4"/><rect x="155" y="20" width="8" height="95" fill="#475569" stroke-width="1"/><text x="80" y="15" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">PERFIL DE VIENTO</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#0ea5e9"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">ANALISIS DE VIENTO</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">NSR-10 TITULO B · ASCE 7-22 · PRESIONES NETAS</text><rect x="18" y="102" width="480" height="1" fill="#0ea5e9" opacity="0.5"/><rect x="18" y="115" width="127" height="22" rx="11" fill="#0c1a2e" stroke="#0ea5e9" stroke-width="1"/><text x="81" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">NSR-10 TITULO B</text><rect x="153" y="115" width="85" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="195" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">ASCE 7-22</text><rect x="246" y="115" width="127" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="309" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">P NETA CUBIERTA</text><rect x="381" y="115" width="99" height="22" rx="11" fill="#3a0000" stroke="#ef4444" stroke-width="1"/><text x="430" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fca5a5">VANO RIGIDO</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Calculo de presiones de viento sobre cubiertas y fachadas por el Metodo Simplificado</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">NSR-10 B.6 y ASCE 7-22 Ch. 27 (MWFRS). Construccion del perfil de velocidades</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">y determinacion de la presion de diseno: qz = 0.613 * Kz * Kzt * Kd * V^2.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Analisis de Viento", expanded=False):
+    st.markdown("""
+    ### Metodologia: Presiones de Viento (NSR-10 Titulo B / ASCE 7-22)
+    Calculo de presiones de diseno sobre la envolvente del edificio (techo y paredes) considerando la exposicion al viento, topografia y categoria de riesgo.
+
+    ####  1. Perfil de Velocidades y Coeficientes
+    - Seleccione la Velocidad Basica de Viento V (km/h o mph) segun el mapa de isovientos de la region.
+    - El modulo calcula Kz (coeficiente de exposicion), Kzt (factor topografico) y Kd (factor de direccionalidad).
+
+    ####  2. Presion de Diseno (GCp y GCpi)
+    - Presion externa: $p = qz \cdot G \cdot Cf$ para el sistema MWFRS.
+    - Presion neta de componentes y revestimientos (C&C): $p_{net} = K_e \cdot p_{net30}$.
+    - Identificacion de zonas de succion critica en esquinas de cubierta (zonas 1, 2, 3).
+
+    ####  3. Distribucion de Cargas en la Estructura
+    - Genera la envolvente de presiones horizontales y de carga de uplift sobre la cubierta.
+    - Calcula las fuerzas netas a nivel de piso para integrar al analisis sismico.
+
+    ####  4. Memorias y Diagramas
+    - Descargue la memoria de calculo en DOCX con el resumen de presiones y los diagramas de carga sobre alzados.
+""")
+
 import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt

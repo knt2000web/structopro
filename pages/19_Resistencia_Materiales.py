@@ -1,4 +1,31 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#3b82f6" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#3b82f6" opacity="0.7"/><g transform="translate(40,20)"><line x1="10" y1="80" x2="150" y2="80" stroke="#475569" stroke-width="2"/><line x1="10" y1="80" x2="10" y2="20" stroke="#475569" stroke-width="2"/><path d="M10,80 L55,30 L100,55 L150,70" fill="none" stroke="#3b82f6" stroke-width="3"/><path d="M10,80 L55,80 L100,80 L150,80" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,3"/><text x="20" y="15" font-family="monospace" font-size="8" fill="#93c5fd">M(x)</text><text x="80" y="15" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">DIAGRAMAS</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#3b82f6"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">RESISTENCIA DE MATERIALES</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">DIAGRAMAS M · V · N · TORSION · ESFUERZOS</text><rect x="18" y="102" width="480" height="1" fill="#3b82f6" opacity="0.5"/><rect x="18" y="115" width="127" height="22" rx="11" fill="#0c1a2e" stroke="#3b82f6" stroke-width="1"/><text x="81" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#93c5fd">DIAGRAMAS M-V-N</text><rect x="153" y="115" width="127" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="216" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">CIRCULO DE MOHR</text><rect x="288" y="115" width="127" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="351" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">TORSION/FLEXION</text><rect x="423" y="115" width="120" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="483" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">NUCLEO CENTRAL</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Calculo de diagramas de esfuerzos internos (M, V, N) para vigas isostáticas e hiperestáticas.</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Circulo de Mohr para estado plano de esfuerzos, esfuerzos principales y planos criticos.</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Torsion pura y combinada. Nucleo central de una seccion transversal.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Resistencia de Materiales", expanded=False):
+    st.markdown("""
+    ### Metodologia: Analisis de Esfuerzos y Deformaciones
+    Modulo de fundamentos analiticos para la verificacion de estados de carga en elementos estructurales bajo acciones combinadas.
+
+    ####  1. Diagramas de Esfuerzos Internos (MEF-clase)
+    - Para cualquier haz cargado, el modulo construye los diagramas de Momento Flector M(x), Fuerza Cortante V(x) y Carga Axial N(x).
+    - Identifica automaticamente los puntos criticos (maximos y minimos absolutos de M y V).
+
+    ####  2. Esfuerzos en Seccion Transversal
+    - **Flexion:** sigma = M*y / I. Verifica el esfuerzo en la fibra extrema mas solicitada.
+    - **Cortante:** tau = V*Q / (I*b). Perfil parabolico de esfuerzo cortante en seccion rectangular o de ala.
+    - **Axial combinado:** Superposicion de esfuerzos por N y M (nucleo central y excentricidad).
+
+    ####  3. Circulo de Mohr y Esfuerzos Principales
+    - Construccion grafica e interactiva del Circulo de Mohr 2D para cualquier estado (sigma_x, sigma_y, tau_xy).
+    - Calcula esfuerzos principales (sigma_1, sigma_2), angulos de planos principales y esfuerzo cortante maximo.
+
+    ####  4. Torsion y Deformaciones
+    - Torsion de Saint-Venant para secciones macizas (J explicito) y secciones de pared delgada (formula de Bredt).
+    - Calculo de angulo de giro theta = T*L / (G*J). Curva elastica de la viga bajo flexion pura.
+""")
+
 import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt

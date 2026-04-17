@@ -1,4 +1,30 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#f59e0b" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#f59e0b" opacity="0.7"/><g transform="translate(40,30)"><rect x="0" y="60" width="40" height="20" rx="1" fill="#92400e" stroke="#d97706" stroke-width="1.5"/><rect x="42" y="60" width="40" height="20" rx="1" fill="#92400e" stroke="#d97706" stroke-width="1.5"/><rect x="84" y="60" width="40" height="20" rx="1" fill="#92400e" stroke="#d97706" stroke-width="1.5"/><rect x="21" y="38" width="40" height="20" rx="1" fill="#b45309" stroke="#d97706" stroke-width="1.5"/><rect x="63" y="38" width="40" height="20" rx="1" fill="#b45309" stroke="#d97706" stroke-width="1.5"/><rect x="0" y="82" width="40" height="20" rx="1" fill="#78350f" stroke="#d97706" stroke-width="1.5"/><rect x="42" y="82" width="40" height="20" rx="1" fill="#78350f" stroke="#d97706" stroke-width="1.5"/><rect x="84" y="82" width="40" height="20" rx="1" fill="#78350f" stroke="#d97706" stroke-width="1.5"/><text x="65" y="15" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">APAREJO</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#f59e0b"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">MAMPOSTERIA Y MORTEROS</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">NSR-10 TITULO D · DOSIFICACION · APAREJOS</text><rect x="18" y="102" width="480" height="1" fill="#f59e0b" opacity="0.5"/><rect x="18" y="115" width="127" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="81" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">NSR-10 TITULO D</text><rect x="153" y="115" width="106" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="206" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">DOSIFICACION</text><rect x="267" y="115" width="82" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="308" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">APAREJOS</text><rect x="357" y="115" width="127" height="22" rx="11" fill="#0c1a2e" stroke="#3b82f6" stroke-width="1"/><text x="420" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#93c5fd">APU MAMPOSTERIA</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Verificacion de resistencia de mamposteria confinada y reforzada segun NSR-10 Titulo D.</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Dosificacion de morteros de pega y revoque, calculo de aparejos (ladrillo, bloque, adobe).</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Generacion de APU y cubicacion para presupuesto de muros y enchapes.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Mamposteria y Morteros", expanded=False):
+    st.markdown("""
+    ### Metodologia: Mamposteria Confinada y Reforzada (NSR-10 Titulo D)
+    Calculo de muros de mamposteria considerando las distintas tipologias normativas: mamposteria simple, confinada (vigas y columnas de confinamiento) y reforzada interiormente.
+
+    ####  1. Resistencia Caracteristica (f'm y f'p)
+    - Seleccione la unidad de mamposteria (ladrillo, bloque de concreto, adobe) y su clase normativa.
+    - El modulo determina f'm por el metodo de prism testing o mediante tablas NSR-10 D.3.4.
+
+    ####  2. Dosificacion de Morteros
+    - Mortero Tipo M (1:3), S (1:4), N (1:6): el modulo genera las proporciones en volumen y en peso seco para cada tipo.
+    - Verifica la resistencia minima del mortero de pega segun f'm requerida (NSR-10 D.7).
+
+    ####  3. Verificacion Estructural (Muro en Cortante)
+    - Para muros confinados, calcula la resistencia al corte diagonal: Vm = Am * vm (NSR-10 D.10.3).
+    - Verifica la ductilidad del sistema muro-columna de confinamiento.
+
+    ####  4. Cubicacion y Aparejos
+    - Calcula el numero de piezas por m2 para los aparejos mas comunes (soga, tizón, a plome, flamenco).
+    - Genera APU detallado incluyendo desperdicios y herramienta de albañileria.
+""")
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches

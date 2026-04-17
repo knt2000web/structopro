@@ -1,4 +1,30 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#ef4444" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#ef4444" opacity="0.7"/><g transform="translate(30,10)"><rect x="0" y="80" width="55" height="60" rx="2" fill="#1e293b" stroke="#ef4444" stroke-width="2"/><rect x="60" y="50" width="55" height="90" rx="2" fill="#1e293b" stroke="#ef4444" stroke-width="2"/><rect x="120" y="65" width="45" height="75" rx="2" fill="#1e293b" stroke="#fca5a5" stroke-width="2"/><rect x="0" y="140" width="165" height="12" rx="2" fill="#374151" stroke="#6b7280" stroke-width="1"/><text x="82" y="18" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">BIM MASTER</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#ef4444"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">GENERADOR MAESTRO BIM</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">MODELO INTEGRADO · IFC4 · LOD 350</text><rect x="18" y="102" width="480" height="1" fill="#ef4444" opacity="0.5"/><rect x="18" y="115" width="106" height="22" rx="11" fill="#3a0000" stroke="#ef4444" stroke-width="1"/><text x="71" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fca5a5">IFC4 LOD 350</text><rect x="132" y="115" width="82" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="173" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">ACERO 3D</text><rect x="222" y="115" width="92" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="268" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">NAVISWORKS</text><rect x="322" y="115" width="120" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="382" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">QTO AUTOMATICO</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Generador maestro del modelo BIM integrado con geometria 3D de todos los elementos</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">estructurales: columnnas, vigas, losas, zapatas, pilotes y muros. LOD 350 con</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">armadura parametrica y propiedades de material ICONTEC embebidas.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Generador Maestro BIM", expanded=False):
+    st.markdown("""
+    ### Metodologia: Generacion del Modelo BIM Maestro (IFC4 LOD 350)
+    Nucleo de exportacion que consolida la geometria tridimensional y los metadatos de todos los elementos del proyecto en un unico modelo IFC cohesionado.
+
+    ####  1. Importacion de Datos de Modulos
+    - El generador consulta el estado guardado en session_state de cada modulo (columnas, vigas, zapatas, pilotes, etc.).
+    - Construye el grafo espacial de elementos con sus relaciones jerarquicas (IfcBuilding -> IfcBuildingStorey -> IfcColumn, etc.).
+
+    ####  2. Armadura Parametrica 3D
+    - Para cada elemento de concreto, inserta la geometria de barras longitudinales (IfcReinforcingBar) y estribos (IfcReinforcingMesh).
+    - Aplica el codigo de colores por diametro comercial (ASTM estandar de la suite) directamente en la presentacion visual.
+
+    ####  3. Property Sets ICONTEC / Pset_ConcreteElementCommon
+    - Asigna los property sets normalizados: NormaDiseno, Fc, Fy, NivelSismico, NumPisos, RecubrimientoNominal y FechaDiseño.
+    - El IFC resultante es compatible con Autodesk Revit, Navisworks y openBIM Viewer sin perdida de propiedades.
+
+    ####  4. QTO Automatico y Cuadro de Materiales
+    - Extrae el Quantity Take-Off (QTO) completo: volumen de concreto (m3), peso de acero (kg) y area de encofrado (m2) por elemento y por piso.
+    - Exporta el cuadro de materiales consolidado en formato Excel listo para presupuesto de obra.
+""")
+
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go

@@ -1,4 +1,31 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#f59e0b" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#f59e0b" opacity="0.7"/><g transform="translate(35,25)"><rect x="0" y="30" width="140" height="100" rx="2" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/><line x1="0" y1="60" x2="140" y2="60" stroke="#f59e0b" stroke-width="1" opacity="0.5"/><line x1="0" y1="90" x2="140" y2="90" stroke="#f59e0b" stroke-width="1" opacity="0.5"/><line x1="35" y1="30" x2="35" y2="130" stroke="#fbbf24" stroke-width="1.5"/><line x1="70" y1="30" x2="70" y2="130" stroke="#fbbf24" stroke-width="1.5"/><line x1="105" y1="30" x2="105" y2="130" stroke="#fbbf24" stroke-width="1.5"/><path d="M0,30 L140,130" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,3"/><text x="70" y="15" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">MURO REFORZADO</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#f59e0b"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">MAMPOSTERIA ESTRUCTURAL</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">NSR-10 TITULO D2 · MUROS SISMORRESISTENTES</text><rect x="18" y="102" width="480" height="1" fill="#f59e0b" opacity="0.5"/><rect x="18" y="115" width="134" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="85" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">NSR-10 TITULO D2</text><rect x="160" y="115" width="120" height="22" rx="11" fill="#3a0000" stroke="#ef4444" stroke-width="1"/><text x="220" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fca5a5">CORTE DIAGONAL</text><rect x="288" y="115" width="169" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="372" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">MAMPOSTERIA REFORZADA</text><rect x="465" y="115" width="141" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="535" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">DISENO SISMORESS.</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Diseño de muros de mamposteria estructural reforzada internamente (barras en celdas)</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">conforme a NSR-10 Titulo D.10. Verificacion de cortante diagonal y flexion en muro.</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Calculo de area de acero vertical/horizontal, longitud de desarrollo y cubierto.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Mamposteria Estructural", expanded=False):
+    st.markdown("""
+    ### Metodologia: Diseño de Muros de Mamposteria Reforzada (NSR-10 D.10)
+    Verificacion y diseño de muros con refuerzo interno (barras longitudinales y horizontales embebidas en las celdas del bloque) para resistir cortante y flexion bajo cargas sismicas.
+
+    ####  1. Geometria y Propiedades del Sistema
+    - Define el panel de muro: longitud Lm, altura hw, espesor t y la resistencia caracteristica f'm (segun prism test o tablas D.3).
+    - Seleccione el bloque portante (norma NSR-10 D.4) y el mortero de pega (tipo S o M).
+
+    ####  2. Resistencia al Corte Diagonal (Vm)
+    - Calculo de la resistencia nominal al corte del muro: Vn = Vm + Vs.
+    - Vm (mamposteria): basado en vm*Am y el coeficiente de corte para la relacion hw/Lm.
+    - Vs (acero horizontal): determinado por el espaciado y el area del refuerzo horizontal.
+
+    ####  3. Verificacion a Flexion y Efecto P-Delta
+    - Analisis de la seccion transversal del muro en flexo-compresion (interaccion N-M).
+    - Verificacion que el refuerzo vertical minimo (rho_v >= 0.0007) y maximo esten satisfechos.
+
+    ####  4. Detallado y Memorias
+    - Genera el despiece constructivo del muro: posicion, calibre y longitud de barras verticales y horizontales.
+    - Exporta la memoria de calculo detallada en DOCX con diagramas de interaccion.
+""")
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches

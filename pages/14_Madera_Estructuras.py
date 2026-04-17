@@ -1,4 +1,30 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#92400e" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#92400e" opacity="0.7"/><g transform="translate(45,25)"><rect x="0" y="40" width="140" height="30" rx="4" fill="#92400e" stroke="#d97706" stroke-width="2" opacity="0.9"/><rect x="0" y="75" width="140" height="30" rx="4" fill="#78350f" stroke="#d97706" stroke-width="2" opacity="0.9"/><rect x="0" y="110" width="140" height="30" rx="4" fill="#6b2a04" stroke="#b45309" stroke-width="2" opacity="0.9"/><text x="70" y="15" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">GLULAM</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#92400e"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">ESTRUCTURAS EN MADERA</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">NSR-10 TITULO G · NTC 5800 · GLULAM</text><rect x="18" y="102" width="480" height="1" fill="#92400e" opacity="0.5"/><rect x="18" y="115" width="134" height="22" rx="11" fill="#2d1000" stroke="#92400e" stroke-width="1"/><text x="85" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#d97706">FLEXION ASD/LRFD</text><rect x="160" y="115" width="120" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="220" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">CORTANTE Y CDP</text><rect x="288" y="115" width="92" height="22" rx="11" fill="#0c1a2e" stroke="#3b82f6" stroke-width="1"/><text x="334" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#93c5fd">CONEXIONES</text><rect x="388" y="115" width="92" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="434" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">GLULAM/CLT</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Calculo de miembros de madera solida, aserrada y madera estructural laminada encolada.</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Verificacion de flexion, cortante y estabilidad lateral segun NDS-2018 / NSR-10 Titulo G.</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Diseño de conexiones con tornillos, pasadores, pernos y conectores de placa dentada.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Estructuras en Madera", expanded=False):
+    st.markdown("""
+    ### Metodologia: Diseño de Miembros de Madera (NDS 2018 / NSR-10 Titulo G)
+    Verificacion de la capacidad resistente de vigas, columnas y diagonales de madera solida y laminada bajo los estados limite de resistencia y servicio.
+
+    ####  1. Propiedades del Material y Factores de Ajuste
+    - Seleccione la especie y grupo (Grupo A, B, C, D segun NTC 5800) y las propiedades caracteristicas: Fb, Fv, Fc, E.
+    - Aplique los factores de ajuste Cd (duracion de carga), CM (humedad), Ct (temperatura), CF (forma), CL (estabilidad lateral).
+
+    ####  2. Verificacion de Flexion (Fb')
+    - Calculo del momento resistente: M'n = Fb' × S.
+    - Chequeo del pandeo lateral-torsional via el Factor de Estabilidad de Viga (CL) segun la relacion slenderness Rb.
+
+    ####  3. Cortante y Deflexion
+    - Verifica el esfuerzo cortante en la seccion critica ubicada a una distancia d del apoyo.
+    - Control de deflexiones: L/360 (carga viva) y L/240 (carga total) para pisos habitables.
+
+    ####  4. Conexiones y Detalles Constructivos
+    - Diseño de pernos (Yield limit equations NDS C8) y conectores de placa dentada.
+    - Calcula la distancia minima borde-extremo y separacion entre sujetadores segun el angulo de carga.
+""")
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches

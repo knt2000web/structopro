@@ -1,4 +1,30 @@
 import streamlit as st
+
+# ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#3b82f6" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#3b82f6" opacity="0.7"/><g transform="translate(40,20)"><line x1="20" y1="130" x2="20" y2="30" stroke="#3b82f6" stroke-width="4"/><line x1="80" y1="130" x2="80" y2="30" stroke="#3b82f6" stroke-width="4"/><line x1="140" y1="130" x2="140" y2="30" stroke="#3b82f6" stroke-width="4"/><line x1="20" y1="30" x2="140" y2="30" stroke="#60a5fa" stroke-width="4"/><line x1="20" y1="80" x2="140" y2="80" stroke="#60a5fa" stroke-width="4"/><polygon points="20,140 11,130 29,130" fill="#3b82f6"/><polygon points="80,140 71,130 89,130" fill="#3b82f6"/><polygon points="140,140 131,130 149,130" fill="#3b82f6"/><text x="80" y="12" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">PORTICO</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#3b82f6"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">ANALISIS ESTRUCTURAL 2D</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">PORTICOS PLANOS · MEF · ENVOLVENTES</text><rect x="18" y="102" width="480" height="1" fill="#3b82f6" opacity="0.5"/><rect x="18" y="115" width="113" height="22" rx="11" fill="#0c1a2e" stroke="#3b82f6" stroke-width="1"/><text x="74" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#93c5fd">PORTICO PLANO</text><rect x="139" y="115" width="120" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="199" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">METODO RIGIDEZ</text><rect x="267" y="115" width="134" height="22" rx="11" fill="#291400" stroke="#f59e0b" stroke-width="1"/><text x="334" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fcd34d">ENVOLVENTES LRFD</text><rect x="409" y="115" width="106" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="462" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">EXPORTAR DXF</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Analisis matricial de porticos planos (2D) por el Metodo de la Rigidez Directa (MEF).</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Construccion automatica de matrices K global, aplicacion de condiciones de frontera</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">y solucion del sistema. Envolvente de cargas LRFD/ASD para diseno de elementos.</text></g></svg></div>""", unsafe_allow_html=True)
+
+with st.expander(" Guia Profesional — Analisis Estructural 2D", expanded=False):
+    st.markdown("""
+    ### Metodologia: Analisis Matricial de Porticos Planos (MEF)
+    Implementacion del Metodo de la Rigidez Directa para marcos planos con grados de libertad de traslacion y rotacion por nudo.
+
+    ####  1. Definicion de Geometria y Cargas
+    - Defina la topologia del portico: coordenadas de nudos, conectividad de elementos, condiciones de borde.
+    - Ingrese las cargas de gravedad (distribuidas y concentradas) y las cargas sismicas/viento por nudo o por piso.
+
+    ####  2. Ensamble de la Matriz de Rigidez Global [K]
+    - El modulo construye las matrices de rigidez local de cada elemento (6x6 para marco plano) y las transforma al sistema global.
+    - Aplica las condiciones de frontera (nudos empotrados, articulados, de rodillo) eliminando filas/columnas de la matriz global.
+
+    ####  3. Solucion y Post-proceso
+    - Resuelve el sistema [K]{d} = {f} para obtener desplazamientos nodales.
+    - Calcula reacciones en apoyos y esfuerzos internos (M, V, N) en cada elemento via la relacion de rigidez local.
+    - Traza diagramas de envolventes LRFD para todas las combinaciones de carga simultaneamente.
+
+    ####  4. Exportacion de Resultados
+    - Exporta los diagramas M-V-N, tabla de desplazamientos y reacciones en formato DOCX y DXF vectorial.
+""")
+
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
