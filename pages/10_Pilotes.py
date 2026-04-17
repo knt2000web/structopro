@@ -1792,6 +1792,7 @@ norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 
 
 st.sidebar.success(f"{_t('Norma Activa:', 'Active Code:')} {norma_sel}")
+mostrar_referencias_norma(norma_sel, "pilotes")
 
 
 
@@ -2007,18 +2008,7 @@ if lista_proyectos:
 
 
 
-    nombre_proy_cargar = st.sidebar.selectbox("Selecciona un proyecto", lista_proyectos, index=idx_def, key=f"sel_load_{"pilotes"}")
-mostrar_referencias_norma(nombre_proy_cargar, "pilotes")
-
-
-
-
-
-
-
-
-
-    
+    nombre_proy_cargar = st.sidebar.selectbox("Selecciona un proyecto", lista_proyectos, index=idx_def, key=f"sel_load_{'pilotes'}")
 
 
 
