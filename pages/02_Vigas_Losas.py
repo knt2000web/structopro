@@ -207,85 +207,88 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   <rect x="0" y="0" width="1100" height="3" fill="#10b981" opacity="0.9"/>
   <rect x="0" y="217" width="1100" height="3" fill="#3b82f6" opacity="0.7"/>
 
-  <!--  VIGA RECTANGULAR (perfil)  -->
-  <g transform="translate(30,40)">
-    <text x="75" y="-8" text-anchor="middle" font-family="monospace" font-size="9" fill="#6b7280" letter-spacing="1.5">VIGA RECTANGULAR</text>
-    <rect x="0" y="18" width="150" height="75" rx="2" fill="#2d3748" stroke="#4a5568" stroke-width="1.5"/>
-    <rect x="0" y="75" width="150" height="18" rx="1" fill="#1a2535"/>
-    <!-- Parabola momento + -->
-    <path d="M0,18 Q75,-4 150,18" fill="none" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="4,3" opacity="0.7"/>
-    <!-- Stirrups -->
-    <rect x="9" y="20" width="2" height="71" rx="1" fill="#00d4ff" opacity="0.9"/>
-    <rect x="27" y="20" width="2" height="71" rx="1" fill="#00d4ff" opacity="0.7"/>
-    <rect x="45" y="20" width="2" height="71" rx="1" fill="#00d4ff" opacity="0.6"/>
-    <rect x="63" y="20" width="2" height="71" rx="1" fill="#00d4ff" opacity="0.6"/>
-    <rect x="81" y="20" width="2" height="71" rx="1" fill="#00d4ff" opacity="0.6"/>
-    <rect x="99" y="20" width="2" height="71" rx="1" fill="#00d4ff" opacity="0.6"/>
-    <rect x="117" y="20" width="2" height="71" rx="1" fill="#00d4ff" opacity="0.7"/>
-    <rect x="135" y="20" width="2" height="71" rx="1" fill="#00d4ff" opacity="0.9"/>
-    <!-- Top bars -->
-    <circle cx="11" cy="25" r="4.5" fill="#e8a838"/><circle cx="139" cy="25" r="4.5" fill="#e8a838"/>
-    <!-- Bottom bars (tension) -->
-    <circle cx="11" cy="87" r="5.5" fill="#e8a838"/><circle cx="35" cy="87" r="5.5" fill="#e8a838"/>
-    <circle cx="115" cy="87" r="5.5" fill="#e8a838"/><circle cx="139" cy="87" r="5.5" fill="#e8a838"/>
-    <line x1="0" y1="108" x2="150" y2="108" stroke="#60a5fa" stroke-width="0.8"/>
-    <text x="75" y="120" text-anchor="middle" font-family="monospace" font-size="10" fill="#93c5fd">b x h</text>
-    <text x="75" y="132" text-anchor="middle" font-family="monospace" font-size="9" fill="#64748b">L (luz libre)</text>
+  <!--  VIGA RECTANGULAR (seccion)  -->
+  <g transform="translate(60,50)">
+    <text x="35" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">RECTANGULAR</text>
+    <!-- Concreto -->
+    <rect x="0" y="0" width="70" height="100" rx="4" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <!-- Estribo -->
+    <rect x="8" y="8" width="54" height="84" rx="4" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="3,2" opacity="0.8"/>
+    <!-- Refuerzo Longitudinal Superior -->
+    <circle cx="16" cy="16" r="4.5" fill="#f59e0b"/>
+    <circle cx="54" cy="16" r="4.5" fill="#f59e0b"/>
+    <!-- Inferior -->
+    <circle cx="16" cy="84" r="5.5" fill="#f59e0b"/>
+    <circle cx="35" cy="84" r="5.5" fill="#f59e0b"/>
+    <circle cx="54" cy="84" r="5.5" fill="#f59e0b"/>
+    <!-- Cotas -->
+    <line x1="0" y1="110" x2="70" y2="110" stroke="#64748b" stroke-width="1"/>
+    <line x1="0" y1="107" x2="0" y2="113" stroke="#64748b" stroke-width="1"/>
+    <line x1="70" y1="107" x2="70" y2="113" stroke="#64748b" stroke-width="1"/>
+    <text x="35" y="122" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">b</text>
+    
+    <line x1="80" y1="0" x2="80" y2="100" stroke="#64748b" stroke-width="1"/>
+    <line x1="77" y1="0" x2="83" y2="0" stroke="#64748b" stroke-width="1"/>
+    <line x1="77" y1="100" x2="83" y2="100" stroke="#64748b" stroke-width="1"/>
+    <text x="90" y="54" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">h</text>
   </g>
 
   <!--  VIGA T  -->
-  <g transform="translate(205,38)">
-    <text x="75" y="-8" text-anchor="middle" font-family="monospace" font-size="9" fill="#6b7280" letter-spacing="1.5">VIGA T — LOSA COLABORANTE</text>
-    <rect x="0" y="18" width="150" height="22" rx="2" fill="#2d3748" stroke="#4a5568" stroke-width="1.5"/>
-    <rect x="38" y="40" width="74" height="58" rx="2" fill="#243040" stroke="#4a5568" stroke-width="1.5"/>
-    <line x1="0" y1="12" x2="150" y2="12" stroke="#10b981" stroke-width="0.8" stroke-dasharray="4,2" opacity="0.7"/>
-    <text x="75" y="9" text-anchor="middle" font-family="monospace" font-size="9" fill="#34d399">beff</text>
-    <!-- Flange bars -->
-    <circle cx="10" cy="25" r="3.5" fill="#e8a838"/><circle cx="28" cy="25" r="3.5" fill="#e8a838"/>
-    <circle cx="44" cy="25" r="4" fill="#e8a838"/><circle cx="106" cy="25" r="4" fill="#e8a838"/>
-    <circle cx="122" cy="25" r="3.5" fill="#e8a838"/><circle cx="140" cy="25" r="3.5" fill="#e8a838"/>
-    <!-- Web stirrups -->
-    <rect x="42" y="42" width="2" height="54" rx="1" fill="#00d4ff" opacity="0.9"/>
-    <rect x="56" y="42" width="2" height="54" rx="1" fill="#00d4ff" opacity="0.7"/>
-    <rect x="70" y="42" width="2" height="54" rx="1" fill="#00d4ff" opacity="0.7"/>
-    <rect x="84" y="42" width="2" height="54" rx="1" fill="#00d4ff" opacity="0.7"/>
-    <rect x="98" y="42" width="2" height="54" rx="1" fill="#00d4ff" opacity="0.9"/>
-    <rect x="108" y="42" width="2" height="54" rx="1" fill="#00d4ff" opacity="0.9"/>
-    <!-- Bottom bars -->
-    <circle cx="48" cy="91" r="5.5" fill="#e8a838"/><circle cx="75" cy="91" r="5.5" fill="#e8a838"/>
-    <circle cx="102" cy="91" r="5.5" fill="#e8a838"/>
-    <text x="75" y="112" text-anchor="middle" font-family="monospace" font-size="9" fill="#93c5fd">bw (alma)</text>
+  <g transform="translate(190,50)">
+    <text x="60" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">SECCION T</text>
+    <!-- Concreto -->
+    <path d="M0,0 L120,0 L120,25 L80,25 L80,100 L40,100 L40,25 L0,25 Z" fill="#1e293b" stroke="#475569" stroke-width="2" stroke-linejoin="round"/>
+    
+    <!-- Estribo Alma -->
+    <rect x="48" y="30" width="24" height="62" rx="3" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="3,2" opacity="0.8"/>
+    
+    <!-- Refuerzo Superior (Ala) -->
+    <circle cx="15" cy="12" r="3.5" fill="#f59e0b"/><circle cx="35" cy="12" r="3.5" fill="#f59e0b"/>
+    <circle cx="56" cy="12" r="4.5" fill="#f59e0b"/><circle cx="64" cy="12" r="4.5" fill="#f59e0b"/>
+    <circle cx="85" cy="12" r="3.5" fill="#f59e0b"/><circle cx="105" cy="12" r="3.5" fill="#f59e0b"/>
+    <!-- Inferior Alma -->
+    <circle cx="56" cy="84" r="5.5" fill="#f59e0b"/>
+    <circle cx="64" cy="84" r="5.5" fill="#f59e0b"/>
+    
+    <!-- Cotas -->
+    <line x1="0" y1="-8" x2="120" y2="-8" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2"/>
+    <text x="60" y="-12" text-anchor="middle" font-family="monospace" font-size="10" fill="#34d399">beff</text>
+    
+    <line x1="40" y1="110" x2="80" y2="110" stroke="#64748b" stroke-width="1"/>
+    <line x1="40" y1="107" x2="40" y2="113" stroke="#64748b" stroke-width="1"/>
+    <line x1="80" y1="107" x2="80" y2="113" stroke="#64748b" stroke-width="1"/>
+    <text x="60" y="122" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">bw</text>
   </g>
 
-  <!--  LOSA 1D  -->
-  <g transform="translate(390,62)">
-    <text x="80" y="-18" text-anchor="middle" font-family="monospace" font-size="9" fill="#6b7280" letter-spacing="1.5">LOSA UNIDIRECCIONAL</text>
-    <!-- Load arrows -->
-    <g stroke="#ef4444" stroke-width="1.2" opacity="0.8">
-      <line x1="0" y1="-18" x2="160" y2="-18"/>
-      <line x1="20" y1="-18" x2="20" y2="-4"/><polygon points="20,-4 17,-11 23,-11" fill="#ef4444"/>
-      <line x1="50" y1="-18" x2="50" y2="-4"/><polygon points="50,-4 47,-11 53,-11" fill="#ef4444"/>
-      <line x1="80" y1="-18" x2="80" y2="-4"/><polygon points="80,-4 77,-11 83,-11" fill="#ef4444"/>
-      <line x1="110" y1="-18" x2="110" y2="-4"/><polygon points="110,-4 107,-11 113,-11" fill="#ef4444"/>
-      <line x1="140" y1="-18" x2="140" y2="-4"/><polygon points="140,-4 137,-11 143,-11" fill="#ef4444"/>
+  <!--  LOSA UNIDIRECCIONAL  -->
+  <g transform="translate(370,75)">
+    <text x="75" y="-35" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#9ca3af" letter-spacing="1">LOSA UNIDIRECCIONAL</text>
+    <!-- Cargas -->
+    <g stroke="#ef4444" stroke-width="1.5" opacity="0.8">
+      <line x1="10" y1="-22" x2="140" y2="-22"/>
+      <line x1="10" y1="-22" x2="10" y2="-6"/><polygon points="10,-6 7,-11 13,-11" fill="#ef4444"/>
+      <line x1="42" y1="-22" x2="42" y2="-6"/><polygon points="42,-6 39,-11 45,-11" fill="#ef4444"/>
+      <line x1="75" y1="-22" x2="75" y2="-6"/><polygon points="75,-6 72,-11 78,-11" fill="#ef4444"/>
+      <line x1="108" y1="-22" x2="108" y2="-6"/><polygon points="108,-6 105,-11 111,-11" fill="#ef4444"/>
+      <line x1="140" y1="-22" x2="140" y2="-6"/><polygon points="140,-6 137,-11 143,-11" fill="#ef4444"/>
     </g>
-    <text x="80" y="-22" text-anchor="middle" font-family="monospace" font-size="8" fill="#f87171">wu (carga diseno)</text>
-    <!-- Slab -->
-    <rect x="0" y="0" width="160" height="38" rx="2" fill="#2d3748" stroke="#4a5568" stroke-width="1.5"/>
-    <!-- Main bars bottom -->
-    <circle cx="15" cy="31" r="4" fill="#e8a838"/><circle cx="40" cy="31" r="4" fill="#e8a838"/>
-    <circle cx="65" cy="31" r="4" fill="#e8a838"/><circle cx="90" cy="31" r="4" fill="#e8a838"/>
-    <circle cx="115" cy="31" r="4" fill="#e8a838"/><circle cx="140" cy="31" r="4" fill="#e8a838"/>
-    <!-- Temp bars top -->
-    <circle cx="27" cy="7" r="2.5" fill="#b45309"/><circle cx="52" cy="7" r="2.5" fill="#b45309"/>
-    <circle cx="77" cy="7" r="2.5" fill="#b45309"/><circle cx="102" cy="7" r="2.5" fill="#b45309"/>
-    <circle cx="127" cy="7" r="2.5" fill="#b45309"/>
-    <!-- h annotation -->
-    <line x1="168" y1="0" x2="168" y2="38" stroke="#60a5fa" stroke-width="0.8"/>
-    <text x="175" y="23" font-family="monospace" font-size="10" fill="#93c5fd">h</text>
-    <!-- Deflection -->
-    <path d="M0,55 Q80,82 160,55" fill="none" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.6"/>
-    <text x="80" y="82" text-anchor="middle" font-family="monospace" font-size="8" fill="#fbbf24">deflexion</text>
+    
+    <!-- Seccion Losa -->
+    <rect x="0" y="0" width="150" height="40" rx="3" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    
+    <!-- Refuerzo principal (puntos) y temperatura (linea base) -->
+    <line x1="10" y1="30" x2="140" y2="30" stroke="#0ea5e9" stroke-width="2" opacity="0.8"/>
+    <circle cx="20" cy="30" r="4.5" fill="#f59e0b"/><circle cx="56" cy="30" r="4.5" fill="#f59e0b"/>
+    <circle cx="93" cy="30" r="4.5" fill="#f59e0b"/><circle cx="130" cy="30" r="4.5" fill="#f59e0b"/>
+    <!-- Retraccion -->
+    <circle cx="20" cy="10" r="3" fill="#b45309"/><circle cx="56" cy="10" r="3" fill="#b45309"/>
+    <circle cx="93" cy="10" r="3" fill="#b45309"/><circle cx="130" cy="10" r="3" fill="#b45309"/>
+    
+    <!-- Cota Altura -->
+    <line x1="160" y1="0" x2="160" y2="40" stroke="#64748b" stroke-width="1"/>
+    <line x1="157" y1="0" x2="163" y2="0" stroke="#64748b" stroke-width="1"/>
+    <line x1="157" y1="40" x2="163" y2="40" stroke="#64748b" stroke-width="1"/>
+    <text x="170" y="24" text-anchor="middle" font-family="monospace" font-size="10" fill="#94a3b8">h</text>
   </g>
 
   <!--  TEXT BLOCK  -->

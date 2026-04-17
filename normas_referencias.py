@@ -459,7 +459,7 @@ for _norma in _NORMAS_OTRAS:
 MODULO_NOMBRES = {
     "columnas_pm":             "📐 Columnas P-M (Rect./Cuad.)",
     "columnas_circulares":     "⭕ Columnas Circulares",
-    "vigas_losas":             "🪵 Vigas y Losas",
+    "vigas_losas":             "🏢 Vigas y Losas",
     "zapatas":                 "🏗️ Zapatas",
     "pilotes":                 "🔩 Pilotes",
     "dados_encepados":         "🧱 Dados y Encepados",
@@ -472,7 +472,7 @@ MODULO_NOMBRES = {
     "kontewall":               "🧱 KonteWall",
     "muros_contencion":        "🪨 Muros de Contención",
     "mamposteria":             "🧱 Mampostería y Morteros",
-    "madera":                  "🪵 Estructuras de Madera",
+    "madera":                  "🏢 Estructuras de Madera",
     "viento":                  "💨 Viento Simplificado",
     "irregularidades":         "📊 Irregularidades Sísmicas",
     "estructuras_metalicas":   "⚙️ Estructuras Metálicas",
