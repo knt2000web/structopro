@@ -198,177 +198,7 @@ try:
 except:
     pass
 
-if not st.session_state.auth_user:
-    login_view()
-    st.stop()
-
-# ─────────────────────────────────────────────
-# SIDEBAR — USUARIO Y NORMA
-# ─────────────────────────────────────────────
-with st.sidebar:
-    # Cabecera usuario
-    st.markdown(f"""
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 0 8px;border-bottom:1px solid #21262d;margin-bottom:12px">
-        <div style="width:32px;height:32px;border-radius:50%;background:#21262d;display:flex;align-items:center;justify-content:center;font-size:14px"><span style="font-size:11px;color:#aaa">USR</span></div>
-        <div style="flex:1;min-width:0">
-            <div style="font-size:12px;color:#8b949e">Sesión activa</div>
-            <div style="font-size:12px;font-weight:600;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{st.session_state.auth_user.email}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    logout_button()
-
-    # ── NORMA ACTIVA ──────────────────────────────────────────────
-    NORMAS_DISPONIBLES = [
-        "NSR-10 (Colombia)", "ACI 318-25 (EE.UU.)", "ACI 318-19 (EE.UU.)",
-        "ACI 318-14 (EE.UU.)", "NEC-SE-HM (Ecuador)", "E.060 (Perú)",
-        "NTC-EM (México)", "COVENIN 1753-2006 (Venezuela)",
-        "NB 1225001-2020 (Bolivia)", "CIRSOC 201-2025 (Argentina)",
-    ]
-    if "norma_sel" not in st.session_state or st.session_state.norma_sel not in NORMAS_DISPONIBLES:
-        st.session_state.norma_sel = NORMAS_DISPONIBLES[0]
-
-    with st.expander("Norma y Sismo", expanded=True):
-        _NORMA_FLAG_URL = {
-            "NSR-10 (Colombia)":             "https://flagpedia.net/data/flags/mini/co.png",
-            "ACI 318-25 (EE.UU.)":           "https://flagpedia.net/data/flags/mini/us.png",
-            "ACI 318-19 (EE.UU.)":           "https://flagpedia.net/data/flags/mini/us.png",
-            "ACI 318-14 (EE.UU.)":           "https://flagpedia.net/data/flags/mini/us.png",
-            "NEC-SE-HM (Ecuador)":           "https://flagpedia.net/data/flags/mini/ec.png",
-            "E.060 (Perú)":                  "https://flagpedia.net/data/flags/mini/pe.png",
-            "NTC-EM (México)":               "https://flagpedia.net/data/flags/mini/mx.png",
-            "COVENIN 1753-2006 (Venezuela)": "https://flagpedia.net/data/flags/mini/ve.png",
-            "NB 1225001-2020 (Bolivia)":     "https://flagpedia.net/data/flags/mini/bo.png",
-            "CIRSOC 201-2025 (Argentina)":   "https://flagpedia.net/data/flags/mini/ar.png",
-        }
-        st.selectbox(
-            "Normativa:",
-            options=NORMAS_DISPONIBLES,
-            index=NORMAS_DISPONIBLES.index(st.session_state.get("norma_sel", NORMAS_DISPONIBLES[0])),
-            key="norma_sel"
-        )
-        flag_url = _NORMA_FLAG_URL.get(st.session_state.norma_sel, "https://flagpedia.net/data/flags/mini/un.png")
-        st.session_state.norma_flag_url = flag_url
-        st.markdown(f"""<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
-            <img src="{flag_url}" style="height:18px;border-radius:2px;"> 
-            <span style="font-size:12px;color:#3fb950;font-weight:600">{st.session_state.norma_sel}</span>
-        </div>""", unsafe_allow_html=True)
-        if "idioma" not in st.session_state:
-            st.session_state.idioma = "Español"
-        if "ACI 318" in st.session_state.norma_sel:
-            st.session_state.idioma = st.radio("Idioma:", ["Español", "English"], horizontal=True,
-                index=0 if st.session_state.idioma == "Español" else 1)
-        else:
-            st.session_state.idioma = "Español"
-
-    # ── NAVEGACIÓN CATEGORIZADA ───────────────────────────────────
-    st.markdown('<div class="nav-category">Modulos de Diseno</div>', unsafe_allow_html=True)
-
-    with st.expander("Hormigon — Secciones", expanded=False):
-        st.markdown("Columnas y vigas de sección")
-        menu_container_rc = st.container()
-
-    with st.expander("Cimentaciones", expanded=False):
-        menu_container_found = st.container()
-
-    with st.expander("Sismo & Viento", expanded=False):
-        menu_container_seismic = st.container()
-
-    with st.expander("Mamposteria & Alternativos", expanded=False):
-        menu_container_mamp = st.container()
-
-    with st.expander("Presupuesto & Materiales", expanded=False):
-        menu_container_budget = st.container()
-
-    with st.expander("Analisis & Utilidades", expanded=False):
-        menu_container_analysis = st.container()
-
-    # ── PROYECTO ──────────────────────────────────────────────────
-    st.markdown("---")
-    with st.expander("Proyecto y Guardado", expanded=False):
-        project_name    = st.text_input("Nombre del Proyecto:", value=st.session_state.get("project_name",  "Mi_Edificio"), key="project_name")
-        project_owner   = st.text_input("Propietario:",         value=st.session_state.get("project_owner", ""),           key="project_owner")
-        project_address = st.text_input("Dirección:",           value=st.session_state.get("project_address",""),          key="project_address")
-        project_phone   = st.text_input("Teléfono:",            value=st.session_state.get("project_phone",  ""),          key="project_phone")
-
-        def serialize_state_dict():
-            state_dict = {}
-            for k, v in st.session_state.items():
-                if k == "auth_user": continue
-                if isinstance(v, pd.DataFrame):
-                    state_dict[k] = {"__type__": "dataframe", "data": v.to_dict(orient="records")}
-                elif isinstance(v, (int, float, str, bool, list, dict)):
-                    state_dict[k] = v
-            return state_dict
-
-        if project_name and project_owner and project_address and project_phone:
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button(" Nube", use_container_width=True):
-                    try:
-                        save_project_to_db(st.session_state.auth_user, project_name, project_owner,
-                                           project_address, project_phone, serialize_state_dict())
-                        st.success("¡Guardado en nube!")
-                    except Exception as e:
-                        st.error(f"Error: {e}")
-            with col2:
-                st.download_button(label="Guardar local",
-                    data=json.dumps(serialize_state_dict(), indent=4),
-                    file_name=f"{project_name}_{datetime.datetime.now().strftime('%Y%m%d')}.json",
-                    mime="application/json", use_container_width=True)
-        else:
-            st.caption("Completa los datos para habilitar el guardado.")
-
-        # Cargar desde nube
-        st.markdown("**Cargar proyecto:**")
-        if st.button("↻ Ver proyectos en nube", use_container_width=True):
-            try:
-                if st.session_state.get("auth_user"):
-                    proyectos_cloud = get_projects_from_db(st.session_state.auth_user)
-                    if proyectos_cloud:
-                        for p in proyectos_cloud:
-                            col_p1, col_p2 = st.columns([3, 1])
-                            col_p1.markdown(f"**{p['nombre_proyecto']}**  \n{p['created_at'][:10]}")
-                            if col_p2.button("", key=f"load_{p['id']}"):
-                                project_data = p.get('estado_json', {})
-                                if isinstance(project_data, str):
-                                    project_data = json.loads(project_data)
-                                for k, v in project_data.items():
-                                    st.session_state[k] = pd.DataFrame(v["data"]) if isinstance(v, dict) and v.get("__type__") == "dataframe" else v
-                                st.success(f" {p['nombre_proyecto']} cargado.")
-                    else:
-                        st.info("Sin proyectos en nube.")
-            except Exception as e:
-                st.error(f"Error nube: {e}")
-
-        uploaded_project = st.file_uploader("Cargar JSON local:", type=['json'])
-        if uploaded_project is not None:
-            try:
-                project_data = json.load(uploaded_project)
-                for k, v in project_data.items():
-                    st.session_state[k] = pd.DataFrame(v["data"]) if isinstance(v, dict) and v.get("__type__") == "dataframe" else v
-                st.success("Archivo cargado ")
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-    # ── PIE SIDEBAR ──────────────────────────────────────────────
-    st.markdown("""
-    <div style="text-align:center;color:#484f58;font-size:10px;padding:12px 0 4px">
-        StructoPro v2.0 &nbsp;·&nbsp; © 2026<br>
-        <i>Herramienta de apoyo profesional</i>
-    </div>""", unsafe_allow_html=True)
-
-# Inicializar APU global
-if "apu_config" not in st.session_state:
-    st.session_state.apu_config = {
-        "moneda": "COP$", "cemento": 32000.0, "acero": 4500.0,
-        "arena": 70000.0, "grava": 80000.0, "costo_dia_mo": 69333.33,
-        "pct_herramienta": 0.05, "pct_aui": 0.30, "iva": 0.19, "pct_util": 0.05
-    }
-
-# ─────────────────────────────────────────────
-# PÁGINAS Y NAVEGACIÓN CATEGORIZADA
-# ─────────────────────────────────────────────
+# Damos a conocer las páginas a Streamlit para que sobrescriba el sidebar por defecto
 def run_home():
     import datetime as _dt
     st.markdown("""
@@ -586,6 +416,179 @@ all_pages = [
 
 curr_page = st.navigation(all_pages, position="hidden")
 
+
+# --- AUTENTICACIÓN ---
+if not st.session_state.auth_user:
+    login_view()
+    st.stop()
+
+# ─────────────────────────────────────────────
+# SIDEBAR — USUARIO Y NORMA
+# ─────────────────────────────────────────────
+with st.sidebar:
+    # Cabecera usuario
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 0 8px;border-bottom:1px solid #21262d;margin-bottom:12px">
+        <div style="width:32px;height:32px;border-radius:50%;background:#21262d;display:flex;align-items:center;justify-content:center;font-size:14px"><span style="font-size:11px;color:#aaa">USR</span></div>
+        <div style="flex:1;min-width:0">
+            <div style="font-size:12px;color:#8b949e">Sesión activa</div>
+            <div style="font-size:12px;font-weight:600;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{st.session_state.auth_user.email}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    logout_button()
+
+    # ── NORMA ACTIVA ──────────────────────────────────────────────
+    NORMAS_DISPONIBLES = [
+        "NSR-10 (Colombia)", "ACI 318-25 (EE.UU.)", "ACI 318-19 (EE.UU.)",
+        "ACI 318-14 (EE.UU.)", "NEC-SE-HM (Ecuador)", "E.060 (Perú)",
+        "NTC-EM (México)", "COVENIN 1753-2006 (Venezuela)",
+        "NB 1225001-2020 (Bolivia)", "CIRSOC 201-2025 (Argentina)",
+    ]
+    if "norma_sel" not in st.session_state or st.session_state.norma_sel not in NORMAS_DISPONIBLES:
+        st.session_state.norma_sel = NORMAS_DISPONIBLES[0]
+
+    with st.expander("Norma y Sismo", expanded=True):
+        _NORMA_FLAG_URL = {
+            "NSR-10 (Colombia)":             "https://flagpedia.net/data/flags/mini/co.png",
+            "ACI 318-25 (EE.UU.)":           "https://flagpedia.net/data/flags/mini/us.png",
+            "ACI 318-19 (EE.UU.)":           "https://flagpedia.net/data/flags/mini/us.png",
+            "ACI 318-14 (EE.UU.)":           "https://flagpedia.net/data/flags/mini/us.png",
+            "NEC-SE-HM (Ecuador)":           "https://flagpedia.net/data/flags/mini/ec.png",
+            "E.060 (Perú)":                  "https://flagpedia.net/data/flags/mini/pe.png",
+            "NTC-EM (México)":               "https://flagpedia.net/data/flags/mini/mx.png",
+            "COVENIN 1753-2006 (Venezuela)": "https://flagpedia.net/data/flags/mini/ve.png",
+            "NB 1225001-2020 (Bolivia)":     "https://flagpedia.net/data/flags/mini/bo.png",
+            "CIRSOC 201-2025 (Argentina)":   "https://flagpedia.net/data/flags/mini/ar.png",
+        }
+        st.selectbox(
+            "Normativa:",
+            options=NORMAS_DISPONIBLES,
+            index=NORMAS_DISPONIBLES.index(st.session_state.get("norma_sel", NORMAS_DISPONIBLES[0])),
+            key="norma_sel"
+        )
+        flag_url = _NORMA_FLAG_URL.get(st.session_state.norma_sel, "https://flagpedia.net/data/flags/mini/un.png")
+        st.session_state.norma_flag_url = flag_url
+        st.markdown(f"""<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+            <img src="{flag_url}" style="height:18px;border-radius:2px;"> 
+            <span style="font-size:12px;color:#3fb950;font-weight:600">{st.session_state.norma_sel}</span>
+        </div>""", unsafe_allow_html=True)
+        if "idioma" not in st.session_state:
+            st.session_state.idioma = "Español"
+        if "ACI 318" in st.session_state.norma_sel:
+            st.session_state.idioma = st.radio("Idioma:", ["Español", "English"], horizontal=True,
+                index=0 if st.session_state.idioma == "Español" else 1)
+        else:
+            st.session_state.idioma = "Español"
+
+    # ── NAVEGACIÓN CATEGORIZADA ───────────────────────────────────
+    st.markdown('<div class="nav-category">Modulos de Diseno</div>', unsafe_allow_html=True)
+
+    with st.expander("Hormigon — Secciones", expanded=False):
+        st.markdown("Columnas y vigas de sección")
+        menu_container_rc = st.container()
+
+    with st.expander("Cimentaciones", expanded=False):
+        menu_container_found = st.container()
+
+    with st.expander("Sismo & Viento", expanded=False):
+        menu_container_seismic = st.container()
+
+    with st.expander("Mamposteria & Alternativos", expanded=False):
+        menu_container_mamp = st.container()
+
+    with st.expander("Presupuesto & Materiales", expanded=False):
+        menu_container_budget = st.container()
+
+    with st.expander("Analisis & Utilidades", expanded=False):
+        menu_container_analysis = st.container()
+
+    # ── PROYECTO ──────────────────────────────────────────────────
+    st.markdown("---")
+    with st.expander("Proyecto y Guardado", expanded=False):
+        project_name    = st.text_input("Nombre del Proyecto:", value=st.session_state.get("project_name",  "Mi_Edificio"), key="project_name")
+        project_owner   = st.text_input("Propietario:",         value=st.session_state.get("project_owner", ""),           key="project_owner")
+        project_address = st.text_input("Dirección:",           value=st.session_state.get("project_address",""),          key="project_address")
+        project_phone   = st.text_input("Teléfono:",            value=st.session_state.get("project_phone",  ""),          key="project_phone")
+
+        def serialize_state_dict():
+            state_dict = {}
+            for k, v in st.session_state.items():
+                if k == "auth_user": continue
+                if isinstance(v, pd.DataFrame):
+                    state_dict[k] = {"__type__": "dataframe", "data": v.to_dict(orient="records")}
+                elif isinstance(v, (int, float, str, bool, list, dict)):
+                    state_dict[k] = v
+            return state_dict
+
+        if project_name and project_owner and project_address and project_phone:
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button(" Nube", use_container_width=True):
+                    try:
+                        save_project_to_db(st.session_state.auth_user, project_name, project_owner,
+                                           project_address, project_phone, serialize_state_dict())
+                        st.success("¡Guardado en nube!")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+            with col2:
+                st.download_button(label="Guardar local",
+                    data=json.dumps(serialize_state_dict(), indent=4),
+                    file_name=f"{project_name}_{datetime.datetime.now().strftime('%Y%m%d')}.json",
+                    mime="application/json", use_container_width=True)
+        else:
+            st.caption("Completa los datos para habilitar el guardado.")
+
+        # Cargar desde nube
+        st.markdown("**Cargar proyecto:**")
+        if st.button("↻ Ver proyectos en nube", use_container_width=True):
+            try:
+                if st.session_state.get("auth_user"):
+                    proyectos_cloud = get_projects_from_db(st.session_state.auth_user)
+                    if proyectos_cloud:
+                        for p in proyectos_cloud:
+                            col_p1, col_p2 = st.columns([3, 1])
+                            col_p1.markdown(f"**{p['nombre_proyecto']}**  \n{p['created_at'][:10]}")
+                            if col_p2.button("", key=f"load_{p['id']}"):
+                                project_data = p.get('estado_json', {})
+                                if isinstance(project_data, str):
+                                    project_data = json.loads(project_data)
+                                for k, v in project_data.items():
+                                    st.session_state[k] = pd.DataFrame(v["data"]) if isinstance(v, dict) and v.get("__type__") == "dataframe" else v
+                                st.success(f" {p['nombre_proyecto']} cargado.")
+                    else:
+                        st.info("Sin proyectos en nube.")
+            except Exception as e:
+                st.error(f"Error nube: {e}")
+
+        uploaded_project = st.file_uploader("Cargar JSON local:", type=['json'])
+        if uploaded_project is not None:
+            try:
+                project_data = json.load(uploaded_project)
+                for k, v in project_data.items():
+                    st.session_state[k] = pd.DataFrame(v["data"]) if isinstance(v, dict) and v.get("__type__") == "dataframe" else v
+                st.success("Archivo cargado ")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+    # ── PIE SIDEBAR ──────────────────────────────────────────────
+    st.markdown("""
+    <div style="text-align:center;color:#484f58;font-size:10px;padding:12px 0 4px">
+        StructoPro v2.0 &nbsp;·&nbsp; © 2026<br>
+        <i>Herramienta de apoyo profesional</i>
+    </div>""", unsafe_allow_html=True)
+
+# Inicializar APU global
+if "apu_config" not in st.session_state:
+    st.session_state.apu_config = {
+        "moneda": "COP$", "cemento": 32000.0, "acero": 4500.0,
+        "arena": 70000.0, "grava": 80000.0, "costo_dia_mo": 69333.33,
+        "pct_herramienta": 0.05, "pct_aui": 0.30, "iva": 0.19, "pct_util": 0.05
+    }
+
+# ─────────────────────────────────────────────
+# PÁGINAS Y NAVEGACIÓN CATEGORIZADA
+# ─────────────────────────────────────────────
 # ── MENÚS CATEGORIZADOS (se inyectan en los contenedores del sidebar) ──
 def _nav_btn(page, container, curr_page):
     """Botón de navegación que hace switch_page."""
@@ -618,5 +621,6 @@ with menu_container_budget:
 with menu_container_analysis:
     for p in [p_a2d, p_a3d, p_gen3d, p_res, p_util]:
         _nav_btn(p, menu_container_analysis, curr_page)
+
 
 curr_page.run()
