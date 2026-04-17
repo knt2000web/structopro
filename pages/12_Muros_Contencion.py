@@ -37,7 +37,6 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
   <rect x="0" y="0" width="1100" height="3" fill="#ca8a04" opacity="0.9"/>
   <rect x="0" y="217" width="1100" height="3" fill="#eab308" opacity="0.7"/>
-
   <!-- GRAFICO: MURO Y EMPUJE -->
   <g transform="translate(60,50)">
     <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">MURO VOLADIZO</text>
@@ -52,7 +51,6 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
     <polygon points="45,-10 85,90 45,90" fill="#ef4444" opacity="0.6"/>
     <text x="55" y="75" font-family="monospace" font-size="20" font-weight="bold" fill="#fca5a5">&#9668;</text>
   </g>
-
   <!-- GRAFICO: ESTABILIDAD -->
   <g transform="translate(280,50)">
     <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">ESTABILIDAD</text>
@@ -73,27 +71,21 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
     <line x1="-15" y1="90" x2="-45" y2="90" stroke="#10b981" stroke-width="3"/>
     <polygon points="-45,90 -35,86 -35,94" fill="#10b981"/>
   </g>
-
   <!-- TEXT BLOCK -->
   <g transform="translate(560,0)">
     <rect x="0" y="28" width="4" height="165" rx="2" fill="#eab308"/>
     <text x="18" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#ffffff">MUROS DE CONTENCIÓN</text>
     <text x="18" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="300" fill="#fde047" letter-spacing="2">ESTABILIDAD Y DISEÑO NSR-10</text>
     <rect x="18" y="100" width="480" height="1" fill="#eab308" opacity="0.5"/>
-    
     <!-- Tags -->
     <rect x="18" y="111" width="90" height="22" rx="11" fill="#2d1c07" stroke="#eab308" stroke-width="1"/>
     <text x="63" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fde047">VOLCAMIENTO</text>
-    
     <rect x="116" y="111" width="100" height="22" rx="11" fill="#301515" stroke="#ef4444" stroke-width="1"/>
     <text x="166" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#f87171">DESLIZAMIENTO</text>
-    
     <rect x="224" y="111" width="116" height="22" rx="11" fill="#0f2e21" stroke="#10b981" stroke-width="1"/>
     <text x="282" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#34d399">ACERO Y CORTANTE</text>
-    
     <rect x="348" y="111" width="76" height="22" rx="11" fill="#0c1a2e" stroke="#38bdf8" stroke-width="1"/>
     <text x="386" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">PLANO DXF</text>
-    
     <!-- Description -->
     <text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Revisión de Estabilidad Externa Geotécnica (Suelo) y Diseño Interno</text>
     <text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Estructural (Concreto) para Muros en Voladizo y de Gravedad.</text>
