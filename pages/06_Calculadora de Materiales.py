@@ -732,13 +732,12 @@ _norma_prev = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 _norma_idx  = NORMAS_LIST.index(_norma_prev) if _norma_prev in NORMAS_LIST else 0
 
 norma_sel = st.sidebar.selectbox(
-    f" {_t('Normativa / País', 'Code / Country')
-mostrar_referencias_norma(norma_sel, "calculadora_materiales")
-}",
+    f" {_t('Normativa / País', 'Code / Country')}",
     NORMAS_LIST,
     index=_norma_idx,
     key="sel_norma_kc_ui",
 )
+mostrar_referencias_norma(norma_sel, "calculadora_materiales")
 
 if norma_sel != _norma_prev:
     st.session_state["norma_sel"] = norma_sel
