@@ -2198,7 +2198,7 @@ with tab2:
                     # Grapas interiores si > 2 filas
                     if num_filas_h > 2:
                         for xb in xs_bar[1:-1]:
-                            pts_g = [(xb - hl * 0.5, yM - hl * 0.5), (xb, yM), (xb, ym), (xb + hl * 0.5, ym + hl * 0.5)]
+                            pts_g = [(xb - L_gancho * 0.5, yM - L_gancho * 0.5), (xb, yM), (xb, ym), (xb + L_gancho * 0.5, ym + L_gancho * 0.5)]
                             msp.add_lwpolyline(pts_g, dxfattribs={'layer': 'ACERO_TRANS', 'color': _color_acero_dxf_col(stirrup_diam)})
 
                     # Cotas seccion
