@@ -217,19 +217,28 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
 </svg></div>""", unsafe_allow_html=True)
 
-# 2. Panel global "Guía Rápida"
-with st.expander(" ¿Qué hace este módulo? — Guía rápida", expanded=False):
+# 2. Panel global "Guía Completa de Uso"
+with st.expander(" ¿Cómo usar este módulo? — Guía Completa de Uso", expanded=False):
     st.markdown('''
-    ###  Cimentaciones — Verificaciones y Entregas
+    ### Configuración y Flujo de Diseño
+    Konte aborda el cálculo de zapatas (Aisladas, Medianeras y Esquineras) desde la base del suelo hasta la armadura 3D, cubriendo tanto la estabilidad geotécnica como la resistencia del acero.
     
-    | Módulo | Qué calcula | Norma |
-    |--------|------------|-------|
-    | **Zapata Aislada** | Dimensionamiento, cortante, flexión, punzonamiento, IFC | ACI 318 / NSR-10 |
-    | **Zapata Medianera** | Viga de amarre, Rint, diagramas Vx/Mx | NSR-10 C.15 |
-    | **Geotecnia** | Terzaghi/Meyerhof, Vesic, Boussinesq, asentamiento | NSR-10 H.3 |
-    | **Exploración** | Profundidad mínima NSR-10 (10% q₀) | NSR-10 H.3.2.3 |
+    ####  1. Geometría y Cargas (Básico)
+    - Ingresa las dimensiones tentativas ($B, L, H$) de la zapata y el tamaño del pedestal ($c_x, c_y$).
+    - Añade las cargas de servicio y últimas (Axial, Momentos en X/Y y Cortantes).
+    - Selecciona el tipo de cimentación (Aislada, Medianera, etc.) para que Konte aplique las excentricidades y vigas de amarre automáticamente.
     
-    **Entregables:** Memoria DOCX · Plano DXF ICONTEC · Modelo IFC BIM · Cuadro de mando multi-zapata
+    ####  2. Verificación Geotécnica (Intermedio)
+    - Revisa que las presiones máximas ($q_{max}$) bajo la zapata no superen la capacidad portante admisible ($q_a$). 
+    - Comprueba que la excentricidad esté en el tercio medio ($e < L/6$) para garantizar que toda el área de la zapata esté en compresión contra el suelo.
+    
+    ####  3. Diseño Estructural NSR-10 / ACI 318 (Avanzado)
+    - **Punzonamiento:** Konte traza un perímetro crítico a $d/2$ de la cara de la columna y evalúa el cortante bidireccional. Aquí sabrás si debes aumentar el peralte ($H$).
+    - **Cortante Unidireccional:** El programa verifica como viga ancha la falla por tracción diagonal a una distancia $d$.
+    - **Flexión:** Se cuantifica el acero inferior en ambas direcciones mediante parrillas ortogonales (p.ej. Φ 5/8" @ 15 cm).
+    
+    ####  4. Entregables BIM y Planos
+    - Tras aprobarse el cálculo, el módulo genera Memorias de Cálculo en DOCX, dibuja automáticamente un plano esquemático en **DXF** para usar en AutoCAD, codificado por colores comerciales de barra, y compila un modelo IFC con barras tridimensionales.
     ''')
 
 

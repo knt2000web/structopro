@@ -53,53 +53,80 @@ norma_sel = st.session_state.get("norma_sel", "NSR-10 (Colombia)")
 en_usa    = (lang == "English" or "ACI" in norma_sel)
 def _t(es, en): return en if en_usa else es
 
-try:
-    st.image("assets/kontewall_header.png", use_container_width=True)
-except:
-    pass
+# 1. Banner SVG premium
+st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;">
+<svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#050f1a 0%,#0f172a 100%);">
+  <g opacity="0.1" stroke="#38bdf8" stroke-width="0.5">
+    <line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/>
+    <line x1="0" y1="165" x2="1100" y2="165"/>
+    <line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/>
+    <line x1="660" y1="0" x2="660" y2="220"/>
+  </g>
+  <rect x="0" y="0" width="1100" height="3" fill="#0ea5e9" opacity="0.9"/>
+  <rect x="0" y="217" width="1100" height="3" fill="#38bdf8" opacity="0.7"/>
+  <!-- GRAFICO: MURO KONTRO -->
+  <g transform="translate(60,50)">
+    <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">VOLADIZO & GEOTECNIA</text>
+    <rect x="-10" y="90" width="120" height="20" fill="#1e293b" stroke="#0ea5e9" stroke-width="2"/>
+    <path d="M20,90 L40,90 L35,-10 L25,-10 Z" fill="#1e293b" stroke="#0ea5e9" stroke-width="2"/>
+    <path d="M100,100 L30,100 L30,-5" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3,2"/>
+    <polygon points="45,-10 120,-10 120,90 45,90" fill="#0f172a" opacity="0.6"/>
+    <polygon points="45,-10 85,90 45,90" fill="#0284c7" opacity="0.4"/>
+    <text x="55" y="75" font-family="monospace" font-size="20" font-weight="bold" fill="#7dd3fc">&#9668;</text>
+  </g>
+  <!-- GRAFICO: ACERO -->
+  <g transform="translate(280,50)">
+    <text x="50" y="-15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="600" fill="#cbd5e1" letter-spacing="1">ARMADURA NSR-10</text>
+    <rect x="10" y="0" width="20" height="80" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <rect x="-10" y="80" width="80" height="20" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+    <line x1="25" y1="5" x2="25" y2="95" stroke="#3b82f6" stroke-width="2"/>
+    <line x1="15" y1="5" x2="15" y2="85" stroke="#ef4444" stroke-width="1" stroke-dasharray="2,2"/>
+    <line x1="-5" y1="85" x2="65" y2="85" stroke="#10b981" stroke-width="2"/>
+    <line x1="-5" y1="95" x2="65" y2="95" stroke="#f59e0b" stroke-width="2"/>
+    <circle cx="20" cy="40" r="1.5" fill="#ef4444"/>
+    <circle cx="20" cy="50" r="1.5" fill="#ef4444"/>
+    <circle cx="20" cy="60" r="1.5" fill="#ef4444"/>
+  </g>
+  <!-- TEXT BLOCK -->
+  <g transform="translate(560,0)">
+    <rect x="0" y="28" width="4" height="165" rx="2" fill="#0ea5e9"/>
+    <text x="18" y="66" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#ffffff">KONTEWALL</text>
+    <text x="18" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="300" fill="#7dd3fc" letter-spacing="2">DISEÑO INTEGRAL DE MUROS EN VOLADIZO</text>
+    <rect x="18" y="100" width="480" height="1" fill="#0ea5e9" opacity="0.5"/>
+    <rect x="18" y="111" width="90" height="22" rx="11" fill="#082f49" stroke="#0ea5e9" stroke-width="1"/>
+    <text x="63" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#38bdf8">GEOTECNIA</text>
+    <rect x="116" y="111" width="100" height="22" rx="11" fill="#0f2e21" stroke="#10b981" stroke-width="1"/>
+    <text x="166" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#34d399">ESTABILIDAD</text>
+    <rect x="224" y="111" width="116" height="22" rx="11" fill="#301515" stroke="#ef4444" stroke-width="1"/>
+    <text x="282" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#f87171">SISMO OKABE</text>
+    <rect x="348" y="111" width="76" height="22" rx="11" fill="#2e140d" stroke="#f97316" stroke-width="1"/>
+    <text x="386" y="126" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fdba74">DXF & BIM</text>
+    <text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">Plataforma avanzada para evaluar seguridad al volcamiento, deslizamiento y presión</text>
+    <text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">portante de suelos, además del diseño estructural con acero de refuerzo conforme</text>
+    <text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af">a estándares internacionales como NSR-10, ACI 318, E.060, entre otras.</text>
+  </g>
+</svg></div>""", unsafe_allow_html=True)
 
-st.title(_t(
-    "KonteWall — Diseño Estructural de Muro de Contención en Voladizo",
-    "KonteWall — Cantilever Retaining Wall Structural Design"
-))
-st.caption(
-    "NSR-10 · ACI 318-25/19 · E.060 · NEC-SE-HM · NTC-EM · "
-    "COVENIN 1753 · NB 1225001 · CIRSOC 201"
-)
+# 2. Panel global "Guía Rápida"
+with st.expander(" ¿Cómo usar KonteWall? — Guía Profesional", expanded=False):
+    st.markdown('''
+    ### Configuración y Flujo de Diseño
+    KonteWall realiza una evaluación dual: **Estabilidad Externa (Suelo)** y **Estabilidad Interna (Acero y Concreto)**. 
+    
+    ####  1. Parámetros Geotécnicos (El Empuje)
+    - Define las propiedades del suelo de relleno (Peso, Ángulo de Fricción Interna y Cohesión).
+    - Mononobe-Okabe: Activa esta opción si necesitas evaluar la cuña sísmica horizontal ($K_h$) en zonas de amenaza sísmica intermedia o alta.
+    ####  2. Perfilamiento Geométrico
+    - Ingresa la altura y el ancho de base. **Regla general:** La base $B$ debe estar entre la mitad ($H/2$) y dos tercios ($2H/3$) de la altura total.
+    - Si el factor de seguridad al **deslizamiento falla**, agrega un **dentellón** para aprovechar el empuje pasivo del suelo.
+    ####  3. Evaluación de Estabilidad
+    - Analiza las presiones en la base ($q_1$ y $q_2$) asegurando que no excedan el $q_{adm}$ portante del suelo natural. 
+    - Excentricidad $e < B/6$: Garantiza que toda la zapata se encuentre bajo compresión.
+    ####  4. Diseño Interno (Acero)
+    - Al satisfacer la geotecnia, revisa las separaciones generadas para Acero de Tensión (Cara de tierra), Acero de Temperatura (Cara expuesta) y acero inferior.
+    - Exporta automáticamente la **Memoria de Cálculo**, cantidades APU y planos vectoriales a escala.
+    ''')
 
-with st.expander("KonteWall — Solución Integral para el Análisis y Diseño de Muros de Contención", expanded=False):
-    st.markdown(
-        "## ¿Qué es KonteWall?\n\n"
-        "**KonteWall** es una plataforma avanzada de ingeniería para el **diseño, análisis y "
-        "optimización de muros de contención en voladizo en concreto reforzado**. "
-        "Transforma parámetros geotécnicos y estructurales complejos en soluciones "
-        "constructivas seguras, económicas y técnicamente rigurosas.\n\n"
-        "Desarrollado por **Konte — Construcción, Consultoría y Tecnología**. "
-        "Autor: **** — Duitama, Boyacá, Colombia.\n\n"
-        "---\n"
-        "##  Funcionalidades Clave\n\n"
-        "| # | Funcionalidad | Descripción |\n"
-        "|---|---|---|\n"
-        "| 1 | **Modelado Geotécnico** | Cohesión, fricción interna, pesos específicos |\n"
-        "| 2 | **Análisis Sísmico** | Mononobe-Okabe (Kh y Kv) |\n"
-        "| 3 | **Optimización Geométrica** | Zapata, pantalla, dentellón |\n"
-        "| 4 | **Verificación de Estabilidad** | FS volcamiento, deslizamiento, portante |\n"
-        "| 5 | **Diseño de Refuerzo** | Armadura vertical, horizontal y de zapata |\n"
-        "| 6 | **Cuantificación** | Concreto, acero, insumos en tiempo real |\n"
-        "| 7 | **Exportación Profesional** | Memoria DOCX, hoja XLSX, plano DXF 3D |\n"
-        "| 8 | **Visualización** | 2D + Planta + 3D interactivo + Isométrico |\n\n"
-        "---\n"
-        "##  Colores de Armadura\n\n"
-        "| Color | Elemento |\n"
-        "|---|---|\n"
-        "|  Azul sólido | Acero interior pantalla (tracción) |\n"
-        "|  Rojo punteado | Acero exterior (temperatura) |\n"
-        "|  Rojo sólido | Acero horizontal (distribución) |\n"
-        "|  Verde | Acero talón posterior |\n"
-        "|  Naranja | Acero punta (voladizo frontal) |\n"
-        "|  Morado | Acero dentellón |\n"
-    )
-    st.caption("KonteWall v4.0 · 2026 · Konte — Construcción, Consultoría y Tecnología ·  · Duitama, Boyacá")
 
 # 
 # FUNCIONES AUXILIARES
