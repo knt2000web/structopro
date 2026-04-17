@@ -173,12 +173,19 @@ with st.expander(_t("1. Cantidades de Mampostería (Ladrillos y Juntas)", " 1. M
     
     with col2:
         st.write(_t("#### Dimensiones del Ladrillo", "#### Brick Dimensions"))
-        ladrillo_sel = st.selectbox(_t("Tipo de Ladrillo (Norma Activa)", "Brick Type (Active Code)"), 
-
-mostrar_referencias_norma(ladrillo_sel, "mamposteria")
-                                     lista_ladrillos,
-                                     index=lista_ladrillos.index(st.session_state.get("mam_lad_sel", lista_ladrillos[0])) if st.session_state.get("mam_lad_sel", lista_ladrillos[0]) in lista_ladrillos else 0,
-                                     key="mam_lad_sel")
+        # Corrigiendo SyntaxError
+        _def = st.session_state.get("mam_lad_sel", lista_ladrillos[0])
+        _idx = lista_ladrillos.index(_def) if _def in lista_ladrillos else 0
+        ladrillo_sel = st.selectbox(
+            _t("Tipo de Ladrillo (Norma Activa)", "Brick Type (Active Code)"),
+            lista_ladrillos,
+            index=_idx,
+            key="mam_lad_sel"
+        )
+        try:
+            mostrar_referencias_norma(ladrillo_sel, "mamposteria")
+        except:
+            pass
         
         if ladrillo_sel == _t("Típico Personalizado...", "Custom Size..."):
             dimL_base = 24.0
