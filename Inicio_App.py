@@ -353,6 +353,16 @@ def run_home():
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+    st.markdown('<div class="hs-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">Cómo comenzar</p>', unsafe_allow_html=True)
+    c1s, c2s, c3s = st.columns(3)
+    with c1s:
+        st.markdown("""<div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:20px;font-family:'Satoshi',sans-serif;">
+            <div style="width:28px;height:28px;border-radius:50%;background:#2ea043;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;margin-bottom:12px">1</div>
+            <div style="font-size:.88rem;font-weight:700;color:#e6edf3;margin-bottom:8px">Configurar norma global</div>
+            <p style="font-size:.8rem;color:#8b949e;line-height:1.65">En la barra lateral expande "Norma y Sismo". Todos los módulos leen esta configuración automáticamente.</p>
+        </div>""", unsafe_allow_html=True)
     with c2s:
         st.markdown("""<div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:20px;font-family:'Satoshi',sans-serif;">
             <div style="width:28px;height:28px;border-radius:50%;background:#1f6feb;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;margin-bottom:12px">2</div>
