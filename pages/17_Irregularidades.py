@@ -134,11 +134,10 @@ def get_irr_factors(norma_sel, tipo):
 st.sidebar.header(_t("Norma de Diseño", "Design Code"))
 norma_disp = st.sidebar.selectbox(
     _t("Seleccione la norma para irregularidades:", "Select code for irregularities:"),
-
-mostrar_referencias_norma(norma_disp, "irregularidades")
     list(NORMA_IRR.keys()),
     key="irr_norma"
 )
+mostrar_referencias_norma(norma_disp, "irregularidades")
 
 st.sidebar.header(_t("Unidades de salida", "Output units"))
 unidades_salida = st.sidebar.radio(

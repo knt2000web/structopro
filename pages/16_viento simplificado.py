@@ -1,4 +1,15 @@
 import streamlit as st
+import pandas as pd
+import numpy as np
+import math
+import io
+import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from docx import Document
+from docx.shared import Inches
+import datetime
+
 
 # ─── BANNER ESTANDAR DIAMANTE ───────────────────────────────
 st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 32px #0008;"><svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#0a1128 0%,#1c2541 100%);"><g opacity="0.1" stroke="#38bdf8" stroke-width="0.5"><line x1="0" y1="55" x2="1100" y2="55"/><line x1="0" y1="110" x2="1100" y2="110"/><line x1="0" y1="165" x2="1100" y2="165"/><line x1="220" y1="0" x2="220" y2="220"/><line x1="440" y1="0" x2="440" y2="220"/><line x1="660" y1="0" x2="660" y2="220"/></g><rect x="0" y="0" width="1100" height="3" fill="#0ea5e9" opacity="0.9"/><rect x="0" y="217" width="1100" height="3" fill="#0ea5e9" opacity="0.7"/><g transform="translate(40,20)"><path d="M0,80 Q40,50 80,60 T160,55" fill="none" stroke="#0ea5e9" stroke-width="3"/><path d="M0,95 Q40,65 80,75 T160,70" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.6"/><path d="M0,110 Q40,80 80,90 T160,85" fill="none" stroke="#7dd3fc" stroke-width="1.5" opacity="0.4"/><rect x="155" y="20" width="8" height="95" fill="#475569" stroke-width="1"/><text x="80" y="15" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#cbd5e1">PERFIL DE VIENTO</text></g><g transform="translate(560,0)"><rect x="0" y="28" width="4" height="165" rx="2" fill="#0ea5e9"/><text x="18" y="66" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="#ffffff">ANALISIS DE VIENTO</text><text x="18" y="94" font-family="Arial,sans-serif" font-size="14" font-weight="300" fill="#93c5fd" letter-spacing="2">NSR-10 TITULO B · ASCE 7-22 · PRESIONES NETAS</text><rect x="18" y="102" width="480" height="1" fill="#0ea5e9" opacity="0.5"/><rect x="18" y="115" width="127" height="22" rx="11" fill="#0c1a2e" stroke="#0ea5e9" stroke-width="1"/><text x="81" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#7dd3fc">NSR-10 TITULO B</text><rect x="153" y="115" width="85" height="22" rx="11" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1"/><text x="195" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#c4b5fd">ASCE 7-22</text><rect x="246" y="115" width="127" height="22" rx="11" fill="#052e16" stroke="#10b981" stroke-width="1"/><text x="309" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#6ee7b7">P NETA CUBIERTA</text><rect x="381" y="115" width="99" height="22" rx="11" fill="#3a0000" stroke="#ef4444" stroke-width="1"/><text x="430" y="130" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="bold" fill="#fca5a5">VANO RIGIDO</text><text x="18" y="156" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">Calculo de presiones de viento sobre cubiertas y fachadas por el Metodo Simplificado</text><text x="18" y="172" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">NSR-10 B.6 y ASCE 7-22 Ch. 27 (MWFRS). Construccion del perfil de velocidades</text><text x="18" y="188" font-family="Arial,sans-serif" font-size="11" fill="#94a3b8">y determinacion de la presion de diseno: qz = 0.613 * Kz * Kzt * Kd * V^2.</text></g></svg></div>""", unsafe_allow_html=True)
@@ -48,600 +59,442 @@ lang = st.session_state.get("idioma", "Español")
 def _t(es, en): return en if lang == "English" else es
 # 
 
-st.set_page_config(page_title=_t("Placa Fácil", "Easy Slab"), layout="wide")
-st.title(_t("Placa Fácil – Sistema de Vigueta y Bloques", "Easy Slab – Joist & Block System"))
-st.markdown(_t("Diseño de losas con vigueta metálica y bloques de arcilla cocida (Placa Fácil). Verificación según NSR-10 (Colombia) y normas internacionales.", 
-               "Design of slabs with metal joists and fired clay blocks (Easy Slab). Verification according to NSR-10 (Colombia) and international codes."))
+# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
 
-# 
-# NORMATIVAS SOPORTADAS (multi-norma)
-# 
-NORMAS_PLACA = {
-    "NSR-10 (Colombia)": {
-        "luz_max": 4.2,          # m, luz máxima de perfiles sin apoyo intermedio
-        "topping_min": 0.04,     # m, espesor mínimo de torta
-        "concreto_min": 21,      # MPa
-        "bloque_dim": (0.80, 0.23, 0.08),  # Largo, ancho, alto (m) – estándar colombiano
-        "perfil_espaciado": 0.89, # m, separación centro a centro de perfiles
-        "requiere_viga_borde": True,
-        "ref": "NSR-10 Capítulo C.21 y Título E",
+st.set_page_config(page_title=_t("Carga de Viento", "Wind Load"), layout="wide")
+st.title(_t("Carga de Viento – Método Simplificado NSR-10", "Wind Load – Simplified Method NSR-10"))
+st.markdown(_t(
+    "Diseño de presiones de viento para edificaciones bajas (h ≤ 18 m) con cubiertas inclinadas ≤ 45°.\n"
+    "Sigue los lineamientos de la **NSR-10, Capítulo B.6** (procedimiento simplificado).",
+    "Wind pressure design for low-rise buildings (h ≤ 18 m) with roofs slope ≤ 45°.\n"
+    "Based on **NSR-10, Chapter B.6** (simplified procedure)."
+))
+
+# ─────────────────────────────────────────────
+# FUNCIONES AUXILIARES (basadas en NSR-10)
+# ─────────────────────────────────────────────
+# Tabla de factores de ajuste λ (exposición B, C, D) – interpolación lineal
+LAMBDA_TABLE = {
+    "B": {  # Exposición B
+        4.5: 0.84, 6.0: 0.91, 7.5: 0.96, 9.0: 1.00, 10.5: 1.04,
+        12.0: 1.07, 13.5: 1.10, 15.0: 1.12, 16.5: 1.15, 18.0: 1.17
     },
-    "E.060 (Perú)": {
-        "luz_max": 4.2,
-        "topping_min": 0.04,
-        "concreto_min": 21,
-        "bloque_dim": (0.80, 0.23, 0.08),
-        "perfil_espaciado": 0.89,
-        "requiere_viga_borde": True,
-        "ref": "E.060 / NTE E.030",
+    "C": {  # Exposición C
+        4.5: 1.21, 6.0: 1.29, 7.5: 1.35, 9.0: 1.40, 10.5: 1.45,
+        12.0: 1.49, 13.5: 1.53, 15.0: 1.56, 16.5: 1.59, 18.0: 1.62
     },
-    "ACI 318-25 (EE.UU.)": {
-        "luz_max": 4.2,
-        "topping_min": 0.04,
-        "concreto_min": 21,
-        "bloque_dim": (0.80, 0.23, 0.08),
-        "perfil_espaciado": 0.89,
-        "requiere_viga_borde": True,
-        "ref": "ACI 318-25 Capítulo 7",
-    },
+    "D": {  # Exposición D
+        4.5: 1.47, 6.0: 1.55, 7.5: 1.61, 9.0: 1.66, 10.5: 1.70,
+        12.0: 1.74, 13.5: 1.78, 15.0: 1.81, 16.5: 1.84, 18.0: 1.87
+    }
 }
 
-# 
-# DATOS DEL BLOQUELÓN (estándar colombiano)
-# 
-BLOCK_DATA = {
-    "largo": 0.80,      # m
-    "ancho": 0.23,      # m
-    "alto": 0.08,       # m
-    "peso_unitario": 13.0,  # kg (promedio 12-14)
-    "unidades_por_m2": 5.18, # rendimiento real
-    "color": "#CD7F32",  # bronce / arcilla
-    "material": "Arcilla cocida",
-    "absorcion_agua": 12,   # % (típico)
-    "transmitancia_termica": 2.10,  # W/m²K
-    "aislamiento_acustico": 45,     # dB (estimado)
+def get_lambda_factor(expo, h):
+    """
+    Devuelve el factor de ajuste λ según exposición y altura media h (m).
+    Interpola linealmente entre los valores tabulados.
+    """
+    if expo not in LAMBDA_TABLE:
+        return 1.0
+    table = LAMBDA_TABLE[expo]
+    heights = sorted(table.keys())
+    if h <= heights[0]:
+        return table[heights[0]]
+    if h >= heights[-1]:
+        return table[heights[-1]]
+    for i in range(len(heights)-1):
+        if heights[i] <= h <= heights[i+1]:
+            t = (h - heights[i]) / (heights[i+1] - heights[i])
+            return table[heights[i]] + t*(table[heights[i+1]] - table[heights[i]])
+    return 1.0
+
+# Coeficientes ps10 (SPRFV) de la Figura B.6.4-2 (para muros y cubiertas)
+PS10_SPRFV = {
+    "Zona A":  {0:0.50, 5:0.48, 10:0.46, 15:0.44, 20:0.42, 25:0.40, 30:0.38, 35:0.36, 40:0.34, 45:0.32},
+    "Zona B":  {0:0.40, 5:0.38, 10:0.36, 15:0.34, 20:0.32, 25:0.30, 30:0.28, 35:0.26, 40:0.24, 45:0.22},
+    "Zona C":  {0:0.33, 5:0.32, 10:0.31, 15:0.30, 20:0.29, 25:0.28, 30:0.27, 35:0.26, 40:0.25, 45:0.24},
+    "Zona D":  {0:0.25, 5:0.24, 10:0.23, 15:0.22, 20:0.21, 25:0.20, 30:0.19, 35:0.18, 40:0.17, 45:0.16},
+    "Zona E":  {0:-0.60, 5:-0.58, 10:-0.56, 15:-0.54, 20:-0.52, 25:-0.50, 30:-0.48, 35:-0.46, 40:-0.44, 45:-0.42},
+    "Zona F":  {0:-0.34, 5:-0.33, 10:-0.32, 15:-0.31, 20:-0.30, 25:-0.29, 30:-0.28, 35:-0.27, 40:-0.26, 45:-0.25},
+    "Zona G":  {0:-0.41, 5:-0.40, 10:-0.39, 15:-0.38, 20:-0.37, 25:-0.36, 30:-0.35, 35:-0.34, 40:-0.33, 45:-0.32},
+    "Zona H":  {0:-0.26, 5:-0.25, 10:-0.24, 15:-0.23, 20:-0.22, 25:-0.21, 30:-0.20, 35:-0.19, 40:-0.18, 45:-0.17},
 }
 
-# 
-# FUNCIONES AUXILIARES
-# 
-def qty_table(rows):
-    df = pd.DataFrame(rows, columns=["Concepto", "Valor"])
-    st.dataframe(df, use_container_width=True, hide_index=True)
+def get_ps10_SPRFV(zona, theta):
+    """Obtiene el coeficiente ps10 (kN/m²) para una zona y ángulo θ (grados)."""
+    if zona not in PS10_SPRFV:
+        return 0.0
+    table = PS10_SPRFV[zona]
+    angles = sorted(table.keys())
+    if theta <= angles[0]:
+        return table[angles[0]]
+    if theta >= angles[-1]:
+        return table[angles[-1]]
+    for i in range(len(angles)-1):
+        if angles[i] <= theta <= angles[i+1]:
+            t = (theta - angles[i]) / (angles[i+1] - angles[i])
+            return table[angles[i]] + t*(table[angles[i+1]] - table[angles[i]])
+    return 0.0
 
-# 
-# SIDEBAR – CONFIGURACIÓN DEL PROYECTO
-# 
-norma_sel = st.sidebar.selectbox(_t("Norma de diseño", "Design code"), list(NORMAS_PLACA.keys()), index=0)
+# Coeficientes pnet10 (C&R) de la Figura B.6.4-3 (para zonas 1 a 5)
+PNET10_CR = {
+    "Zona1": {
+        "pos": {0:0.05, 5:0.05, 10:0.04, 15:0.04, 20:0.04, 25:0.04, 30:0.04, 35:0.04, 40:0.04, 45:0.04},
+        "neg": {0:-0.12, 5:-0.12, 10:-0.11, 15:-0.11, 20:-0.10, 25:-0.10, 30:-0.10, 35:-0.09, 40:-0.09, 45:-0.09}
+    },
+    "Zona2": {
+        "pos": {0:0.04, 5:0.04, 10:0.04, 15:0.04, 20:0.04, 25:0.04, 30:0.04, 35:0.04, 40:0.04, 45:0.04},
+        "neg": {0:-0.13, 5:-0.13, 10:-0.12, 15:-0.12, 20:-0.11, 25:-0.11, 30:-0.11, 35:-0.10, 40:-0.10, 45:-0.10}
+    },
+    "Zona3": {
+        "pos": {0:0.05, 5:0.05, 10:0.05, 15:0.05, 20:0.05, 25:0.05, 30:0.05, 35:0.05, 40:0.05, 45:0.05},
+        "neg": {0:-0.30, 5:-0.29, 10:-0.28, 15:-0.27, 20:-0.26, 25:-0.25, 30:-0.24, 35:-0.23, 40:-0.22, 45:-0.21}
+    },
+    "Zona4": {
+        "pos": {0:0.10, 5:0.10, 10:0.09, 15:0.09, 20:0.09, 25:0.09, 30:0.08, 35:0.08, 40:0.08, 45:0.08},
+        "neg": {0:-0.11, 5:-0.11, 10:-0.10, 15:-0.10, 20:-0.09, 25:-0.09, 30:-0.09, 35:-0.08, 40:-0.08, 45:-0.08}
+    },
+    "Zona5": {
+        "pos": {0:0.11, 5:0.11, 10:0.10, 15:0.10, 20:0.10, 25:0.10, 30:0.09, 35:0.09, 40:0.09, 45:0.09},
+        "neg": {0:-0.14, 5:-0.14, 10:-0.13, 15:-0.13, 20:-0.12, 25:-0.12, 30:-0.12, 35:-0.11, 40:-0.11, 45:-0.11}
+    }
+}
 
-mostrar_referencias_norma(norma_sel, "viento")
-norma = NORMAS_PLACA[norma_sel]
-
-st.sidebar.header(_t("Datos del proyecto", "Project data"))
-proyecto_nombre = st.sidebar.text_input(_t("Nombre del proyecto", "Project name"), "Placa Fácil - Ejemplo")
-proyecto_direccion = st.sidebar.text_input(_t("Dirección de obra", "Site address"), "Calle 123, Bogotá")
-proyecto_cliente = st.sidebar.text_input(_t("Cliente / Propietario", "Client / Owner"), "Constructora XYZ")
-
-st.sidebar.header(_t("Geometría de la placa", "Slab geometry"))
-Lx = st.sidebar.number_input(_t("Luz X (m)", "Span X (m)"), 2.0, 12.0, 6.0, 0.1)
-Ly = st.sidebar.number_input(_t("Luz Y (m)", "Span Y (m)"), 2.0, 12.0, 5.0, 0.1)
-orientacion = st.sidebar.selectbox(_t("Dirección de los perfiles", "Profile direction"), ["Paralelo a X", "Paralelo a Y"], index=0)
-
-st.sidebar.header(_t("Parámetros de diseño", "Design parameters"))
-espesor_torta = st.sidebar.number_input(_t("Espesor de la torta de concreto (cm)", "Concrete topping thickness (cm)"), 4.0, 10.0, 5.0, 0.5) / 100.0
-fc_concreto = st.sidebar.number_input(_t("Resistencia f'c concreto (MPa)", "Concrete strength f'c (MPa)"), 18.0, 35.0, 21.0, 0.5)
-# Dimensiones de bloque (estándar colombiano) – se usan las fijas pero permitimos ajuste fino
-block_length = BLOCK_DATA["largo"]
-block_width = BLOCK_DATA["ancho"]
-block_height = BLOCK_DATA["alto"]
-# Perfiles
-perfil_espaciado = st.sidebar.number_input(_t("Separación entre perfiles (cm)", "Profile spacing (cm)"), 70.0, 100.0, 89.0, 1.0) / 100.0
-perfil_largo_max = st.sidebar.number_input(_t("Longitud máxima de perfil (m)", "Max profile length (m)"), 3.0, 12.0, 4.2, 0.1)
-# Malla electrosoldada
-malla_diam = st.sidebar.number_input(_t("Diámetro de la malla (mm)", "Mesh diameter (mm)"), 3.0, 6.0, 4.0, 0.5)
-malla_espaciado = st.sidebar.number_input(_t("Espaciado de la malla (cm)", "Mesh spacing (cm)"), 10.0, 20.0, 15.0, 1.0) / 100.0
-# Vigas de borde
-incluir_vigas = st.sidebar.checkbox(_t("Incluir vigas de borde", "Include edge beams"), value=True)
-viga_b = st.sidebar.number_input(_t("Ancho viga borde (cm)", "Edge beam width (cm)"), 10.0, 30.0, 15.0, 1.0) / 100.0
-viga_h = st.sidebar.number_input(_t("Altura viga borde (cm)", "Edge beam height (cm)"), 15.0, 40.0, 20.0, 1.0) / 100.0
-
-st.sidebar.header(_t("Factores de desperdicio", "Waste factors"))
-desp_bloques = st.sidebar.number_input(_t("Bloques (%)", "Blocks (%)"), 0.0, 20.0, 5.0, 1.0) / 100.0
-desp_concreto = st.sidebar.number_input(_t("Concreto (%)", "Concrete (%)"), 0.0, 20.0, 10.0, 1.0) / 100.0
-desp_malla = st.sidebar.number_input(_t("Malla (%)", "Mesh (%)"), 0.0, 20.0, 10.0, 1.0) / 100.0
-desp_perfiles = st.sidebar.number_input(_t("Perfiles (%)", "Profiles (%)"), 0.0, 20.0, 5.0, 1.0) / 100.0
-
-st.sidebar.header(_t("APU – Precios unitarios", "APU – Unit prices"))
-moneda = st.sidebar.text_input(_t("Moneda", "Currency"), "COP", key="apu_moneda")
-precio_bloque = st.sidebar.number_input(_t("Precio por bloque (unidad)", "Price per block (unit)"), 5000.0, 15000.0, 7200.0, 100.0)
-precio_perfil = st.sidebar.number_input(_t("Precio por metro lineal de perfil", "Price per linear meter of profile"), 20000.0, 50000.0, 28000.0, 1000.0)
-precio_malla = st.sidebar.number_input(_t("Precio por m² de malla", "Price per m² of mesh"), 8000.0, 20000.0, 11000.0, 500.0)
-precio_concreto = st.sidebar.number_input(_t("Precio por m³ de concreto", "Price per m³ of concrete"), 300000.0, 600000.0, 450000.0, 10000.0)
-precio_mo = st.sidebar.number_input(_t("Costo mano de obra (día)", "Labor cost (day)"), 50000.0, 150000.0, 70000.0, 5000.0)
-pct_herramienta = st.sidebar.number_input(_t("% Herramienta menor (sobre MO)", "Minor tool percentage"), 0.0, 20.0, 5.0, 1.0) / 100.0
-pct_aui = st.sidebar.number_input(_t("% A.I.U. (sobre costo directo)", "A.I.U. percentage"), 0.0, 50.0, 30.0, 5.0) / 100.0
-pct_util = st.sidebar.number_input(_t("% Utilidad (sobre costo directo)", "Profit percentage"), 0.0, 20.0, 5.0, 1.0) / 100.0
-iva = st.sidebar.number_input(_t("% IVA (sobre utilidad)", "IVA on profit"), 0.0, 30.0, 19.0, 1.0) / 100.0
-
-# 
-# CÁLCULOS DE CANTIDADES (con rendimiento real)
-# 
-area_total = Lx * Ly
-
-# Determinar dirección de los perfiles
-if orientacion == "Paralelo a X":
-    perfil_largo = Lx
-    perfil_ancho = Ly
-else:
-    perfil_largo = Ly
-    perfil_ancho = Lx
-
-# Número de perfiles (se colocan en la dirección perpendicular al perfil)
-n_profiles = math.ceil(perfil_ancho / perfil_espaciado) + 1
-longitud_total_perfiles = n_profiles * perfil_largo
-longitud_total_perfiles_desp = longitud_total_perfiles * (1 + desp_perfiles)
-
-# Número de bloques con rendimiento real (5.18 unidades/m²)
-n_bloques = math.ceil(area_total * BLOCK_DATA["unidades_por_m2"])
-n_bloques_desp = math.ceil(n_bloques * (1 + desp_bloques))
-
-# Volumen de concreto (torta + vigas de borde)
-vol_torta = area_total * espesor_torta
-vol_vigas = 0
-if incluir_vigas:
-    vol_vigas = (2 * (Lx + Ly)) * viga_b * viga_h
-vol_concreto_total = vol_torta + vol_vigas
-vol_concreto_total_desp = vol_concreto_total * (1 + desp_concreto)
-
-# Área de malla electrosoldada
-area_malla = area_total * (1 + desp_malla)
-
-# Peso propio estimado (según datos reales del sistema)
-peso_sistema_kgm2 = 175  # kg/m² (promedio 170-180)
-peso_total_kg = peso_sistema_kgm2 * area_total
-carga_muerta_kgm2 = peso_total_kg / area_total
-
-# Dosificación de concreto para f'c=21 MPa (350 kg/m³ aprox)
-cemento_por_m3 = 350  # kg/m³
-total_cemento_kg = cemento_por_m3 * vol_concreto_total_desp
-bultos_cemento = math.ceil(total_cemento_kg / 50)  # bultos de 50 kg
-
-# 
-# VERIFICACIONES NORMATIVAS (NSR-10 y otras)
-# 
-verificaciones = []
-
-# 1. Luz máxima de perfiles
-luz_util = perfil_largo
-cumple_luz = luz_util <= norma["luz_max"]
-verificaciones.append({
-    "item": "Luz máxima de perfiles",
-    "referencia": f"{norma['ref']} / Artículo correspondiente",
-    "requerido": f"≤ {norma['luz_max']:.2f} m",
-    "calculado": f"{luz_util:.2f} m",
-    "cumple": cumple_luz,
-    "observacion": "Ok" if cumple_luz else f"Excede {norma['luz_max']:.2f} m → requiere viga intermedia"
-})
-
-# 2. Espesor de la torta de concreto
-cumple_topping = espesor_torta >= norma["topping_min"]
-verificaciones.append({
-    "item": "Espesor de torta de concreto",
-    "referencia": "NSR-10 C.21.6.4.1 / Título E",
-    "requerido": f"≥ {norma['topping_min']*100:.0f} cm",
-    "calculado": f"{espesor_torta*100:.1f} cm",
-    "cumple": cumple_topping,
-    "observacion": "Ok" if cumple_topping else "Incrementar espesor"
-})
-
-# 3. Resistencia del concreto
-fc_mpa = fc_concreto
-cumple_fc = fc_mpa >= norma["concreto_min"]
-verificaciones.append({
-    "item": "Resistencia del concreto",
-    "referencia": "NSR-10 C.21.3.1",
-    "requerido": f"≥ {norma['concreto_min']} MPa",
-    "calculado": f"{fc_mpa:.1f} MPa",
-    "cumple": cumple_fc,
-    "observacion": "Ok" if cumple_fc else "Usar concreto de mayor resistencia"
-})
-
-# 4. Altura total de la placa
-altura_total = block_height + espesor_torta
-h_min = 0.13  # mínimo recomendado
-cumple_h = altura_total >= h_min
-verificaciones.append({
-    "item": "Altura total de la placa",
-    "referencia": "Práctica constructiva / NSR-10",
-    "requerido": f"≥ {h_min*100:.0f} cm",
-    "calculado": f"{altura_total*100:.1f} cm",
-    "cumple": cumple_h,
-    "observacion": "Ok" if cumple_h else "Aumentar espesor de bloque o torta"
-})
-
-# 5. Vigas de borde
-if norma.get("requiere_viga_borde", False) and incluir_vigas:
-    cumple_vigas = True
-    verificaciones.append({
-        "item": "Vigas de borde",
-        "referencia": "NSR-10 C.21.6.4",
-        "requerido": "Dimensiones mínimas: b ≥ 0.15 m, h ≥ 0.15 m",
-        "calculado": f"{viga_b*100:.0f} x {viga_h*100:.0f} cm",
-        "cumple": cumple_vigas,
-        "observacion": "Ok" if cumple_vigas else "Ajustar dimensiones"
-    })
-else:
-    verificaciones.append({
-        "item": "Vigas de borde",
-        "referencia": "NSR-10 C.21.6.4",
-        "requerido": "Requerido para diafragma rígido",
-        "calculado": "No incluidas",
-        "cumple": False,
-        "observacion": "Se recomienda incluir vigas de borde"
-    })
-
-# 6. Espaciamiento de perfiles (por practicidad)
-cumple_espaciado = perfil_espaciado <= 1.0
-verificaciones.append({
-    "item": "Espaciamiento de perfiles",
-    "referencia": "Recomendación constructiva",
-    "requerido": "≤ 1.00 m",
-    "calculado": f"{perfil_espaciado*100:.0f} cm",
-    "cumple": cumple_espaciado,
-    "observacion": "Ok" if cumple_espaciado else "Reducir espaciamiento"
-})
-
-# 7. Absorción de agua (humedecimiento previo)
-verificaciones.append({
-    "item": "Absorción de agua del bloque",
-    "referencia": "NTC 4205 / Práctica constructiva",
-    "requerido": "Humedecer bloques antes del vaciado",
-    "calculado": f"{BLOCK_DATA['absorcion_agua']}%",
-    "cumple": True,
-    "observacion": "Recordar humedecer bloques para evitar absorción del concreto"
-})
-
-# 8. Aislamiento térmico
-verificaciones.append({
-    "item": "Aislamiento térmico",
-    "referencia": "Criterios de confort",
-    "requerido": "U ≤ 3.0 W/m²K (típico)",
-    "calculado": f"{BLOCK_DATA['transmitancia_termica']:.2f} W/m²K",
-    "cumple": BLOCK_DATA['transmitancia_termica'] <= 3.0,
-    "observacion": "Buen aislamiento térmico" if BLOCK_DATA['transmitancia_termica'] <= 3.0 else "Mejorar aislamiento"
-})
-
-# 
-# PRESUPUESTO APU
-# 
-costo_bloques = n_bloques_desp * precio_bloque
-costo_perfiles = longitud_total_perfiles_desp * precio_perfil
-costo_malla = area_malla * precio_malla
-costo_concreto = vol_concreto_total_desp * precio_concreto
-
-# Mano de obra estimada (días) – se asume rendimiento 0.8 días/m²
-dias_mo = area_total * 0.8
-costo_mo = dias_mo * precio_mo
-
-costo_directo = costo_bloques + costo_perfiles + costo_malla + costo_concreto + costo_mo
-herramienta = costo_mo * pct_herramienta
-aiu = costo_directo * pct_aui
-utilidad = costo_directo * pct_util
-iva_util = utilidad * iva
-total_proyecto = costo_directo + herramienta + aiu + iva_util
-
-# 
-# VISUALIZACIÓN 3D (Plotly) – con bloques de arcilla y pestañas
-# 
-def create_3d_model(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo, 
-                    block_length, block_width, block_height, espesor_torta, 
-                    viga_b, viga_h, incluir_vigas):
-    fig = go.Figure()
-    
-    def add_prism(x0, y0, z0, dx, dy, dz, color, opacity=0.7, name=""):
-        x = [x0, x0+dx, x0+dx, x0, x0, x0+dx, x0+dx, x0]
-        y = [y0, y0, y0+dy, y0+dy, y0, y0, y0+dy, y0+dy]
-        z = [z0, z0, z0, z0, z0+dz, z0+dz, z0+dz, z0+dz]
-        i = [0,0,4,4,1,5,2,6,3,7,0,4]
-        j = [1,2,5,6,5,6,6,7,7,4,4,7]
-        k = [2,3,6,7,6,7,7,4,4,5,1,3]
-        fig.add_trace(go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k, color=color, opacity=opacity, name=name, showlegend=False))
-    
-    # Posiciones de los perfiles
-    if orientacion == "Paralelo a X":
-        y_positions = np.linspace(0, Ly, n_profiles)
-        for y in y_positions:
-            # Perfil (prisma delgado)
-            add_prism(0, y - 0.02, 0, Lx, 0.04, block_height, 'silver', 0.9)
-        # Bloques entre perfiles (con pestañas de apoyo)
-        for i in range(len(y_positions)-1):
-            y1 = y_positions[i]
-            y2 = y_positions[i+1]
-            # El bloque real ocupa el espacio entre perfiles, pero tiene una pestaña que apoya sobre el perfil.
-            # Para simplificar, dibujamos el bloque como un prisma de color arcilla.
-            n_blocks_x = math.ceil(Lx / block_length)
-            for j in range(n_blocks_x):
-                x1 = j * block_length
-                x2 = min(x1 + block_length, Lx)
-                # Bloque principal
-                add_prism(x1, y1, 0, x2-x1, y2-y1, block_height, BLOCK_DATA["color"], 0.8)
-                # Pestaña de apoyo (solo en los extremos de cada bloque, donde apoya en el perfil)
-                # Simulamos una pequeña extensión de 0.01 m en cada lado
-                if x2 - x1 > 0.01:
-                    add_prism(x1, y1 - 0.01, 0, x2-x1, 0.02, block_height, '#A0522D', 0.9)
-                    add_prism(x1, y2 - 0.01, 0, x2-x1, 0.02, block_height, '#A0522D', 0.9)
+def get_pnet10_CR(zona, theta, area_efectiva):
+    """
+    Obtiene el coeficiente pnet10 (kN/m²) para una zona (1-5), ángulo θ y área efectiva (m²).
+    Ajuste simplificado por área efectiva.
+    """
+    if zona not in PNET10_CR:
+        return 0.0, 0.0
+    tab = PNET10_CR[zona]
+    # Interpolación para θ
+    angles = sorted(tab["pos"].keys())
+    if theta <= angles[0]:
+        pos = tab["pos"][angles[0]]
+        neg = tab["neg"][angles[0]]
+    elif theta >= angles[-1]:
+        pos = tab["pos"][angles[-1]]
+        neg = tab["neg"][angles[-1]]
     else:
-        x_positions = np.linspace(0, Lx, n_profiles)
-        for x in x_positions:
-            add_prism(x - 0.02, 0, 0, 0.04, Ly, block_height, 'silver', 0.9)
-        for i in range(len(x_positions)-1):
-            x1 = x_positions[i]
-            x2 = x_positions[i+1]
-            n_blocks_y = math.ceil(Ly / block_length)
-            for j in range(n_blocks_y):
-                y1 = j * block_length
-                y2 = min(y1 + block_length, Ly)
-                add_prism(x1, y1, 0, x2-x1, y2-y1, block_height, BLOCK_DATA["color"], 0.8)
-                # Pestañas
-                add_prism(x1 - 0.01, y1, 0, 0.02, y2-y1, block_height, '#A0522D', 0.9)
-                add_prism(x2 - 0.01, y1, 0, 0.02, y2-y1, block_height, '#A0522D', 0.9)
-    
-    # Torta de concreto (encima de los bloques)
-    add_prism(0, 0, block_height, Lx, Ly, espesor_torta, 'lightgray', 0.4)
-    
-    # Vigas de borde
-    if incluir_vigas:
-        for y0 in [0, Ly]:
-            add_prism(0, y0 - viga_b/2, 0, Lx, viga_b, viga_h, 'darkgray', 0.7)
-        for x0 in [0, Lx]:
-            add_prism(x0 - viga_b/2, 0, 0, viga_b, Ly, viga_h, 'darkgray', 0.7)
-    
-    # Malla electrosoldada (cuadrícula de líneas sobre la torta)
-    spacing = 0.15  # 15 cm
-    lines_x = []
-    lines_y = []
-    lines_z = []
-    for y in np.arange(0, Ly+spacing, spacing):
-        lines_x.extend([0, Lx, None])
-        lines_y.extend([y, y, None])
-        lines_z.extend([block_height+espesor_torta+0.01, block_height+espesor_torta+0.01, None])
-    for x in np.arange(0, Lx+spacing, spacing):
-        lines_x.extend([x, x, None])
-        lines_y.extend([0, Ly, None])
-        lines_z.extend([block_height+espesor_torta+0.01, block_height+espesor_torta+0.01, None])
-    fig.add_trace(go.Scatter3d(x=lines_x, y=lines_y, z=lines_z, mode='lines', line=dict(color='black', width=2), name='Malla electrosoldada', showlegend=False))
-    
-    fig.update_layout(
-        scene=dict(
-            xaxis_title='X (m)', yaxis_title='Y (m)', zaxis_title='Z (m)',
-            aspectmode='data',
-            bgcolor='#1a1a2e'
-        ),
-        margin=dict(l=0, r=0, b=0, t=0),
-        height=500,
-        plot_bgcolor='black',
-        paper_bgcolor='#1e1e1e'
-    )
+        for i in range(len(angles)-1):
+            if angles[i] <= theta <= angles[i+1]:
+                t = (theta - angles[i]) / (angles[i+1] - angles[i])
+                pos = tab["pos"][angles[i]] + t*(tab["pos"][angles[i+1]] - tab["pos"][angles[i]])
+                neg = tab["neg"][angles[i]] + t*(tab["neg"][angles[i+1]] - tab["neg"][angles[i]])
+                break
+    # Ajuste por área efectiva (simplificado: para áreas > 10 m², se reduce un 20%)
+    if area_efectiva > 10:
+        factor = 0.8
+        pos *= factor
+        neg *= factor
+    return pos, neg
+
+# ─────────────────────────────────────────────
+# FUNCIONES DE DIBUJO ESQUEMÁTICO (reemplazan las imágenes externas)
+# ─────────────────────────────────────────────
+def draw_figure_b642(theta_deg, presiones):
+    """
+    Dibuja un esquema de la Figura B.6.4-2 (SPRFV) mostrando las zonas A-H.
+    Muestra además los valores de presión calculados.
+    """
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.set_facecolor('#f0f0f0')
+    ax.set_xlim(-1, 10)
+    ax.set_ylim(-1, 7)
+    ax.axis('off')
+
+    # Dibujar el perfil del edificio
+    w = 8
+    h_muro = 3
+    h_cumbrera = 5 if theta_deg > 0 else h_muro
+    # Muros
+    ax.add_patch(patches.Rectangle((0, 0), w, h_muro, edgecolor='black', facecolor='lightgray', alpha=0.5))
+    # Cubierta
+    if theta_deg > 0:
+        ax.plot([0, w/2, w], [h_muro, h_cumbrera, h_muro], 'b-', linewidth=2)
+    else:
+        ax.plot([0, w], [h_muro, h_muro], 'b-', linewidth=2)
+
+    # Anotar zonas según NSR-10 (posiciones aproximadas)
+    # Zona A: barlovento, parte inferior del muro
+    ax.annotate(f"A\n{presiones['A']:.2f}", xy=(w*0.1, h_muro*0.5), ha='center', fontsize=9, bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='black'))
+    # Zona B: sotavento, parte inferior del muro
+    ax.annotate(f"B\n{presiones['B']:.2f}", xy=(w*0.9, h_muro*0.5), ha='center', fontsize=9, bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='black'))
+    # Zona C: interior del muro (se puede indicar con texto)
+    ax.annotate(f"C\n{presiones['C']:.2f}", xy=(w*0.5, h_muro*0.5), ha='center', fontsize=9, bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='black'))
+    # Zona D: interior de cubierta
+    ax.annotate(f"D\n{presiones['D']:.2f}", xy=(w*0.5, h_muro+0.5), ha='center', fontsize=9, bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='black'))
+    # Zona E: final de cubierta barlovento
+    ax.annotate(f"E\n{presiones['E']:.2f}", xy=(w*0.2, h_muro+1.2), ha='center', fontsize=9, bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='black'))
+    # Zona F: final de cubierta sotavento
+    ax.annotate(f"F\n{presiones['F']:.2f}", xy=(w*0.8, h_muro+1.2), ha='center', fontsize=9, bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='black'))
+    # Zona G: interior cubierta barlovento
+    ax.annotate(f"G\n{presiones['G']:.2f}", xy=(w*0.4, h_muro+0.8), ha='center', fontsize=9, bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='black'))
+    # Zona H: interior cubierta sotavento
+    ax.annotate(f"H\n{presiones['H']:.2f}", xy=(w*0.6, h_muro+0.8), ha='center', fontsize=9, bbox=dict(boxstyle="round,pad=0.3", fc='white', ec='black'))
+
+    ax.set_title(f"Figura B.6.4-2 – Zonas de presión (θ = {theta_deg:.1f}°)", fontsize=12)
     return fig
 
-# 
-# DXF EXPORT (PLANTA Y DETALLES)
-# 
-def generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo, 
-                 block_length, incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente):
-    doc_dxf = ezdxf.new('R2010')
-    doc_dxf.units = ezdxf.units.M
-    msp = doc_dxf.modelspace()
-    
-    for lay, col in [('CONTOUR', 7), ('PROFILES', 4), ('BLOCKS', 2), ('MESH', 1), ('EDGE_BEAMS', 3), ('TEXT', 5)]:
-        if lay not in doc_dxf.layers:
-            doc_dxf.layers.add(lay, color=col)
-    
-    # Contorno
-    msp.add_lwpolyline([(0,0), (Lx,0), (Lx,Ly), (0,Ly), (0,0)], dxfattribs={'layer':'CONTOUR'})
-    
-    # Vigas de borde
-    if incluir_vigas:
-        for y0 in [0, Ly]:
-            msp.add_lwpolyline([(0, y0 - viga_b/2), (Lx, y0 - viga_b/2), (Lx, y0 + viga_b/2), (0, y0 + viga_b/2), (0, y0 - viga_b/2)], dxfattribs={'layer':'EDGE_BEAMS'})
-        for x0 in [0, Lx]:
-            msp.add_lwpolyline([(x0 - viga_b/2, 0), (x0 - viga_b/2, Ly), (x0 + viga_b/2, Ly), (x0 + viga_b/2, 0), (x0 - viga_b/2, 0)], dxfattribs={'layer':'EDGE_BEAMS'})
-    
-    # Perfiles
-    if orientacion == "Paralelo a X":
-        y_positions = np.linspace(0, Ly, n_profiles)
-        for y in y_positions:
-            msp.add_line((0, y), (Lx, y), dxfattribs={'layer':'PROFILES'})
+def draw_figure_b643(theta_deg, pnet_fachada, pnet_cubierta):
+    """
+    Dibuja un esquema de la Figura B.6.4-3 (C&R) mostrando zonas 1-5.
+    """
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.set_facecolor('#f0f0f0')
+    ax.set_xlim(-1, 10)
+    ax.set_ylim(-1, 7)
+    ax.axis('off')
+
+    # Dibujar perfil
+    w = 8
+    h_muro = 3
+    h_cumbrera = 5 if theta_deg > 0 else h_muro
+    ax.add_patch(patches.Rectangle((0, 0), w, h_muro, edgecolor='black', facecolor='lightgray', alpha=0.5))
+    if theta_deg > 0:
+        ax.plot([0, w/2, w], [h_muro, h_cumbrera, h_muro], 'b-', linewidth=2)
     else:
-        x_positions = np.linspace(0, Lx, n_profiles)
-        for x in x_positions:
-            msp.add_line((x, 0), (x, Ly), dxfattribs={'layer':'PROFILES'})
-    
-    # Malla
-    spacing = 0.15
-    for x in np.arange(0, Lx, spacing):
-        msp.add_line((x, 0), (x, Ly), dxfattribs={'layer':'MESH'})
-    for y in np.arange(0, Ly, spacing):
-        msp.add_line((0, y), (Lx, y), dxfattribs={'layer':'MESH'})
-    
-    # Cuadro de título
-    title_rect_x = 0
-    title_rect_y = -2.5
-    title_rect_w = 8.0
-    title_rect_h = 1.8
-    msp.add_lwpolyline([(title_rect_x, title_rect_y), (title_rect_x+title_rect_w, title_rect_y), 
-                        (title_rect_x+title_rect_w, title_rect_y+title_rect_h), (title_rect_x, title_rect_y+title_rect_h), 
-                        (title_rect_x, title_rect_y)], dxfattribs={'layer':'TEXT'})
-    msp.add_text(f"PROYECTO: {proyecto_nombre}", dxfattribs={'layer':'TEXT', 'height':0.25, 'insert':(title_rect_x+0.2, title_rect_y+1.5)})
-    msp.add_text(f"CLIENTE: {proyecto_cliente}", dxfattribs={'layer':'TEXT', 'height':0.2, 'insert':(title_rect_x+0.2, title_rect_y+1.2)})
-    msp.add_text(f"DIRECCIÓN: {proyecto_direccion}", dxfattribs={'layer':'TEXT', 'height':0.2, 'insert':(title_rect_x+0.2, title_rect_y+0.9)})
-    msp.add_text(f"FECHA: {datetime.now().strftime('%d/%m/%Y')}", dxfattribs={'layer':'TEXT', 'height':0.2, 'insert':(title_rect_x+0.2, title_rect_y+0.6)})
-    msp.add_text(f"ESCALA: 1:50", dxfattribs={'layer':'TEXT', 'height':0.2, 'insert':(title_rect_x+0.2, title_rect_y+0.3)})
-    msp.add_text(f"PLACA FÁCIL - SISTEMA VIGUETA Y BLOQUES", dxfattribs={'layer':'TEXT', 'height':0.25, 'insert':(Lx/2, Ly+0.5), 'halign':2})
-    
-    out = io.StringIO()
-    doc_dxf.write(out)
-    return out.getvalue().encode('utf-8')
+        ax.plot([0, w], [h_muro, h_muro], 'b-', linewidth=2)
 
-# 
-# MEMORIA DOCX
-# 
-def generate_memory():
-    doc = Document()
-    doc.add_heading(f"Memoria de Cálculo – Placa Fácil", 0)
-    doc.add_paragraph(f"Proyecto: {proyecto_nombre}")
-    doc.add_paragraph(f"Cliente: {proyecto_cliente}")
-    doc.add_paragraph(f"Dirección: {proyecto_direccion}")
-    doc.add_paragraph(f"Fecha: {datetime.now().strftime('%d/%m/%Y')}")
-    doc.add_paragraph(f"Norma aplicada: {norma_sel} – {norma['ref']}")
-    
-    doc.add_heading("1. Datos de entrada", level=1)
-    doc.add_paragraph(f"Luz X: {Lx:.2f} m, Luz Y: {Ly:.2f} m")
-    doc.add_paragraph(f"Orientación de perfiles: {orientacion}")
-    doc.add_paragraph(f"Espesor torta: {espesor_torta*100:.1f} cm")
-    doc.add_paragraph(f"Altura bloque: {block_height*100:.1f} cm")
-    doc.add_paragraph(f"Separación perfiles: {perfil_espaciado*100:.0f} cm")
-    doc.add_paragraph(f"Concreto: f'c = {fc_concreto:.1f} MPa")
-    doc.add_paragraph(f"Bloquelón: {block_length*100:.0f} x {block_width*100:.0f} x {block_height*100:.0f} cm, peso unitario {BLOCK_DATA['peso_unitario']} kg")
-    
-    doc.add_heading("2. Verificaciones normativas", level=1)
-    for v in verificaciones:
-        p = doc.add_paragraph()
-        p.add_run(f"{v['item']} – {v['referencia']}\n").bold = True
-        p.add_run(f"Requerido: {v['requerido']}\n")
-        p.add_run(f"Calculado: {v['calculado']}\n")
-        p.add_run(f"Estado: {' CUMPLE' if v['cumple'] else ' NO CUMPLE'} – {v['observacion']}\n")
-    
-    doc.add_heading("3. Cantidades de materiales", level=1)
-    doc.add_paragraph(f"Área de placa: {area_total:.2f} m²")
-    doc.add_paragraph(f"Número de bloques: {n_bloques_desp} unidades (incluye {desp_bloques*100:.0f}% desperdicio)")
-    doc.add_paragraph(f"Longitud total de perfiles: {longitud_total_perfiles_desp:.1f} m (incluye {desp_perfiles*100:.0f}% desperdicio)")
-    doc.add_paragraph(f"Área de malla: {area_malla:.2f} m² (incluye {desp_malla*100:.0f}% desperdicio)")
-    doc.add_paragraph(f"Volumen concreto: {vol_concreto_total_desp:.2f} m³ (incluye {desp_concreto*100:.0f}% desperdicio)")
-    doc.add_paragraph(f"Cemento Portland: {bultos_cemento} bultos de 50 kg")
-    
-    doc.add_heading("4. Presupuesto", level=1)
-    doc.add_paragraph(f"Costo bloques: {moneda} {costo_bloques:,.0f}")
-    doc.add_paragraph(f"Costo perfiles: {moneda} {costo_perfiles:,.0f}")
-    doc.add_paragraph(f"Costo malla: {moneda} {costo_malla:,.0f}")
-    doc.add_paragraph(f"Costo concreto: {moneda} {costo_concreto:,.0f}")
-    doc.add_paragraph(f"Mano de obra: {moneda} {costo_mo:,.0f}")
-    doc.add_paragraph(f"Herramienta menor: {moneda} {herramienta:,.0f}")
-    doc.add_paragraph(f"A.I.U.: {moneda} {aiu:,.0f}")
-    doc.add_paragraph(f"IVA s/Utilidad: {moneda} {iva_util:,.0f}")
-    doc.add_paragraph(f"**TOTAL PROYECTO: {moneda} {total_proyecto:,.0f}**")
-    
-    return doc
+    # Zonas de fachada (4 y 5)
+    # Zona 4: interior fachada
+    ax.annotate(f"Zona 4 (interior)\n+{pnet_fachada['Interior']['+']:.2f}\n-{abs(pnet_fachada['Interior']['-']):.2f}",
+                xy=(w*0.5, h_muro*0.5), ha='center', fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.3", fc='lightyellow', ec='black'))
+    # Zona 5: final fachada (cerca del borde)
+    ax.annotate(f"Zona 5 (final)\n+{pnet_fachada['Final']['+']:.2f}\n-{abs(pnet_fachada['Final']['-']):.2f}",
+                xy=(w*0.1, h_muro*0.5), ha='center', fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.3", fc='lightyellow', ec='black'))
+    # Zonas de cubierta (1,2,3)
+    # Zona 1: interior
+    ax.annotate(f"Zona 1 (interior)\n+{pnet_cubierta['Interior']['+']:.2f}\n-{abs(pnet_cubierta['Interior']['-']):.2f}",
+                xy=(w*0.5, h_muro+0.8), ha='center', fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.3", fc='lightyellow', ec='black'))
+    # Zona 2: final
+    ax.annotate(f"Zona 2 (final)\n+{pnet_cubierta['Final']['+']:.2f}\n-{abs(pnet_cubierta['Final']['-']):.2f}",
+                xy=(w*0.8, h_muro+1.2), ha='center', fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.3", fc='lightyellow', ec='black'))
+    # Zona 3: esquina
+    ax.annotate(f"Zona 3 (esquina)\n+{pnet_cubierta['Esquinas']['+']:.2f}\n-{abs(pnet_cubierta['Esquinas']['-']):.2f}",
+                xy=(w*0.95, h_muro+0.5), ha='center', fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.3", fc='lightyellow', ec='black'))
 
-# 
-# INTERFAZ PRINCIPAL (PESTAÑAS)
-# 
-tab_res, tab_3d, tab_dxf, tab_mem, tab_qty, tab_apu = st.tabs([
-    " Resultados", " Modelo 3D", " DXF", " Memoria", " Cantidades", " APU"
-])
+    ax.set_title(f"Figura B.6.4-3 – Zonas para componentes y revestimientos (θ = {theta_deg:.1f}°)", fontsize=12)
+    return fig
 
-with tab_res:
-    st.subheader("Resultados del diseño")
-    st.write(f"**Área de la placa:** {area_total:.2f} m²")
-    st.write(f"**Número de perfiles:** {n_profiles}")
-    st.write(f"**Longitud total de perfiles:** {longitud_total_perfiles_desp:.1f} m")
-    st.write(f"**Número de bloques:** {n_bloques_desp} unidades")
-    st.write(f"**Volumen de concreto:** {vol_concreto_total_desp:.2f} m³")
-    st.write(f"**Área de malla electrosoldada:** {area_malla:.2f} m²")
-    st.write(f"**Carga muerta estimada:** {carga_muerta_kgm2:.0f} kg/m² (basado en peso real del sistema)")
-    st.write(f"**Cemento necesario:** {bultos_cemento} bultos de 50 kg")
-    
-    st.markdown("### Verificaciones normativas")
-    for v in verificaciones:
-        if v['cumple']:
-            st.success(f" {v['item']}: {v['calculado']} – {v['observacion']}")
-        else:
-            st.error(f" {v['item']}: {v['calculado']} – {v['observacion']}")
-        st.caption(f"Referencia: {v['referencia']}")
+# ─────────────────────────────────────────────
+# SIDEBAR – PARÁMETROS GENERALES
+# ─────────────────────────────────────────────
+st.sidebar.header(_t("Norma de Diseño", "Design Code"))
+norma_sel = st.sidebar.selectbox(
+    _t("Seleccione la norma:", "Select code:"),
+    ["NSR-10 (Colombia)", "ACI 318-25 (EE.UU.)", "ACI 318-19 (EE.UU.)", "ACI 318-14 (EE.UU.)",
+     "NEC-SE-HM (Ecuador)", "E.060 (Perú)", "NTC-EM (México)", "COVENIN 1753-2006 (Venezuela)",
+     "NB 1225001-2020 (Bolivia)", "CIRSOC 201-2025 (Argentina)"],
+    index=0
+)
+mostrar_referencias_norma(norma_sel, "viento_simplificado")
 
-with tab_3d:
-    st.subheader("Modelo 3D de la placa (con bloques de arcilla y pestañas)")
-    fig_3d = create_3d_model(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo, 
-                              block_length, block_width, block_height, espesor_torta, 
-                              viga_b, viga_h, incluir_vigas)
-    st.plotly_chart(fig_3d, use_container_width=True)
+st.sidebar.markdown("---")
+st.sidebar.header(_t("Datos de entrada", "Input data"))
+V = st.sidebar.number_input(_t("Velocidad básica del viento V [m/s]", "Basic wind speed V [m/s]"), 10.0, 60.0, 36.0, 1.0)
+I = st.sidebar.selectbox(_t("Factor de importancia I", "Importance factor I"), ["I (Grupo I)", "II (Grupo II)", "III (Grupo III)", "IV (Grupo IV)"], index=1)
+I_val = {"I (Grupo I)":0.87, "II (Grupo II)":1.00, "III (Grupo III)":1.15, "IV (Grupo IV)":1.15}[I]
+expo = st.sidebar.selectbox(_t("Categoría de exposición", "Exposure category"), ["B", "C", "D"], index=1)
+hr = st.sidebar.number_input(_t("Altura de cumbrera hr [m]", "Ridge height hr [m]"), 2.0, 18.0, 4.68, 0.1)
+he = st.sidebar.number_input(_t("Altura de cornisa he [m]", "Eave height he [m]"), 2.0, 18.0, 4.50, 0.1)
+W = st.sidebar.number_input(_t("Ancho del edificio W [m] (perpendicular a cumbrera)", "Building width W [m] (perpendicular to ridge)"), 5.0, 100.0, 10.0, 1.0)
+L = st.sidebar.number_input(_t("Longitud del edificio L [m] (paralelo a cumbrera)", "Building length L [m] (parallel to ridge)"), 5.0, 100.0, 20.0, 1.0)
+tipo_cubierta = st.sidebar.selectbox(_t("Tipo de cubierta", "Roof type"), ["Plana", "1 agua", "2 aguas"], index=2)
+theta = st.sidebar.number_input(_t("Ángulo de inclinación θ [°]", "Roof slope θ [°]"), 0.0, 45.0, 2.0, 0.5)
+Kzt = st.sidebar.number_input(_t("Factor topográfico Kzt", "Topographic factor Kzt"), 0.8, 1.5, 1.0, 0.05)
+region_huracan = st.sidebar.checkbox(_t("¿Región propensa a huracanes?", "Hurricane-prone region?"), value=False)
 
-with tab_dxf:
-    st.subheader("Exportar plano DXF")
-    st.info("El DXF incluye la planta con contorno, perfiles, malla, vigas de borde y cuadro de título.")
-    if st.button("Generar archivo DXF"):
-        dxf_data = generate_dxf(Lx, Ly, orientacion, n_profiles, perfil_espaciado, perfil_largo, 
-                                block_length, incluir_vigas, viga_b, viga_h, proyecto_nombre, proyecto_direccion, proyecto_cliente)
-        st.download_button("Descargar DXF", data=dxf_data, file_name=f"PlacaFacil_{proyecto_nombre}.dxf", mime="application/dxf")
+# C&R áreas efectivas
+area_fachada = st.sidebar.number_input(_t("Área efectiva en fachada [m²]", "Effective area for walls [m²]"), 0.5, 50.0, 6.75, 1.0)
+area_cubierta = st.sidebar.number_input(_t("Área efectiva en cubierta [m²]", "Effective area for roof [m²]"), 0.5, 50.0, 12.0, 1.0)
+area_alero = st.sidebar.number_input(_t("Área efectiva en alero [m²]", "Effective area for eaves [m²]"), 0.0, 50.0, 0.0, 1.0)
 
-with tab_mem:
-    st.subheader("Memoria de cálculo")
-    if st.button("Generar memoria DOCX"):
-        doc = generate_memory()
-        buf = io.BytesIO()
-        doc.save(buf)
-        buf.seek(0)
-        st.download_button("Descargar Memoria", data=buf, file_name=f"Memoria_PlacaFacil_{proyecto_nombre}.docx", 
-                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+# ─────────────────────────────────────────────
+# VERIFICACIONES PREVIAS
+# ─────────────────────────────────────────────
+h_media = (hr + he) / 2
+if h_media > 18.0:
+    st.error(_t("La altura media del edificio supera los 18 m. Este método simplificado solo aplica para h ≤ 18 m.", "Mean building height exceeds 18 m. This simplified method applies only for h ≤ 18 m."))
+if theta > 45.0:
+    st.error(_t("El ángulo de cubierta supera los 45°. Este método solo aplica para θ ≤ 45°.", "Roof slope exceeds 45°. This method applies only for θ ≤ 45°."))
+if tipo_cubierta == "2 aguas" and theta > 27.0 and region_huracan:
+    st.warning(_t("En regiones propensas a huracanes, el ángulo máximo para cubiertas a dos aguas es 27° (NSR-10 B.6.4.1.2(d)).", "In hurricane-prone regions, the maximum roof slope for gable roofs is 27° (NSR-10 B.6.4.1.2(d))."))
 
-with tab_qty:
-    st.subheader("Cantidades detalladas")
-    qty_data = [
-        ("Bloques (unidades)", n_bloques, n_bloques_desp, f"{desp_bloques*100:.0f}%"),
-        ("Perfiles (m)", longitud_total_perfiles, longitud_total_perfiles_desp, f"{desp_perfiles*100:.0f}%"),
-        ("Malla (m²)", area_total, area_malla, f"{desp_malla*100:.0f}%"),
-        ("Concreto (m³)", vol_concreto_total, vol_concreto_total_desp, f"{desp_concreto*100:.0f}%"),
-        ("Cemento (bultos 50 kg)", "-", bultos_cemento, "-"),
-    ]
-    df_qty = pd.DataFrame(qty_data, columns=["Material", "Neto", "Con desperdicio", "Desperdicio"])
-    st.dataframe(df_qty, use_container_width=True, hide_index=True)
-    st.write(f"**Volumen de torta de concreto:** {vol_torta:.2f} m³")
-    if incluir_vigas:
-        st.write(f"**Volumen de vigas de borde:** {vol_vigas:.2f} m³")
-    st.write(f"**Peso unitario del bloque:** {BLOCK_DATA['peso_unitario']:.1f} kg")
-    st.write(f"**Rendimiento:** {BLOCK_DATA['unidades_por_m2']:.2f} bloques/m²")
+if norma_sel != "NSR-10 (Colombia)":
+    st.warning(_t("El método simplificado de viento está implementado solo para NSR-10 (Colombia). Para otras normas se recomienda utilizar métodos analíticos completos.", "The simplified wind method is implemented only for NSR-10 (Colombia). For other codes, it is recommended to use full analytical methods."))
 
-with tab_apu:
-    st.subheader("Presupuesto APU")
-    cost_data = [
-        ("Bloques (unidades)", n_bloques_desp, precio_bloque, costo_bloques),
-        ("Perfiles (m)", f"{longitud_total_perfiles_desp:.1f} m", precio_perfil, costo_perfiles),
-        ("Malla (m²)", f"{area_malla:.2f} m²", precio_malla, costo_malla),
-        ("Concreto (m³)", f"{vol_concreto_total_desp:.2f} m³", precio_concreto, costo_concreto),
-        ("Mano de obra", f"{dias_mo:.1f} días", precio_mo, costo_mo),
-        ("Herramienta menor", f"{pct_herramienta*100:.0f}% MO", "", herramienta),
-        ("A.I.U.", f"{pct_aui*100:.0f}% CD", "", aiu),
-        ("IVA s/Utilidad", f"{iva*100:.0f}% Util", "", iva_util),
-        ("TOTAL", "", "", total_proyecto),
-    ]
-    df_costo = pd.DataFrame(cost_data, columns=["Concepto", "Cantidad", "Precio unitario", "Subtotal"])
-    df_costo["Precio unitario"] = pd.to_numeric(df_costo["Precio unitario"], errors="ignore")
-    df_costo["Subtotal"] = pd.to_numeric(df_costo["Subtotal"], errors="ignore")
-    st.dataframe(
-        df_costo.style.format({"Subtotal": "{:,.0f}", "Precio unitario": "{:,.0f}"}, na_rep=""),
-        use_container_width=True,
-        hide_index=True
-    )
-    st.metric(f"Gran Total Proyecto ({moneda})", f"{total_proyecto:,.0f}")
-    
-    if st.button("Exportar presupuesto a Excel"):
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df_costo.to_excel(writer, sheet_name="Presupuesto", index=False)
-            df_qty.to_excel(writer, sheet_name="Cantidades", index=False)
-        output.seek(0)
-        st.download_button("Descargar Excel", data=output, file_name=f"Presupuesto_PlacaFacil_{proyecto_nombre}.xlsx", 
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+# ─────────────────────────────────────────────
+# CÁLCULOS
+# ─────────────────────────────────────────────
+lambda_ = get_lambda_factor(expo, h_media)
 
-# 
-# FOOTER
-# 
+# SPRFV
+zonas = ["A", "B", "C", "D", "E", "F", "G", "H"]
+presiones = {}
+for zona in zonas:
+    ps10 = get_ps10_SPRFV(f"Zona {zona}", theta)
+    ps = lambda_ * Kzt * I_val * ps10
+    presiones[zona] = ps
+
+# Aplicar presiones mínimas NSR-10 B.6.4.2.1.1
+for zona in ["A", "B", "C", "D"]:
+    if presiones[zona] < 0.4:
+        presiones[zona] = 0.4
+# Para zonas E,F,G,H no se aplica mínimo positivo, pero se asegura que no sean positivas
+# (ya son negativas, pero si por interpolación dieran positivas, se anulan)
+for zona in ["E", "F", "G", "H"]:
+    if presiones[zona] > 0:
+        presiones[zona] = 0.0
+
+# C&R
+pos4, neg4 = get_pnet10_CR("Zona4", theta, area_fachada)
+pos5, neg5 = get_pnet10_CR("Zona5", theta, area_fachada)
+pnet_fachada = {
+    "Interior": {"+": pos4, "-": neg4},
+    "Final":   {"+": pos5, "-": neg5}
+}
+
+pos1, neg1 = get_pnet10_CR("Zona1", theta, area_cubierta)
+pos2, neg2 = get_pnet10_CR("Zona2", theta, area_cubierta)
+pos3, neg3 = get_pnet10_CR("Zona3", theta, area_cubierta)
+pnet_cubierta = {
+    "Interior": {"+": pos1, "-": neg1},
+    "Final":   {"+": pos2, "-": neg2},
+    "Esquinas": {"+": pos3, "-": neg3}
+}
+
+# Presiones mínimas C&R (NSR-10 B.6.4.2.2.1)
+for tipo in pnet_fachada.values():
+    if tipo["+"] < 0.4:
+        tipo["+"] = 0.4
+    if abs(tipo["-"]) < 0.4:
+        tipo["-"] = -0.4
+for tipo in pnet_cubierta.values():
+    if tipo["+"] < 0.4:
+        tipo["+"] = 0.4
+    if abs(tipo["-"]) < 0.4:
+        tipo["-"] = -0.4
+
+# ─────────────────────────────────────────────
+# MOSTRAR RESULTADOS
+# ─────────────────────────────────────────────
 st.markdown("---")
-st.markdown(f"""
-> **Placa Fácil – Sistema de Vigueta y Bloques**  
-> Norma activa: `{norma_sel}`  
-> f'c = {fc_concreto:.1f} MPa | Espesor torta = {espesor_torta*100:.1f} cm | Altura total = {altura_total*100:.1f} cm  
-> Bloques de arcilla: {block_length*100:.0f}×{block_width*100:.0f}×{block_height*100:.0f} cm, {BLOCK_DATA['unidades_por_m2']:.2f} ud/m²  
-> **Referencia:** {norma['ref']}  
->  *Las herramientas son de apoyo para el diseño. Verifique siempre con la norma vigente del país.*
-""")
+st.header(_t("Resultados", "Results"))
+st.subheader(_t("Sistema Principal de Resistencia al Viento (SPRFV)", "Main Wind Force Resisting System (MWFRS)"))
+
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("**Presiones netas de diseño (ps) [kN/m²]**")
+    df_sp = pd.DataFrame({
+        "Zona": zonas,
+        "ps (kN/m²)": [f"{presiones[z]:.2f}" for z in zonas]
+    })
+    st.dataframe(df_sp, use_container_width=True, hide_index=True)
+
+with col2:
+    # Gráfico de barras
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=zonas,
+        y=[presiones[z] for z in zonas],
+        name="ps",
+        marker_color=['#4a6ea8' if z in ['A','B','C','D'] else '#a84a6e' for z in zonas]
+    ))
+    fig.update_layout(
+        title="Presiones de viento (SPRFV)",
+        yaxis_title="Presión (kN/m²)",
+        template="plotly_dark"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# Dibujar esquema de la Figura B.6.4-2 con valores reales
+st.markdown("---")
+st.subheader(_t("Esquema de zonas SPRFV (Figura B.6.4-2)", "SPRFV zones diagram (Figure B.6.4-2)"))
+fig_b642 = draw_figure_b642(theta, presiones)
+st.pyplot(fig_b642)
+
+st.markdown("---")
+st.subheader(_t("Componentes y Revestimientos (C&R)", "Components & Cladding (C&C)"))
+
+st.markdown("**Fachadas**")
+df_fachada = pd.DataFrame({
+    "Ubicación": ["Interior", "Final"],
+    "Presión positiva (+) [kN/m²]": [pnet_fachada["Interior"]["+"], pnet_fachada["Final"]["+"]],
+    "Presión negativa (-) [kN/m²]": [pnet_fachada["Interior"]["-"], pnet_fachada["Final"]["-"]]
+})
+# Formatear solo las columnas numéricas
+df_fachada["Presión positiva (+) [kN/m²]"] = df_fachada["Presión positiva (+) [kN/m²]"].map(lambda x: f"{x:.2f}")
+df_fachada["Presión negativa (-) [kN/m²]"] = df_fachada["Presión negativa (-) [kN/m²]"].map(lambda x: f"{x:.2f}")
+st.dataframe(df_fachada, use_container_width=True, hide_index=True)
+
+st.markdown("**Cubierta**")
+df_cubierta = pd.DataFrame({
+    "Ubicación": ["Interior", "Final", "Esquinas"],
+    "Presión positiva (+) [kN/m²]": [pnet_cubierta["Interior"]["+"], pnet_cubierta["Final"]["+"], pnet_cubierta["Esquinas"]["+"]],
+    "Presión negativa (-) [kN/m²]": [pnet_cubierta["Interior"]["-"], pnet_cubierta["Final"]["-"], pnet_cubierta["Esquinas"]["-"]]
+})
+df_cubierta["Presión positiva (+) [kN/m²]"] = df_cubierta["Presión positiva (+) [kN/m²]"].map(lambda x: f"{x:.2f}")
+df_cubierta["Presión negativa (-) [kN/m²]"] = df_cubierta["Presión negativa (-) [kN/m²]"].map(lambda x: f"{x:.2f}")
+st.dataframe(df_cubierta, use_container_width=True, hide_index=True)
+
+# Dibujar esquema de la Figura B.6.4-3 con valores reales
+st.markdown("---")
+st.subheader(_t("Esquema de zonas C&R (Figura B.6.4-3)", "C&C zones diagram (Figure B.6.4-3)"))
+fig_b643 = draw_figure_b643(theta, pnet_fachada, pnet_cubierta)
+st.pyplot(fig_b643)
+
+st.caption(_t("Nota: Las presiones mostradas ya incluyen el factor de ajuste λ, Kzt, I y los mínimos exigidos por NSR-10.", "Note: Pressures already include adjustment factor λ, Kzt, I and the minimum requirements of NSR-10."))
+
+# ─────────────────────────────────────────────
+# EXPORTAR RESULTADOS (DOCX)
+# ─────────────────────────────────────────────
+st.markdown("---")
+if st.button(_t("Generar Memoria DOCX", "Generate DOCX Report")):
+    doc = Document()
+    doc.add_heading(_t("Memoria de Cálculo – Carga de Viento", "Wind Load Calculation Report"), 0)
+    doc.add_paragraph(f"Norma: {norma_sel}")
+    doc.add_paragraph(f"Fecha: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    doc.add_heading("1. Datos de entrada", level=1)
+    doc.add_paragraph(f"Velocidad básica V = {V} m/s\n"
+                      f"Factor de importancia I = {I_val:.2f} (Grupo {I.split('(')[1].split(')')[0]})\n"
+                      f"Exposición = {expo}\n"
+                      f"Altura media h = {h_media:.2f} m\n"
+                      f"Geometría: W = {W} m, L = {L} m\n"
+                      f"Cubierta: {tipo_cubierta}, θ = {theta}°\n"
+                      f"Kzt = {Kzt:.2f}\n"
+                      f"Región propensa a huracanes: {'Sí' if region_huracan else 'No'}\n"
+                      f"Áreas efectivas: fachada = {area_fachada} m², cubierta = {area_cubierta} m², alero = {area_alero} m²")
+    doc.add_heading("2. Factor de ajuste λ", level=1)
+    doc.add_paragraph(f"Para exposición {expo} y altura {h_media:.2f} m → λ = {lambda_:.3f}")
+    doc.add_heading("3. Presiones de diseño SPRFV", level=1)
+    table = doc.add_table(rows=1+len(zonas), cols=2)
+    table.style = 'Table Grid'
+    hdr = table.rows[0].cells
+    hdr[0].text = "Zona"; hdr[1].text = "ps (kN/m²)"
+    for i, zona in enumerate(zonas):
+        row = table.rows[i+1].cells
+        row[0].text = zona
+        row[1].text = f"{presiones[zona]:.2f}"
+    doc.add_heading("4. Presiones de diseño C&R", level=1)
+    doc.add_paragraph("Fachadas:")
+    doc.add_paragraph(f"Interior: +{pnet_fachada['Interior']['+']:.2f} / -{abs(pnet_fachada['Interior']['-']):.2f} kN/m²")
+    doc.add_paragraph(f"Final:   +{pnet_fachada['Final']['+']:.2f} / -{abs(pnet_fachada['Final']['-']):.2f} kN/m²")
+    doc.add_paragraph("Cubierta:")
+    doc.add_paragraph(f"Interior: +{pnet_cubierta['Interior']['+']:.2f} / -{abs(pnet_cubierta['Interior']['-']):.2f} kN/m²")
+    doc.add_paragraph(f"Final:   +{pnet_cubierta['Final']['+']:.2f} / -{abs(pnet_cubierta['Final']['-']):.2f} kN/m²")
+    doc.add_paragraph(f"Esquinas:+{pnet_cubierta['Esquinas']['+']:.2f} / -{abs(pnet_cubierta['Esquinas']['-']):.2f} kN/m²")
+    doc.add_paragraph("Referencia: NSR-10 Capítulo B.6 (Procedimiento simplificado)")
+    doc_mem = io.BytesIO()
+    doc.save(doc_mem)
+    doc_mem.seek(0)
+    st.download_button(_t("Descargar Memoria DOCX", "Download DOCX"), data=doc_mem,
+                       file_name="Memoria_Viento.docx",
+                       mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")

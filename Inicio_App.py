@@ -277,42 +277,33 @@ def run_home():
 """, unsafe_allow_html=True)
 
     st.markdown('<p class="section-title">Módulos de cálculo disponibles</p>', unsafe_allow_html=True)
-    st.markdown("""
-<div class="modules-grid">
-  <div class="module-card" style="--card-accent:#3fb950">
+    # --- Dinámicamente generar la grilla para todos los módulos ---
+    st.markdown('<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />', unsafe_allow_html=True)
+    html_cards = []
+    colors = ['#3fb950', '#79c0ff', '#d2a8ff', '#d29922', '#ff7b72', '#ffa657', '#8957e5', '#33b3ae', '#e34c26']
+    
+    # Agrupamos por si queremos pero de momento listamos todos secuencialmente
+    for i, page in enumerate(all_pages):
+        if page.title == "Inicio": continue
+        
+        c = colors[i % len(colors)]
+        icon_text = page.icon.replace(':material/', '').replace(':', '') if page.icon else 'apps'
+        
+        # Limpiar el nombre base
+        base_name = page.url_path.replace("pages/", "").replace(".py", "")
+        
+        html_cards.append(f"""
+  <div class="module-card" style="--card-accent:{c}">
     <div class="card-header">
-      <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.8"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg></div>
-      <div><div class="card-title">Columnas — Diagrama P-M Biaxial</div><div class="card-sub">Módulo › Columnas_PM</div></div>
+      <div class="card-icon" style="color:{c};"><span class="material-symbols-rounded" style="font-size:22px">{icon_text}</span></div>
+      <div>
+        <div class="card-title">{{page.title}}</div>
+        <div class="card-sub">Archivo › {{base_name}}</div>
+      </div>
     </div>
-    <p class="card-desc">Genera diagramas de interacción P-M en 3D (Superficie de Bresler). Verificación de esbeltez NSR-10, diseño de estribos sísmicos, magnificación de momentos, exportación IFC-BIM.</p>
-    <div class="tag-row"><span class="tag g">Bresler 3D</span><span class="tag b">Esbeltez kL/r</span><span class="tag b">Estribos sísmicos</span><span class="tag o">IFC / DXF / DOCX</span></div>
-  </div>
-  <div class="module-card" style="--card-accent:#79c0ff">
-    <div class="card-header">
-      <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#79c0ff" stroke-width="1.8"><rect x="2" y="9" width="20" height="6" rx="1"/></svg></div>
-      <div><div class="card-title">Vigas y Losas — Diseño Completo</div><div class="card-sub">Módulo › Vigas_Losas</div></div>
-    </div>
-    <p class="card-desc">Diseño a flexión (rectangular y Viga T), cortante sísmico Vp, deflexiones Branson, losa en una dirección, punzonamiento NSR-10 C.11.11, longitudes de desarrollo.</p>
-    <div class="tag-row"><span class="tag b">Viga Rectangular / T</span><span class="tag r">Cortante Vp sísmico</span><span class="tag b">Deflexión Branson</span><span class="tag o">Punzonamiento</span></div>
-  </div>
-  <div class="module-card" style="--card-accent:#d2a8ff">
-    <div class="card-header">
-      <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d2a8ff" stroke-width="1.8"><rect x="2" y="15" width="20" height="6" rx="1"/><line x1="7" y1="15" x2="7" y2="4"/><line x1="12" y1="15" x2="12" y2="4"/><line x1="17" y1="15" x2="17" y2="4"/><line x1="4" y1="4" x2="20" y2="4"/></svg></div>
-      <div><div class="card-title">Cimentaciones y Muros</div><div class="card-sub">Zapatas · Pilotes · Muros contención</div></div>
-    </div>
-    <p class="card-desc">Diseño de zapatas aisladas, pilotes y cabezales. Muros en voladizo — estabilidad al deslizamiento, volcamiento y presiones netas. DXF rótulo ICONTEC.</p>
-    <div class="tag-row"><span class="tag p">Zapatas</span><span class="tag p">Pilotes</span><span class="tag g">Estabilidad</span><span class="tag o">DXF ICONTEC</span></div>
-  </div>
-  <div class="module-card" style="--card-accent:#d29922">
-    <div class="card-header">
-      <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d29922" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-      <div><div class="card-title">Presupuesto APU Mercado</div><div class="card-sub">Análisis de Precios Unitarios en vivo</div></div>
-    </div>
-    <p class="card-desc">Cotización de materiales con precios configurables. Calcula costo directo, A.I.U., utilidad e IVA. Multi-moneda. Exporta presupuesto en Excel.</p>
-    <div class="tag-row"><span class="tag o">Precios configurables</span><span class="tag o">A.I.U. + IVA</span><span class="tag g">Excel .xlsx</span></div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
+  </div>""")
+
+    st.markdown('<div class="modules-grid">' + "".join(html_cards) + '</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="hs-divider"></div>', unsafe_allow_html=True)
     st.markdown('<p class="section-title">Cómo comenzar</p>', unsafe_allow_html=True)
@@ -394,7 +385,7 @@ p_mad    = st.Page("pages/14_Madera_Estructuras.py",      title="Madera Estructu
 p_metal  = st.Page("pages/18_Estructuras_Metalicas.py",   title="Estructuras Metálicas",   icon=":material/build:")
 
 # Presupuesto
-p_calc  = st.Page("pages/06_Calculadora de Materiales.py", title="Calculadora Materiales", icon=":material/calculate:")
+p_calc  = st.Page("pages/06_Calculadora_de_Materiales.py", title="Calculadora Materiales", icon=":material/calculate:")
 p_apu   = st.Page("pages/05_APU_Mercado.py",               title="APU Mercado",            icon=":material/payments:")
 
 # Análisis

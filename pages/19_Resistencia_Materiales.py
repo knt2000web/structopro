@@ -456,8 +456,7 @@ with tab_centroide:
                         dxf_text(msp, x_bar, y_bar-5, f"Ixx={Ix_total:.2f}  Iyy={Iy_total:.2f}", "TEXTO", h=TH12*0.8)
                         norma_res = st.session_state.get("norma_sel", "NSR-10")
                         _cam12 = dxf_rotulo_campos(f"Seccion Compuesta – Inercias", norma_res, "001")
-
-mostrar_referencias_norma(norma_res, "resistencia_materiales")
+                        mostrar_referencias_norma(norma_res, "resistencia_materiales")
                         dxf_rotulo(msp, _cam12, 0, y_bar-30, rot_w=max(sum_A**0.5*3,20), rot_h=12, escala=20)
                     else:
                         msp.add_text(f"Centroid: ({x_bar:.2f}, {y_bar:.2f})", dxfattribs={'layer':'TEXTO', 'height':1, 'insert':(x_bar+2, y_bar+2)})

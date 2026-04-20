@@ -2111,7 +2111,7 @@ if modulo_sel == " Diseño a Cortante — Vigas de Concreto":
         if Vs_req_kN > Vs_max_kN:
             ratio_vs = Vs_req_kN / Vs_max_kN
             bw_new_mm = (Vs_req_kN * 1000) / (0.66 * math.sqrt(fc) * d_mm_cv)
-            st.error(f"⚠️ **FALLA POR APLASTAMIENTO DEL ALMA — NSR-10 C.11.4.7.9:** $V_s$ requerido ({Vs_req_kN*factor_fuerza:.2f} {unidad_fuerza}) supera el límite máximo transversal $V_{{s,max}}$ = {Vs_max_kN*factor_fuerza:.2f} {unidad_fuerza} (Ratio = **{ratio_vs:.2f}**).\n\n"
+            st.error(f"**FALLA POR APLASTAMIENTO DEL ALMA — NSR-10 C.11.4.7.9:** $V_s$ requerido ({Vs_req_kN*factor_fuerza:.2f} {unidad_fuerza}) supera el límite máximo transversal $V_{{s,max}}$ = {Vs_max_kN*factor_fuerza:.2f} {unidad_fuerza} (Ratio = **{ratio_vs:.2f}**).\n\n"
                      f"El concreto fallará por compresión diagonal antes de que el acero fluya. **Aumente la sección.**\n\n"
                      f"**Soluciones propuestas:**\n"
                      f"• Aumentar el ancho del alma **bw** ≥ **{math.ceil(bw_new_mm/10)} cm**.\n"

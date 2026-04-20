@@ -114,3 +114,22 @@ def get_projects_from_db(user):
     if response.status_code != 200:
         raise Exception(f"Error al obtener proyectos: {response.status_code} - {response.text}")
     return response.json()
+
+def delete_project_from_db(user, nombre_proyecto):
+    user_id = getattr(user, 'id', None)
+    access_token = getattr(user, 'access_token', None)
+    if not user_id:
+        raise Exception("Usuario no autenticado")
+    
+    import requests
+    # Importante: para DELETE se requiere la PK o filtro
+    url = f"{SUPABASE_URL}/rest/v1/proyectos?user_id=eq.{user_id}&nombre_proyecto=eq.{nombre_proyecto}"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {access_token or SUPABASE_KEY}",
+        "Content-Type": "application/json"
+    }
+    response = requests.delete(url, headers=headers)
+    if response.status_code not in (200, 204):
+        raise Exception(f"Error al eliminar: {response.status_code} - {response.text}")
+    return True

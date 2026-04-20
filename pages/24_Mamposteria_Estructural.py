@@ -174,13 +174,12 @@ if global_norma not in NORMAS_AC:
 
 norma_ac = st.sidebar.selectbox(
     _t("Norma de Diseño","Design Code"),
-
-mostrar_referencias_norma(norma_ac, "mamposteria_estructural")
     list(NORMAS_AC.keys()),
     index=list(NORMAS_AC.keys()).index(global_norma),
     key="ac_norma_selector"
 )
 st.session_state.ac_norma = norma_ac
+mostrar_referencias_norma(norma_ac, "mamposteria_estructural")
 nc = NORMAS_AC[norma_ac]
 _iso = nc["pais"]
 st.sidebar.markdown(

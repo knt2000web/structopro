@@ -1076,7 +1076,7 @@ L_col = st.sidebar.number_input(_t("Altura libre de la columna (L) [cm]", "Colum
 
 limite_d = D/2 if es_circular else min(b/2, h/2)
 if d_prime >= limite_d:
-    st.error(f"⚠️ El recubrimiento al centroide d' ({d_prime:.1f} cm) supera o alcanza el núcleo central de la columna geométrica (límite: {limite_d:.1f} cm). Disminuya d' o aumente la sección.")
+    st.error(f"El recubrimiento al centroide d' ({d_prime:.1f} cm) supera o alcanza el núcleo central de la columna geométrica (límite: {limite_d:.1f} cm). Disminuya d' o aumente la sección.")
     st.stop()
 
 st.sidebar.header(_t("3. Refuerzo Longitudinal", "3. Longitudinal Reinforcement"))
@@ -2832,7 +2832,7 @@ with tab4:
         try:
             import numpy as _np_ifc
             if tuple(int(x) for x in _np_ifc.__version__.split(".")[:2]) >= (2,0):
-                st.warning("⚠️ IFC requiere numpy<2.0 para compatibilidad. Instale: pip install 'numpy<2.0'")
+                st.warning("IFC requiere numpy<2.0 para compatibilidad. Instale: pip install 'numpy<2.0'")
             import ifcopenshell
             import ifcopenshell.api
             import ifcopenshell.guid
@@ -3148,7 +3148,7 @@ with tab4:
                 )
                 if buf_ifc_col:
                     _ifc_fname = f"Columna_{'Circ_D'+str(int(D)) if es_circular else str(int(b))+'x'+str(int(h))}_IFC4.ifc"
-                    st.success(_t("✅ IFC4 generado correctamente.", "✅ IFC4 generated successfully."))
+                    st.success(_t("IFC4 generado correctamente.", "IFC4 generated successfully."))
                     st.download_button(
                         label=_t("⬇️ Descargar IFC4", "⬇️ Download IFC4"),
                         data=buf_ifc_col,
