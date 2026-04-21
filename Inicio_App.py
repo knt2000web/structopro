@@ -409,7 +409,7 @@ home    = st.Page(run_home, title="Inicio", icon=":material/home:", default=True
 
 # Hormigón
 p_col   = st.Page("pages/01_Columnas_PM.py",          title="Columnas PM",           icon=":material/domain:")
-p_ccirc = st.Page("pages/07_Columnas_Circulares.py",  title="Columnas Circulares",   icon=":material/lens:")
+p_ccirc = st.Page("pages/07_Columnas_Circulares.py",  title="Pilares Circulares (Puentes/Silos)", icon=":material/lens:")
 p_vig   = st.Page("pages/02_Vigas_Losas.py",          title="Vigas y Losas",         icon=":material/horizontal_rule:")
 p_otras = st.Page("pages/03_Otras_Estructuras.py",    title="Otras Estructuras",     icon=":material/extension:")
 p_pred  = st.Page("pages/04_Predimensionamiento.py",  title="Predimensionamiento",   icon=":material/straighten:")
@@ -428,7 +428,7 @@ p_irreg  = st.Page("pages/17_Irregularidades.py",    title="Irregularidades",   
 # Mampostería & Alt
 p_mamp_e = st.Page("pages/24_Mamposteria_Estructural.py", title="Mampostería Estructural", icon=":material/grid_on:")
 p_mamp_m = st.Page("pages/13_Mamposteria_Morteros.py",    title="Mampostería Morteros",    icon=":material/apps:")
-p_placa  = st.Page("pages/08_Placa facil.py",             title="Placa fácil",             icon=":material/view_module:")
+p_placa  = st.Page("pages/08_Placa_facil.py",             title="Placa fácil",             icon=":material/view_module:")
 p_konte  = st.Page("pages/11_Kontewall.py",               title="Kontewall",               icon=":material/view_compact:")
 p_mad    = st.Page("pages/14_Madera_Estructuras.py",      title="Madera Estructuras",      icon=":material/forest:")
 p_metal  = st.Page("pages/18_Estructuras_Metalicas.py",   title="Estructuras Metálicas",   icon=":material/build:")
@@ -444,6 +444,9 @@ p_gen3d = st.Page("pages/23_Generador_Maestro_3D.py",    title="Generador 3D",  
 p_res   = st.Page("pages/19_Resistencia_Materiales.py",  title="Resistencia Materiales",icon=":material/science:")
 p_util  = st.Page("pages/20_Utilidades_Comunes.py",      title="Utilidades Comunes",    icon=":material/widgets:")
 
+# Gestión de Obra
+p_foto  = st.Page("pages/25_Registro_Fotografico.py",    title="Registro Fotográfico",  icon=":material/photo_camera:")
+
 all_pages = [
     home,
     p_col, p_ccirc, p_vig, p_otras, p_pred,
@@ -452,6 +455,7 @@ all_pages = [
     p_mamp_e, p_mamp_m, p_placa, p_konte, p_mad, p_metal,
     p_calc, p_apu,
     p_a2d, p_a3d, p_gen3d, p_res, p_util,
+    p_foto,
 ]
 
 curr_page = st.navigation(all_pages, position="hidden")

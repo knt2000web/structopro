@@ -62,6 +62,119 @@ except ImportError:
 # PERSISTENCIA SUPABASE (mismo patrón que Columnas)
 # 
 
+
+# =============================================================================
+# FEATURE A — Envolvente de Momentos y Puntos de Corte
+# =============================================================================
+def plot_corte_acero(L_m, Mu_max_kNm, phi_Mn_prov_kNm, phi_Mn_continua_kNm,
+                     As_prov_cm2, As_continua_cm2, d_cm, factor_fuerza, unidad_mom, normasel):
+    import math as _math
+    x = np.linspace(0, L_m, 300)
+    Mu_x    = Mu_max_kNm  * 4 * (x/L_m) * (1 - x/L_m) * factor_fuerza
+    phi_max  = phi_Mn_prov_kNm     * factor_fuerza
+    phi_cont = phi_Mn_continua_kNm * factor_fuerza
+    x_cut_left = x_cut_right = None
+    if phi_cont < phi_max * 0.999 and phi_max > 0:
+        ratio = phi_cont / phi_max
+        if 0 < ratio < 1:
+            disc = max(0.0, 1.0 - ratio)
+            ext  = d_cm / 100
+            x_cut_left  = max(0.0,   L_m * (1 - _math.sqrt(disc)) / 2 - ext)
+            x_cut_right = min(L_m, L_m - L_m * (1 - _math.sqrt(disc)) / 2 + ext)
+    fig, ax = plt.subplots(figsize=(9, 4.5))
+    fig.patch.set_facecolor('#1e1e2e'); ax.set_facecolor('#14142a')
+    ax.tick_params(colors='#cdd6f4', labelsize=8)
+    for sp in ['top','right']: ax.spines[sp].set_visible(False)
+    for sp in ['bottom','left']: ax.spines[sp].set_color('#555')
+    ax.xaxis.label.set_color('#cdd6f4'); ax.yaxis.label.set_color('#cdd6f4')
+    ax.fill_between(x, 0, Mu_x, alpha=0.18, color='#60a5fa')
+    ax.plot(x, Mu_x, color='#60a5fa', lw=2.2,
+            label=f'Envolvente $M_u$ (max={Mu_max_kNm*factor_fuerza:.2f} {unidad_mom})')
+    ax.axhline(phi_max,  color='#4ade80', lw=2.0, linestyle='--',
+               label=f'$\\phi M_n$ total = {phi_max:.2f} {unidad_mom}  (As={As_prov_cm2:.2f} cm²)')
+    if phi_cont < phi_max * 0.999:
+        ax.axhline(phi_cont, color='#facc15', lw=1.8, linestyle=':',
+                   label=f'$\\phi M_n$ continua = {phi_cont:.2f} {unidad_mom}  (As={As_continua_cm2:.2f} cm²)')
+    if x_cut_left is not None:
+        xs_e = [0, x_cut_left, x_cut_left, x_cut_right, x_cut_right, L_m]
+        ys_e = [phi_cont, phi_cont, phi_max, phi_max, phi_cont, phi_cont]
+        ax.step(xs_e, ys_e, where='post', color='#f97316', lw=2.5, label='Capacidad escalonada $\\phi M_n(x)$')
+        for xc, lbl in [(x_cut_left, f'Corte izq\n{x_cut_left*100:.1f} cm'),
+                         (x_cut_right, f'Corte der\n{x_cut_right*100:.1f} cm')]:
+            ax.axvline(xc, color='#f97316', lw=1.2, linestyle='--', alpha=0.7)
+            ax.annotate(lbl, xy=(xc, phi_cont * 0.45), color='#f97316', fontsize=7.5,
+                        ha='center', va='center',
+                        bbox=dict(boxstyle='round,pad=0.25', fc='#1e1e2e', ec='#f97316', lw=0.8))
+    ax.axhline(0, color='#555', lw=0.8); ax.axvline(0, color='#555', lw=0.8); ax.axvline(L_m, color='#555', lw=0.8)
+    ax.set_xlabel('Longitud de la viga (m)', fontsize=9); ax.set_ylabel(f'Momento [{unidad_mom}]', fontsize=9)
+    ax.set_title(f'Envolvente de Momentos y Puntos de Corte — {normasel}', color='white', fontsize=10, fontweight='bold')
+    ax.legend(loc='upper center', fontsize=7.5, framealpha=0.3, facecolor='#1e1e2e',
+              edgecolor='#555', labelcolor='#cdd6f4', ncol=2)
+    ax.set_xlim(0, L_m); ax.set_ylim(bottom=-phi_max * 0.08)
+    ax.grid(True, linestyle=':', alpha=0.25, color='#888'); fig.tight_layout()
+    return fig, x_cut_left, x_cut_right
+
+
+# =============================================================================
+# FEATURE B — Cortante por Capacidad Ve sísmico (DMO / DES)
+# =============================================================================
+def calc_Ve_sismico_fig(As_sup_izq, As_inf_izq, As_sup_der, As_inf_der,
+                         b_cm, d_cm, L_m, wu_kNm, fc_mpa, fy_mpa,
+                         factor_fuerza, unidad_fuerza, normasel):
+    def mpr(As_cm2):
+        b_mm = b_cm*10; d_mm = d_cm*10
+        a = As_cm2*100*(1.25*fy_mpa)/(0.85*fc_mpa*b_mm)
+        return As_cm2*100*(1.25*fy_mpa)*(d_mm - a/2)/1e6
+    Mpr_i_neg = mpr(As_sup_izq); Mpr_i_pos = mpr(As_inf_izq)
+    Mpr_d_neg = mpr(As_sup_der); Mpr_d_pos = mpr(As_inf_der)
+    V_grav = wu_kNm * L_m / 2
+    Ve1 = (Mpr_i_neg + Mpr_d_pos) / L_m + V_grav
+    Ve2 = (Mpr_i_pos + Mpr_d_neg) / L_m - V_grav
+    Ve_max = max(abs(Ve1), abs(Ve2))
+    x = np.linspace(0, L_m, 200)
+    V_sism = Ve_max - 2*Ve_max*x/L_m
+    V_grav_x = V_grav - wu_kNm*x
+    fig, ax = plt.subplots(figsize=(9, 3.5))
+    fig.patch.set_facecolor('#1e1e2e'); ax.set_facecolor('#14142a')
+    ax.tick_params(colors='#cdd6f4', labelsize=8)
+    for sp in ['top','right']: ax.spines[sp].set_visible(False)
+    for sp in ['bottom','left']: ax.spines[sp].set_color('#555')
+    ax.xaxis.label.set_color('#cdd6f4'); ax.yaxis.label.set_color('#cdd6f4')
+    Vs = V_sism * factor_fuerza
+    ax.fill_between(x, 0, Vs, where=Vs>=0, alpha=0.22, color='#f87171', interpolate=True)
+    ax.fill_between(x, 0, Vs, where=Vs<0,  alpha=0.22, color='#60a5fa', interpolate=True)
+    ax.plot(x, Vs, color='#f87171', lw=2.2,
+            label=f'$V_e$ capacidad sísmica (1.25$f_y$, $\\phi$=1) = ±{Ve_max*factor_fuerza:.2f} {unidad_fuerza}')
+    ax.plot(x, V_grav_x*factor_fuerza, color='#a3e635', lw=1.4, linestyle='--',
+            label=f'$V_u$ isostático gravitacional = {V_grav*factor_fuerza:.2f} {unidad_fuerza}')
+    ax.axhline(0, color='#555', lw=0.8); ax.axvline(0, color='#555', lw=0.8); ax.axvline(L_m, color='#555', lw=0.8)
+    ax.set_xlabel('Longitud de la viga (m)', fontsize=9); ax.set_ylabel(f'Cortante [{unidad_fuerza}]', fontsize=9)
+    ax.set_title(f'Diagrama Cortante por Capacidad $V_e$ — {normasel}', color='white', fontsize=10, fontweight='bold')
+    ax.legend(fontsize=7.5, framealpha=0.3, facecolor='#1e1e2e', edgecolor='#555', labelcolor='#cdd6f4')
+    ax.set_xlim(0, L_m); ax.grid(True, linestyle=':', alpha=0.25, color='#888'); fig.tight_layout()
+    return {'Ve_max': Ve_max, 'V_grav': V_grav,
+            'Mpr_i_neg': Mpr_i_neg, 'Mpr_i_pos': Mpr_i_pos,
+            'Mpr_d_neg': Mpr_d_neg, 'Mpr_d_pos': Mpr_d_pos, 'fig': fig}
+
+
+# =============================================================================
+# FEATURE C — Verificación de Ancho de Grieta (servicio) ACI 318 §24.3.2
+# =============================================================================
+def verif_grieta(Mu_serv_kNm, As_prov_cm2, b_cm, h_cm, d_cm, cc_cm, fy_mpa, Es_mpa,
+                 factor_fuerza, unidad_mom, normasel):
+    import math as _math
+    d_mm = d_cm*10; cc_mm = cc_cm*10; As_mm2 = As_prov_cm2*100
+    if As_mm2 <= 0 or d_mm <= 0: return None
+    Mu_serv_Nmm = Mu_serv_kNm * 1e6
+    fs_serv = max(Mu_serv_Nmm / (0.9*As_mm2*d_mm), 1.0)
+    s_max1 = 380*(280/fs_serv) - 2.5*cc_mm
+    s_max2 = 300*(280/fs_serv)
+    s_max  = min(s_max1, s_max2)
+    n_bars_est = max(1, round(As_mm2 / (_math.pi*(12.7)**2/4)))
+    s_real = (b_cm*10 - 2*cc_mm - 2*9.5) / max(n_bars_est-1, 1)
+    return {'fs_serv': fs_serv, 's_max': s_max, 's_real': s_real,
+            'ok': s_real <= s_max, 'cc_mm': cc_mm}
+
 def get_supabase_rest_info():
     try:
         url = st.secrets["SUPABASE_URL"]
@@ -1218,7 +1331,7 @@ if modulo_sel == " Diseño a Flexión — Viga Rectangular":
             ok_flex    = phi_Mn_kNm >= Mu_vr_kN
             ok_rho_min = rho_prov >= rho_min
             ok_rho_max = rho_prov <= rho_max
-            tab_r, tab_s, tab_3d, tab_q = st.tabs([f"Resultados {''if (ok_flex and ok_rho_min and ok_rho_max) else '?'}"," Sección 2D"," Visualización 3D"," Cantidades"])
+            tab_r, tab_s, tab_env, tab_3d, tab_q = st.tabs([f"Resultados {''if (ok_flex and ok_rho_min and ok_rho_max) else '?'}"," Sección 2D"," 📈 Envolvente & Ve"," Visualización 3D"," Cantidades"])
             with tab_r:
                 st.markdown(f"**Factor de reducción φ = {phi_f}** (flexión) | Norma: `{code['ref']}`")
                 st.markdown("""**Verificación fundamental:** La resistencia a flexión provista **φMn** debe ser mayor o igual al momento último demandado **Mu**.
@@ -1350,6 +1463,64 @@ if modulo_sel == " Diseño a Flexión — Viga Rectangular":
                 _cap = f"{n_f1_vr} barras (fila 1) + {n_f2_vr} barras (fila 2) {bar_vr} | As={As_prov:.3f} cm² | d_eff={d_eff_mm/10:.2f} cm" if dos_filas_vr else f"{n_bars} varillas {bar_vr} | As={As_prov:.3f} cm²"
                 st.caption(_cap)
 
+            with tab_env:
+                st.subheader("📈 Envolvente de Momentos y Puntos de Corte")
+                n_cont_vr   = max(2, math.ceil(n_bars * 0.25))
+                As_cont_vr  = n_cont_vr * Ab_vr
+                a_cont      = As_cont_vr*100*fy/(0.85*fc*b_mm)
+                phi_Mn_cont_vr = phi_f * As_cont_vr*100*fy*(d_eff_mm - a_cont/2)/1e6
+                fig_env, xc_l, xc_r = plot_corte_acero(
+                    L_m=L_vr, Mu_max_kNm=Mu_vr_kN, phi_Mn_prov_kNm=phi_Mn_kNm,
+                    phi_Mn_continua_kNm=phi_Mn_cont_vr,
+                    As_prov_cm2=As_prov, As_continua_cm2=As_cont_vr,
+                    d_cm=d_eff_mm/10, factor_fuerza=factor_fuerza,
+                    unidad_mom=unidad_mom, normasel=normasel)
+                st.pyplot(fig_env); plt.close(fig_env)
+                if xc_l is not None:
+                    st.info(f"✂️ **Puntos de corte:** bastones a partir de **{xc_l*100:.1f} cm** (izq.) "
+                            f"y hasta **{xc_r*100:.1f} cm** (der.) — incluye extensión mínima d={d_eff_mm/10:.1f} cm. "
+                            f"Barras continuas: {n_cont_vr} barras ({As_cont_vr:.2f} cm²).")
+                st.markdown("---")
+                es_sism_vr = any(k in nivelsis.lower() for k in ['dmo','des','imf','smf','ga','gm','pe','pm','mrle','mrod'])
+                if es_sism_vr:
+                    st.subheader("⚡ Cortante por Capacidad $V_e$ (Sísmico)")
+                    cv1, cv2 = st.columns(2)
+                    with cv1:
+                        As_si_vr = st.number_input("As sup. izq. (cm²)", 0.5, 50.0, float(As_prov), 0.1, key="ve_si_vr")
+                        As_ii_vr = st.number_input("As inf. izq. (cm²)", 0.5, 50.0, float(round(As_prov*0.5,2)), 0.1, key="ve_ii_vr")
+                    with cv2:
+                        As_sd_vr = st.number_input("As sup. der. (cm²)", 0.5, 50.0, float(As_prov), 0.1, key="ve_sd_vr")
+                        As_id_vr = st.number_input("As inf. der. (cm²)", 0.5, 50.0, float(round(As_prov*0.5,2)), 0.1, key="ve_id_vr")
+                    wu_est = Mu_vr_kN * 2 / (L_vr**2) if L_vr > 0 else 0
+                    ve_res = calc_Ve_sismico_fig(As_si_vr, As_ii_vr, As_sd_vr, As_id_vr,
+                        b_vr, d_eff_mm/10, L_vr, wu_est, fc, fy, factor_fuerza, unidad_fuerza, normasel)
+                    st.pyplot(ve_res['fig']); plt.close(ve_res['fig'])
+                    c1v, c2v = st.columns(2)
+                    c1v.metric(f"Ve sísmico [{unidad_fuerza}]", f"{ve_res['Ve_max']*factor_fuerza:.2f}")
+                    c2v.metric(f"Vu isostático [{unidad_fuerza}]", f"{ve_res['V_grav']*factor_fuerza:.2f}")
+                    st.caption(f"Mpr_izq(−)={ve_res['Mpr_i_neg']*factor_fuerza:.2f} {unidad_mom} | "
+                               f"Mpr_der(−)={ve_res['Mpr_d_neg']*factor_fuerza:.2f} {unidad_mom} | {coderef}")
+                else:
+                    st.info("ℹ️ El cortante por capacidad Ve (1.25fy) aplica para niveles sísmicos DMO y DES. Active el nivel sísmico en el panel lateral.")
+                st.markdown("---")
+                st.subheader("🔍 Verificación Ancho de Grieta (Servicio)")
+                Ms_vr = st.number_input(f"Momento de servicio Ms [{unidad_mom}]",
+                    0.1, float(Mu_vr*2), float(round(Mu_vr*0.6,2)), 0.1, key="ms_vr")
+                cc_vr_gr = max(dp_vr - db_vr/20, 2.5)
+                gr = verif_grieta(Ms_vr/factor_fuerza, As_prov, b_vr, h_vr, d_eff_mm/10,
+                                  cc_vr_gr, fy, 200000, factor_fuerza, unidad_mom, normasel)
+                if gr:
+                    df_gr = pd.DataFrame({
+                        "Parámetro": ["Recubrimiento cc","fs servicio","s_max permitido (§24.3.2)","s_real entre barras","Verificación"],
+                        "Valor": [f"{gr['cc_mm']:.0f} mm", f"{gr['fs_serv']:.1f} MPa",
+                                  f"{gr['s_max']:.1f} mm", f"{gr['s_real']:.1f} mm",
+                                  "✅ CUMPLE" if gr['ok'] else "❌ NO CUMPLE — aumentar barras"]})
+                    st.dataframe(df_gr, use_container_width=True, hide_index=True)
+                    if not gr['ok']:
+                        st.warning(f"⚠️ s_real ({gr['s_real']:.1f} mm) > s_max ({gr['s_max']:.1f} mm). Aumente el número de barras o reduzca su separación.")
+                    else:
+                        st.success(f"✅ Separación OK: {gr['s_real']:.1f} mm ≤ {gr['s_max']:.1f} mm.")
+                st.caption(f"Ref: {coderef} — ACI 318-25 §24.3.2 / NSR-10 C.9.4.2")
             with tab_3d:
                 st.subheader("Visualización 3D de Viga Rectangular")
                 fig3d = go.Figure()
@@ -2474,7 +2645,9 @@ if modulo_sel == " Inercia Fisurada y Deflexiones en Vigas":
     Ig_mm4 = b_de_mm*(h_de*10)**3/12
     Icr_mm4 = b_de_mm*x_de**3/3 + n_de*As_de_mm2*(d_de_mm-x_de)**2
     yt_mm = h_de*10/2
-    fr = 0.62*lam*math.sqrt(fc)
+    # fr (módulo de rotura) varía por norma — NTC-EM México usa 0.60 (NTC-EM Cap. 2)
+    _fr_factor = 0.60 if "NTC-EM" in normasel else 0.62
+    fr = _fr_factor * lam * math.sqrt(fc)
     Mcr_Nmm = fr*Ig_mm4/yt_mm
     Mcr_kNm = Mcr_Nmm/1e6
 
@@ -2646,7 +2819,11 @@ if modulo_sel == " Diseño de Losa en Una Dirección":
         a_ls_mm = As_prov_ls*100*fy/(0.85*fc*b_ls_mm)
         phi_Mn_ls = phi_f*As_prov_ls*100*fy*(d_ls_mm-a_ls_mm/2)/1e6
         # rho_temp depends on fy (NSR-10 C.7.12.2)
-        rho_temp_ls = 0.0020 if fy <= 280 else (0.0018 * 420/fy if fy > 420 else 0.0018)
+        # NTC-EM México exige ρ_temp = 0.0020 fijo independientemente de fy (NTC-EM Cap. 4)
+        if "NTC-EM" in normasel:
+            rho_temp_ls = 0.0020
+        else:
+            rho_temp_ls = 0.0020 if fy <= 280 else (0.0018 * 420/fy if fy > 420 else 0.0018)
         As_temp = rho_temp_ls*b_ls*h_ls
         s_temp = min(Ab_ls/As_temp*100, 5*h_ls, 45)
 
@@ -3946,7 +4123,8 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                     ifcopenshell.api.run("material.assign_material", O, products=[st_bar], material=mat_steel)
 
                 # Pset_NSR10_Viga
-                pset = ifcopenshell.api.run("pset.add_pset", O, product=beam, name="Pset_NSR10_Viga")
+                _pset_name = f"Pset_{normasel.split('(')[0].strip().replace('-','_').replace(' ','_')}_Viga"
+                pset = ifcopenshell.api.run("pset.add_pset", O, product=beam, name=_pset_name)
                 ifcopenshell.api.run("pset.edit_pset", O, pset=pset, properties={
                     "Norma":                norma,
                     "Nivel_Sismico":        nivel_sis,
@@ -4040,7 +4218,7 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                 file_name=_ifc_fname_v,
                 mime="application/x-step",
                 key="ifc_viga_btn")
-            st.caption(f"IFC4: IfcBeam + {_nb_s+_nb_i} barras long. + {n_est_ifc} estribos 3D + Pset_NSR10_Viga")
+            st.caption(f"IFC4: IfcBeam + {_nb_s+_nb_i} barras long. + {n_est_ifc} estribos 3D + Pset_{normasel.split('(')[0].strip()}_Viga")
         except ImportError as e_imp_v:
             import sys as _sys_ifc_v
             import importlib

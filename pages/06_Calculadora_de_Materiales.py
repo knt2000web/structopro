@@ -132,6 +132,9 @@ _PERSIST_KEYS = [
   "dxf_elaboro", "dxf_reviso", "dxf_aprobo",
   "norma_sel", "idioma", "unidades", "kc_precios",
   "logo_bytes",
+  "presupuesto_wbs",
+  "catalogo_apus",
+  "kardex_insumos",
 ]
 
 PROJECTS_FILE = "konte_projects.json"
@@ -219,6 +222,103 @@ st.set_page_config(page_title="Calculadora de Materiales", layout="wide", page_i
 # 
 if "idioma" not in st.session_state: st.session_state["idioma"] = "Español"
 if "unidades" not in st.session_state: st.session_state["unidades"] = "Métrico"
+
+# ── INITIALIZATION DE LA BASE DE DATOS KARDEX (FASE 1 WBS) ──
+if "kardex_insumos" not in st.session_state:
+    # Pre-cargamos una base estática para 2026 (Colombia)
+    _default_kardex = [
+        {"ID": "MAT-CEM-01", "Categoría": "Materiales", "Insumo": "Cemento Gris Portland Tipo 1 (Bulto 50kg)", "Unidad": "bulto", "Precio": 32500, "Fuente": "Promedio 2026"},
+        {"ID": "MAT-CEM-02", "Categoría": "Materiales", "Insumo": "Cemento Blanco (Bulto 40kg)", "Unidad": "bulto", "Precio": 48000, "Fuente": "Promedio 2026"},
+        {"ID": "MAT-ARE-01", "Categoría": "Materiales", "Insumo": "Arena de Peña (Lavada)", "Unidad": "m3", "Precio": 65000, "Fuente": "Cantera"},
+        {"ID": "MAT-ARE-02", "Categoría": "Materiales", "Insumo": "Arena de Río o Concretera", "Unidad": "m3", "Precio": 85000, "Fuente": "Cantera"},
+        {"ID": "MAT-GRA-01", "Categoría": "Materiales", "Insumo": "Grava Triturada (1/2, 3/4)", "Unidad": "m3", "Precio": 95000, "Fuente": "Cantera"},
+        {"ID": "MAT-ACE-01", "Categoría": "Materiales", "Insumo": "Acero de Refuerzo FY=420MPa (G-60) Figurado", "Unidad": "kg", "Precio": 4200, "Fuente": "Siderúrgica"},
+        {"ID": "MAT-ACE-02", "Categoría": "Materiales", "Insumo": "Malla Electrosoldada (4mm, 15x15)", "Unidad": "m2", "Precio": 18500, "Fuente": "Siderúrgica"},
+        {"ID": "MAT-ACE-03", "Categoría": "Materiales", "Insumo": "Alambre Negro Calibre 18 (Amarres)", "Unidad": "kg", "Precio": 5200, "Fuente": "Ferretería"},
+        {"ID": "MAT-MAM-01", "Categoría": "Materiales", "Insumo": "Ladrillo Estructural Portante 12x20x30", "Unidad": "und", "Precio": 1800, "Fuente": "Ladrillera"},
+        {"ID": "MAT-MAM-02", "Categoría": "Materiales", "Insumo": "Bloque No. 5 (12x20x30) Arcilla Divisorio", "Unidad": "und", "Precio": 1600, "Fuente": "Ladrillera"},
+        {"ID": "MAT-AGU-01", "Categoría": "Materiales", "Insumo": "Agua de obra (Acueducto)", "Unidad": "lt", "Precio": 15, "Fuente": "Referencia"},
+        {"ID": "MAT-MAM-03", "Categoría": "Materiales", "Insumo": "Pegante Cerámico (Bulto 25kg)", "Unidad": "bulto", "Precio": 18000, "Fuente": "Ferretería"},
+        {"ID": "MAT-MAM-04", "Categoría": "Materiales", "Insumo": "Boquilla/Fragua (Bolsa 2kg)", "Unidad": "und", "Precio": 8500, "Fuente": "Ferretería"},
+        {"ID": "MAT-ACAB-01", "Categoría": "Materiales", "Insumo": "Estuco Plástico Interiores (Cuñete 30kg)", "Unidad": "und", "Precio": 55000, "Fuente": "Ferretería"},
+        {"ID": "MAT-ACAB-02", "Categoría": "Materiales", "Insumo": "Pintura Vinilo Tipo 1 (Galón)", "Unidad": "gal", "Precio": 65000, "Fuente": "Ferretería"},
+        {"ID": "MAT-CUB-01", "Categoría": "Materiales", "Insumo": "Teja Fibrocemento Perfil 7 #6", "Unidad": "und", "Precio": 38000, "Fuente": "Ferretería"},
+        
+        {"ID": "MO-OFI-01",  "Categoría": "Mano de Obra", "Insumo": "Cuadrilla 1 (1 Oficial + 1 Ayudante)", "Unidad": "día", "Precio": 195000, "Fuente": "Salarial+Prestac."},
+        {"ID": "MO-OFI-02",  "Categoría": "Mano de Obra", "Insumo": "Oficial de Construcción", "Unidad": "día", "Precio": 110000, "Fuente": "Salarial+Prestac."},
+        {"ID": "MO-AYU-01",  "Categoría": "Mano de Obra", "Insumo": "Ayudante Práctico", "Unidad": "día", "Precio": 85000, "Fuente": "Salarial+Prestac."},
+        {"ID": "MO-ESP-01",  "Categoría": "Mano de Obra", "Insumo": "Oficial Pintor / Estucador", "Unidad": "día", "Precio": 115000, "Fuente": "Destajo"},
+        
+        {"ID": "EQ-HERR-01",  "Categoría": "Equipos", "Insumo": "Herramienta Menor (Desgaste 5% MO)", "Unidad": "glb", "Precio": 1, "Fuente": "Estimado %"},
+        {"ID": "EQ-MAQ-01",  "Categoría": "Equipos", "Insumo": "Mezcladora Concreto 1 Bulto Gasolina", "Unidad": "día", "Precio": 65000, "Fuente": "Alquiler"},
+        {"ID": "EQ-MAQ-02",  "Categoría": "Equipos", "Insumo": "Vibrador de Concreto 1.5hp", "Unidad": "día", "Precio": 45000, "Fuente": "Alquiler"},
+        {"ID": "EQ-MAQ-03",  "Categoría": "Equipos", "Insumo": "Rana Compactadora", "Unidad": "día", "Precio": 70000, "Fuente": "Alquiler"},
+        
+        {"ID": "TRA-001",  "Categoría": "Transporte", "Insumo": "Acarreo Volqueta (Viaje 7m3) Urbano", "Unidad": "vje", "Precio": 180000, "Fuente": "Tarifa Local"},
+        {"ID": "TRA-002",  "Categoría": "Transporte", "Insumo": "Botada de Escombros Volqueta sencilla", "Unidad": "vje", "Precio": 150000, "Fuente": "Tarifa Local"}
+    ]
+
+    st.session_state["kardex_insumos"] = pd.DataFrame(_default_kardex)
+
+
+if "catalogo_apus" not in st.session_state:
+    # Catálogo inicial básico
+    st.session_state["catalogo_apus"] = {
+        "APU-EST-01": {
+            "Nombre": "Concreto F'c=3000 PSI P.Máx=3/4 Construcción (Hecho en Obra)",
+            "Unidad": "m3",
+            "Insumos": [
+                {"ID_Insumo": "MAT-CEM-01", "Cantidad": 7.0},
+                {"ID_Insumo": "MAT-ARE-02", "Cantidad": 0.55},
+                {"ID_Insumo": "MAT-GRA-01", "Cantidad": 0.84},
+                {"ID_Insumo": "MAT-AGU-01", "Cantidad": 180.0},
+                {"ID_Insumo": "MO-OFI-01",  "Cantidad": 0.25}, # 4.0 m3/dia corrida
+                {"ID_Insumo": "MO-AYU-01",  "Cantidad": 0.50}, 
+                {"ID_Insumo": "EQ-MAQ-01",  "Cantidad": 0.25},
+                {"ID_Insumo": "EQ-MAQ-02",  "Cantidad": 0.25}
+            ]
+        },
+        "APU-EST-02": {
+            "Nombre": "Suministro y Figuración de Acero de Refuerzo FY=420MPa (G-60)",
+            "Unidad": "kg",
+            "Insumos": [
+                {"ID_Insumo": "MAT-ACE-01", "Cantidad": 1.05}, # 5% desperdicio
+                {"ID_Insumo": "MAT-ACE-03", "Cantidad": 0.05}, # alambre amarres
+                {"ID_Insumo": "MO-OFI-01",  "Cantidad": 0.005} # Cuadrilla arma 200 kg/dia
+            ]
+        },
+        "APU-MAM-01": {
+            "Nombre": "Muro en Bloque No.5 Arcilla e=12cm Mortero 1:4 (Doble Cara a la vista)",
+            "Unidad": "m2",
+            "Insumos": [
+                {"ID_Insumo": "MAT-MAM-02", "Cantidad": 15.0}, # rend x m2
+                {"ID_Insumo": "MAT-CEM-01", "Cantidad": 0.15}, 
+                {"ID_Insumo": "MAT-ARE-01", "Cantidad": 0.03},
+                {"ID_Insumo": "MAT-AGU-01", "Cantidad": 10.0},
+                {"ID_Insumo": "MO-OFI-01",  "Cantidad": 0.07}  # 15 m2/dia
+            ]
+        },
+        "APU-PRE-01": {
+            "Nombre": "Excavación Manual en Conglomerado Pof <= 2m",
+            "Unidad": "m3",
+            "Insumos": [
+                {"ID_Insumo": "MO-AYU-01",  "Cantidad": 0.40}  # 2.5 m3/dia por ayudante
+            ]
+        },
+        "APU-ACA-01": {
+            "Nombre": "Pintura Vinil Tipo 1 a Dos Manos Interiores",
+            "Unidad": "m2",
+            "Insumos": [
+                {"ID_Insumo": "MAT-ACAB-02","Cantidad": 0.04}, # gal/m2
+                {"ID_Insumo": "MAT-ACAB-01","Cantidad": 0.50}, # und estuco req.
+                {"ID_Insumo": "MO-ESP-01",  "Cantidad": 0.02}  # 50m2/dia un pintor
+            ]
+        }
+    }
+
+if "presupuesto_wbs" not in st.session_state:
+    st.session_state["presupuesto_wbs"] = [] # Lista de capítulos e items
+
 _lang = st.session_state["idioma"]
 _unit = st.session_state["unidades"]
 
@@ -1320,41 +1420,254 @@ def build_dxf_planilla(rows, precios, R):
 
 # ── HELPER: EXCEL EXPORT (RESUMEN)
 def build_excel_resumen(rows, precios, R):
-  _emp = st.session_state.get("empresa","") or "________________"
-  _proy = st.session_state.get("proyecto","") or "________________"
-  _ing = st.session_state.get("ingeniero","") or "________________"
-  output = BytesIO()
-  with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-    wb = writer.book
-    hdr  = wb.add_format({"bold":True,"bg_color":"#1e3a5f","font_color":"white","border":1,"align":"center"})
-    cell = wb.add_format({"border":1})
-    num  = wb.add_format({"border":1,"num_format":"#,##0.00"})
-    money = wb.add_format({"border":1,"num_format":"#,##0.00","bg_color":"#e8f5e9"})
-    title_fmt = wb.add_format({"bold":True,"font_size":14,"font_color":"#1e3a5f"})
-    sub_fmt  = wb.add_format({"font_size":11,"font_color":"#444444"})
-    ws = wb.add_worksheet("Resumen Materiales")
-    ws.set_column("A:A",35); ws.set_column("B:B",18); ws.set_column("C:C",18); ws.set_column("D:D",20); ws.set_column("E:E",20)
-    ws.write("A1", f"Calculadora de Materiales — {_emp}", title_fmt)
-    ws.write("A2", f"Proyecto: {_proy} | Ingeniero: {_ing}", sub_fmt)
-    ws.write("A3", f"Norma: {R.get('_norma','---')} | País: {R.get('pais','---')} | Moneda: {R.get('moneda','---')}")
-    ws.write("A4", f"Generado: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    cols = ["Elemento / Material","Unidad","Cantidad",f"P. Unit. ({R.get('moneda','$')})",f"Total ({R.get('moneda','$')})"]
-    for ci,c in enumerate(cols): ws.write(6,ci,c,hdr)
-    total_costo=0
-    for ri,row in enumerate(rows, start=7):
-      ws.write(ri,0,row.get("elemento",""),cell)
-      ws.write(ri,1,row.get("unidad",""),cell)
-      ws.write_number(ri,2,float(row.get("cant",0)),num)
-      p_unit=float(row.get("precio",0)); subtotal=float(row.get("cant",0))*p_unit; total_costo+=subtotal
-      ws.write_number(ri,3,p_unit,money); ws.write_number(ri,4,subtotal,money)
-    last=len(rows)+7; bold_total=wb.add_format({"bold":True,"bg_color":"#1e3a5f","font_color":"white","num_format":"#,##0.00","border":1})
-    ws.write(last,3,"TOTAL",hdr); ws.write_number(last,4,total_costo,bold_total)
-    ws2=wb.add_worksheet("Precios Referencia")
-    ws2.write(0,0,"Material",hdr); ws2.write(0,1,"Precio",hdr); ws2.write(0,2,"Moneda",hdr)
-    for pi,(k,v) in enumerate(precios.items(),start=1):
-      ws2.write(pi,0,k,cell); ws2.write_number(pi,1,float(v),num); ws2.write(pi,2,R.get("moneda","$"),cell)
-  output.seek(0)
-  return output
+    """
+    Excel con 4 hojas:
+    1. Resumen por Capitulos (con AIU SECOP II)
+    2. Presupuesto WBS Desglosado
+    3. Sabana de APUs (insumos desplegados desde Kardex)
+    4. Precios de Referencia + Kardex completo
+    Claves reales: "Capitulo", "Items", "ID_APU", "Cantidad"
+    """
+    emp    = st.session_state.get("empresa",   "") or ""
+    proy   = st.session_state.get("proyecto",  "") or ""
+    ing    = st.session_state.get("ingeniero", "") or ""
+    wbs    = st.session_state.get("presupuesto_wbs", [])
+    apus   = st.session_state.get("catalogo_apus", {})
+    dfk    = st.session_state.get("kardex_insumos", None)
+    moneda = R.get("moneda", "$")
+
+    # AIU — guardados como porcentaje (10.0 = 10%), se dividen aqui
+    pct_A = float(st.session_state.get("pct_admin",  0) or 0) / 100.0
+    pct_I = float(st.session_state.get("pct_imprev", 0) or 0) / 100.0
+    pct_U = float(st.session_state.get("pct_util",   0) or 0) / 100.0
+    factor_aiu = 1.0 + pct_A + pct_I + pct_U
+
+    # Helper precio unitario de un APU recalculado desde Kardex
+    def costo_apu_xls(idapu):
+        if idapu not in apus:
+            return 0.0
+        total = 0.0
+        for ins in apus[idapu].get("Insumos", []):
+            precio_ins = 0.0
+            if dfk is not None:
+                r = dfk[dfk["ID"] == ins.get("ID_Insumo", "")]
+                if not r.empty:
+                    precio_ins = float(r.iloc[0]["Precio"])
+            total += float(ins.get("Cantidad", 0)) * precio_ins
+        return total
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        wb = writer.book
+
+        f_hdr  = wb.add_format({"bold": True, "bg_color": "#1E3A5F", "font_color": "white",
+                                 "border": 1, "align": "center", "valign": "vcenter", "font_size": 9})
+        f_cap  = wb.add_format({"bold": True, "bg_color": "#D6E4F0", "border": 1,
+                                 "align": "left", "valign": "vcenter", "font_size": 9})
+        f_item = wb.add_format({"border": 1, "align": "left", "font_size": 9})
+        f_num  = wb.add_format({"border": 1, "align": "right", "font_size": 9, "num_format": "#,##0.00"})
+        f_tot  = wb.add_format({"bold": True, "bg_color": "#1E3A5F", "font_color": "white",
+                                 "border": 1, "align": "right", "font_size": 9, "num_format": "#,##0.00"})
+        f_apu  = wb.add_format({"bold": True, "bg_color": "#E8F5E9", "border": 1, "align": "left", "font_size": 9})
+        f_sub  = wb.add_format({"italic": True, "bg_color": "#F5F5F5", "border": 1,
+                                 "font_color": "#555555", "align": "left", "font_size": 8})
+        f_ttl  = wb.add_format({"bold": True, "font_size": 13, "font_color": "#1E3A5F"})
+        f_note = wb.add_format({"italic": True, "font_size": 8, "font_color": "#888888"})
+        f_pct  = wb.add_format({"border": 1, "align": "center", "font_size": 9})
+        f_aiu  = wb.add_format({"bold": True, "bg_color": "#FFF9C4", "border": 1,
+                                 "align": "right", "font_size": 9, "num_format": "#,##0.00"})
+
+        # Pre-calcular totales por capitulo
+        cap_totals, gran_total = [], 0.0
+        for cap in wbs:
+            ct = 0.0
+            for it in cap.get("Items", []):
+                vu = float(it.get("_Vr_Unit", 0) or 0)
+                if vu == 0:
+                    vu = costo_apu_xls(it.get("ID_APU", ""))
+                ct += float(it.get("Cantidad", 0)) * vu
+            cap_totals.append(ct)
+            gran_total += ct
+
+        valor_aiu       = gran_total * (pct_A + pct_I + pct_U)
+        precio_ofertado = gran_total * factor_aiu
+
+        # ══════════════════════════════════════════════════════
+        # HOJA 1 — RESUMEN POR CAPITULOS
+        # ══════════════════════════════════════════════════════
+        ws1 = wb.add_worksheet("1. Resumen Capitulos")
+        ws1.set_column("B:B", 6); ws1.set_column("C:C", 44)
+        ws1.set_column("D:D", 20); ws1.set_column("E:E", 14)
+
+        ws1.merge_range("B1:E1", f"PRESUPUESTO — {proy}", f_ttl)
+        ws1.write("B2", f"Empresa: {emp}  |  Ingeniero: {ing}  |  Norma: {R.get('_norma',R.get('norma',''))}  |  Moneda: {moneda}", f_note)
+        ws1.write("B3", f"Generado: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}", f_note)
+
+        for ci, h in enumerate(["Item", "Capitulo", f"Costo Directo ({moneda})", "Participacion"], start=1):
+            ws1.write(4, ci, h, f_hdr)
+
+        for ri, (cap, ct) in enumerate(zip(wbs, cap_totals), start=5):
+            pct_cap = (ct / gran_total * 100) if gran_total else 0
+            ws1.write(ri, 1, f"{ri-4:02d}", f_item)
+            ws1.write(ri, 2, cap.get("Capitulo", f"Capitulo {ri-4}"), f_cap)
+            ws1.write_number(ri, 3, ct, f_num)
+            ws1.write(ri, 4, f"{pct_cap:.1f}%", f_pct)
+
+        lr = 5 + len(wbs)
+        ws1.merge_range(lr, 1, lr, 2, "COSTO DIRECTO TOTAL", f_tot)
+        ws1.write_number(lr, 3, gran_total, f_tot)
+        ws1.write(lr, 4, "100.0%", f_tot)
+
+        ws1.merge_range(lr+2, 1, lr+2, 2,
+            f"A.I.U. = Adm.{pct_A*100:.1f}% + Impr.{pct_I*100:.1f}% + Util.{pct_U*100:.1f}% = {(pct_A+pct_I+pct_U)*100:.1f}%",
+            f_item)
+        ws1.write_number(lr+2, 3, valor_aiu, f_aiu)
+        ws1.merge_range(lr+3, 1, lr+3, 2, "PRECIO OFERTADO TOTAL (C.D. x (1+A+I+U))", f_tot)
+        ws1.write_number(lr+3, 3, precio_ofertado, f_tot)
+        ws1.write(lr+5, 1, "* AIU calculado sobre Costo Directo Total — Estandar SECOP II Colombia", f_note)
+
+        # ══════════════════════════════════════════════════════
+        # HOJA 2 — PRESUPUESTO WBS DESGLOSADO
+        # ══════════════════════════════════════════════════════
+        ws2 = wb.add_worksheet("2. Presupuesto WBS")
+        ws2.set_column("B:B", 8); ws2.set_column("C:C", 46)
+        ws2.set_column("D:D", 10); ws2.set_column("E:E", 16); ws2.set_column("F:F", 18)
+
+        ws2.merge_range("B1:F1", f"PRESUPUESTO GENERAL — {proy}", f_ttl)
+        ws2.write("B2", f"Norma: {R.get('_norma',R.get('norma',''))}  |  Generado: {datetime.datetime.now().strftime('%d/%m/%Y')}", f_note)
+
+        for ci, h in enumerate(["Item", "Descripcion (APU)", "Unidad", f"Cantidad", f"P.U. ({moneda})", f"Total ({moneda})"], start=1):
+            ws2.write(3, ci, h, f_hdr)
+
+        row2 = 4
+        for ci, (cap, _) in enumerate(zip(wbs, cap_totals), start=1):
+            ws2.merge_range(row2, 1, row2, 5, f"{ci:02d}. {cap.get('Capitulo', '')}", f_cap)
+            row2 += 1
+            sub_cap = 0.0
+            for ji, it in enumerate(cap.get("Items", []), start=1):
+                idapu = it.get("ID_APU", "")
+                desc  = apus.get(idapu, {}).get("Nombre", idapu)
+                und   = apus.get(idapu, {}).get("Unidad", "und")
+                qty   = float(it.get("Cantidad", 0))
+                vu    = float(it.get("_Vr_Unit", 0) or 0)
+                if vu == 0:
+                    vu = costo_apu_xls(idapu)
+                subt = qty * vu
+                sub_cap += subt
+                ws2.write(row2, 1, f"{ci:02d}.{ji:02d}", f_item)
+                ws2.write(row2, 2, desc, f_item)
+                ws2.write(row2, 3, und, f_item)
+                ws2.write_number(row2, 4, qty, f_num)
+                ws2.write_number(row2, 5, vu, f_num)
+                # Total en columna G (indice 6, 0-based)
+                ws2.set_column("G:G", 18)
+                ws2.write_number(row2, 6, subt, f_num)
+                row2 += 1
+            ws2.write(row2, 5, f"SUBTOTAL CAP. {ci:02d}", f_cap)
+            ws2.write_number(row2, 6, sub_cap, f_tot)
+            row2 += 1
+
+        row2 += 1
+        ws2.write(row2,   5, "COSTO DIRECTO TOTAL", f_tot)
+        ws2.write_number(row2,   6, gran_total,      f_tot)
+        ws2.write(row2+1, 5, f"A.I.U. ({(pct_A+pct_I+pct_U)*100:.1f}%)", f_item)
+        ws2.write_number(row2+1, 6, valor_aiu,       f_aiu)
+        ws2.write(row2+2, 5, "PRECIO OFERTADO",      f_tot)
+        ws2.write_number(row2+2, 6, precio_ofertado, f_tot)
+
+        # ══════════════════════════════════════════════════════
+        # HOJA 3 — SABANA DE APUs
+        # ══════════════════════════════════════════════════════
+        ws3 = wb.add_worksheet("3. Sabana APUs")
+        ws3.set_column("B:B", 12); ws3.set_column("C:C", 44); ws3.set_column("D:D", 14)
+        ws3.set_column("E:E", 14); ws3.set_column("F:F", 18); ws3.set_column("G:G", 18); ws3.set_column("H:H", 10)
+
+        ws3.merge_range("B1:H1", "SABANA DE ANALISIS DE PRECIOS UNITARIOS", f_ttl)
+        ws3.write("B2", f"Proyecto: {proy}  |  Norma: {R.get('_norma',R.get('norma',''))}  |  Moneda: {moneda}", f_note)
+        row3 = 3
+
+        apus_en_uso = {it.get("ID_APU") for cap in wbs for it in cap.get("Items", []) if it.get("ID_APU")}
+        if not apus_en_uso:
+            apus_en_uso = set(apus.keys())
+
+        for apuid in apus_en_uso:
+            if apuid not in apus:
+                continue
+            apu = apus[apuid]
+            ws3.merge_range(row3, 1, row3, 7,
+                f"APU: {apu.get('Nombre','')}  |  Unidad: {apu.get('Unidad','')}  |  Codigo: {apuid}", f_apu)
+            row3 += 1
+            for ci, h in enumerate(["Cod. Insumo","Descripcion Insumo","Categoria","Unidad",
+                                      "Cantidad", f"Tarifa ({moneda})", f"Subtotal ({moneda})", "% APU"], start=1):
+                ws3.write(row3, ci, h, f_hdr)
+            row3 += 1
+
+            total_apu, detalle = 0.0, []
+            for ins in apu.get("Insumos", []):
+                iid  = ins.get("ID_Insumo", "")
+                cant = float(ins.get("Cantidad", 0))
+                nom, cat, und, prec = iid, "—", "und", 0.0
+                if dfk is not None:
+                    r = dfk[dfk["ID"] == iid]
+                    if not r.empty:
+                        nom  = r.iloc[0]["Insumo"]
+                        cat  = r.iloc[0].get("Categoria", r.iloc[0].get("Categoría", "—"))
+                        und  = r.iloc[0]["Unidad"]
+                        prec = float(r.iloc[0]["Precio"])
+                sub = cant * prec
+                total_apu += sub
+                detalle.append((iid, nom, cat, und, cant, prec, sub))
+
+            for (iid, nom, cat, und, cant, prec, sub) in detalle:
+                pct_ins = (sub / total_apu * 100) if total_apu else 0
+                ws3.write(row3, 1, iid, f_sub)
+                ws3.write(row3, 2, nom, f_item)
+                ws3.write(row3, 3, cat, f_sub)
+                ws3.write(row3, 4, und, f_item)
+                ws3.write_number(row3, 5, cant, f_num)
+                ws3.write_number(row3, 6, prec, f_num)
+                ws3.write_number(row3, 7, sub,  f_num)
+                ws3.write(row3, 8, f"{pct_ins:.1f}%", f_pct)
+                row3 += 1
+
+            ws3.write(row3, 6, "COSTO DIRECTO APU", f_cap)
+            ws3.write_number(row3, 7, total_apu, f_tot)
+            row3 += 2
+
+        # ══════════════════════════════════════════════════════
+        # HOJA 4 — PRECIOS DE REFERENCIA + KARDEX (la original)
+        # ══════════════════════════════════════════════════════
+        ws4 = wb.add_worksheet("4. Precios Referencia")
+        ws4.set_column("A:A", 30); ws4.set_column("B:B", 18); ws4.set_column("C:C", 12)
+
+        ws4.merge_range("A1:C1", f"Precios de Referencia — {R.get('pais','---')} — {moneda}", f_ttl)
+        ws4.write(2, 0, "Material", f_hdr)
+        ws4.write(2, 1, f"Precio ({moneda})", f_hdr)
+        ws4.write(2, 2, "Moneda", f_hdr)
+        for pi, (k, v) in enumerate(precios.items(), start=3):
+            try:
+                ws4.write(pi, 0, k); ws4.write_number(pi, 1, float(v), f_num); ws4.write(pi, 2, moneda)
+            except (TypeError, ValueError):
+                ws4.write(pi, 0, k); ws4.write(pi, 1, str(v)); ws4.write(pi, 2, moneda)
+
+        if dfk is not None and not dfk.empty:
+            r4k = 3 + len(precios) + 3
+            ws4.write(r4k, 0, "— KARDEX DE INSUMOS COMPLETO —", f_cap)
+            r4k += 1
+            for ci, col in enumerate(dfk.columns):
+                ws4.write(r4k, ci, col, f_hdr)
+            r4k += 1
+            for _, fila in dfk.iterrows():
+                for ci, val in enumerate(fila):
+                    try:
+                        ws4.write_number(r4k, ci, float(val), f_num)
+                    except (TypeError, ValueError):
+                        ws4.write(r4k, ci, str(val) if val is not None else "")
+                r4k += 1
+
+    output.seek(0)
+    return output
+
 
 # 
 # HELPER: EXCEL EXPORT (PRESUPUESTO)
@@ -1668,36 +1981,61 @@ if not _has_identity or not _has_rows:
 st.sidebar.markdown(f"## {_t('Configuración', 'Settings')}")
 
 # ── ROL DE USUARIO ────────────────────────────────────────────────────────────
-# admin: acceso total (desarrollo/revisión) — sin restricciones de exportación
-# pro:   acceso completo (cliente de pago)
-# free:  solo cálculos + Excel/CSV
-with st.sidebar.expander(f"{_t('Rol de Usuario', 'User Role')}", expanded=False):
-  _roles_disponibles = ["free", "pro", "admin"]
-  _rol_actual = st.session_state.get("user_role", "free")
-  _rol_idx    = _roles_disponibles.index(_rol_actual) if _rol_actual in _roles_disponibles else 0
-  _rol_nuevo  = st.radio(
-    _t("Selecciona tu rol:", "Select your role:"),
-    _roles_disponibles,
-    index=_rol_idx,
-    key="sid_rol_usuario",
-    help=(
-      "free: cálculos + Excel/CSV.\n"
-      "pro: todos los entregables (DOCX, PDF, DXF).\n"
-      "admin: acceso total sin restricciones — para desarrollo y revisión."
-    ),
-  )
-  if _rol_nuevo != _rol_actual:
-    st.session_state["user_role"] = _rol_nuevo
-    save_state()
-    st.rerun()
-  _color_rol = {"admin": "#1b5e20", "pro": "#0d47a1", "free": "#b71c1c"}
-  st.markdown(
-    f'<div style="background:{_color_rol.get(_rol_nuevo,"#333")};'
-    f'color:white;border-radius:6px;padding:6px 10px;font-size:12px;'
-    f'text-align:center;font-weight:600;margin-top:6px;">'
-    f'Rol activo: {_rol_nuevo.upper()}</div>',
+# Emails con privilegio de administrador permanente (no pueden ser cambiados por el UI)
+_ADMIN_EMAILS = {"civcesar@gmail.com"}
+
+_auth_email = ""
+try:
+  _auth_user = st.session_state.get("auth_user")
+  if _auth_user:
+    _auth_email = (getattr(_auth_user, "email", None) or "").lower().strip()
+except Exception:
+  _auth_email = ""
+
+_es_superadmin = _auth_email in _ADMIN_EMAILS
+
+if _es_superadmin:
+  # Forzar rol admin sin posibilidad de cambio
+  st.session_state["user_role"] = "admin"
+  _rol_nuevo = "admin"
+  st.sidebar.markdown(
+    '<div style="background:#1b5e20;color:white;border-radius:6px;padding:8px 12px;'
+    'font-size:12px;text-align:center;font-weight:700;margin-bottom:6px;'
+    'border:1px solid #4caf50;">'
+    '🔑 ADMINISTRADOR — Acceso total</div>',
     unsafe_allow_html=True,
   )
+else:
+  # admin: acceso total (desarrollo/revisión) — sin restricciones de exportación
+  # pro:   acceso completo (cliente de pago)
+  # free:  solo cálculos + Excel/CSV
+  with st.sidebar.expander(f"{_t('Rol de Usuario', 'User Role')}", expanded=False):
+    _roles_disponibles = ["free", "pro", "admin"]
+    _rol_actual = st.session_state.get("user_role", "free")
+    _rol_idx    = _roles_disponibles.index(_rol_actual) if _rol_actual in _roles_disponibles else 0
+    _rol_nuevo  = st.radio(
+      _t("Selecciona tu rol:", "Select your role:"),
+      _roles_disponibles,
+      index=_rol_idx,
+      key="sid_rol_usuario",
+      help=(
+        "free: cálculos + Excel/CSV.\n"
+        "pro: todos los entregables (DOCX, PDF, DXF).\n"
+        "admin: acceso total sin restricciones — para desarrollo y revisión."
+      ),
+    )
+    if _rol_nuevo != _rol_actual:
+      st.session_state["user_role"] = _rol_nuevo
+      save_state()
+      st.rerun()
+    _color_rol = {"admin": "#1b5e20", "pro": "#0d47a1", "free": "#b71c1c"}
+    st.markdown(
+      f'<div style="background:{_color_rol.get(_rol_nuevo,"#333")};'
+      f'color:white;border-radius:6px;padding:6px 10px;font-size:12px;'
+      f'text-align:center;font-weight:600;margin-top:6px;">'
+      f'Rol activo: {_rol_nuevo.upper()}</div>',
+      unsafe_allow_html=True,
+    )
 
 
 with st.sidebar.expander(f" {_t('Identidad del Proyecto','Project Identity')}", expanded=False):
@@ -2065,11 +2403,460 @@ div[data-testid="stTabs"] button[role="tab"] {
 </style>
 """, unsafe_allow_html=True)
 
-tabs=st.tabs([f"{R['concreto']}","Mampostería","Columna","Viga","Losa","Cimiento","Muro Contención","Techo","Pisos","Cielo Raso",f"{R['varilla']}",
-       "Pintura","Cubierta","Importar Excel","Salario Mínimo / Liq.","Configuración","Rendimientos MO","Presupuesto","Resumen y Exportar"])
+# ── TABS MAESTROS (ARQUITECTURA WBS) ──
+main_tabs = st.tabs([
+    "1. Presupuesto (WBS)", 
+    "2. Kardex de Insumos", 
+    "3. Gestor de APUs", 
+    "4. Cronograma Gantt", 
+    "5. Asistentes Cantidades", 
+    "6. Reportes y Exportación"
+])
+
+with main_tabs[4]: # 5. Asistentes Cantidades
+    calc_tabs = st.tabs([f"{R['concreto']}","Mampostería","Columna","Viga","Losa","Cimiento","Muro Contención","Techo","Pisos","Cielo Raso",f"{R['varilla']}",
+        "Pintura","Cubierta","Importar Excel","Salario Mínimo / Liq.","Configuración","Rendimientos MO","Anexo Cant.(Legacy)","Exportar(Legacy)"])
+
 
 # TAB 1 — CONCRETO 
-with tabs[0]:
+
+# ── UI DEL KARDEX DE INSUMOS ──
+with main_tabs[1]:
+    st.header("Kardex Universal de Insumos")
+    st.markdown("Base de datos de precios unitarios. Puedes editar manualente o afectar los valores. Próximamente: Integración con IA para lectura de lista de precios.")
+    
+    col_k1, col_k2 = st.columns([3, 1])
+    with col_k1:
+        # Categoría filtrada
+        filtro_cat = st.selectbox("Filtrar por Categoría", ["Todas", "Materiales", "Mano de Obra", "Equipos", "Transporte"])
+        df_k = st.session_state["kardex_insumos"]
+        
+        if filtro_cat != "Todas":
+            df_view = df_k[df_k["Categoría"] == filtro_cat].copy()
+        else:
+            df_view = df_k.copy()
+            
+        # Tabla Editable
+        edited_df = st.data_editor(
+            df_view, 
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "Categoría": st.column_config.SelectboxColumn("Categoría", options=["Materiales", "Mano de Obra", "Equipos", "Transporte"], required=True),
+                "Precio": st.column_config.NumberColumn("Tarifa Unit. ($)", format="$ %d")
+            },
+            key="kardex_editor"
+        )
+        
+        # Guardar cambios
+        if st.button("Guardar Cambios al Kardex", type="primary"):
+            # Update the original df with edited values
+            df_orig = st.session_state["kardex_insumos"]
+            # To simplify, we overwrite the whole category or DB if edited 
+            # (Note: robust saving logic will be expanded later)
+            st.session_state["kardex_insumos"] = edited_df
+            st.success("Kardex actualizado correctamente")
+            
+    with col_k2:
+        st.info("**Importar Lista de Precios (Excel)**\nPuedes cargar un archivo Excel con tus precios propios para actualizar masivamente el Kardex. Esta funcionalidad estara disponible en la siguiente version.")
+        st.button("Importar Precios desde Excel", disabled=True, help="Disponible en v2.0")
+
+# ── ESPACIOS PARA PRÓXIMAS FASES ──
+with main_tabs[0]:
+    st.header("Estructura de Desglose de Trabajo (WBS) - Presupuesto")
+    st.caption("Arma tu presupuesto agrupando Ítems por Capítulos.")
+    
+    # helper para recalculos
+    df_k = st.session_state.get("kardex_insumos")
+    cat_apus = st.session_state.get("catalogo_apus", {})
+    
+    def costo_apu_calc(id_apu):
+        if id_apu not in cat_apus: return 0.0
+        apu = cat_apus[id_apu]
+        total = 0.0
+        for i in apu["Insumos"]:
+            p = 0.0
+            if df_k is not None:
+                r = df_k[df_k["ID"] == i["ID_Insumo"]]
+                if not r.empty: p = float(r.iloc[0]["Precio"])
+            total += i["Cantidad"] * p
+        return total
+        
+    wbs = st.session_state.get("presupuesto_wbs", [])
+    
+    # ── AGREGAR CAPÍTULO ──
+    col_cap1, col_cap2 = st.columns([3, 1])
+    with col_cap1:
+        n_cap = st.text_input("Nombre del Nuevo Capítulo", placeholder="Ej. 1.0 Cimentación")
+    with col_cap2:
+        st.write("")
+        st.write("")
+        if st.button("Crear Capítulo"):
+            if n_cap:
+                st.session_state["presupuesto_wbs"].append({"Capitulo": n_cap, "Items": []})
+                st.rerun()
+
+    st.divider()
+    
+    # ── RENDERIZAR WBS ──
+    presupuesto_total = 0.0
+    
+    lista_apus = list(cat_apus.keys())
+    def get_apu_n(id_ap): return cat_apus[id_ap]["Nombre"] if id_ap in cat_apus else id_ap
+    
+    for c_idx, capitulo in enumerate(wbs):
+        # Calcular subtotal del cap
+        subtotal = 0.0
+        for itm in capitulo["Items"]:
+            vr_uni = costo_apu_calc(itm["ID_APU"])
+            itm["_Vr_Unit"] = vr_uni
+            subtotal += vr_uni * itm["Cantidad"]
+            
+        presupuesto_total += subtotal
+        
+        with st.expander(f"{capitulo['Capitulo']} — Subtotal: $ {subtotal:,.2f}", expanded=True):
+            # Botón eliminar capítulo completo (P-04)
+            _hd1, _hd2 = st.columns([6, 1])
+            with _hd2:
+                if st.button("Eliminar capitulo", key=f"del_cap_{c_idx}", type="secondary"):
+                    st.session_state["presupuesto_wbs"].pop(c_idx)
+                    save_state()
+                    st.rerun()
+                    
+            if not capitulo["Items"]:
+                st.info("No hay ítems en este capítulo.")
+            else:
+                # Mostrar en df
+                df_cap = pd.DataFrame(capitulo["Items"])
+                
+                edited_cap = st.data_editor(
+                    df_cap,
+                    num_rows="dynamic",
+                    use_container_width=True,
+                    key=f"cap_editor_{c_idx}",
+                    column_config={
+                        "ID_Item": "Item (Num)",
+                        "ID_APU": st.column_config.SelectboxColumn("APU Vinculado", options=lista_apus, required=True),
+                        "Cantidad": st.column_config.NumberColumn(format="%.2f"),
+                        "Predecesora": "Predec. (Gantt)",
+                        "_Vr_Unit": st.column_config.NumberColumn("Vr. Unit. ($)", disabled=True, format="$ %d")
+                    }
+                )
+                
+                _sc1, _sc2 = st.columns([2, 1])
+                with _sc1:
+                    if st.button(f"Guardar cambios {capitulo['Capitulo']}", key=f"btn_s_{c_idx}"):
+                        valid_items = edited_cap.to_dict('records')
+                        st.session_state["presupuesto_wbs"][c_idx]["Items"] = valid_items
+                        save_state()
+                        st.success("Guardado.")
+                        st.rerun()
+                    
+            st.markdown("---")
+            with st.form(f"frm_add_item_{c_idx}"):
+                st.markdown(f"**Añadir Ítem a {capitulo['Capitulo']}**")
+                cc1, cc2, cc3 = st.columns([1, 2, 1])
+                with cc1: n_it = st.text_input("Número Ítem (Ej 1.1)")
+                with cc2: sel_ap = st.selectbox("Seleccionar APU", lista_apus, format_func=get_apu_n)
+                with cc3: n_cant = st.number_input("Cantidad", min_value=0.01, value=1.0)
+                if st.form_submit_button("Añadir al Capítulo"):
+                    if n_it:
+                        st.session_state["presupuesto_wbs"][c_idx]["Items"].append({
+                            "ID_Item": n_it, "ID_APU": sel_ap, "Cantidad": n_cant, "Predecesora": ""
+                        })
+                        st.rerun()
+                        
+    # P-06: AIU sobre Costo Directo Total (estandar SECOP II Colombia)
+    st.divider()
+    _aiu_c1, _aiu_c2, _aiu_c3, _aiu_c4 = st.columns(4)
+    with _aiu_c1:
+        pct_A = st.number_input("Administracion (%)", 0.0, 30.0, 10.0, 0.5, key="pct_admin_wbs") / 100.0
+    with _aiu_c2:
+        pct_I = st.number_input("Imprevistos (%)",    0.0, 20.0,  5.0, 0.5, key="pct_imprev_wbs") / 100.0
+    with _aiu_c3:
+        pct_U = st.number_input("Utilidad (%)",       0.0, 20.0,  5.0, 0.5, key="pct_util_wbs")   / 100.0
+    with _aiu_c4:
+        st.metric("A.I.U. Total", f"{(pct_A+pct_I+pct_U)*100:.1f}%")
+        
+    valor_aiu       = presupuesto_total * (pct_A + pct_I + pct_U)
+    precio_ofertado = presupuesto_total * (1 + pct_A + pct_I + pct_U)
+    
+    _tot1, _tot2, _tot3 = st.columns(3)
+    with _tot1:
+        st.metric("COSTO DIRECTO TOTAL", f"$ {presupuesto_total:,.0f}")
+    with _tot2:
+        st.metric("A.I.U.", f"$ {valor_aiu:,.0f}")
+    with _tot3:
+        st.metric("PRECIO OFERTADO", f"$ {precio_ofertado:,.0f}")
+
+    st.session_state["pct_admin"]  = pct_A * 100
+    st.session_state["pct_imprev"] = pct_I * 100
+    st.session_state["pct_util"]   = pct_U * 100
+
+
+with main_tabs[2]:
+    st.header("Constructor de APUs (Análisis de Precios Unitarios)")
+    st.markdown("Arma tus recetas combinando insumos del Kardex y estimando tiempos (Rendimientos).")
+    
+    col_apu_lista, col_apu_editor = st.columns([1, 2])
+    
+    cat_apus = st.session_state.get("catalogo_apus", {})
+    df_k = st.session_state.get("kardex_insumos")
+    
+    # helper de precios
+    def get_precio_insumo(id_insumo):
+        if df_k is not None:
+            r = df_k[df_k["ID"] == id_insumo]
+            if not r.empty:
+                return float(r.iloc[0]["Precio"]), r.iloc[0]["Unidad"], r.iloc[0]["Insumo"], r.iloc[0]["Categoría"]
+        return 0.0, "und", "Desconocido", "Desconocido"
+
+    with col_apu_lista:
+        st.subheader("Catálogo de APUs")
+        apu_seleccionado = st.selectbox("Seleccionar APU para editar:", list(cat_apus.keys()), format_func=lambda x: f"{x} - {cat_apus[x]['Nombre']}")
+        
+        st.divider()
+        st.markdown("**Crear Nuevo APU**")
+        with st.form("form_nuevo_apu"):
+            n_nombre = st.text_input("Nombre de la Tarea")
+            n_und = st.selectbox("Unidad de Medida", ["m2", "m3", "ml", "kg", "und", "glb", "pto"])
+            btn_crear = st.form_submit_button("Añadir APU")
+            if btn_crear and n_nombre:
+                new_id = f"APU-{len(cat_apus)+1:03d}"
+                st.session_state["catalogo_apus"][new_id] = {"Nombre": n_nombre, "Unidad": n_und, "Insumos": []}
+                st.rerun()
+
+    with col_apu_editor:
+        if apu_seleccionado:
+            apu_data = cat_apus[apu_seleccionado]
+            st.subheader(f"Desglose: {apu_data['Nombre']}")
+            st.caption(f"Unidad de Medida base para este cálculo: 1 {apu_data['Unidad']}")
+            
+            # Tabla de Insumos Actuales
+            filas_tabla = []
+            costo_total = 0.0
+            
+            for item in apu_data["Insumos"]:
+                p_unit, _, desc, c_cat = get_precio_insumo(item["ID_Insumo"])
+                t_parcial = item["Cantidad"] * p_unit
+                costo_total += t_parcial
+                filas_tabla.append({
+                    "Categoría": c_cat,
+                    "Insumo": desc,
+                    "Cantidad": item["Cantidad"],
+                    "Vr. Unitario": p_unit,
+                    "Vr. Parcial": t_parcial,
+                    "ID_Insumo": item["ID_Insumo"]
+                })
+            
+            if filas_tabla:
+                df_editor = pd.DataFrame(filas_tabla)
+                st.dataframe(
+                    df_editor[["Categoría", "Insumo", "Cantidad", "Vr. Unitario", "Vr. Parcial"]], 
+                    use_container_width=True, hide_index=True,
+                    column_config={
+                        "Vr. Unitario": st.column_config.NumberColumn(format="$ %d"),
+                        "Vr. Parcial": st.column_config.NumberColumn(format="$ %d"),
+                        "Cantidad": st.column_config.NumberColumn(format="%.3f")
+                    }
+                )
+            else:
+                st.warning("Este APU está vacío. Agrega insumos abajo.")
+            
+            st.metric(f"Costo Directo Total por ({apu_data['Unidad']})", f"$ {costo_total:,.2f}")
+            
+            # Agregar Nuevo Insumo
+            st.divider()
+            st.markdown("**Agregar Insumo a este APU**")
+            with st.form(f"form_insumo_{apu_seleccionado}"):
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    lista_insumos = df_k["ID"].tolist() if df_k is not None else []
+                    def fmt_insumo(i_id):
+                        if df_k is not None:
+                            rz = df_k[df_k["ID"] == i_id]
+                            if not rz.empty:
+                                return f"{rz.iloc[0]['Insumo']} ({rz.iloc[0]['Unidad']})"
+                        return i_id
+                    sel_insumo = st.selectbox("Seleccionar Insumo del Kardex", lista_insumos, format_func=fmt_insumo)
+                with c2:
+                    sel_cant = st.number_input("Cantidad/Rendimiento", min_value=0.0001, value=1.0, format="%.4f")
+                
+                if st.form_submit_button("Vincular Insumo"):
+                    # Check if exists
+                    exist_idx = -1
+                    for i, ins in enumerate(st.session_state["catalogo_apus"][apu_seleccionado]["Insumos"]):
+                        if ins["ID_Insumo"] == sel_insumo:
+                            exist_idx = i
+                    if exist_idx >= 0:
+                        st.session_state["catalogo_apus"][apu_seleccionado]["Insumos"][exist_idx]["Cantidad"] += sel_cant
+                    else:
+                        st.session_state["catalogo_apus"][apu_seleccionado]["Insumos"].append({"ID_Insumo": sel_insumo, "Cantidad": sel_cant})
+                    st.rerun()
+
+with main_tabs[3]:
+    import plotly.express as px
+    import datetime
+    
+    st.header("Cronograma de Obra (Gantt)")
+    st.caption("Los tiempos se calculan desde los rendimientos de Mano de Obra del APU. Ajusta la fecha de inicio y el factor de cuadrilla.")
+    
+    wbs      = st.session_state.get("presupuesto_wbs", [])
+    cat_apus = st.session_state.get("catalogo_apus", {})
+    df_k     = st.session_state.get("kardex_insumos")
+    
+    # ── Controles de encabezado ──────────────────────────────────────
+    gc1, gc2, gc3 = st.columns([2, 2, 2])
+    with gc1:
+        fecha_inicio_sel = st.date_input("Fecha inicio del proyecto",
+                                          value=datetime.date.today(),
+                                          key="gantt_fecha_inicio")
+    with gc2:
+        cuadrilla = st.number_input("Factor cuadrilla (frentes simultaneos)",
+                                    min_value=1, max_value=10, value=1, step=1,
+                                    key="gantt_cuadrilla",
+                                    help="Divide la duracion de cada tarea por este valor (2 = 2 cuadrillas en paralelo)")
+    with gc3:
+        st.caption("Formato predecesoras: escribe el Numero Item del item del que depende (ej: 1.1)")
+        st.info("Las predecesoras se editan en el Tab WBS -> columna Predec.")
+    
+    st.divider()
+    
+    # ── 1. Extraer Tareas y Rendimientos ────────────────────────────
+    tareas = []
+    
+    def get_mo_days_per_unit(id_apu):
+        if id_apu not in cat_apus: return 1.0
+        apu = cat_apus[id_apu]
+        rend = 0.0
+        for i in apu.get("Insumos", []):
+            es_mo = False
+            if df_k is not None:
+                r = df_k[df_k["ID"] == i.get("ID_Insumo", "")]
+                if not r.empty:
+                    cat_val = r.iloc[0].get("Categoría", r.iloc[0].get("Categoria", ""))
+                    if cat_val == "Mano de Obra":
+                        es_mo = True
+            if es_mo:
+                rend += float(i.get("Cantidad", 0))
+        return rend if rend > 0 else 1.0
+    
+    flat_items = {}
+    
+    for cap in wbs:
+        for itm in cap.get("Items", []):
+            id_item = str(itm.get("ID_Item", "")).strip()
+            if not id_item: continue
+            rend_unit = get_mo_days_per_unit(itm.get("ID_APU", ""))
+            dur_dias  = max(1, math.ceil((rend_unit * float(itm.get("Cantidad", 1.0))) / max(1, cuadrilla)))
+            apu_name  = cat_apus.get(itm.get("ID_APU", ""), {}).get("Nombre", "Sin APU")
+            pred      = str(itm.get("Predecesora", "")).strip()
+            tarea = {
+                "Task"     : f"{id_item} — {apu_name[:25]}",
+                "ID"       : id_item,
+                "Capitulo" : cap["Capitulo"],
+                "Duration" : dur_dias,
+                "Predecesor": pred,
+                "Start"    : None,
+                "Finish"   : None
+            }
+            tareas.append(tarea)
+            flat_items[id_item] = tarea
+    
+    # ── 2. CPM: resolver fechas por dependencias (fecha_inicio_pry = date elegida) ──
+    fecha_inicio_pry = datetime.datetime.combine(fecha_inicio_sel, datetime.time())
+    
+    # Resolver dependencias
+    # iteramos hasta que todos tengan start date
+    pendientes = list(tareas)
+    resueltos = 0
+    max_iter = len(tareas) * 2
+    
+    while pendientes and max_iter > 0:
+        max_iter -= 1
+        t = pendientes.pop(0)
+        
+        # Tiene predecesor?
+        if not t["Predecesor"]:
+            t["Start"] = fecha_inicio_pry
+            t["Finish"] = t["Start"] + datetime.timedelta(days=t["Duration"])
+            resueltos += 1
+            continue
+            
+        # Depende de alguien?
+        p_id = t["Predecesor"]
+        if p_id in flat_items and flat_items[p_id]["Finish"] is not None:
+            # predecesor resuelto
+            t["Start"] = flat_items[p_id]["Finish"]
+            t["Finish"] = t["Start"] + datetime.timedelta(days=t["Duration"])
+            resueltos += 1
+        else:
+            # predecesor no resuelto aún, mandar al final de la cola
+            pendientes.append(t)
+            
+    # Asignar fallback a los imposibles (circular ref)
+    for t in pendientes:
+        t["Start"] = fecha_inicio_pry
+        t["Finish"] = t["Start"] + datetime.timedelta(days=t["Duration"])
+        
+    # ── 3. Graficar ──────────────────────────────────────────────────
+    if not tareas:
+        st.info("Anade items al Presupuesto WBS para ver el Cronograma.")
+    else:
+        df_gantt = pd.DataFrame(tareas)
+        df_gantt = df_gantt.sort_values(by=["Start", "ID"], ascending=[True, True])
+        
+        fig = px.timeline(
+            df_gantt,
+            x_start="Start",
+            x_end="Finish",
+            y="Task",
+            color="Capitulo",
+            title=f"Cronograma de Ejecucion — Inicio: {fecha_inicio_sel.strftime('%d/%m/%Y')} | Factor cuadrilla: x{cuadrilla}",
+            template="plotly_dark",
+            height=max(400, len(tareas) * 32 + 120)
+        )
+        fig.update_yaxes(autorange="reversed")
+        fig.update_layout(
+            font=dict(family="Outfit, sans-serif", size=12),
+            xaxis_title="Fechas",
+            yaxis_title="Items del WBS",
+            margin=dict(l=20, r=20, t=60, b=20)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Tabla resumen de duraciones
+        with st.expander("Ver tabla de duraciones calculadas"):
+            df_tabla = df_gantt[["Capitulo", "ID", "Task", "Duration", "Predecesor", "Start", "Finish"]].copy()
+            df_tabla["Inicio"]     = df_tabla["Start"].apply(lambda d: d.strftime("%d/%m/%Y") if d else "—")
+            df_tabla["Termina"]    = df_tabla["Finish"].apply(lambda d: d.strftime("%d/%m/%Y") if d else "—")
+            df_tabla["Duracion dias"] = df_tabla["Duration"]
+            st.dataframe(df_tabla[["Capitulo", "ID", "Task", "Duracion dias", "Predecesor", "Inicio", "Termina"]],
+                         use_container_width=True)
+            
+            dur_total = (df_gantt["Finish"].max() - fecha_inicio_pry).days if not df_gantt.empty else 0
+            st.metric("Duracion total del proyecto", f"{dur_total} dias calendario")
+        
+        col_dl1, col_dl2 = st.columns([1, 3])
+        with col_dl1:
+            if st.button("Descargar Render (PDF)", type="primary"):
+                try:
+                    import kaleido
+                    img_bytes = fig.to_image(format="pdf", width=1280, height=720, scale=2)
+                    st.download_button(
+                        label="Guardar Gantt.pdf",
+                        data=img_bytes,
+                        file_name="Cronograma_Gantt.pdf",
+                        mime="application/pdf"
+                    )
+                except Exception as e:
+                    st.error("Instala kaleido para exportar ($ pip install -U kaleido)")
+
+with main_tabs[5]:
+    st.title(" Reportes y Documentos")
+    st.info("Exportación de presupuestos a Excel y PDF.")
+
+with calc_tabs[0]:
   st.subheader(f"Calculadora de {R['concreto']}")
   st.caption(f"Dosificaciones CM-V3.0 | Norma: {norma_sel}")
   geo_col, elem_col = st.columns([2, 3])
@@ -2245,7 +3032,38 @@ with tabs[0]:
  Los precios se pueden ajustar manualmente en <b> Precios de Materiales</b> (panel izquierdo).
 </div>
 """, unsafe_allow_html=True)
-  if st.button(f"Agregar {elemento_conc} al Resumen", key="kc_add_conc", type="primary"):
+  st.markdown("---")
+  st.markdown("#### 🔗 Transferir Cantidad al Presupuesto WBS")
+  st.caption(f"Volumen a exportar (Neto + Desperdicio): **{vol_t:.2f} m³**")
+  hook_c1, hook_c2, hook_c3 = st.columns([2, 2, 1])
+  
+  _wbs_list = st.session_state.get("presupuesto_wbs", [])
+  lista_caps = [c["Capitulo"] for c in _wbs_list]
+  _apus_dict = st.session_state.get("catalogo_apus", {})
+  
+  with hook_c1:
+      dest_cap = st.selectbox("1. Capítulo Destino", lista_caps) if lista_caps else st.info("Crea un capítulo primero en el Tab 1")
+  with hook_c2:
+      dest_apu = st.selectbox("2. APU (Receta)", list(_apus_dict.keys()), format_func=lambda x: _apus_dict[x]["Nombre"]) if _apus_dict else None
+  with hook_c3:
+      st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+      btn_wbs = st.button("📤 Enviar", type="primary", key="btn_wbs_concreto_v1")
+      
+  if btn_wbs and dest_cap and dest_apu:
+      for idx, cap in enumerate(_wbs_list):
+          if cap["Capitulo"] == dest_cap:
+              num_id = f"00{len(cap['Items'])+1}"
+              st.session_state["presupuesto_wbs"][idx]["Items"].append({
+                  "ID_Item": num_id,
+                  "ID_APU": dest_apu,
+                  "Cantidad": float(vol_t),
+                  "Predecesora": ""
+              })
+              st.success(f"¡Volumen ({vol_t:.2f} m3) transferido al capítulo '{dest_cap}' usando {dest_apu}!")
+              break
+
+  st.markdown("#### (Legacy) Agregar a lista plana")
+  if st.button(f"Agregar {elemento_conc} al Resumen Rápido", key="kc_add_conc"):
     label = desc_elem if desc_elem else elemento_conc
     st.session_state.kc_rows.extend([
       {"elemento": f"{label} — {R['cemento']}", "unidad": "bultos", "cant": round(bolsas, 0), "precio": p["cemento"]},
@@ -2257,7 +3075,7 @@ with tabs[0]:
     st.success(f" {label} — {bolsas} bolsas | {arena_c:.2f}m³ arena | {grava_c:.2f}m³ grava | {agua_c:.0f} lt")
 
 # TAB 2 — PARED / MAMPOSTERÍA (7 modos) 
-with tabs[1]:
+with calc_tabs[1]:
   st.subheader("Calculadora de Pared")
   st.caption(f"CM-V3.0 | 7 tipos | {norma_sel}")
 
@@ -2851,7 +3669,7 @@ with tabs[1]:
 
 
 # TAB 3 — COLUMNA (7 secciones CM-V3.0) 
-with tabs[2]:
+with calc_tabs[2]:
   st.subheader("Calculadora de Columna")
   st.caption(f"CM-V3.0 | 7 tipos de sección | {norma_sel}")
 
@@ -3184,7 +4002,7 @@ with tabs[2]:
 
 
 # TAB 4 — VIGA (4 secciones CM-V3.0) 
-with tabs[3]:
+with calc_tabs[3]:
   st.subheader("Calculadora de Viga")
   st.caption(f"CM-V3.0 | 4 tipos | Acero +/- | {norma_sel}")
 
@@ -3457,7 +4275,7 @@ with tabs[3]:
 
 
 # TAB 5 — LOSA (CM-V3.0) 
-with tabs[4]:
+with calc_tabs[4]:
   st.subheader("Calculadora de Losa")
   st.caption(f"CM-V3.0 | Maciza · Nervada · Ilimitado | {norma_sel}")
 
@@ -3804,7 +4622,7 @@ with tabs[4]:
 
 
 # TAB 6 — CIMIENTO (CM-V3.0 · 11 modos) 
-with tabs[5]:
+with calc_tabs[5]:
   st.subheader("Calculadora de Cimiento")
   st.caption(f"CM-V3.0 | 11 modos | {norma_sel}")
 
@@ -4209,7 +5027,7 @@ with tabs[5]:
 
 
 # TAB 7 — MURO DE CONTENCIÓN (CM-V3.0 · 11 modos) 
-with tabs[6]:
+with calc_tabs[6]:
   st.subheader("Calculadora de Muro de Contención")
   st.caption(f"CM-V3.0 | Ciclópeo (6) + Estructural (4) | {norma_sel}")
 
@@ -4489,7 +5307,7 @@ with tabs[6]:
 
 
 # TAB 14 — SALARIO MÍNIMO Y LIQUIDACIÓN 
-with tabs[14]:
+with calc_tabs[14]:
   sal = SALARIOS_MIN.get(pais)
   if sal:
     st.subheader(f"Salario Mínimo y Liquidación Laboral — {pais}")
@@ -4603,7 +5421,7 @@ with tabs[14]:
       st.dataframe(pd.DataFrame(filas_h).set_index("Año"), use_container_width=True)
 
 # TAB 16 — CONFIGURACIÓN (13 subtabs) 
-with tabs[15]:
+with calc_tabs[15]:
   st.subheader(" Configuración del Sistema")
   st.caption(f"Personalice dosificaciones, materiales y costos | {norma_sel} | {moneda}")
 
@@ -5000,7 +5818,7 @@ with tabs[15]:
 
 # TAB RESUMEN — TECHO (CM-V3.0 · 7 modos) 
 
-with tabs[7]:
+with calc_tabs[7]:
   st.subheader("Calculadora de Techo")
   st.caption(f"CM-V3.0 | Tejas (1A/2A/4A/Área) + Láminas (1/2/3 Filas) | {norma_sel}")
 
@@ -5113,7 +5931,7 @@ with tabs[7]:
 
 
 # TAB 9 — PISOS (CM-V3.0 · 6 modos) 
-with tabs[8]:
+with calc_tabs[8]:
   st.subheader("Calculadora de Pisos")
   st.caption(f"CM-V3.0 | Cerámica · Porcelanato · Zócalo | {norma_sel} | {moneda}")
 
@@ -5354,7 +6172,7 @@ with tabs[8]:
 
 
 # TAB 10 — CIELO RASO (CM-V3.0 · Panel Yeso) 
-with tabs[9]:
+with calc_tabs[9]:
   st.subheader("Calculadora de Cielo Raso")
   st.caption(f"CM-V3.0 | Panel Yeso / Drywall | {norma_sel} | {moneda}")
 
@@ -5515,7 +6333,7 @@ with tabs[9]:
 
 
 # TAB 3 — VARILLAS 
-with tabs[10]:
+with calc_tabs[10]:
   st.subheader(f"Calculadora de {R['varilla']}"); st.caption(f"Base de datos CM-V3.0 | {norma_sel}")
   v1,v2,v3,v4=st.columns(4)
   with v1:
@@ -5559,7 +6377,7 @@ with tabs[10]:
     st.success(f" {kg_total:.2f} kg de {var_sel} agregados")
 
 # TAB 4 — PINTURA 
-with tabs[11]:
+with calc_tabs[11]:
   st.subheader(f" {_t('Calculadora de', 'Calculator for')} {R['pintura']}")
   p1,p2,p3=st.columns(3)
   with p1:
@@ -5623,7 +6441,7 @@ with tabs[11]:
 
 
 # TAB 6 — CUBIERTA 
-with tabs[12]:
+with calc_tabs[12]:
   st.subheader(f"Calculadora de {R['cubierta']}")
   CUBIERTA_TIPOS={"Lámina ZincAlum (0.80m útil)":{"ancho_util":0.80,"tipo":"lamina"},"Lámina Galvanizada (0.80m útil)":{"ancho_util":0.80,"tipo":"lamina"},
           "Teja española (5 und/m²)":{"und_m2":5,"tipo":"teja"},"Teja plana (6 und/m²)":{"und_m2":6,"tipo":"teja"},"Teja ondulada (7 und/m²)":{"und_m2":7,"tipo":"teja"}}
@@ -5660,7 +6478,7 @@ with tabs[12]:
       st.session_state.kc_rows.append({"elemento":f"Cubierta — {cub_tipo}","unidad":"und","cant":und_cub,"precio":p.get("teja",p["ceramica"]*0.3)}); st.success(f" {und_cub} tejas agregadas")
 
 # TAB 7 — IMPORTAR EXCEL 
-with tabs[13]:
+with calc_tabs[13]:
   st.subheader("Importar desde Excel")
   template_rows=[
     {"Elemento":"Columna C1","Tipo":"Concreto","Volumen_m3":0.5,"Area_m2":"","Longitud_m":"","fc_MPa":21,"Dosificacion":"1:2:4"},
@@ -5696,7 +6514,7 @@ with tabs[13]:
 # TAB RESUMEN — RESUMEN Y EXPORTAR 
 
 # TAB 16 — RENDIMIENTOS MO 
-with tabs[16]:
+with calc_tabs[16]:
   st.subheader(" Factor de Rendimiento (Mano de Obra)")
   st.caption("Consulte tiempos requeridos (días) según volumen de obra, basados en 'Rendimientos.xlsx'.")
   search_rend = st.text_input("Buscar actividad:")
@@ -5724,7 +6542,7 @@ with tabs[16]:
     st.success(f"**Resultado:** Para {qty_val:,.2f} unidades, se requieren **{dias_req:,.2f} días** (Rendimiento: {factor} {ud})")
 
 # TAB 17 — PRESUPUESTO 
-with tabs[17]:
+with calc_tabs[17]:
   st.subheader("Generador de Presupuestos APU")
   st.caption("Presupuesto preconfigurado con precios unitarios, mano de obra, IVA y AIU según la región seleccionada.")
 
@@ -5877,7 +6695,7 @@ with tabs[17]:
   )
 
 # TAB 18 — RESUMEN Y EXPORTAR 
-with tabs[18]:
+with calc_tabs[18]:
   st.subheader("Resumen de Materiales y Exportación")
   if not st.session_state.kc_rows:
     st.info("Agrega materiales desde cualquier tab de cálculo y aparecerán aquí.")

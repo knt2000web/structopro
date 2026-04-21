@@ -58,6 +58,116 @@ def _t(es, en):
 # 
 import requests
 
+
+# =============================================================================
+# FEATURE D — Tabla de combinaciones de carga (Diagrama P-M multi-punto)
+# =============================================================================
+def parse_combo_table(df_combos, factor_fuerza):
+    puntos = []
+    for i, row in df_combos.iterrows():
+        try:
+            pu  = float(row.get('Pu',  row.get('pu',  0))) / factor_fuerza
+            mux = float(row.get('Mux', row.get('mux', 0))) / factor_fuerza
+            muy = float(row.get('Muy', row.get('muy', 0))) / factor_fuerza
+            lbl = str(row.get('Combinacion', row.get('combo', f'C{i+1}')))
+            puntos.append((pu, mux, muy, lbl))
+        except Exception:
+            pass
+    return puntos
+
+
+def plot_pm_combos(cap_x, Pu_single, Mux_single, puntos_combo,
+                   factor_fuerza, unidad_fuerza, unidad_mom):
+    COLORS = ['#f87171','#fb923c','#facc15','#4ade80','#34d399',
+              '#60a5fa','#a78bfa','#f472b6','#e879f9','#94a3b8']
+    fig, ax = plt.subplots(figsize=(7, 8))
+    fig.patch.set_facecolor('#1e1e2e'); ax.set_facecolor('#14142a')
+    ax.tick_params(colors='#cdd6f4', labelsize=8)
+    for sp in ['top','right']: ax.spines[sp].set_visible(False)
+    for sp in ['bottom','left']: ax.spines[sp].set_color('#555')
+    ax.xaxis.label.set_color('#cdd6f4'); ax.yaxis.label.set_color('#cdd6f4')
+    Mn_c = [v*factor_fuerza for v in cap_x['phi_Mn']]
+    Pn_c = [v*factor_fuerza for v in cap_x['phi_Pn']]
+    ax.plot(Mn_c, Pn_c, color='#60a5fa', lw=2.5, label='Diagrama \u03c6P-\u03c6M')
+    ax.fill_betweenx(Pn_c, 0, Mn_c, alpha=0.08, color='#60a5fa')
+    ax.plot(abs(Mux_single)*factor_fuerza, Pu_single*factor_fuerza,
+            'D', ms=9, color='#facc15', zorder=8,
+            markeredgecolor='white', markeredgewidth=0.8,
+            label=f'Punto actual Pu={Pu_single*factor_fuerza:.1f} {unidad_fuerza}')
+    for i, (pu, mux, muy, lbl) in enumerate(puntos_combo):
+        c = COLORS[i % len(COLORS)]
+        ax.plot(abs(mux)*factor_fuerza, pu*factor_fuerza, 'o', ms=7, color=c, zorder=7,
+                markeredgecolor='white', markeredgewidth=0.5,
+                label=f'{lbl}: ({abs(mux)*factor_fuerza:.1f}, {pu*factor_fuerza:.1f})')
+    ax.axhline(0, color='#555', lw=0.8); ax.axvline(0, color='#555', lw=0.8)
+    ax.set_xlabel(f'Momento M [{unidad_mom}]', fontsize=9)
+    ax.set_ylabel(f'Carga Axial P [{unidad_fuerza}]', fontsize=9)
+    ax.set_title('Diagrama P-M \u2014 Todas las Combinaciones de Carga',
+                 color='white', fontsize=10, fontweight='bold')
+    ax.legend(loc='upper right', fontsize=6.5, framealpha=0.3,
+              facecolor='#1e1e2e', edgecolor='#555', labelcolor='#cdd6f4', ncol=1)
+    ax.grid(True, linestyle=':', alpha=0.2, color='#888'); fig.tight_layout()
+    return fig
+
+
+# =============================================================================
+# FEATURE E — Alzado 2D de Confinamiento
+# =============================================================================
+def plot_alzado_confinamiento(L_col_cm, Lo_cm, s_conf_cm, s_centro_cm,
+                               b_cm, h_cm, es_circular,
+                               rebar_diam_mm, stirrup_diam_mm, norma_sel, coderef):
+    from matplotlib.lines import Line2D
+    W = h_cm; L = L_col_cm; Lo = Lo_cm; s1 = s_conf_cm; s2 = s_centro_cm; cov = 3.8
+    fig, ax = plt.subplots(figsize=(5, 10))
+    fig.patch.set_facecolor('#1e1e2e'); ax.set_facecolor('#14142a')
+    ax.tick_params(colors='#cdd6f4', labelsize=7)
+    for sp in ax.spines.values(): sp.set_color('#555')
+    ax.xaxis.label.set_color('#cdd6f4'); ax.yaxis.label.set_color('#cdd6f4')
+    ax.add_patch(plt.Rectangle((0, 0), W, L, lw=2, edgecolor='#94a3b8', facecolor='#2d3748', zorder=1))
+    for y0 in [0, L-Lo]:
+        ax.add_patch(plt.Rectangle((cov, y0), W-2*cov, Lo, lw=0, facecolor='#f9731620', zorder=2))
+        ax.add_patch(plt.Rectangle((cov, y0), W-2*cov, Lo, lw=1.5, edgecolor='#f97316',
+                                    facecolor='none', linestyle='--', zorder=3))
+    # estribos zona Lo inf
+    y = s1
+    while y <= Lo - s1*0.5:
+        ax.plot([cov, W-cov], [y, y], color='#f97316', lw=1.2, zorder=4); y += s1
+    # estribos zona central
+    y = Lo + s2
+    while y <= L - Lo - s2*0.5:
+        ax.plot([cov, W-cov], [y, y], color='#60a5fa', lw=1.0, linestyle='--', zorder=4); y += s2
+    # estribos zona Lo sup
+    y = L - Lo + s1
+    while y <= L - s1*0.5:
+        ax.plot([cov, W-cov], [y, y], color='#f97316', lw=1.2, zorder=4); y += s1
+    # barras longitudinales
+    for xb in [cov + rebar_diam_mm/20, W - cov - rebar_diam_mm/20]:
+        ax.plot([xb, xb], [cov, L-cov], color='#ff6b35', lw=2.5, zorder=5)
+    # cotas
+    def cota(y1, y2, texto, lado='r'):
+        xc = W+6 if lado=='r' else -6; dx=3
+        for y in [y1,y2]: ax.plot([xc-dx, xc+dx], [y,y], color='#a3e635', lw=0.8)
+        ax.annotate('', xy=(xc,y2), xytext=(xc,y1),
+                    arrowprops=dict(arrowstyle='<->', color='#a3e635', lw=0.9))
+        ax.text(xc+dx+1, (y1+y2)/2, texto, color='#a3e635', fontsize=7, va='center')
+    cota(0, Lo,   f'Lo={Lo:.0f} cm\ns\u2081={s1:.0f} cm')
+    cota(Lo, L-Lo, f'Libre\ns\u2082={s2:.0f} cm')
+    cota(L-Lo, L, f'Lo={Lo:.0f} cm\ns\u2081={s1:.0f} cm')
+    cota(0, L,    f'L={L:.0f} cm', lado='l')
+    ax.text(W/2, Lo/2, 'ZONA\nCONFINADA', color='#f97316', fontsize=7, ha='center', va='center', fontweight='bold', zorder=6)
+    ax.text(W/2, L-Lo/2, 'ZONA\nCONFINADA', color='#f97316', fontsize=7, ha='center', va='center', fontweight='bold', zorder=6)
+    ax.text(W/2, L/2, 'ZONA\nCENTRAL', color='#60a5fa', fontsize=7, ha='center', va='center', zorder=6)
+    leg = [Line2D([0],[0], color='#f97316', lw=1.5, label=f'Estribos s\u2081={s1:.0f} cm (confinamiento)'),
+           Line2D([0],[0], color='#60a5fa', lw=1.0, linestyle='--', label=f'Estribos s\u2082={s2:.0f} cm (zona libre)'),
+           Line2D([0],[0], color='#ff6b35', lw=2.5, label='Barras longitudinales')]
+    ax.legend(handles=leg, loc='upper center', bbox_to_anchor=(0.5,-0.04), fontsize=7,
+              framealpha=0.3, facecolor='#1e1e2e', edgecolor='#555', labelcolor='#cdd6f4', ncol=1)
+    sec = f"Circular D={h_cm:.0f} cm" if es_circular else f"Rectangular {b_cm:.0f}\xd7{h_cm:.0f} cm"
+    ax.set_title(f'Alzado Confinamiento \u2014 {sec}\n{norma_sel}', color='white', fontsize=9, fontweight='bold')
+    ax.set_xlim(-10, W+22); ax.set_ylim(-10, L+10); ax.set_aspect('equal'); ax.axis('off')
+    fig.tight_layout()
+    return fig
+
 def get_supabase_rest_info():
     try:
         url = st.secrets["SUPABASE_URL"]
@@ -193,7 +303,7 @@ def _panel_normativo(titulo, descripcion, inputs_requeridos, fc, fy,
     c3.metric("ρ mín", f"{rhomin:.4f}", help="Cuantía mínima longitudinal")
     c4.metric("ρ máx", f"{rhomax:.4f}", help="Cuantía máxima")
     c5.metric("fc / fy", f"{fc:.0f} / {fy:.0f} MPa", help="Materiales activos")
-    st.caption(f" Norma: **{normasel}** | Nivel sísmico: **{nivelsis}** | Ref: {coderef}")
+    st.caption(f" Norma: **{norma_sel}** | Nivel sísmico: **{nivelsis}** | Ref: {coderef}")
     if inputs_requeridos:
         with st.expander(" Datos requeridos para este módulo", expanded=False):
             for item in inputs_requeridos:
@@ -605,6 +715,34 @@ CODES = {
         "seismic_levels": ["GE — Grado Estándar", "GM — Ductilidad Moderada", "GA — Ductilidad Alta"],
         "ref": "CIRSOC 201",
     },
+}
+
+# =============================================================================
+# RECUBRIMIENTO MÍNIMO EN COLUMNAS POR NORMA (cm)
+# =============================================================================
+COVER_MIN_COL = {
+    "NSR-10 (Colombia)":              3.8,   # NSR-10 C.7.7.1
+    "ACI 318-25 (EE.UU.)":            3.8,   # ACI 318-25 §26.4.1.1
+    "ACI 318-19 (EE.UU.)":            3.8,   # ACI 318-19 §26.4.1.1
+    "ACI 318-14 (EE.UU.)":            3.8,   # ACI 318-14 §7.7.1
+    "NEC-SE-HM (Ecuador)":            3.8,   # NEC-SE-HM §7.7
+    "E.060 (Perú)":                   4.0,   # E.060 Art. 7.7
+    "NTC-EM (México)":                3.5,   # NTC-EM §2.1.4
+    "COVENIN 1753-2006 (Venezuela)":  3.8,   # COVENIN 1753
+    "NB 1225001-2020 (Bolivia)":      3.8,   # NB 1225001
+    "CIRSOC 201-2025 (Argentina)":    3.8,   # CIRSOC 201
+}
+COVER_REF_COL = {
+    "NSR-10 (Colombia)":              "NSR-10 C.7.7.1",
+    "ACI 318-25 (EE.UU.)":            "ACI 318-25 §26.4.1.1",
+    "ACI 318-19 (EE.UU.)":            "ACI 318-19 §26.4.1.1",
+    "ACI 318-14 (EE.UU.)":            "ACI 318-14 §7.7.1",
+    "NEC-SE-HM (Ecuador)":            "NEC-SE-HM §7.7",
+    "E.060 (Perú)":                   "E.060 Art. 7.7",
+    "NTC-EM (México)":                "NTC-EM §2.1.4",
+    "COVENIN 1753-2006 (Venezuela)":  "COVENIN 1753 §7.7",
+    "NB 1225001-2020 (Bolivia)":      "NB 1225001 §7.7",
+    "CIRSOC 201-2025 (Argentina)":    "CIRSOC 201 §7.7",
 }
 
 # 
@@ -1066,7 +1204,7 @@ if es_circular:
     D = st.sidebar.number_input(_t("Diámetro (D) [cm]", "Diameter (D) [cm]"), 15.0, 150.0, 40.0, 5.0, key="c_pm_D")
     b = D
     h = D
-    st.sidebar.caption("ℹ Para columnas circulares se usa espiral en lugar de estribos")
+    st.sidebar.caption("ℹ Para columnas circulares comunes se usa espiral. **Nota:** Para puentes, silos y pilares circulares de gran diámetro con zuncho verificado según 10 normas, usa el módulo especializado *Pilares Circulares* en el menú.")
 else:
     b = st.sidebar.number_input(_t("Base (b) [cm]", "Width (b) [cm]"), 15.0, 150.0, 30.0, 5.0, key="c_pm_b")
     h = st.sidebar.number_input(_t("Altura (h) [cm]", "Height (h) [cm]"), 15.0, 150.0, 40.0, 5.0, key="c_pm_h")
@@ -1413,10 +1551,11 @@ Muy_magnified = Muy_input * slender_y['delta_ns']
 # =============================================================================
 if not es_circular:
     recub_cm = max(d_prime - rebar_diam / 20.0, 2.5)
-    # NSR-10 C.7.7.1 — recubrimiento mínimo para columnas
-    _recub_min_nsr = 3.8  # cm — columnas expuestas o en ambiente normal
+    # Recubrimiento mínimo dinámico por norma
+    _recub_min_nsr = COVER_MIN_COL.get(norma_sel, 3.8)
+    _cover_ref_nsr = COVER_REF_COL.get(norma_sel, "C.7.7.1")
     if recub_cm < _recub_min_nsr:
-        st.sidebar.warning(f" NSR-10 C.7.7.1: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo recomendado de {_recub_min_nsr} cm para columnas. Verifique d'.")
+        st.sidebar.warning(f"⚠️ {_cover_ref_nsr}: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo de {_recub_min_nsr} cm para columnas según {norma_sel}. Verifique d'.")
     bc = b - 2 * recub_cm
     hc = h - 2 * recub_cm
     Ach = bc * hc
@@ -1481,9 +1620,10 @@ if not es_circular:
     perim_estribo += (num_flejes_x * long_fleje_x + num_flejes_y * long_fleje_y)
 else:
     recub_cm = max(d_prime - rebar_diam / 20.0, 2.5)
-    _recub_min_nsr = 3.8
+    _recub_min_nsr = COVER_MIN_COL.get(norma_sel, 3.8)
+    _cover_ref_nsr = COVER_REF_COL.get(norma_sel, "C.7.7.1")
     if recub_cm < _recub_min_nsr:
-        st.sidebar.warning(f" NSR-10 C.7.7.1: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo de {_recub_min_nsr} cm.")
+        st.sidebar.warning(f"⚠️ {_cover_ref_nsr}: Recubrimiento calculado ({recub_cm:.1f} cm) < mínimo de {_recub_min_nsr} cm según {norma_sel}.")
     dc = D - 2 * recub_cm
     Ach = math.pi * (dc/2)**2
     Ag_circ = math.pi * (D/2)**2
@@ -1605,9 +1745,10 @@ except Exception:
 # =============================================================================
 # TABS PRINCIPALES
 # =============================================================================
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab2b, tab3, tab4 = st.tabs([
     _t(" Diagrama P-M Biaxial", " Biaxial P-M Diagram"),
     _t(" Sección & Estribos", " Section & Ties"),
+    _t(" 📐 Alzado & Combos", " 📐 Elevation & Load Combos"),
     _t(" Cantidades y APU", " Quantities & APU"),
     _t(" Memoria de Cálculo", " Calculation Report")
 ])
@@ -1676,7 +1817,14 @@ with tab1:
         | **Muy magnificado** | {Muy_magnified:.2f} {unidad_mom} | |
         """)
         if slenderness['kl_r'] > 100:
-            st.warning(" **kl/r > 100** — Se requiere análisis no lineal según NSR-10 C.10.10.7")
+            st.warning(f"⚠️ **kl/r > 100** — Se requiere análisis no lineal de segundo orden según {norma_sel}.")
+        elif slenderness['kl_r'] > 22:
+            st.info(
+                f"ℹ️ **Método no-sway aplicado (δns = {slenderness['delta_ns']:.3f}).** "
+                f"Si la estructura es **desplazable** (pórtico sin arriostramiento lateral), "
+                f"calcule δs mediante análisis P-Δ directo según {norma_sel} e ingrese los momentos "
+                f"amplificados como Mux / Muy antes de ejecutar el diagrama."
+            )
         st.markdown("---")
         st.subheader(_t("Verificación de Estribos / Espiral", "Tie / Spiral Verification"))
         if not es_circular:
@@ -2586,6 +2734,76 @@ with tab2:
 # =============================================================================
 # TAB 3: CANTIDADES, DESPIECE Y APU
 # =============================================================================
+# =============================================================================
+# TAB 2B: ALZADO DE CONFINAMIENTO + TABLA DE COMBINACIONES DE CARGA
+# =============================================================================
+with tab2b:
+    col_alz, col_combo = st.columns([1, 1], gap="large")
+
+    # ── ALZADO 2D DE CONFINAMIENTO ────────────────────────────────────────────
+    with col_alz:
+        st.subheader(_t("📐 Alzado de Confinamiento", "📐 Confinement Elevation"))
+        s_centro_alz = st.number_input(
+            _t("Separación zona central s₂ (cm)", "Central zone spacing s₂ (cm)"),
+            5.0, 50.0, float(min(s_conf * 2.0, 30.0)), 1.0, key="s2_alz_col")
+        fig_alz = plot_alzado_confinamiento(
+            L_col_cm=L_col, Lo_cm=Lo_conf, s_conf_cm=s_conf, s_centro_cm=s_centro_alz,
+            b_cm=b if not es_circular else D, h_cm=h if not es_circular else D,
+            es_circular=es_circular,
+            rebar_diam_mm=rebar_diam, stirrup_diam_mm=stirrup_diam,
+            norma_sel=norma_sel, coderef="C.7.7.1")
+        st.pyplot(fig_alz); plt.close(fig_alz)
+        st.caption(
+            f"Lo = {Lo_conf:.0f} cm | s₁ = {s_conf:.0f} cm (confinamiento) | "
+            f"s₂ = {s_centro_alz:.0f} cm (zona libre) | Ref: {norma_sel}")
+
+    # ── TABLA DE COMBINACIONES DE CARGA ──────────────────────────────────────
+    with col_combo:
+        st.subheader(_t("📊 Combinaciones P-M", "📊 P-M Load Combos"))
+        st.caption(_t("Ingrese sus combinaciones — el diagrama grafica todos los puntos simultáneamente.",
+                      "Enter load combinations — the P-M diagram plots all points simultaneously."))
+        _combos_def = pd.DataFrame({
+            "Combinacion": ["1.4D", "1.2D+1.6L", "1.2D+1.0L+1.0E", "0.9D+1.0E", "1.2D+1.6L+0.5Lr"],
+            "Pu":  [round(Pu_input*0.70,1), round(Pu_input,1), round(Pu_input*0.85,1), round(Pu_input*0.50,1), round(Pu_input*0.95,1)],
+            "Mux": [round(abs(Mux_input)*0.50,1), round(abs(Mux_input),1), round(abs(Mux_input)*1.20,1), round(abs(Mux_input)*0.80,1), round(abs(Mux_input)*0.90,1)],
+            "Muy": [round(abs(Muy_input)*0.50,1), round(abs(Muy_input),1), round(abs(Muy_input)*1.20,1), round(abs(Muy_input)*0.80,1), round(abs(Muy_input)*0.90,1)],
+        })
+        df_combos = st.data_editor(
+            _combos_def, num_rows="dynamic", use_container_width=True, key="combos_pm_col",
+            column_config={
+                "Combinacion": st.column_config.TextColumn("Combinación", width="medium"),
+                "Pu":  st.column_config.NumberColumn(f"Pu [{unidad_fuerza}]",  min_value=0),
+                "Mux": st.column_config.NumberColumn(f"Mux [{unidad_mom}]", min_value=0),
+                "Muy": st.column_config.NumberColumn(f"Muy [{unidad_mom}]", min_value=0),
+            })
+        puntos_combo = parse_combo_table(df_combos, factor_fuerza)
+        if puntos_combo and len(cap_x.get('phi_Mn', [])) > 0:
+            fig_pm_c = plot_pm_combos(cap_x, Pu_col, Mux_col, puntos_combo,
+                                      factor_fuerza, unidad_fuerza, unidad_mom)
+            st.pyplot(fig_pm_c); plt.close(fig_pm_c)
+            # Tabla de estado por combinación
+            try:
+                from scipy.interpolate import interp1d as _i1d
+                _fi = _i1d(cap_x['phi_Pn'], cap_x['phi_Mn'], kind='linear', fill_value='extrapolate')
+                rows_ok = []
+                for (pu, mux, muy, lbl) in puntos_combo:
+                    phi_at = float(_fi(pu))
+                    dentro = abs(mux) <= phi_at
+                    rows_ok.append({"Combo": lbl,
+                                    f"Pu [{unidad_fuerza}]": f"{pu*factor_fuerza:.1f}",
+                                    f"Mux [{unidad_mom}]": f"{abs(mux)*factor_fuerza:.1f}",
+                                    "Estado": "✅ Dentro" if dentro else "❌ Fuera"})
+                st.dataframe(pd.DataFrame(rows_ok), use_container_width=True, hide_index=True)
+                ratios = [(abs(mux)/float(_fi(pu)) if float(_fi(pu))>0 else 999, lbl) for pu,mux,muy,lbl in puntos_combo]
+                critica = max(ratios, key=lambda r: r[0])
+                msg = f"✅ Todas dentro — combo crítica: `{critica[1]}` (M/φM={critica[0]:.3f})" if critica[0]<=1 else f"⚠️ Combo fuera del diagrama: `{critica[1]}` (M/φM={critica[0]:.3f})"
+                (st.success if critica[0]<=1 else st.warning)(msg)
+            except Exception:
+                pass
+        else:
+            st.info(_t("Complete la tabla para ver los puntos en el diagrama P-M.",
+                       "Fill the table to plot points on the P-M diagram."))
+
 with tab3:
     st.subheader(f"Cantidades de Materiales — {'Circular'if es_circular else 'Rectangular'}, L={L_col:.0f} cm")
     col_c1, col_c2, col_c3, col_c4 = st.columns(4)
@@ -3067,7 +3285,7 @@ with tab4:
                         "ReinforcementVolumeRatio": float(rho_pct) / 100.0,
                         "ReinforcementAreaRatio":   float(As_cm2)
                     },
-                    "Pset_NSR10": {
+                    f"Pset_{norma_sel.split('(')[0].strip().replace('-','_').replace(' ','_')}": {
                         "Norma":                norma,
                         "Nivel_Sismico":        nivel_sis,
                         "fc_MPa":               float(fc_mpa),
@@ -3156,8 +3374,8 @@ with tab4:
                         mime="application/x-step",
                         key="ifc_col_btn")
                     st.caption(_t(
-                        f"IFC4: IfcColumn + barras long. + estribos 3D + Pset_NSR10",
-                        f"IFC4: IfcColumn + longitudinal bars + 3D stirrups + Pset_NSR10"))
+                        f"IFC4: IfcColumn + barras long. + estribos 3D + Pset_{norma_sel.split('(')[0].strip()}",
+                        f"IFC4: IfcColumn + longitudinal bars + 3D stirrups + Pset_{norma_sel.split('(')[0].strip()}"))
 
 
         except ImportError as e_imp:
@@ -3239,7 +3457,7 @@ with tab4:
             p_esb = doc.add_paragraph("[ADVERTENCIA] Columna MUY esbelta (kL/r > 100). Las ecuaciones estándar pierden validez, requiere análisis P-delta riguroso.")
             p_esb.bold = True
         elif slenderness['kl_r'] > 22:
-            doc.add_paragraph(f"Columna Esbelta — Se aplica factor de magnificación δns = {slenderness['delta_ns']:.3f} (NSR-10 C.10.10.6)").runs[0].bold=True
+            doc.add_paragraph(f"Columna Esbelta — δns = {slenderness['delta_ns']:.3f} ({coderef}, método no-sway). Si estructura desplazable: aplicar P-Δ e ingresar Mux/Muy amplificados.").runs[0].bold=True
             if 'Pc' in dir(): doc.add_paragraph(f"Carga crítica Euler (Pc) = {Pc:.1f} kN")
             doc.add_paragraph(f"Momento magnificado Mux* = {Mux_input*slenderness['delta_ns']:.2f} {unidad_mom}")
             _r_min = (h if not es_circular else D)*0.289
@@ -3357,7 +3575,7 @@ with tab4:
         doc.add_paragraph(f"s2 (Separación centro): Estribos {stirrupdiam_saf}mm @ {s_bas_saf:.0f} cm")
 
         # 5. Verificaciones Normativas
-        doc.add_heading("5. VERIFICACIONES NORMATIVAS NSR-10 / ACI 318-19", level=1)
+        doc.add_heading(f"5. VERIFICACIONES NORMATIVAS — {norma_sel}", level=1)
         table5 = doc.add_table(rows=1, cols=5)
         table5.style = 'Table Grid'
         _hc5 = table5.rows[0].cells
@@ -3499,10 +3717,10 @@ with tab4:
             
         doc.add_heading("8. REFERENCIAS NORMATIVAS", level=1)
         _refs = [
-            ("NSR-10 C.10.3",    "Hipótesis de diseño en flexo-compresión — distribución lineal de deformaciones"),
-            ("NSR-10 C.10.9.1",  "Límites de cuantía: ρ_min=1%, ρ_max=4% (DES/DMO), 8% (DMI)"),
-            ("NSR-10 C.10.10",   "Efectos de esbeltez — método de magnificación de momentos δns"),
-            ("NSR-10 C.10.10.6", "Factor δns = Cm/(1 − Pu/0.75Pc) ≥ 1.0"),
+            (f"{coderef} — Flexocompresión",   "Hipótesis de diseño — distribución lineal de deformaciones"),
+            (f"{coderef} — Cuantías",           "Límites de cuantía: ρ_min=1%, ρ_max según nivel sísmico y norma activa"),
+            (f"{coderef} — Esbeltez",           "Efectos de esbeltez — método de magnificación de momentos δns (no-sway)"),
+            (f"{coderef} — Factor δns",         "Factor δns = Cm/(1 − Pu/0.75Pc) ≥ 1.0  |  Para sway: usar análisis P-Δ directo"),
             ("NSR-10 C.21.6.3",  "Cuantía máxima zona de rótula plástica — DES: ρ ≤ 4%"),
             ("NSR-10 C.21.6.4",  "Confinamiento en columnas — zona de rótula plástica"),
             ("NSR-10 C.21.6.4.1","Lo_min = max(h, b, Lu/6, 45 cm)"),
@@ -3570,3 +3788,63 @@ with tab4:
         st.download_button(label=_t("Descargar Excel", "Download Excel"),
                            data=excel_buffer, file_name=f"Verificaciones_Columna_{b:.0f}x{h:.0f}.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                           
+    st.markdown("---")
+    st.subheader("Transferir al Presupuesto WBS")
+    st.caption("Envia el volumen de concreto y el acero calculado directamente al arbol WBS de la Calculadora de Materiales.")
+    
+    _wbs_list = st.session_state.get("presupuesto_wbs", [])
+    _apus_dict = st.session_state.get("catalogo_apus", {})
+    lista_caps = [c["Capitulo"] for c in _wbs_list]
+    
+    if not lista_caps:
+        st.warning("Aun no hay capitulos en el Presupuesto WBS. Ve a la pagina 'Calculadora de Materiales' -> Tab '1. Presupuesto (WBS)' y crea un capitulo primero.")
+    elif not _apus_dict:
+        st.warning("El catalogo de APUs esta vacio. Ve a 'Calculadora de Materiales' -> Tab '3. Gestor de APUs'.")
+    else:
+        col_wbs1, col_wbs2 = st.columns([1, 1])
+        
+        with col_wbs1:
+            st.markdown("**1. Enviar Volumen de Concreto**")
+            st.metric("Volumen calculado", f"{vol_concreto_m3:.3f} m³")
+            dest_cap_c = st.selectbox("Capitulo destino", lista_caps, key="wbs_cap_col_c")
+            dest_apu_c = st.selectbox("APU a aplicar", list(_apus_dict.keys()),
+                                       format_func=lambda x: _apus_dict[x]["Nombre"], key="wbs_apu_col_c")
+            btn_wbs_c = st.button("Enviar Concreto al WBS", type="primary", use_container_width=True, key="btn_send_conc_col")
+
+        with col_wbs2:
+            st.markdown("**2. Enviar Acero de Refuerzo**")
+            st.metric("Acero total calculado", f"{peso_total_acero_kg:.1f} kg")
+            dest_cap_s = st.selectbox("Capitulo destino", lista_caps, key="wbs_cap_col_s")
+            dest_apu_s = st.selectbox("APU a aplicar", list(_apus_dict.keys()),
+                                       format_func=lambda x: _apus_dict[x]["Nombre"], key="wbs_apu_col_s")
+            btn_wbs_s = st.button("Enviar Acero al WBS", type="primary", use_container_width=True, key="btn_send_acero_col")
+
+        if btn_wbs_c:
+            _transferido = False
+            for cap in st.session_state["presupuesto_wbs"]:
+                if cap["Capitulo"] == dest_cap_c:
+                    nid = f"{len(cap['Items'])+1:03d}"
+                    cap["Items"].append({"ID_Item": nid, "ID_APU": dest_apu_c,
+                                         "Cantidad": float(vol_concreto_m3), "Predecesora": ""})
+                    _transferido = True
+                    break
+            if _transferido:
+                st.success(f"Concreto ({vol_concreto_m3:.3f} m3) enviado al capitulo '{dest_cap_c}'. Ve a la Calculadora de Materiales -> Tab WBS para verlo.")
+            else:
+                st.error("No se encontro el capitulo seleccionado en session_state.")
+
+        if btn_wbs_s:
+            _transferido = False
+            for cap in st.session_state["presupuesto_wbs"]:
+                if cap["Capitulo"] == dest_cap_s:
+                    nid = f"{len(cap['Items'])+1:03d}"
+                    cap["Items"].append({"ID_Item": nid, "ID_APU": dest_apu_s,
+                                         "Cantidad": float(peso_total_acero_kg), "Predecesora": ""})
+                    _transferido = True
+                    break
+            if _transferido:
+                st.success(f"Acero ({peso_total_acero_kg:.1f} kg) enviado al capitulo '{dest_cap_s}'. Ve a la Calculadora de Materiales -> Tab WBS para verlo.")
+            else:
+                st.error("No se encontro el capitulo seleccionado en session_state.")
+

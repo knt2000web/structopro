@@ -239,11 +239,14 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
   </g>
 </svg></div>""", unsafe_allow_html=True)
 
-st.title(_t("Columna Circular: Interacción P–M & Espiral", "Circular Columns P-M Interaction"))
+st.title(_t("Pilares Circulares (Puentes y Silos) — Interacción P–M Biaxial y Zunchos", "Circular Pillars (Bridges & Silos) P-M Interaction"))
 
 with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=False):
     st.markdown("""
-    ### Metodología y Flujo de Diseño (Columnas Circulares ACI/NSR)
+    > **[!] ¿CUÁNDO USAR ESTE MÓDULO?**  
+    > *Este módulo es un motor de análisis avanzado especializado en infraestructura pesada (puentes, silos, pilotes de cimentación profunda) donde la verificación estricta del Zuncho perimetral bajo múltiples normas es requerida. Si estás diseñando columnas circulares comunes para edificios residenciales o comerciales, te recomendamos usar el módulo general **01. Columnas PM**.*
+
+    ### Metodología y Flujo de Diseño (Pilares Especiales)
     Este módulo evalúa la capacidad bidireccional y el confinamiento superior (zunchos) propio de las columnas circulares.
     
     ####  1. Geometría Radial y Armado
