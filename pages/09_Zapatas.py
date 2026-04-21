@@ -33,10 +33,131 @@ except ImportError:
 
 # 
 # IDIOMA GLOBAL
+
+# ═══════════════════════════════════════════════════════════════════
+#  PERSISTENCIA LOCAL v6.1 — 09_Zapatas
+# ═══════════════════════════════════════════════════════════════════
+import json as _json_persist
+import os   as _os_persist
+import base64 as _b64_persist
+
+_STATE_FILE = "zapatas_state.json"
+
+_PERSIST_KEYS = [
+    # Identidad global
+    "empresa", "proyecto", "ingeniero",
+    "dxfelaboro", "dxfreviso", "dxfaprobo",
+    "normasel", "idioma", "userrole",
+    # Geotecnia / zapata aislada
+    "zfc", "zfy", "zphi", "cohval", "cohunit",
+    "gamval", "gamunit", "zgsat",
+    "zap_b", "zap_l", "zhzcp", "zap_df", "zbcolcp",
+    "zQact", "znf", "zfs", "zspt",
+    "zbousB", "zbousL", "zbousZ",
+    "zHhoriz", "zdelta",
+    "zopthmin", "zopthmax",
+    "znombreregistro",
+    # Diseño estructural
+    "poscoliso",
+    # APU
+    "apuconfig",
+]
+
+def _save_state_zap():
+    try:
+        snap = {}
+        for k in _PERSIST_KEYS:
+            val = st.session_state.get(k)
+            if val is None:
+                continue
+            if k == "logobytes" and isinstance(val, (bytes, bytearray)):
+                snap[k] = {"type": "bytes_b64", "data": _b64_persist.b64encode(val).decode()}
+            else:
+                try:
+                    _json_persist.dumps(val)
+                    snap[k] = val
+                except (TypeError, ValueError):
+                    snap[k] = str(val)
+        with open(_STATE_FILE, "w", encoding="utf-8") as _f:
+            _json_persist.dump(snap, _f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def _load_state_zap():
+    if not _os_persist.path.exists(_STATE_FILE):
+        return
+    try:
+        with open(_STATE_FILE, "r", encoding="utf-8") as _f:
+            data = _json_persist.load(_f)
+        for k, v in data.items():
+            if k not in st.session_state:
+                if isinstance(v, dict) and v.get("type") == "bytes_b64":
+                    st.session_state[k] = _b64_persist.b64decode(v["data"])
+                else:
+                    st.session_state[k] = v
+    except Exception:
+        pass
+
+_load_state_zap()
+
 lang = st.session_state.get("idioma", "Español")
 def _t(es, en):
     return en if lang == "English" else es
 # 
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  IDENTIDAD GLOBAL v6.1
+# ═══════════════════════════════════════════════════════════════════
+def _get_identity():
+    """Lee campos de identidad desde session_state con fallback a guión bajo."""
+    empresa   = st.session_state.get("empresa",   "") or "________________"
+    proyecto  = st.session_state.get("proyecto",  "") or "________________"
+    ingeniero = st.session_state.get("ingeniero", "") or "________________"
+    elab = st.session_state.get("dxfelaboro", st.session_state.get("dxf_elaboro", "")) or "________________"
+    rev  = st.session_state.get("dxfreviso",  st.session_state.get("dxf_reviso",  "")) or "________________"
+    apb  = st.session_state.get("dxfaprobo",  st.session_state.get("dxf_aprobo",  "")) or "________________"
+    logo = st.session_state.get("logobytes",  st.session_state.get("logo_bytes"))
+    return empresa, proyecto, ingeniero, elab, rev, apb, logo
+
+
+def _rol_badge():
+    """Muestra badge de rol en sidebar y devuelve (rol, puede_exportar)."""
+    rol = st.session_state.get("userrole", "free")
+    color = {"admin": "#1b5e20", "pro": "#0d47a1", "free": "#b71c1c"}.get(rol, "#b71c1c")
+    st.sidebar.markdown(
+        f"<span style='background:{color};color:white;padding:2px 8px;"
+        f"border-radius:4px;font-size:11px'>{rol.upper()}</span>",
+        unsafe_allow_html=True,
+    )
+    puede_exportar = rol in ("admin", "pro")
+    return rol, puede_exportar
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  HELPER: figura matplotlib con fondo blanco para DOCX
+# ═══════════════════════════════════════════════════════════════════
+def _fig_to_docx_white(fig):
+    """Devuelve bytes PNG con fondo blanco, apto para embeber en DOCX."""
+    orig_fc   = fig.get_facecolor()
+    orig_axes = [(ax, ax.get_facecolor()) for ax in fig.get_axes()]
+    fig.patch.set_facecolor("white")
+    for ax, _ in orig_axes:
+        ax.set_facecolor("#f8f9fa")
+        ax.tick_params(colors="#1a1a1a")
+        ax.xaxis.label.set_color("#1a1a1a")
+        ax.yaxis.label.set_color("#1a1a1a")
+        for spine in ax.spines.values():
+            spine.set_edgecolor("#cccccc")
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=200, facecolor="white",
+                transparent=False, bbox_inches="tight")
+    buf.seek(0)
+    img_bytes = buf.read()
+    fig.patch.set_facecolor(orig_fc)
+    for ax, fc in orig_axes:
+        ax.set_facecolor(fc)
+    return img_bytes
 
 st.set_page_config(page_title=_t("Zapatas y Suelos", "Footings and Soils"), layout="wide")
 
@@ -83,7 +204,7 @@ def guardar_proyecto_supabase(nombre, estado_dict, ref):
     }
     try:
         endpoint = f"{url}/rest/v1/proyectos?on_conflict=nombre_proyecto"
-        res = requests.post(endpoint, headers=headers, json=payload)
+        res = requests.post(endpoint, headers=headers, json=payload, timeout=5)
         if res.status_code in [200, 201, 204]: return True, " Proyecto en la nube"
         return False, f" Error API: {res.text}"
     except Exception as e: return False, f" Error API: {e}"
@@ -107,7 +228,7 @@ def cargar_proyecto_supabase(nombre, ref):
     headers = {"apikey": key, "Authorization": f"Bearer {key}", "Accept": "application/json"}
     try:
         endpoint = f"{url}/rest/v1/proyectos?nombre_proyecto=eq.{full_name}&select=*"
-        res = requests.get(endpoint, headers=headers)
+        res = requests.get(endpoint, headers=headers, timeout=5)
         if res.status_code == 200:
             data = res.json()
             if data:
@@ -131,7 +252,7 @@ def listar_proyectos_supabase(ref):
     headers = {"apikey": key, "Authorization": f"Bearer {key}", "Accept": "application/json"}
     try:
         endpoint = f"{url}/rest/v1/proyectos?select=nombre_proyecto"
-        res = requests.get(endpoint, headers=headers)
+        res = requests.get(endpoint, headers=headers, timeout=5)
         if res.status_code == 200:
             return sorted([i["nombre_proyecto"].replace(f"[{ref.upper()}] ", "") for i in res.json() if f"[{ref.upper()}]" in i.get("nombre_proyecto","")])
         return []
@@ -259,6 +380,17 @@ st.sidebar.markdown("""
 # CONFIGURACIÓN GENERAL Y APU
 # 
 st.sidebar.header(_t(" Configuración Global", " Global Settings"))
+
+# ── Roles v6.1 ──────────────────────────────────────────────────────────────
+_rol, _puede_exportar = _rol_badge()
+if _rol == "free":
+    st.sidebar.warning(
+        "Modo Profesional requerido para exportar DOCX, DXF e IFC. "
+        "Contacta al administrador para activar tu licencia."
+    )
+elif _rol == "admin":
+    st.sidebar.info("Modo Administrador activo — todos los entregables habilitados.")
+# ─────────────────────────────────────────────────────────────────────────────
 if "norma_sel" not in st.session_state:
     st.session_state.norma_sel = "NSR-10 (Colombia)"
 
@@ -273,10 +405,22 @@ st.sidebar.markdown(
 )
 
 # Parametros normativos base
-phi_v = 0.75 # Cortante
-phi_f = 0.90 # Flexión
-if "E.060" in norma_sel:
-    phi_v = 0.85
+# ── Factores phi por norma (NSR-10/ACI/E.060/NEC/NTC/COVENIN/CIRSOC) ───────
+_PHI = {
+    "NSR-10 Colombia":             {"v": 0.75, "f": 0.90},
+    "ACI 318-25 EE.UU.":          {"v": 0.75, "f": 0.90},
+    "ACI 318-19 EE.UU.":          {"v": 0.75, "f": 0.90},
+    "ACI 318-14 EE.UU.":          {"v": 0.75, "f": 0.90},
+    "E.060 Peru":                  {"v": 0.85, "f": 0.90},
+    "NEC-SE-HM Ecuador":           {"v": 0.75, "f": 0.90},
+    "NTC-EM México":               {"v": 0.75, "f": 0.90},
+    "COVENIN 1753-2006 Venezuela": {"v": 0.75, "f": 0.90},
+    "NB 1225001-2020 Bolivia":     {"v": 0.75, "f": 0.90},
+    "CIRSOC 201-2025 Argentina":   {"v": 0.75, "f": 0.90},
+}
+_phi_vals = _PHI.get(norma_sel, {"v": 0.75, "f": 0.90})
+phi_v = _phi_vals["v"]  # Cortante
+phi_f = _phi_vals["f"]  # Flexión
 
 fc_basico = st.sidebar.number_input(_t("f'c Zapata [MPa]", "f'c Footing [MPa]"), 15.0, 50.0, st.session_state.get("z_fc", 21.0), 1.0, key="z_fc")
 fy_basico = st.sidebar.number_input(_t("fy Acero [MPa]", "fy Steel [MPa]"), 240.0, 500.0, st.session_state.get("z_fy", 420.0), 10.0, key="z_fy")
@@ -889,9 +1033,23 @@ def generar_docx_ampliado(zap_ext_d, zap_int_d, viga_d, dis_d, dist_d, norma, fi
     
     doc.add_heading(f"MEMORIA ESTRUCTURAL — SISTEMA {sn['nombre'].upper()} ({norma})", 0)
 
-    # 0. Portada
+    # 0. Portada — identidad global v6.1
+    _emp_d, _proy_d, _ing_d, _elab_d, _rev_d, _apb_d, _logo_d = _get_identity()
     p0 = doc.add_paragraph()
-    p0.add_run(f"Proyecto: \nElemento: Zapata Medianera + {sn['nombre']}\nNorma: {norma} — Art. {sn['art']}\nFecha: {_dt_dxf.datetime.now().strftime('%d/%m/%Y')}\nMateriales: Concreto f'c = {viga_d.get('fc',21)} MPa, Acero fy = {viga_d.get('fy',420)} MPa").bold = True
+    p0.add_run(
+        f"Empresa: {_emp_d}  |  Proyecto: {_proy_d}  |  Ing.: {_ing_d}\n"
+        f"Elemento: Zapata Medianera + {sn['nombre']}\n"
+        f"Norma: {norma} — Art. {sn['art']}\n"
+        f"Elaboró: {_elab_d}   Revisó: {_rev_d}   Aprobó: {_apb_d}\n"
+        f"Materiales: Concreto f'c = {viga_d.get('fc',21)} MPa, Acero fy = {viga_d.get('fy',420)} MPa\n"
+        f"Fecha: {_dt_dxf.datetime.now().strftime('%d/%m/%Y')}"
+    ).bold = True
+    if _logo_d:
+        try:
+            import io as _io_logo
+            doc.add_picture(_io_logo.BytesIO(_logo_d), width=Inches(1.5))
+        except Exception:
+            pass
 
     # 1. Parámetros de Diseño y Geometría
     doc.add_heading("1. PARÁMETROS DE DISEÑO", level=1)
@@ -946,12 +1104,9 @@ def generar_docx_ampliado(zap_ext_d, zap_int_d, viga_d, dis_d, dist_d, norma, fi
     doc.add_heading("7. DIAGRAMAS Y PLANOS", level=1)
     if fig_vm is not None:
         try:
-            import io as _io
-            _img = _io.BytesIO()
-            fig_vm.savefig(_img, format='png', bbox_inches='tight', dpi=150)
-            _img.seek(0)
+            _img_bytes = _fig_to_docx_white(fig_vm)
             doc.add_paragraph("Diagrama de Cortante y Momento (Viga):")
-            doc.add_picture(_img, width=_In(5.5))
+            doc.add_picture(io.BytesIO(_img_bytes), width=_In(5.5))
         except Exception as e:
             doc.add_paragraph(f"(Error al embeber imagen: {e})")
 
@@ -1084,6 +1239,7 @@ with st.expander(_t("1. Esfuerzos en masa de suelo debajo de zapata", "1. Soil S
 
     fig_b.tight_layout()
     st.pyplot(fig_b)
+    plt.close(fig_b)
 
 # 
 # T2: CAPACIDAD PORTANTE DE SUELO (TERZAGHI) + ASENTAMIENTOS
@@ -1148,13 +1304,13 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
                                  ["Cuadrada", "Continua (Muro)", "Circular"] if lang=="Español"
                                  else ["Square", "Continuous (Wall)", "Circular"], key="z_shape")
         B_cp  = st.number_input(_t("Ancho B [m]","Width B [m]"), 0.5, 10.0,
-                                st.session_state.get("cp_b", 2.0), 0.1, key="cp_b")
+                                st.session_state.get("zap_b", 2.0), 0.1, key="zap_b")
         L_cp  = st.number_input(_t("Largo L [m]","Length L [m]"), 0.5, 100.0,
-                                st.session_state.get("cp_l", 2.0), 0.1, key="cp_l")
+                                st.session_state.get("zap_l", 2.0), 0.1, key="zap_l")
         Hz_cp = st.number_input(_t("Altura zapata Hz [m]","Footing height Hz [m]"),
                                 0.1, 2.0, 0.5, 0.05, key="z_hz_cp")
         Df_cp = st.number_input(_t("Profundidad Df [m]","Depth Df [m]"), 0.0, 10.0,
-                                st.session_state.get("cp_df", 1.5), 0.1, key="cp_df")
+                                st.session_state.get("zap_df", 1.5), 0.1, key="zap_df")
         b_col_cp = st.number_input(_t("Lado columna b [m]","Column side b [m]"), 0.1, 2.0, 0.4, 0.05, key="z_bcol_cp")
         Q_act  = st.number_input("Carga vertical actuante Q [kN]", 10.0, 50000.0, 800.0, 100.0, key="z_Qact")
     with c3:
@@ -1381,6 +1537,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
     ax_ves.tick_params(colors="white"); ax_ves.spines[:].set_color("#444")
     ax_ves.legend(loc="lower right", fontsize=8, facecolor="#111", labelcolor="white")
     st.pyplot(fig_ves)
+    plt.close(fig_ves)
 
     #  GRÁFICA: BULBO DE PRESIONES / MECANISMO DE FALLA (VECTORIZADO) 
     st.divider()
@@ -1504,6 +1661,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
     ax_tb.tick_params(colors="white"); ax_tb.spines[:].set_color("#444")
     ax_tb.legend(loc="upper right", fontsize=8, facecolor="#111", labelcolor="white")
     st.pyplot(fig_tb)
+    plt.close(fig_tb)
 
 # 
 # T4: PROFUNDIDAD MÍNIMA EXPLORACIÓN
@@ -1564,6 +1722,7 @@ with st.expander(_t("4. Profundidad Mínima de Exploración de Subsuelo (NSR-10)
     
     fig_ex.tight_layout()
     st.pyplot(fig_ex)
+    plt.close(fig_ex)
     
     # Guardar en sesión para usarlo en gráficos
     st.session_state.z_exploracion = z_mid
@@ -1603,59 +1762,107 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         # Los tipos 2/3/4 tienen su propio flujo completo, no continúan el bloque T3
     else:
         #  TIPO 1: Flujo original de zapata aislada céntrica 
-        st.info(_t("**Modo: Zapata Aislada Céntrica** — Ingresa las Cargas de Servicio (para dimensionar BxL) y Últimas (para diseñar espesor y acero).",
-                   " **Mode: Isolated Centered Footing** — Enter Service Loads (BxL sizing) and Ultimate Loads (thickness and steel)."))
+        st.info(_t("**Modo: Zapata Aislada Céntrica** — Selecciona el método de ingreso de cargas.",
+                   " **Mode: Isolated Centered Footing** — Select the loads input method."))
 
-    colA, colB, colC = st.columns(3)
-    with colA:
-        st.write("#### Cargas (Servicio y Últimas)")
-        P_svc = st.number_input("Carga Axial de Servicio Ps [kN]", value=800.0, step=50.0)
-        M_svc_B = st.number_input("Momento de Servicio Ms (dir. B) [kN·m]", value=0.0, step=10.0)
-        M_svc_L = st.number_input("Momento de Servicio Ms (dir. L) [kN·m]", value=0.0, step=10.0)
-        P_ult = st.number_input("Carga Axial Factorizada Pu [kN]", value=1120.0, step=50.0)
-        M_ult_B = st.number_input("Momento Factorizado Mu (dir. B) [kN·m]", value=0.0, step=10.0)
-        M_ult_L = st.number_input("Momento Factorizado Mu (dir. L) [kN·m]", value=0.0, step=10.0)
-        
-    with colB:
-        st.write(_t("#### Geometría y Suelo", "#### Geometry and Soil"))
-        q_unit = st.selectbox(_t("Unidad q_adm:", "q_adm Unit:"), ["kPa (kN/m²)", "ton/m²", "kg/cm²", "MPa"], index=0)
-        
-        default_q = 200.0
-        step_q = 10.0
-        if q_unit == "ton/m²":
-            default_q, step_q = 20.0, 1.0
-        elif q_unit == "kg/cm²":
-            default_q, step_q = 2.0, 0.1
-        elif q_unit == "MPa":
-            default_q, step_q = 0.2, 0.05
+        st.write("---")
+        st.markdown("### 1. Cargas Actuantes en la Base de la Columna")
+        modo_cargas = st.radio("Método de Ingreso de Cargas:", 
+                     ["Envolventes Finales (ETABS / SAP2000)", "Generar Combinaciones (Ingreso D, L, E)"], 
+                     horizontal=True, key="z_modo_cargas")
+
+        if "Combinaciones" in modo_cargas:
+            cD, cL, cE = st.columns(3)
+            with cD:
+                PD = st.number_input("Carga Muerta P_D [kN]", value=500.0, step=50.0)
+                MD_B = st.number_input("Momento M_D (dir B) [kN·m]", value=35.0)
+                MD_L = st.number_input("Momento M_D (dir L) [kN·m]", value=29.0)
+            with cL:
+                PL = st.number_input("Carga Viva P_L [kN]", value=350.0, step=50.0)
+                ML_B = st.number_input("Momento M_L (dir B) [kN·m]", value=18.0)
+                ML_L = st.number_input("Momento M_L (dir L) [kN·m]", value=16.0)
+            with cE:
+                PE = st.number_input("Sismo P_E [kN]", value=80.0, step=10.0)
+                ME_B = st.number_input("Momento M_E (dir B) [kN·m]", value=55.0)
+                ME_L = st.number_input("Momento M_E (dir L) [kN·m]", value=61.0)
+                
+            P_svc = max(PD + PL, PD + PE, PD + 0.75*PL + 0.75*PE)
+            M_svc_B = max(abs(MD_B)+abs(ML_B), abs(MD_B)+abs(ME_B), abs(MD_B)+0.75*abs(ML_B)+0.75*abs(ME_B))
+            M_svc_L = max(abs(MD_L)+abs(ML_L), abs(MD_L)+abs(ME_L), abs(MD_L)+0.75*abs(ML_L)+0.75*abs(ME_L))
+
+            P_ult = max(1.2*PD + 1.6*PL, 1.2*PD + 1.0*PL + 1.0*PE)
+            M_ult_B = max(1.2*abs(MD_B) + 1.6*abs(ML_B), 1.2*abs(MD_B) + 1.0*abs(ML_B) + 1.0*abs(ME_B))
+            M_ult_L = max(1.2*abs(MD_L) + 1.6*abs(ML_L), 1.2*abs(MD_L) + 1.0*abs(ML_L) + 1.0*abs(ME_L))
             
-        q_val_input = st.number_input(_t("Capacidad Portante q_adm", "Bearing Capacity q_adm"), value=default_q, step=step_q)
-        
-        if q_unit == "kPa (kN/m²)":
-            q_adm_z = q_val_input
-        elif q_unit == "ton/m²":
-            q_adm_z = q_val_input * 9.80665
-        elif q_unit == "MPa":
-            q_adm_z = q_val_input * 1000.0
-        else: # kg/cm²
-            q_adm_z = q_val_input * 98.0665
+            st.info(f"**Envolventes Calculadas:** Ps={P_svc:.1f} kN | Pu={P_ult:.1f} kN | Ms_B={M_svc_B:.1f} kN·m | Mu_B={M_ult_B:.1f} kN·m", icon="💡")
 
-        # Mostrar equivalencias en formato adaptable (evita que se corte la métrica en pantallas reducidas)
-        st.info(f"**Equivalencia:** `{q_adm_z:.1f} kPa` | `{q_adm_z/9.80665:.2f} ton/m²` | `{q_adm_z/98.0665:.3f} kg/cm²` | `{q_adm_z/1000:.4f} MPa`")
+        else:
+            cC1, cC2, _ = st.columns([1.5, 1.5, 1])
+            with cC1:
+                P_svc = st.number_input("Carga Axial Svc. Ps [kN]", value=800.0, step=50.0)
+                M_svc_B = st.number_input("Mom. Svc. Ms (dir. B) [kN·m]", value=0.0, step=10.0)
+                M_svc_L = st.number_input("Mom. Svc. Ms (dir. L) [kN·m]", value=0.0, step=10.0)
+            with cC2:
+                P_ult = st.number_input("Carga Axial Fact. Pu [kN]", value=1120.0, step=50.0)
+                M_ult_B = st.number_input("Mom. Fact. Mu (dir. B) [kN·m]", value=0.0, step=10.0)
+                M_ult_L = st.number_input("Mom. Fact. Mu (dir. L) [kN·m]", value=0.0, step=10.0)
 
-        c1_col = st.number_input(_t("Dim. Columna c1 (dir. B) [cm]", "Column dim. c1 (B dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
-        c2_col = st.number_input(_t("Dim. Columna c2 (dir. L) [cm]", "Column dim. c2 (L dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
-        pos_col_iso = st.selectbox("Posición de la columna", ["Interior", "Borde (eje X)", "Borde (eje Y)", "Esquina"], key="pos_col_iso")
-        gamma_prom = st.number_input(_t("γ_promedio (suelo+concreto) [kN/m³]", "γ_avg (soil+concrete) [kN/m³]"), value=20.0)
-        Df_z = st.number_input(_t("Desplante Df [m]", "Footing Depth Df [m]"), value=1.0, step=0.1)
+        st.write("---")
+        st.markdown("### 2. Geometría, Suelo y Diseño Estructural")
+        colG, colE = st.columns(2)
+            
+        with colG:
+            st.write(_t("#### Geometría y Suelo", "#### Geometry and Soil"))
+            q_unit = st.selectbox(_t("Unidad q_adm:", "q_adm Unit:"), ["kPa (kN/m²)", "ton/m²", "kg/cm²", "MPa"], index=0)
+            
+            default_q = 200.0
+            step_q = 10.0
+            if q_unit == "ton/m²":
+                default_q, step_q = 20.0, 1.0
+            elif q_unit == "kg/cm²":
+                default_q, step_q = 2.0, 0.1
+            elif q_unit == "MPa":
+                default_q, step_q = 0.2, 0.05
+                
+            q_val_input = st.number_input(_t("Capacidad Portante q_adm", "Bearing Capacity q_adm"), value=default_q, step=step_q)
+            
+            if q_unit == "kPa (kN/m²)":
+                q_adm_z = q_val_input
+            elif q_unit == "ton/m²":
+                q_adm_z = q_val_input * 9.80665
+            elif q_unit == "MPa":
+                q_adm_z = q_val_input * 1000.0
+            else: # kg/cm²
+                q_adm_z = q_val_input * 98.0665
 
-    with colC:
-        st.write("#### Diseño Estructural")
-        H_zap = st.number_input("Espesor H propuesto [cm]", value=50.0, step=5.0)
-        recub_z = st.number_input("Recubrimiento al suelo [cm]", value=7.5, step=0.5)
-        bar_z = st.selectbox("Varilla a utilizar:", list(REBAR_DICT.keys()), index=def_idx)
-        A_bar_z = REBAR_DICT[bar_z]["area"] * 100 # mm2
-        db_bar_z = REBAR_DICT[bar_z]["db"] # mm
+            st.info(f"**Equivalencia:** `{q_adm_z:.1f} kPa` | `{q_adm_z/9.80665:.2f} ton/m²` | `{q_adm_z/98.0665:.3f} kg/cm²` | `{q_adm_z/1000:.4f} MPa`")
+            
+            cc1, cc2 = st.columns(2)
+            with cc1:
+                c1_col = st.number_input(_t("Columna c1 (dir. B) [cm]", "Col c1 (B dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
+                pos_col_iso = st.selectbox("Posición", ["Interior", "Borde (eje X)", "Borde (eje Y)", "Esquina"], key="pos_col_iso")
+                gamma_prom = st.number_input(_t("γ_promedio [kN/m³]", "γ_avg [kN/m³]"), value=20.0)
+            with cc2:
+                c2_col = st.number_input(_t("Columna c2 (dir. L) [cm]", "Col c2 (L dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
+                Df_z = st.number_input(_t("Desplante Df [m]", "Depth Df [m]"), value=1.0, step=0.1)
+                s_c_uso = st.number_input("Sobrecarga s/c [kPa]", value=3.0, step=0.5, help="Sobrecarga externa s/c (equivale aprox a 300 kg/m²)")
+
+        with colE:
+            st.write("#### Diseño Estructural")
+            H_zap = st.number_input("Espesor H propuesto [cm]", value=50.0, step=5.0)
+            # ── Recubrimiento mínimo por norma ─────────────────────────────────────────
+            _COVER_MIN_ZAP = {
+                'NSR-10 Colombia': 7.5, 'ACI 318-25 EE.UU.': 7.5,
+                'ACI 318-19 EE.UU.': 7.5, 'ACI 318-14 EE.UU.': 7.5,
+                'E.060 Peru': 7.5, 'NEC-SE-HM Ecuador': 7.5,
+                'NTC-EM México': 7.0, 'COVENIN 1753-2006 Venezuela': 7.5,
+                'NB 1225001-2020 Bolivia': 7.5, 'CIRSOC 201-2025 Argentina': 7.5,
+            }
+            _recub_default = _COVER_MIN_ZAP.get(norma_sel, 7.5)
+            recub_z = st.number_input("Recubrimiento al suelo [cm]", value=float(_recub_default), step=0.5, help=f"Min. normativo: {_recub_default} cm — {norma_sel}")
+            bar_z = st.selectbox("Varilla a utilizar:", list(REBAR_DICT.keys()), index=def_idx)
+            A_bar_z = REBAR_DICT[bar_z]["area"] * 100 # mm2
+            db_bar_z = REBAR_DICT[bar_z]["db"] # mm
         
     #  Validaciones robustas 
     if c1_col <= 0 or c2_col <= 0:
@@ -1893,7 +2100,16 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     except (ZeroDivisionError, ValueError):
         rho_B = 0.02
         disc_B = 0
-    rho_use_B = max(rho_B, 0.0018)
+    # ── Cuantía mínima por norma ────────────────────────────────────────────────
+    _RHO_MIN_ZAP = {
+        'NSR-10 Colombia': 0.0018, 'ACI 318-25 EE.UU.': 0.0018,
+        'ACI 318-19 EE.UU.': 0.0018, 'ACI 318-14 EE.UU.': 0.0018,
+        'E.060 Peru': 0.0018, 'NEC-SE-HM Ecuador': 0.0018,
+        'NTC-EM México': 0.0020, 'COVENIN 1753-2006 Venezuela': 0.0018,
+        'NB 1225001-2020 Bolivia': 0.0018, 'CIRSOC 201-2025 Argentina': 0.0018,
+    }
+    _rho_min_zap = _RHO_MIN_ZAP.get(norma_sel, 0.0018)
+    rho_use_B = max(rho_B, _rho_min_zap)
     As_req_B = rho_use_B * (L_use*100) * d_z  # cm2 para ancho L
     n_barras_B = math.ceil(As_req_B / REBAR_DICT[bar_z]["area"])
     sep_B = (L_use*100 - 2*recub_z) / max(1, n_barras_B - 1)  # Acero Dir.B se distribuye a lo largo de L
@@ -1906,7 +2122,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
     except (ZeroDivisionError, ValueError):
         rho_L = 0.02
         disc_L = 0
-    rho_use_L = max(rho_L, 0.0018)
+    rho_use_L = max(rho_L, _rho_min_zap)
     As_req_L = rho_use_L * (B_use*100) * d_z  # cm2 para ancho B
     n_barras_L = math.ceil(As_req_L / REBAR_DICT[bar_z]["area"])
     sep_L = (B_use*100 - 2*recub_z) / max(1, n_barras_L - 1)  # Acero Dir.L se distribuye a lo largo de B
@@ -1952,7 +2168,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         st.markdown(f"**Revisión Estructural: f'c = {fc_basico} MPa | fy = {fy_basico} MPa**")
         
         #  RECOMENDACIÓN DE ACERO Y ALERTA 
-        sep_max = min(3 * H_zap, 45.0)
+
         warning_bar = []
         if sep_B > sep_max or sep_L > sep_max:
             warning_bar.append(f" La separación ({max(sep_B, sep_L):.1f} cm) excede la máxima permitida normativa ({sep_max} cm). ¡Usa una varilla más pequeña (ej. #4 o #5)!")
@@ -2031,7 +2247,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             Pp_pasivo = _c_fs3.number_input("Empuje pasivo Ep [kN] (si hay muro adyacente)", 0.0, 5000.0, 0.0, 10.0)
 
         # Carga vertical total de servicio (peso zapata + suelo + carga)
-        W_total = P_svc + (B_use * L_use * Df_z * gamma_prom)   # kN (usa gamma_prom del panel)
+        W_total = P_svc + (B_use * L_use * Df_z * gamma_prom) + (B_use * L_use * s_c_uso)   # kN (peso real zap + relleno + sobrecarga)
 
         # --- FS VOLCAMIENTO (referencia al borde de la zapata) ---
         # Momento estabilizador = P_svc * B/2  (carga vertical actúa en el centro)
@@ -2287,16 +2503,30 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             ax_2d.axis('off')
             ax_2d.set_title(f"Armadura Inferior\n{int(n_barras_B)} {bar_z} (B) / {int(n_barras_L)} {bar_z} (L)", color="white", fontsize=10)
             st.pyplot(fig_2d)
+            plt.close(fig_2d)
         
         #  MEMORIA DE CÁLCULO COMPLETA 
         doc_zap = Document()
         doc_zap.add_heading(f"MEMORIA ESTRUCTURAL — ZAPATA {tipo_zap} ({norma_sel})", 0)
 
-        # 0. Portada
+        # 0. Portada — identidad global v6.1
         import datetime
+        _emp_z, _proy_z, _ing_z, _elab_z, _rev_z, _apb_z, _logo_z = _get_identity()
         p0 = doc_zap.add_paragraph()
         _ns = st.session_state.get("nivel_sismico", "N/A - General")
-        p0.add_run(f"Proyecto: \nElemento: Zapata {tipo_zap}\nNorma: {norma_sel}\nNivel Sísmico: {_ns}\nMateriales: Concreto f'c = {fc_basico:.1f} MPa, Acero fy = {fy_basico:.1f} MPa\nFecha: {datetime.datetime.now().strftime('%d/%m/%Y')}").bold = True
+        p0.add_run(
+            f"Empresa: {_emp_z}  |  Proyecto: {_proy_z}  |  Ing.: {_ing_z}\n"
+            f"Elemento: Zapata {tipo_zap} — Norma: {norma_sel}\n"
+            f"Nivel Sísmico: {_ns}\n"
+            f"Elaboró: {_elab_z}   Revisó: {_rev_z}   Aprobó: {_apb_z}\n"
+            f"Materiales: Concreto f'c = {fc_basico:.1f} MPa, Acero fy = {fy_basico:.1f} MPa\n"
+            f"Fecha: {datetime.datetime.now().strftime('%d/%m/%Y')}"
+        ).bold = True
+        if _logo_z:
+            try:
+                doc_zap.add_picture(io.BytesIO(_logo_z), width=Inches(1.5))
+            except Exception:
+                pass
 
         # 1. Parámetros de Diseño
         doc_zap.add_heading("1. PARÁMETROS DE DISEÑO", level=1)
@@ -2551,7 +2781,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             with st.spinner("Generando IFC4 nativo..."):
                 buf_ifc = _make_ifc_zapata_aislada(
                     B_use, L_use, H_zap/100, c1_col/100, c2_col/100, fc_basico, fy_basico,
-                    bar_z, int(n_barras_B), bar_z, int(n_barras_L), recub_z, P_ult, norma_sel, "Proyecto NSR-10"
+                    bar_z, int(n_barras_B), bar_z, int(n_barras_L), recub_z, P_ult, norma_sel, st.session_state.get("proyecto", "") or "Proyecto"
                 )
                 if buf_ifc:
                     st.success("IFC4 generado con éxito.")
@@ -2560,20 +2790,31 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
 
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
-            st.download_button("Memoria DOCX", data=f_zap_io,
+            if _puede_exportar:
+                st.download_button("Memoria DOCX", data=f_zap_io,
                                file_name=f"Memoria_Zapata_{B_use:.1f}x{L_use:.1f}m.docx",
                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                use_container_width=True, disabled=not area_ok)
+            else:
+                st.button("Memoria DOCX", disabled=True, help="Requiere licencia Pro o Admin.", use_container_width=True)
         with col_m2:
-            st.download_button("Descargar Plano DXF (ICONTEC)", data=_dxf_bytes,
+            if _puede_exportar:
+                st.download_button("Descargar Plano DXF (ICONTEC)", data=_dxf_bytes,
                                file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}.dxf" if _dxf_bytes else "Plano.dxf",
                                mime="application/dxf",
                                use_container_width=True, disabled=(_dxf_bytes is None))
+            else:
+                st.button("Descargar Plano DXF (ICONTEC)", disabled=True,
+                          help="Requiere licencia Pro o Admin.", use_container_width=True)
         with col_m3:
-            st.download_button("Descargar Modelo BIM (IFC)", data=buf_ifc,
+            if _puede_exportar:
+                st.download_button("Descargar Modelo BIM (IFC)", data=buf_ifc,
                                file_name=f"Zapata_Aislada_{B_use:.1f}x{L_use:.1f}.ifc" if buf_ifc else "Modelo.ifc",
                                mime="application/x-step",
                                use_container_width=True, disabled=(buf_ifc is None))
+            else:
+                st.button("Descargar Modelo BIM (IFC)", disabled=True,
+                          help="Requiere licencia Pro o Admin.", use_container_width=True)
 
     with tab_dwg:
         st.subheader("Visualización 3D de la Fundación con Acero de Refuerzo")
@@ -2704,6 +2945,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         ax_z.set_ylim(-10, H_zap+70)
         ax_z.axis('off')
         st.pyplot(fig_z)
+        plt.close(fig_z)
         
         st.markdown("---")
         st.write("####  Vista 3D Nativa (Volumen de Concreto)")
@@ -3102,9 +3344,11 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             _idx = _nombres_existentes.index(_nombre_zap)
             st.session_state["zapatas_proyecto"][_idx] = _entrada
             st.success(f"Zapata **{_nombre_zap}** actualizada en el registro.")
+            _save_state_zap()  # Persistencia v6.1
         else:
             st.session_state["zapatas_proyecto"].append(_entrada)
             st.success(f"Zapata **{_nombre_zap}** agregada al proyecto ({len(st.session_state['zapatas_proyecto'])} total).")
+            _save_state_zap()  # Persistencia v6.1
 
     if _col_btn2.button(" Limpiar registro"):
         st.session_state["zapatas_proyecto"] = []
@@ -3523,13 +3767,17 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                         st.error(f"Error generando DXF: {_e_dxf}")
             
             if _buf_dxf:
-                st.download_button(
-                    f"Descargar DXF — {sn['nombre']}",
-                    data=_buf_dxf,
-                    file_name=f"zapata_sistema_{sn['nombre'].replace(' ','_').lower()}.dxf",
-                    mime="application/dxf",
-                    key="zm_dl_dxf"
-                )
+                if _puede_exportar:
+                    st.download_button(
+                        f"Descargar DXF — {sn['nombre']}",
+                        data=_buf_dxf,
+                        file_name=f"zapata_sistema_{sn['nombre'].replace(' ','_').lower()}.dxf",
+                        mime="application/dxf",
+                        key="zm_dl_dxf"
+                    )
+                else:
+                    st.button("Descargar DXF Sistema", disabled=True,
+                              help="Requiere licencia Pro o Admin.")
 
         else:
             st.warning(" Completa primero la pestaña **Geometría y Presiones** y el diseño de la viga.")
@@ -3610,5 +3858,19 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                         st.error("Error al generar IFC.")
                         
             if _buf_ifc_s:
-                st.download_button("Descargar Modelo BIM (IFC)", data=_buf_ifc_s, file_name="Sistema_Medianero.ifc", mime="application/x-step")
-
+                if _puede_exportar:
+                    st.download_button("Descargar Modelo BIM (IFC)", data=_buf_ifc_s,
+                                       file_name="Sistema_Medianero.ifc", mime="application/x-step")
+                else:
+                    st.button("Descargar Modelo BIM (IFC)", disabled=True,
+                              help="Requiere licencia Pro o Admin.")
+# ── Separación máxima por norma ─────────────────────────────────────────────
+_SEP_MAX_LIMITS = {
+    'NSR-10 Colombia': 45.0, 'ACI 318-25 EE.UU.': 45.0,
+    'ACI 318-19 EE.UU.': 45.0, 'ACI 318-14 EE.UU.': 45.0,
+    'E.060 Peru': 45.0, 'NEC-SE-HM Ecuador': 45.0,
+    'NTC-EM México': 40.0, 'COVENIN 1753-2006 Venezuela': 40.0,
+    'NB 1225001-2020 Bolivia': 45.0, 'CIRSOC 201-2025 Argentina': 40.0,
+}
+_sep_max_abs = _SEP_MAX_LIMITS.get(norma_sel, 45.0)
+sep_max = min(3 * H_zap, _sep_max_abs)

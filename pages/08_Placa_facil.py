@@ -283,209 +283,218 @@ if not _has_id:
 # ══════════════════════════════════════════════════════════════════════════════
 st.sidebar.markdown("## Configuracion")
 
-# ── Rol de usuario ─────────────────────────────────────────────────────────────
+# ── Rol de usuario ────────────────────────────────────────────────────────────
 with st.sidebar.expander("Rol de Usuario", expanded=False):
-    _roles = ["free", "pro", "admin"]
-    _rol_idx = _roles.index(st.session_state.get("user_role", "free"))
-    _rol_nuevo = st.radio(
-        "Selecciona tu rol:", _roles, index=_rol_idx,
-        key="pf_rol_radio",
-        help="free: calculos + Excel/CSV. pro: todos los entregables. admin: acceso total.",
-    )
-    if _rol_nuevo != st.session_state.get("user_role"):
-        st.session_state["user_role"] = _rol_nuevo
+    roles = ["free", "pro", "admin"]
+    rol_idx = roles.index(st.session_state.get("user_role", "free"))
+    rol_nuevo = st.radio("Selecciona tu rol", roles, index=rol_idx,
+                         key="pf_rol_radio",
+                         help="free: cálculos + Excel/CSV.  pro: todos los entregables.  admin: acceso total.")
+    if rol_nuevo != st.session_state.get("user_role"):
+        st.session_state["user_role"] = rol_nuevo
         save_state()
         st.rerun()
-    _color_rol = {"admin": "#1b5e20", "pro": "#0d47a1", "free": "#b71c1c"}
-    st.markdown(
-        f'<div style="background:{_color_rol[_rol_nuevo]};color:white;border-radius:6px;'
-        f'padding:5px 10px;font-size:12px;text-align:center;font-weight:600;margin-top:6px;">'
-        f'Rol activo: {_rol_nuevo.upper()}</div>',
-        unsafe_allow_html=True,
-    )
+    color_rol = {"admin": "#1b5e20", "pro": "#0d47a1", "free": "#b71c1c"}
+    st.markdown(f'<div style="background:{color_rol[rol_nuevo]};color:white;border-radius:6px;'
+                f'padding:5px 10px;font-size:12px;text-align:center;font-weight:600;margin-top:6px;">'
+                f'Rol activo: {rol_nuevo.upper()}</div>', unsafe_allow_html=True)
 
-# ── Identidad del proyecto ─────────────────────────────────────────────────────
+# ── Identidad del Proyecto ────────────────────────────────────────────────────
 with st.sidebar.expander("Identidad del Proyecto", expanded=False):
-    _id_emp  = st.text_input("Empresa / Firma",
-                             value=st.session_state.get("empresa", ""),
-                             key="sid_empresa_pf", placeholder="________________")
-    _id_proy = st.text_input("Nombre del Proyecto",
-                             value=st.session_state.get("proyecto", ""),
-                             key="sid_proyecto_pf", placeholder="________________")
-    _id_ing  = st.text_input("Ingeniero Responsable",
-                             value=st.session_state.get("ingeniero", ""),
-                             key="sid_ingeniero_pf", placeholder="________________")
-    _c1, _c2 = st.columns(2)
-    _id_elab = _c1.text_input("Elaboro",  value=st.session_state.get("pf_elaboro", ""),  key="sid_elab_pf")
-    _id_rev  = _c2.text_input("Reviso",   value=st.session_state.get("pf_reviso", ""),   key="sid_rev_pf")
-    _id_apb  = st.text_input("Aprobo",    value=st.session_state.get("pf_aprobo", ""),   key="sid_apb_pf")
+    ide_emp  = st.text_input("Empresa / Firma", value=st.session_state.get("empresa",""),
+                              key="sid_empresa_pf", placeholder="Konte Ingeniería")
+    ide_proy = st.text_input("Nombre del Proyecto", value=st.session_state.get("proyecto",""),
+                              key="sid_proyecto_pf", placeholder="Edificio Ejemplo")
+    ide_ing  = st.text_input("Ingeniero Responsable", value=st.session_state.get("ingeniero",""),
+                              key="sid_ingeniero_pf", placeholder="Ing. Responsable")
+    c1, c2   = st.columns(2)
+    ide_elab = c1.text_input("Elaboró", value=st.session_state.get("pf_elaboro",""), key="sid_elab_pf")
+    ide_rev  = c2.text_input("Revisó",  value=st.session_state.get("pf_reviso",""),  key="sid_rev_pf")
+    ide_apb  = st.text_input("Aprobó",  value=st.session_state.get("pf_aprobo",""),  key="sid_apb_pf")
     if st.button("Guardar identidad", key="btn_id_pf", use_container_width=True):
-        st.session_state["empresa"]    = _id_emp
-        st.session_state["proyecto"]   = _id_proy
-        st.session_state["ingeniero"]  = _id_ing
-        st.session_state["pf_elaboro"] = _id_elab
-        st.session_state["pf_reviso"]  = _id_rev
-        st.session_state["pf_aprobo"]  = _id_apb
-        save_state()
-        st.success("Identidad guardada")
-        st.rerun()
-
-    # Logo
-    st.markdown("---")
-    st.markdown("**Logo de empresa**")
-    st.caption("Aparece en portada de PDF y DOCX. PNG/JPG, fondo blanco recomendado.")
-    _logo_file = st.file_uploader("Subir logo (PNG/JPG)",
-                                  type=["png", "jpg", "jpeg"],
-                                  key="pf_logo_upload")
-    if _logo_file is not None:
-        _raw = _logo_file.read()
-        if _raw:
-            st.session_state["logo_bytes"] = _raw
-            save_state()
-            st.success("Logo cargado")
-    if st.session_state.get("logo_bytes"):
-        try:
-            st.image(st.session_state["logo_bytes"], width=150,
-                     caption="Logo activo — aparece en PDF y DOCX")
-        except Exception:
-            st.caption("Logo cargado (no previsualizable)")
-        _la, _lb = st.columns(2)
-        if _la.button("Quitar logo", key="pf_rm_logo", use_container_width=True):
-            st.session_state.pop("logo_bytes", None)
-            save_state()
-            st.rerun()
-        _lb.download_button("Descargar", data=st.session_state["logo_bytes"],
-                            file_name="logo.png", mime="image/png",
-                            use_container_width=True, key="pf_dl_logo")
-    else:
-        st.caption("Sin logo — documentos solo texto.")
+        st.session_state["empresa"]    = ide_emp
+        st.session_state["proyecto"]   = ide_proy
+        st.session_state["ingeniero"]  = ide_ing
+        st.session_state["pf_elaboro"] = ide_elab
+        st.session_state["pf_reviso"]  = ide_rev
+        st.session_state["pf_aprobo"]  = ide_apb
+        save_state(); st.success("Identidad guardada"); st.rerun()
 
 st.sidebar.markdown("---")
+st.sidebar.markdown("**Logo de empresa**")
+st.sidebar.caption("Aparece en portada de PDF y DOCX. PNG/JPG, fondo blanco recomendado.")
+logo_file = st.sidebar.file_uploader("Subir logo PNG/JPG", type=["png","jpg","jpeg"], key="pf_logo_upload")
+if logo_file is not None:
+    raw = logo_file.read()
+    if raw:
+        st.session_state["logo_bytes"] = raw; save_state(); st.sidebar.success("Logo cargado")
+if st.session_state.get("logo_bytes"):
+    try: st.sidebar.image(st.session_state["logo_bytes"], width=150, caption="Logo activo")
+    except: st.sidebar.caption("Logo cargado (no previsualizable)")
+    la, lb = st.sidebar.columns(2)
+    if la.button("Quitar logo", key="pf_rm_logo", use_container_width=True):
+        st.session_state.pop("logo_bytes", None); save_state(); st.rerun()
+    lb.download_button("⬇️", data=st.session_state["logo_bytes"], file_name="logo.png",
+                        mime="image/png", use_container_width=True, key="pf_dl_logo")
+else:
+    st.sidebar.caption("Sin logo — documentos solo texto.")
+st.sidebar.markdown("---")
 
-# ── Norma ──────────────────────────────────────────────────────────────────────
+# ── Norma e idioma ────────────────────────────────────────────────────────────
 norma_sel = st.sidebar.selectbox(
-    _t("Norma de diseno", "Design code"),
+    _t("Norma de diseño", "Design code"),
     list(NORMAS_PLACA.keys()), index=0, key="pf_norma_sel")
 mostrar_referencias_norma(norma_sel, "placa_facil")
 norma = NORMAS_PLACA[norma_sel]
-
-# ── Datos del proyecto (plano) ─────────────────────────────────────────────────
-st.sidebar.header(_t("Datos del proyecto", "Project data"))
-proyecto_nombre    = st.sidebar.text_input(
-    _t("Nombre del proyecto", "Project name"),
-    value=st.session_state.get("pf_proyecto_nombre", ""),
-    placeholder="________________", key="pf_proy_nom")
-proyecto_direccion = st.sidebar.text_input(
-    _t("Direccion de obra", "Site address"),
-    value=st.session_state.get("pf_proyecto_dir", ""),
-    placeholder="________________", key="pf_proy_dir")
-proyecto_cliente   = st.sidebar.text_input(
-    _t("Cliente / Propietario", "Client / Owner"),
-    value=st.session_state.get("pf_proyecto_cliente", ""),
-    placeholder="________________", key="pf_proy_cli")
-
-# Sincronizar al session_state en cada rerun
-st.session_state["pf_proyecto_nombre"]  = proyecto_nombre
-st.session_state["pf_proyecto_dir"]     = proyecto_direccion
-st.session_state["pf_proyecto_cliente"] = proyecto_cliente
-
-num_pisos = st.sidebar.number_input(_t("Numero de pisos", "Number of floors"), 1, 10, 1, 1)
-uso_placa = st.sidebar.selectbox(_t("Uso de la placa", "Slab use"), list(CARGA_VIVA.keys()), index=0)
-carga_viva_kn = CARGA_VIVA[uso_placa]
-
-# ── Geometria ──────────────────────────────────────────────────────────────────
-st.sidebar.header(_t("Geometria de la placa", "Slab geometry"))
-Lx = st.sidebar.number_input(_t("Luz X (m)", "Span X (m)"), 2.0, 12.0, 6.0, 0.1)
-Ly = st.sidebar.number_input(_t("Luz Y (m)", "Span Y (m)"), 2.0, 12.0, 5.0, 0.1)
-orientacion = st.sidebar.selectbox(
-    _t("Direccion de los perfiles", "Profile direction"),
-    ["Paralelo a X", "Paralelo a Y"], index=0)
-
-# ── Diseno ─────────────────────────────────────────────────────────────────────
-st.sidebar.header(_t("Parametros de diseno", "Design parameters"))
-espesor_torta    = st.sidebar.number_input(
-    _t("Espesor torta concreto (cm)", "Concrete topping (cm)"), 4.0, 10.0, 5.0, 0.5) / 100.0
-fc_concreto      = st.sidebar.number_input(
-    _t("Resistencia f'c (MPa)", "Concrete f'c (MPa)"), 18.0, 35.0, 21.0, 0.5)
-perfil_espaciado = st.sidebar.number_input(
-    _t("Separacion entre perfiles (cm)", "Profile spacing (cm)"), 70.0, 100.0, 89.0, 1.0) / 100.0
-incluir_vigas    = st.sidebar.checkbox(
-    _t("Incluir vigas de borde", "Include edge beams"), value=True)
-viga_b = st.sidebar.number_input(
-    _t("Ancho viga borde (cm)", "Edge beam width (cm)"), 10.0, 30.0, 15.0, 1.0) / 100.0
-viga_h = st.sidebar.number_input(
-    _t("Altura viga borde (cm)", "Edge beam height (cm)"), 15.0, 40.0, 20.0, 1.0) / 100.0
-
-# ── Sismico ────────────────────────────────────────────────────────────────────
-st.sidebar.header(_t("Parametros sismicos", "Seismic parameters"))
-zona_sismica = st.sidebar.selectbox(
-    _t("Zona sismica (Aa)", "Seismic zone"),
-    ["I (Aa<0.10)", "II (0.10<=Aa<0.20)", "III (0.20<=Aa<0.30)", "IV (Aa>=0.30)"], index=1)
-sistema_estructural = st.sidebar.selectbox(
-    _t("Sistema estructural", "Structural system"),
-    ["DMO (Desempeno Minimo)", "DES (Desempeno Especial)", "DMI (Desempeno Intermedio)"], index=0)
-is_high_seismic = ("IV" in zona_sismica) or ("III" in zona_sismica)
-if is_high_seismic and "DMO" in sistema_estructural:
-    st.sidebar.warning("Zona alta: DMO no permitido segun NSR-10 C.21. Use DES o DMI.")
-
-# ── Desperdicios ───────────────────────────────────────────────────────────────
-st.sidebar.header(_t("Factores de desperdicio", "Waste factors"))
-desp_bloques  = st.sidebar.number_input("Bloques (%)",   0.0, 20.0, 5.0,  1.0) / 100.0
-desp_concreto = st.sidebar.number_input("Concreto (%)",  0.0, 20.0, 10.0, 1.0) / 100.0
-desp_malla    = st.sidebar.number_input("Malla (%)",     0.0, 20.0, 10.0, 1.0) / 100.0
-desp_perfiles = st.sidebar.number_input("Perfiles (%)",  0.0, 20.0, 5.0,  1.0) / 100.0
-
-# ── APU precios (referencia Q1-2026 Colombia) ──────────────────────────────────
-st.sidebar.header("APU — Precios unitarios")
-moneda         = st.sidebar.text_input("Moneda", "COP", key="pf_moneda")
-precio_bloque  = st.sidebar.number_input(
-    "Precio bloque (und)", 3000.0, 20000.0, 7200.0, 100.0,
-    help="Ref. mercado Colombia Q1-2026: COP 7,200")
-precio_perfil  = st.sidebar.number_input(
-    "Precio perfil (m lineal)", 15000.0, 60000.0, 28000.0, 1000.0,
-    help="Ref. mercado Colombia Q1-2026: COP 28,000")
-precio_malla   = st.sidebar.number_input(
-    "Precio malla (m2)", 6000.0, 25000.0, 11000.0, 500.0,
-    help="Ref. mercado Colombia Q1-2026: COP 11,000")
-precio_concreto= st.sidebar.number_input(
-    "Precio concreto (m3)", 200000.0, 700000.0, 450000.0, 10000.0,
-    help="Ref. mercado Colombia Q1-2026: COP 450,000")
-precio_mo      = st.sidebar.number_input(
-    "Costo MO (dia)", 40000.0, 200000.0, 70000.0, 5000.0,
-    help="Ref. SMLMV 2026 Colombia")
-pct_herramienta= st.sidebar.number_input("% Herramienta menor", 0.0, 20.0, 5.0, 1.0) / 100.0
-pct_aui        = st.sidebar.number_input("% A.I.U.", 0.0, 50.0, 30.0, 5.0) / 100.0
-pct_util       = st.sidebar.number_input("% Utilidad", 0.0, 20.0, 5.0, 1.0) / 100.0
-iva_pct        = st.sidebar.number_input("% IVA s/Utilidad", 0.0, 30.0, 19.0, 1.0) / 100.0
-
-# Indicador de precios
-_price_nota = "Precios de referencia Q1-2026 — verificar con cotizacion actual antes de contratar."
-st.sidebar.markdown(
-    f'<div style="background:#1a1a1a;border-radius:6px;padding:6px 10px;margin:4px 0 8px;'
-    f'font-size:10px;color:#e65100;">[!] {_price_nota}</div>',
-    unsafe_allow_html=True)
-st.session_state["_price_status_label"] = _price_nota
-st.session_state["_price_date"] = datetime.now().strftime("%d/%m/%Y")
-
-# ── Datos plano ────────────────────────────────────────────────────────────────
-st.sidebar.header("Datos del plano")
-plano_numero = st.sidebar.text_input("Numero de plano",
-    value=st.session_state.get("pf_plano_num", "PL-01"), key="pf_plano")
-escala_plano = st.sidebar.text_input("Escala",
-    value=st.session_state.get("pf_escala", "1:50"), key="pf_escala_inp")
-elaboro  = st.session_state.get("pf_elaboro", "") or "________________"
-revisado = st.session_state.get("pf_reviso",  "") or "________________"
-aprobado = st.session_state.get("pf_aprobo",  "") or "________________"
-st.session_state["pf_plano_num"] = plano_numero
-st.session_state["pf_escala"]    = escala_plano
 
 st.sidebar.markdown(f'<div style="text-align:center;color:gray;font-size:10px;">'
                     f'© {datetime.now().year} {_emp_hdr} — Uso profesional exclusivo</div>',
                     unsafe_allow_html=True)
 
+
+
 # ══════════════════════════════════════════════════════════════════════════════
-# FUNCIONES DE CALCULO
+# INPUTS PRINCIPALES — se muestran en Tab "⚙️ Configuración"
 # ══════════════════════════════════════════════════════════════════════════════
+
+def _section_header(titulo, subtitulo=""):
+    st.markdown(
+        f'''<div style="background:linear-gradient(90deg,#1e3a5f,#2e6da4);
+            border-radius:8px;padding:10px 18px;margin:12px 0 8px;">
+          <span style="color:white;font-weight:700;font-size:1rem;">{titulo}</span>
+          {"<br><span style=\'color:#90caf9;font-size:0.82rem;\'>" + subtitulo + "</span>" if subtitulo else ""}
+        </div>''', unsafe_allow_html=True)
+
+def render_config_tab():
+    # ── Sección 1: Proyecto ───────────────────────────────────────────────────
+    _section_header("Datos del Proyecto", "Información general del encargo")
+    pc1, pc2, pc3 = st.columns(3)
+    proyecto_nombre    = pc1.text_input(_t("Nombre del proyecto","Project name"),
+                            value=st.session_state.get("pf_proyecto_nombre",""),
+                            placeholder="Edificio Ejemplo", key="pf_proy_nom")
+    proyecto_direccion = pc2.text_input(_t("Dirección de obra","Site address"),
+                            value=st.session_state.get("pf_proyecto_dir",""),
+                            placeholder="Calle 123", key="pf_proy_dir")
+    proyecto_cliente   = pc3.text_input(_t("Cliente / Propietario","Client / Owner"),
+                            value=st.session_state.get("pf_proyecto_cliente",""),
+                            placeholder="Cliente S.A.S.", key="pf_proy_cli")
+    st.session_state["pf_proyecto_nombre"]  = proyecto_nombre
+    st.session_state["pf_proyecto_dir"]     = proyecto_direccion
+    st.session_state["pf_proyecto_cliente"] = proyecto_cliente
+
+    pa1, pa2 = st.columns(2)
+    num_pisos  = pa1.number_input(_t("Número de pisos","Number of floors"), 1, 10, 1, 1, key="pf_num_pisos")
+    uso_placa  = pa2.selectbox(_t("Uso de la placa","Slab use"), list(CARGA_VIVA.keys()), index=0, key="pf_uso_placa")
+    carga_viva_kn = CARGA_VIVA[uso_placa]
+
+    # ── Sección 2: Geometría ──────────────────────────────────────────────────
+    _section_header("Geometria de la Placa", "Luces y dirección de perfiles")
+    g1, g2, g3 = st.columns(3)
+    Lx           = g1.number_input(_t("Luz X (m)","Span X (m)"), 2.0, 12.0, 6.0, 0.1, key="pf_Lx")
+    Ly           = g2.number_input(_t("Luz Y (m)","Span Y (m)"), 2.0, 12.0, 5.0, 0.1, key="pf_Ly")
+    orientacion  = g3.selectbox(_t("Dirección de los perfiles","Profile direction"),
+                                ["Paralelo a X","Paralelo a Y"], index=0, key="pf_orientacion")
+
+    # ── Sección 3: Parámetros de diseño ──────────────────────────────────────
+    _section_header("Parametros de Diseno", "Materiales, perfiles y vigas")
+    d1, d2, d3 = st.columns(3)
+    espesor_torta    = d1.number_input(_t("Espesor torta concreto (cm)","Concrete topping (cm)"),
+                            4.0, 10.0, 5.0, 0.5, key="pf_espesor_torta") / 100.0
+    fc_concreto      = d2.number_input(_t("Resistencia f'c (MPa)","Concrete f'c (MPa)"),
+                            18.0, 35.0, 21.0, 0.5, key="pf_fc_concreto")
+    perfil_espaciado = d3.number_input(_t("Separación entre perfiles (cm)","Profile spacing (cm)"),
+                            70.0, 100.0, 89.0, 1.0, key="pf_perfil_espaciado") / 100.0
+
+    d4, d5, d6 = st.columns(3)
+    incluir_vigas = d4.checkbox(_t("Incluir vigas de borde","Include edge beams"), value=True, key="pf_incluir_vigas")
+    viga_b = d5.number_input(_t("Ancho viga borde (cm)","Edge beam width (cm)"),
+                10.0, 30.0, 15.0, 1.0, key="pf_viga_b") / 100.0 if incluir_vigas else 0.15
+    viga_h = d6.number_input(_t("Altura viga borde (cm)","Edge beam height (cm)"),
+                15.0, 40.0, 20.0, 1.0, key="pf_viga_h") / 100.0 if incluir_vigas else 0.20
+
+    # Viga intermedia
+    with st.expander(_t("Viga Intermedia (opcional)","Intermediate Beam (optional)"),
+                     expanded=False):
+        vi1, vi2, vi3 = st.columns(3)
+        incluir_viga_int = vi1.checkbox(_t("Incluir viga intermedia","Include intermediate beam"),
+                                         value=False, key="pf_viga_int_check")
+        viga_int_b = vi2.number_input(_t("Ancho viga intermedia (cm)","Int. beam width (cm)"),
+                        10.0, 30.0, 15.0, 1.0, key="pf_vint_b") / 100.0 if incluir_viga_int else 0.0
+        viga_int_h = vi3.number_input(_t("Altura viga intermedia (cm)","Int. beam height (cm)"),
+                        15.0, 50.0, 25.0, 1.0, key="pf_vint_h") / 100.0 if incluir_viga_int else 0.0
+        viga_int_pos = st.slider(_t("Posición (fracción de luz)","Position (span fraction)"),
+                        0.25, 0.75, 0.50, 0.05,
+                        key="pf_vint_pos") if incluir_viga_int else 0.0
+
+    # ── Sección 4: Parámetros sísmicos ────────────────────────────────────────
+    _section_header("Parametros Sismicos", "Zona y sistema estructural — NSR-10 C.21")
+    s1, s2 = st.columns(2)
+    zona_sismica       = s1.selectbox(_t("Zona sísmica (Aa)","Seismic zone"),
+                            ["I (Aa≤0.10)","II (0.10<Aa≤0.20)","III (0.20<Aa≤0.30)","IV (Aa>0.30)"],
+                            index=1, key="pf_zona_sismica")
+    sistema_estructural = s2.selectbox(_t("Sistema estructural","Structural system"),
+                            ["DMO — Desempeño Mínimo","DES — Desempeño Especial","DMI — Desempeño Intermedio"],
+                            index=0, key="pf_sistema_estructural")
+    is_high_seismic = "IV" in zona_sismica or "III" in zona_sismica
+    if is_high_seismic and "DMO" in sistema_estructural:
+        st.warning("⚠️ Zona alta: DMO no permitido según NSR-10 C.21. Use DES o DMI.")
+
+    # ── Sección 5: APU (colapsable) ───────────────────────────────────────────
+    with st.expander("APU - Precios Unitarios", expanded=False):
+        ap0, ap1 = st.columns([1,3])
+        moneda = ap0.text_input("Moneda", "COP", key="pf_moneda")
+        st.markdown("**Factores de desperdicio (%)**")
+        aw1, aw2, aw3, aw4 = st.columns(4)
+        desp_bloques  = aw1.number_input("Bloques",   0.0, 20.0, 5.0,  1.0, key="pf_desp_bloques") / 100.0
+        desp_concreto = aw2.number_input("Concreto",  0.0, 20.0, 10.0, 1.0, key="pf_desp_concreto") / 100.0
+        desp_malla    = aw3.number_input("Malla",     0.0, 20.0, 10.0, 1.0, key="pf_desp_malla") / 100.0
+        desp_perfiles = aw4.number_input("Perfiles",  0.0, 20.0, 5.0,  1.0, key="pf_desp_perfiles") / 100.0
+        st.markdown("**Precios unitarios**")
+        ap1c, ap2c, ap3c = st.columns(3)
+        precio_bloque   = ap1c.number_input("Precio bloque (und)",    3000.0,  20000.0,  7200.0, 100.0,
+                            key="pf_precio_bloque", help="Ref. mercado Colombia Q1-2026: COP 7,200")
+        precio_perfil   = ap2c.number_input("Precio perfil (m lineal)",15000.0, 60000.0, 28000.0,1000.0,
+                            key="pf_precio_perfil", help="Ref. mercado Colombia Q1-2026: COP 28,000")
+        precio_malla    = ap3c.number_input("Precio malla (m²)",        6000.0,  25000.0, 11000.0, 500.0,
+                            key="pf_precio_malla", help="Ref. mercado Colombia Q1-2026: COP 11,000")
+        ap4c, ap5c, ap6c = st.columns(3)
+        precio_concreto = ap4c.number_input("Precio concreto (m³)",  200000.0, 700000.0,450000.0,10000.0,
+                            key="pf_precio_concreto", help="Ref. mercado Colombia Q1-2026: COP 450,000")
+        precio_mo       = ap5c.number_input("Costo MO (día)",          40000.0, 200000.0, 70000.0, 5000.0,
+                            key="pf_precio_mo", help="Ref. SMLMV 2026 Colombia")
+        pct_herramienta = ap6c.number_input("% Herramienta menor",       0.0,   20.0,   5.0,  1.0, key="pf_pct_herramienta") / 100.0
+        ap7c, ap8c, ap9c = st.columns(3)
+        pct_aui      = ap7c.number_input("% A.I.U.",    0.0, 50.0, 30.0, 5.0, key="pf_pct_aui") / 100.0
+        pct_util     = ap8c.number_input("% Utilidad",  0.0, 20.0,  5.0, 1.0, key="pf_pct_util") / 100.0
+        iva_pct      = ap9c.number_input("% IVA s/Util",0.0, 30.0, 19.0, 1.0, key="pf_iva_pct") / 100.0
+
+    # ── Sección 6: Datos del plano (colapsable) ───────────────────────────────
+    with st.expander("Datos del Plano", expanded=False):
+        pl1, pl2 = st.columns(2)
+        plano_numero  = pl1.text_input("Número de plano",
+                            value=st.session_state.get("pf_plano_num","PL-01"), key="pf_plano")
+        escala_plano  = pl2.text_input("Escala",
+                            value=st.session_state.get("pf_escala","1:50"), key="pf_escala_inp")
+        st.session_state["pf_plano_num"] = plano_numero
+        st.session_state["pf_escala"]    = escala_plano
+
+    elaboro  = st.session_state.get("pf_elaboro","") or ""
+    revisado = st.session_state.get("pf_reviso","")  or ""
+    aprobado = st.session_state.get("pf_aprobo","")  or ""
+
+    return (proyecto_nombre, proyecto_direccion, proyecto_cliente,
+            num_pisos, uso_placa, carga_viva_kn,
+            Lx, Ly, orientacion,
+            espesor_torta, fc_concreto, perfil_espaciado,
+            incluir_vigas, viga_b, viga_h,
+            incluir_viga_int, viga_int_b, viga_int_h, viga_int_pos,
+            zona_sismica, sistema_estructural, is_high_seismic,
+            moneda, desp_bloques, desp_concreto, desp_malla, desp_perfiles,
+            precio_bloque, precio_perfil, precio_malla, precio_concreto,
+            precio_mo, pct_herramienta, pct_aui, pct_util, iva_pct,
+            plano_numero, escala_plano, elaboro, revisado, aprobado)
+
+
 def profile_inertia():
     h = PROFILE_DATA["alto_total"]; bw = PROFILE_DATA["ancho_alma"]
     tw = PROFILE_DATA["espesor_alma"]; bf = PROFILE_DATA["ancho_ala"]
@@ -517,183 +526,6 @@ def select_rebars(As_req_cm2):
         best = {"b1": table[-1], "b2": table[-1], "total": table[-1]["area"]*2}
     return best
 
-# ══════════════════════════════════════════════════════════════════════════════
-# CALCULOS PRINCIPALES
-# ══════════════════════════════════════════════════════════════════════════════
-area_total = Lx * Ly * num_pisos
-if orientacion == "Paralelo a X":
-    perfil_largo = Lx; perfil_ancho = Ly
-else:
-    perfil_largo = Ly; perfil_ancho = Lx
-
-n_profiles = math.ceil(perfil_ancho / perfil_espaciado) + 1
-longitud_total_perfiles = n_profiles * perfil_largo
-longitud_total_perfiles_desp = longitud_total_perfiles * (1 + desp_perfiles) * num_pisos
-
-n_hileras = n_profiles - 1
-bloques_por_hilera = math.ceil((Lx if orientacion=="Paralelo a X" else Ly) / BLOCK_DATA["largo"])
-n_bloques = n_hileras * bloques_por_hilera
-n_bloques_desp = math.ceil(n_bloques * (1 + desp_bloques)) * num_pisos
-
-vol_torta = area_total * espesor_torta
-vol_vigas = (2*(Lx+Ly)) * viga_b * viga_h * num_pisos if incluir_vigas else 0
-vol_concreto_total = vol_torta + vol_vigas
-vol_concreto_total_desp = vol_concreto_total * (1 + desp_concreto)
-area_malla = area_total * (1 + desp_malla + 0.15)
-
-peso_bloques_kg  = n_bloques * BLOCK_DATA["peso_unitario"]
-peso_concreto_kg = vol_concreto_total * CONCRETE_DATA["densidad"]
-peso_perfiles_kg = longitud_total_perfiles * PROFILE_DATA["peso_por_m"] * num_pisos
-peso_total_kg    = peso_bloques_kg + peso_concreto_kg + peso_perfiles_kg
-carga_muerta_kgm2 = peso_total_kg / (Lx*Ly*num_pisos) if (Lx*Ly*num_pisos) > 0 else 0
-
-total_cemento_kg = CONCRETE_DATA["cemento_por_m3"] * vol_concreto_total_desp
-bultos_cemento   = math.ceil(total_cemento_kg / 50)
-
-# Estructural
-g = 9.81
-Wd_kn  = carga_muerta_kgm2 * g / 1000
-Wu_kn  = 1.2*Wd_kn + 1.6*carga_viva_kn
-Wu_lin = Wu_kn * perfil_espaciado
-Mu     = Wu_lin * perfil_largo**2 / 8
-
-I_real     = profile_inertia()
-E_concreto = 4700 * math.sqrt(fc_concreto) * 1e6
-Wserv_lin  = (Wd_kn + carga_viva_kn) * perfil_espaciado
-delta_max  = perfil_largo / 360
-delta_calc = (5*Wserv_lin*perfil_largo**4)/(384*E_concreto*I_real) if I_real > 0 else 0
-cumple_deflexion = delta_calc <= delta_max
-
-As_min   = 0.0018 * BLOCK_DATA["ancho"] * espesor_torta
-As_malla = MESH_DATA["diametro"]**2 * math.pi / 4 * 1000 / MESH_DATA["espaciado_largo"]
-cumple_malla = As_malla >= As_min
-
-Vu = Wu_lin * perfil_largo / 2
-Vc = 0.17 * math.sqrt(fc_concreto*1000) * BLOCK_DATA["ancho"] * (BLOCK_DATA["alto"]+espesor_torta) / 1000
-cumple_cortante = Vu <= Vc
-
-# Viga de borde
-W_beam_kn = Wu_kn * (perfil_espaciado/2 + 0.5)
-beam_span  = max(Lx, Ly)
-Mu_beam    = W_beam_kn * beam_span**2 / 8
-Vu_beam    = W_beam_kn * beam_span / 2
-
-d_beam = viga_h - 0.05
-Rn     = Mu_beam / (0.9*viga_b*d_beam**2)*1e6 if (viga_b*d_beam**2) > 0 else 0
-rho    = (0.85*fc_concreto/420)*(1-math.sqrt(max(0,1-2*Rn/(0.85*fc_concreto)))) if Rn > 0 else 0
-As_beam     = max(rho*viga_b*d_beam*1e4, 0.0018*viga_b*viga_h*1e4)
-rebar_combo = select_rebars(As_beam)
-As_prov_beam = rebar_combo["total"]
-ref_beam    = f"1{rebar_combo['b1']['nom']} + 1{rebar_combo['b2']['nom']} (As={As_prov_beam:.2f} cm2)"
-
-stirrup_factor = 0.25 if (is_high_seismic and "DMO" not in sistema_estructural) else 0.50
-confinement_zone_length = 2.0*max(viga_h,0.50) if stirrup_factor == 0.25 else 0.0
-s_beam = round(min(stirrup_factor*d_beam, 0.30), 2)
-
-Vc_beam = 0.17*math.sqrt(fc_concreto*1000)*viga_b*d_beam/1000
-cumple_cortante_beam = Vu_beam <= Vc_beam
-cumple_flexion_beam  = As_prov_beam >= As_beam
-
-x_vals = np.linspace(0, beam_span, 100)
-M_vals = W_beam_kn * x_vals * (beam_span - x_vals) / 2
-V_vals = W_beam_kn * (beam_span/2 - x_vals)
-
-# Seccion compuesta
-beff    = perfil_espaciado
-E_acero = 200e9
-n_mod   = E_acero / E_concreto
-A_prof  = PROFILE_DATA["ancho_alma"]*PROFILE_DATA["alto_total"] + 2*PROFILE_DATA["ancho_ala"]*PROFILE_DATA["espesor_ala"]
-y_prof  = PROFILE_DATA["alto_total"] / 2.0
-A_slab  = beff * espesor_torta
-y_slab  = PROFILE_DATA["alto_total"] + espesor_torta/2.0
-A_pt    = A_prof * n_mod
-y_c     = (A_pt*y_prof + A_slab*y_slab) / (A_pt + A_slab)
-I_comp  = (profile_inertia()*n_mod + A_pt*(y_prof-y_c)**2 +
-           (beff*espesor_torta**3)/12 + A_slab*(y_slab-y_c)**2)
-S_comp  = I_comp/y_c if y_c > 0 else 0.0
-
-# Longitud desarrollo
-fy=420.0; db_ref=0.0127
-ld = max((fy*db_ref)/(1.1*math.sqrt(fc_concreto))/1000, 12*db_ref, 0.30)
-
-# Verificaciones normativas
-verificaciones = [
-    {"item":"Luz maxima perfiles","referencia":norma["ref"],
-     "requerido":f"<= {norma['luz_max']:.2f} m","calculado":f"{perfil_largo:.2f} m",
-     "cumple":perfil_largo<=norma["luz_max"],
-     "obs":"Ok" if perfil_largo<=norma["luz_max"] else "Excede — requiere viga intermedia"},
-    {"item":"Espesor torta concreto","referencia":"NSR-10 C.21.6.4.1",
-     "requerido":f">= {norma['topping_min']*100:.0f} cm","calculado":f"{espesor_torta*100:.1f} cm",
-     "cumple":espesor_torta>=norma["topping_min"],
-     "obs":"Ok" if espesor_torta>=norma["topping_min"] else "Incrementar espesor"},
-    {"item":"Resistencia concreto","referencia":"NSR-10 C.21.3.1",
-     "requerido":f">= {norma['concreto_min']} MPa","calculado":f"{fc_concreto:.1f} MPa",
-     "cumple":fc_concreto>=norma["concreto_min"],
-     "obs":"Ok" if fc_concreto>=norma["concreto_min"] else "Usar concreto mayor resistencia"},
-    {"item":"Deflexion (L/360)","referencia":"NSR-10 C.9.5.2",
-     "requerido":f"<= {delta_max*1000:.1f} mm","calculado":f"{delta_calc*1000:.1f} mm",
-     "cumple":cumple_deflexion,"obs":"Ok" if cumple_deflexion else "Aumentar peralte o reducir luz"},
-    {"item":"Cortante en apoyo (placa)","referencia":"NSR-10 C.11",
-     "requerido":f"Vu <= {Vc:.2f} kN","calculado":f"Vu = {Vu:.2f} kN",
-     "cumple":cumple_cortante,"obs":"Ok" if cumple_cortante else "Aumentar seccion de viga"},
-    {"item":"Acero minimo de malla","referencia":"NSR-10 C.7.12",
-     "requerido":f"As >= {As_min*100:.2f} cm2/m","calculado":f"As = {As_malla:.2f} cm2/m",
-     "cumple":cumple_malla,"obs":"Ok" if cumple_malla else "Aumentar diametro o reducir espaciamiento"},
-    {"item":"Viga borde - Momento","referencia":"NSR-10 C.21.6",
-     "requerido":f"As >= {As_beam:.2f} cm2","calculado":f"As prov = {As_prov_beam:.2f} cm2",
-     "cumple":cumple_flexion_beam,"obs":"Ok" if cumple_flexion_beam else "Aumentar acero"},
-    {"item":"Viga borde - Cortante","referencia":"NSR-10 C.11",
-     "requerido":f"Vu <= {Vc_beam:.2f} kN","calculado":f"Vu = {Vu_beam:.2f} kN",
-     "cumple":cumple_cortante_beam,"obs":"Ok" if cumple_cortante_beam else "Aumentar seccion o estribos"},
-    {"item":"Altura total de la placa","referencia":"Practica constructiva",
-     "requerido":">= 13 cm","calculado":f"{(BLOCK_DATA['alto']+espesor_torta)*100:.1f} cm",
-     "cumple":(BLOCK_DATA["alto"]+espesor_torta)>=0.13,
-     "obs":"Ok" if (BLOCK_DATA["alto"]+espesor_torta)>=0.13 else "Aumentar espesor"},
-    {"item":"Vigas de borde","referencia":"NSR-10 C.21.6.4",
-     "requerido":"Incluidas" if norma.get("requiere_viga_borde") else "Opcional",
-     "calculado":"Si" if incluir_vigas else "No",
-     "cumple":incluir_vigas or not norma.get("requiere_viga_borde"),
-     "obs":"Ok" if (incluir_vigas or not norma.get("requiere_viga_borde")) else "Incluir vigas de borde"},
-    {"item":"Zona sismica y confinamiento","referencia":"NSR-10 C.21",
-     "requerido":f"Estribos {'d/4' if stirrup_factor==0.25 else 'd/2'} @ {s_beam*100:.0f} cm",
-     "calculado":f"Zona {zona_sismica} | {sistema_estructural}",
-     "cumple":not (is_high_seismic and "DMO" in sistema_estructural),
-     "obs":"Confinamiento requerido" if stirrup_factor==0.25 else "Ok"},
-]
-
-# APU
-costo_bloques  = n_bloques_desp * precio_bloque
-costo_perfiles = longitud_total_perfiles_desp * precio_perfil
-costo_malla    = area_malla * precio_malla
-costo_concreto = vol_concreto_total_desp * precio_concreto
-dias_mo        = area_total * 0.8
-costo_mo       = dias_mo * precio_mo
-costo_directo  = costo_bloques + costo_perfiles + costo_malla + costo_concreto + costo_mo
-herramienta    = costo_mo * pct_herramienta
-aiu            = costo_directo * pct_aui
-utilidad       = costo_directo * pct_util
-iva_util       = utilidad * iva_pct
-total_proyecto = costo_directo + herramienta + aiu + iva_util
-costo_maciza   = vol_concreto_total * 1.2 * precio_concreto
-ahorro         = max(0, costo_maciza - total_proyecto)
-sobrecosto     = max(0, total_proyecto - costo_maciza)
-
-actividades   = ["Instalacion de perfiles","Colocacion de bloques",
-                 "Colocacion de malla","Fundida de concreto","Curado"]
-duracion_dias = [0.5*area_total/100, 1.0*area_total/100,
-                 0.3*area_total/100, 1.5*area_total/100, 0.5]
-cronograma    = pd.DataFrame({"Actividad": actividades,
-                               "Duracion (dias)": [max(1, round(d)) for d in duracion_dias]})
-
-# Alertas de luz
-if perfil_largo > 3.5 and perfil_largo <= norma["luz_max"]:
-    st.warning(f"Luz de perfiles {perfil_largo:.2f} m — cerca del limite {norma['luz_max']} m.")
-elif perfil_largo > norma["luz_max"]:
-    st.error(f"Luz de perfiles {perfil_largo:.2f} m excede limite {norma['luz_max']} m. Requiere viga intermedia.")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# MODELO 3D
-# ══════════════════════════════════════════════════════════════════════════════
 def create_3d_model(Lx, Ly, orientacion, n_profiles, sep, perfil_largo,
                     esp_t, inc_vigas, vb, vh):
     fig = go.Figure()
@@ -865,6 +697,22 @@ def create_3d_model(Lx, Ly, orientacion, n_profiles, sep, perfil_largo,
         _box(-vb, -vb,   -vh, vb, Ly+2*vb, vh, "#6A6A6A", 0.88, "Viga borde", v_hover)
         _box(Lx,  -vb,   -vh, vb, Ly+2*vb, vh, "#6A6A6A", 0.88, "Viga borde", v_hover)
 
+    # ── Viga Intermedia 3D v6.1 ─────────────────────────────────────────────
+    if incluir_viga_int and viga_int_b > 0:
+        v_hover_int = (f"<b>Viga Intermedia</b><br>"
+                       f"b = {viga_int_b*100:.0f} cm  h = {viga_int_h*100:.0f} cm<br>"
+                       f"Posición: {viga_int_pos*100:.0f}% de la luz")
+        if orientacion == "Paralelo a X":
+            y_vi = Ly * viga_int_pos
+            _box(0, y_vi - viga_int_b/2, -viga_int_h,
+                 Lx, viga_int_b, viga_int_h, "#3A5A8A", 0.90,
+                 "Viga intermedia", v_hover_int)
+        else:
+            x_vi = Lx * viga_int_pos
+            _box(x_vi - viga_int_b/2, 0, -viga_int_h,
+                 viga_int_b, Ly, viga_int_h, "#3A5A8A", 0.90,
+                 "Viga intermedia", v_hover_int)
+
     # ── Leyenda manual ────────────────────────────────────────────────────────
     legends = [
         (f"Perfil Colmena h={h_p*1000:.0f}mm b={bt*1000:.0f}mm", "#B0B0B0", "square"),
@@ -873,6 +721,8 @@ def create_3d_model(Lx, Ly, orientacion, n_profiles, sep, perfil_largo,
     ]
     if inc_vigas:
         legends.append((f"Viga borde {vb*100:.0f}×{vh*100:.0f}cm", "#6A6A6A", "square"))
+    if incluir_viga_int and viga_int_b > 0:
+        legends.append((f"Viga intermedia {viga_int_b*100:.0f}×{viga_int_h*100:.0f}cm", "#3A5A8A", "square"))
     for lname, lcolor, lsym in legends:
         fig.add_trace(go.Scatter3d(
             x=[None], y=[None], z=[None], mode="markers",
@@ -1015,9 +865,11 @@ def _dxf_writer():
         b.write(" 71\n0\n 72\n100\n 73\n1\n 74\n3\n 75\n0\n 76\n1\n 77\n0\n 78\n0\n")
         b.write("  0\nENDTAB\n")
         # LAYER
-        b.write(f"  0\nTABLE\n  2\nLAYER\n 70\n{len(layers)}\n")
+        b.write(f"  0\nTABLE\n  2\nLAYER\n  5\n2\n100\nAcDbSymbolTable\n 70\n{len(layers)}\n")
+        _hcnt = 10
         for nm,(col,lw) in layers.items():
-            b.write(f"  0\nLAYER\n  2\n{nm}\n 70\n0\n 62\n{col}\n  6\nContinuous\n370\n{lw}\n")
+            b.write(f"  0\nLAYER\n  5\n{_hcnt:X}\n100\nAcDbSymbolTableRecord\n100\nAcDbLayerTableRecord\n  2\n{nm}\n 70\n0\n 62\n{col}\n  6\nContinuous\n370\n{lw}\n")
+            _hcnt += 1
         b.write("  0\nENDTAB\n")
         # STYLE
         b.write("  0\nTABLE\n  2\nSTYLE\n 70\n1\n")
@@ -1071,6 +923,20 @@ def generate_dxf_profesional():
         for y in np.linspace(0, Ly, n_profiles): line(0,y,Lx,y,lay="PERFILES")
     else:
         for x in np.linspace(0, Lx, n_profiles): line(x,0,x,Ly,lay="PERFILES")
+    # Viga intermedia en planta DXF v6.1
+    if incluir_viga_int and viga_int_b > 0:
+        if orientacion == "Paralelo a X":
+            y_vi = Ly * viga_int_pos
+            poly([(0, y_vi-viga_int_b/2),(Lx, y_vi-viga_int_b/2),
+                  (Lx, y_vi+viga_int_b/2),(0, y_vi+viga_int_b/2)], lay="ACERO_LONG")
+            txt(Lx/2, y_vi+viga_int_b/2+0.08,
+                f"VIG.INT {viga_int_b*100:.0f}x{viga_int_h*100:.0f}cm", h=0.12, lay="NOTAS", ha=1)
+        else:
+            x_vi = Lx * viga_int_pos
+            poly([(x_vi-viga_int_b/2,0),(x_vi+viga_int_b/2,0),
+                  (x_vi+viga_int_b/2,Ly),(x_vi-viga_int_b/2,Ly)], lay="ACERO_LONG")
+            txt(x_vi+viga_int_b/2+0.08, Ly/2,
+                f"VIG.INT {viga_int_b*100:.0f}x{viga_int_h*100:.0f}cm", h=0.12, lay="NOTAS")
     xm = MESH_DATA["espaciado_largo"]
     while xm < Lx-0.01: line(xm,0,xm,Ly,lay="MALLA"); xm += MESH_DATA["espaciado_largo"]
     ym = MESH_DATA["espaciado_corto"]
@@ -1138,6 +1004,21 @@ def generate_dxf_profesional():
     txt((ox2+xend2)/2,z3+0.40,"CORTE A-A'",h=THG,lay="TEXTO",ha=1)
     txt((ox2+xend2)/2,z3+0.25,f"Concreto f'c={fc_concreto:.0f} MPa  Malla Q2 O{MESH_DATA['diametro']*1000:.0f}mm",h=TH*0.85,lay="TEXTO",ha=1)
     txt((ox2+xend2)/2,z3+0.12,"Escala 1:10  (cotas en mm o cm segun rotulo)",h=TH*0.75,lay="NOTAS",ha=1)
+    # Viga intermedia en corte A-A DXF v6.1
+    if incluir_viga_int and viga_int_b > 0:
+        vib2 = viga_int_b * S; vih2 = viga_int_h * S
+        xvi2 = ox2 + (xend2 - ox2) * viga_int_pos
+        poly([(xvi2-vib2/2, z0-vih2),(xvi2+vib2/2, z0-vih2),
+              (xvi2+vib2/2, z3),(xvi2-vib2/2, z3)], lay="CONCRETO")
+        cov2i=0.04*S; rb2i=0.008*S
+        for bz2i in [z0-vih2+cov2i+rb2i, z3-cov2i-rb2i]:
+            for bx2i in [xvi2-vib2/2+cov2i+rb2i, xvi2+vib2/2-cov2i-rb2i]:
+                circle(bx2i, bz2i, rb2i, lay="ACERO_LONG")
+        poly([(xvi2-vib2/2+cov2i, z0-vih2+cov2i),(xvi2+vib2/2-cov2i, z0-vih2+cov2i),
+              (xvi2+vib2/2-cov2i, z3-cov2i),(xvi2-vib2/2+cov2i, z3-cov2i)], lay="ESTRIBOS")
+        txt(xvi2, z0-vih2-0.15,
+            f"VIG.INT {viga_int_b*100:.0f}x{viga_int_h*100:.0f}cm As={As_beam_int:.2f}cm2",
+            h=TH*0.80, lay="NOTAS", ha=1)
 
     # Posicion base de zonas de detalle
     _oy_det = zvb2 - 1.5
@@ -1480,6 +1361,27 @@ def generate_ifc():
                          f"'Viga borde concreto','{ref_beam}',#{eb_lp},#{eb_shp},$);")
             all_ents.append(f"#{eb}")
 
+    # VIGA INTERMEDIA IFC v6.1
+    if incluir_viga_int and viga_int_b > 0:
+        if orientacion == "Paralelo a X":
+            y_vi = Ly * viga_int_pos
+            ev_pt = _pt(0., y_vi, -viga_int_h / 2)
+            ev_ax = _ax3(ev_pt, 71, 72)
+            ev_ext_d = Lx
+        else:
+            x_vi = Lx * viga_int_pos
+            ev_pt = _pt(x_vi, 0., -viga_int_h / 2)
+            ev_ax = _ax3(ev_pt, 72, 71)
+            ev_ext_d = Ly
+        ev_lp  = _lp(ev_ax)
+        ev_rp  = _rp(viga_int_b, viga_int_h)
+        ev_ext = _ext(ev_rp, ev_ax, ev_ext_d)
+        ev_shp = _shp(ev_ext)
+        ev = _eid()
+        lines.append(f"#{ev}=IFCBEAM('VigaInt',#13,'Viga Intermedia',"
+                     f"'Viga intermedia concreto','{norma_sel}',#{ev_lp},#{ev_shp},$);")
+        all_ents.append(f"#{ev}")
+
     # RELACION ESPACIAL
     if all_ents:
         e_rel = _eid()
@@ -1675,6 +1577,16 @@ def generate_memory():
         doc.add_paragraph(f"Zona confinamiento: {confinement_zone_length*100:.0f} cm desde apoyo (NSR-10 C.21)")
     doc.add_paragraph()
 
+    # CAP 6b — Viga Intermedia DOCX v6.1
+    if incluir_viga_int and viga_int_b > 0:
+        _h("6b. Diseno Viga Intermedia")
+        doc.add_paragraph(f"Posicion: {viga_int_pos*100:.0f}% de la luz ({max(Lx,Ly)*viga_int_pos:.2f} m)")
+        doc.add_paragraph(f"Seccion: b={viga_int_b*100:.0f} cm  h={viga_int_h*100:.0f} cm")
+        doc.add_paragraph(f"Momento: Mu = {Mu_int:.2f} kN·m | As req = {As_beam_int:.2f} cm2 | As prov = {As_prov_int:.2f} cm2")
+        doc.add_paragraph(f"Cortante: Vu = {Vu_int:.2f} kN")
+        doc.add_paragraph(f"Refuerzo: {ref_int}")
+        doc.add_paragraph()
+
     # CAP 7 — Verificaciones
     _h("7. Verificaciones Normativas")
     tv=doc.add_table(rows=1,cols=5); tv.style="Table Grid"
@@ -1853,11 +1765,284 @@ def generate_pdf():
 # ══════════════════════════════════════════════════════════════════════════════
 # TABS PRINCIPALES
 # ══════════════════════════════════════════════════════════════════════════════
-tabs = st.tabs(["Resultados","Modelo 3D","DXF e IFC","Memoria DOCX",
+# ── Valores por defecto (se sobreescriben en Tab 0 render) ──────────────────
+if "pf_config_init" not in st.session_state:
+    st.session_state["pf_config_init"] = True
+
+# ── Leer configuración desde session_state (valores por defecto mientras tab[0] no se visita) ──
+proyecto_nombre    = st.session_state.get("pf_proyecto_nombre", "")
+proyecto_direccion = st.session_state.get("pf_proyecto_dir", "")
+proyecto_cliente   = st.session_state.get("pf_proyecto_cliente", "")
+num_pisos          = int(st.session_state.get("pf_num_pisos", 1))
+uso_placa          = st.session_state.get("pf_uso_placa", list(CARGA_VIVA.keys())[0])
+carga_viva_kn      = CARGA_VIVA.get(uso_placa, 1.8)
+Lx                 = float(st.session_state.get("pf_Lx", 6.0))
+Ly                 = float(st.session_state.get("pf_Ly", 5.0))
+orientacion        = st.session_state.get("pf_orientacion", "Paralelo a X")
+espesor_torta      = float(st.session_state.get("pf_espesor_torta", 5.0)) / 100.0
+fc_concreto        = float(st.session_state.get("pf_fc_concreto", 21.0))
+perfil_espaciado   = float(st.session_state.get("pf_perfil_espaciado", 89.0)) / 100.0
+incluir_vigas      = bool(st.session_state.get("pf_incluir_vigas", True))
+viga_b             = float(st.session_state.get("pf_viga_b", 15.0)) / 100.0
+viga_h             = float(st.session_state.get("pf_viga_h", 20.0)) / 100.0
+incluir_viga_int   = bool(st.session_state.get("pf_viga_int_check", False))
+viga_int_b         = float(st.session_state.get("pf_vint_b", 15.0)) / 100.0 if incluir_viga_int else 0.0
+viga_int_h         = float(st.session_state.get("pf_vint_h", 25.0)) / 100.0 if incluir_viga_int else 0.0
+viga_int_pos       = float(st.session_state.get("pf_vint_pos", 0.50)) if incluir_viga_int else 0.0
+zona_sismica        = st.session_state.get("pf_zona_sismica", "II (0.10<Aa≤0.20)")
+sistema_estructural = st.session_state.get("pf_sistema_estructural", "DMO — Desempeño Mínimo")
+is_high_seismic     = "IV" in zona_sismica or "III" in zona_sismica
+moneda              = st.session_state.get("pf_moneda", "COP")
+desp_bloques        = float(st.session_state.get("pf_desp_bloques", 5.0)) / 100.0
+desp_concreto       = float(st.session_state.get("pf_desp_concreto", 10.0)) / 100.0
+desp_malla          = float(st.session_state.get("pf_desp_malla", 10.0)) / 100.0
+desp_perfiles       = float(st.session_state.get("pf_desp_perfiles", 5.0)) / 100.0
+precio_bloque       = float(st.session_state.get("pf_precio_bloque", 7200.0))
+precio_perfil       = float(st.session_state.get("pf_precio_perfil", 28000.0))
+precio_malla        = float(st.session_state.get("pf_precio_malla", 11000.0))
+precio_concreto     = float(st.session_state.get("pf_precio_concreto", 450000.0))
+precio_mo           = float(st.session_state.get("pf_precio_mo", 70000.0))
+pct_herramienta     = float(st.session_state.get("pf_pct_herramienta", 5.0)) / 100.0
+pct_aui             = float(st.session_state.get("pf_pct_aui", 30.0)) / 100.0
+pct_util            = float(st.session_state.get("pf_pct_util", 5.0)) / 100.0
+iva_pct             = float(st.session_state.get("pf_iva_pct", 19.0)) / 100.0
+plano_numero        = st.session_state.get("pf_plano_num", "PL-01")
+escala_plano        = st.session_state.get("pf_escala", "1:50")
+elaboro             = st.session_state.get("pf_elaboro", "") or ""
+revisado            = st.session_state.get("pf_reviso", "")  or ""
+aprobado            = st.session_state.get("pf_aprobo", "")  or ""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CALCULOS PRINCIPALES
+# ══════════════════════════════════════════════════════════════════════════════
+area_total = Lx * Ly * num_pisos
+if orientacion == "Paralelo a X":
+    perfil_largo = Lx; perfil_ancho = Ly
+else:
+    perfil_largo = Ly; perfil_ancho = Lx
+
+n_profiles = math.ceil(perfil_ancho / perfil_espaciado) + 1
+longitud_total_perfiles = n_profiles * perfil_largo
+longitud_total_perfiles_desp = longitud_total_perfiles * (1 + desp_perfiles) * num_pisos
+
+n_hileras = n_profiles - 1
+bloques_por_hilera = math.ceil((Lx if orientacion=="Paralelo a X" else Ly) / BLOCK_DATA["largo"])
+n_bloques = n_hileras * bloques_por_hilera
+n_bloques_desp = math.ceil(n_bloques * (1 + desp_bloques)) * num_pisos
+
+vol_torta = area_total * espesor_torta
+vol_vigas = (2*(Lx+Ly)) * viga_b * viga_h * num_pisos if incluir_vigas else 0
+vol_concreto_total = vol_torta + vol_vigas
+vol_concreto_total_desp = vol_concreto_total * (1 + desp_concreto)
+area_malla = area_total * (1 + desp_malla + 0.15)
+
+peso_bloques_kg  = n_bloques * BLOCK_DATA["peso_unitario"]
+peso_concreto_kg = vol_concreto_total * CONCRETE_DATA["densidad"]
+peso_perfiles_kg = longitud_total_perfiles * PROFILE_DATA["peso_por_m"] * num_pisos
+peso_total_kg    = peso_bloques_kg + peso_concreto_kg + peso_perfiles_kg
+carga_muerta_kgm2 = peso_total_kg / (Lx*Ly*num_pisos) if (Lx*Ly*num_pisos) > 0 else 0
+
+total_cemento_kg = CONCRETE_DATA["cemento_por_m3"] * vol_concreto_total_desp
+bultos_cemento   = math.ceil(total_cemento_kg / 50)
+
+# Estructural
+g = 9.81
+Wd_kn  = carga_muerta_kgm2 * g / 1000
+Wu_kn  = 1.2*Wd_kn + 1.6*carga_viva_kn
+Wu_lin = Wu_kn * perfil_espaciado
+Mu     = Wu_lin * perfil_largo**2 / 8
+
+I_real     = profile_inertia()
+E_concreto = 4700 * math.sqrt(fc_concreto) * 1e6
+Wserv_lin  = (Wd_kn + carga_viva_kn) * perfil_espaciado
+delta_max  = perfil_largo / 360
+delta_calc = (5*Wserv_lin*perfil_largo**4)/(384*E_concreto*I_real) if I_real > 0 else 0
+cumple_deflexion = delta_calc <= delta_max
+
+As_min   = 0.0018 * BLOCK_DATA["ancho"] * espesor_torta
+As_malla = MESH_DATA["diametro"]**2 * math.pi / 4 * 1000 / MESH_DATA["espaciado_largo"]
+cumple_malla = As_malla >= As_min
+
+Vu = Wu_lin * perfil_largo / 2
+Vc = 0.17 * math.sqrt(fc_concreto*1000) * BLOCK_DATA["ancho"] * (BLOCK_DATA["alto"]+espesor_torta) / 1000
+cumple_cortante = Vu <= Vc
+
+# Viga de borde
+W_beam_kn = Wu_kn * (perfil_espaciado/2 + 0.5)
+beam_span  = max(Lx, Ly)
+Mu_beam    = W_beam_kn * beam_span**2 / 8
+Vu_beam    = W_beam_kn * beam_span / 2
+
+d_beam = viga_h - 0.05
+Rn     = Mu_beam / (0.9*viga_b*d_beam**2)*1e6 if (viga_b*d_beam**2) > 0 else 0
+rho    = (0.85*fc_concreto/420)*(1-math.sqrt(max(0,1-2*Rn/(0.85*fc_concreto)))) if Rn > 0 else 0
+As_beam     = max(rho*viga_b*d_beam*1e4, 0.0018*viga_b*viga_h*1e4)
+rebar_combo = select_rebars(As_beam)
+As_prov_beam = rebar_combo["total"]
+ref_beam    = f"1{rebar_combo['b1']['nom']} + 1{rebar_combo['b2']['nom']} (As={As_prov_beam:.2f} cm2)"
+
+stirrup_factor = 0.25 if (is_high_seismic and "DMO" not in sistema_estructural) else 0.50
+confinement_zone_length = 2.0*max(viga_h,0.50) if stirrup_factor == 0.25 else 0.0
+s_beam = round(min(stirrup_factor*d_beam, 0.30), 2)
+
+Vc_beam = 0.17*math.sqrt(fc_concreto*1000)*viga_b*d_beam/1000
+cumple_cortante_beam = Vu_beam <= Vc_beam
+cumple_flexion_beam  = As_prov_beam >= As_beam
+
+x_vals = np.linspace(0, beam_span, 100)
+M_vals = W_beam_kn * x_vals * (beam_span - x_vals) / 2
+V_vals = W_beam_kn * (beam_span/2 - x_vals)
+
+# Seccion compuesta
+beff    = perfil_espaciado
+E_acero = 200e9
+n_mod   = E_acero / E_concreto
+A_prof  = PROFILE_DATA["ancho_alma"]*PROFILE_DATA["alto_total"] + 2*PROFILE_DATA["ancho_ala"]*PROFILE_DATA["espesor_ala"]
+y_prof  = PROFILE_DATA["alto_total"] / 2.0
+A_slab  = beff * espesor_torta
+y_slab  = PROFILE_DATA["alto_total"] + espesor_torta/2.0
+A_pt    = A_prof * n_mod
+y_c     = (A_pt*y_prof + A_slab*y_slab) / (A_pt + A_slab)
+I_comp  = (profile_inertia()*n_mod + A_pt*(y_prof-y_c)**2 +
+           (beff*espesor_torta**3)/12 + A_slab*(y_slab-y_c)**2)
+S_comp  = I_comp/y_c if y_c > 0 else 0.0
+
+# Longitud desarrollo
+fy=420.0; db_ref=0.0127
+ld = max((fy*db_ref)/(1.1*math.sqrt(fc_concreto))/1000, 12*db_ref, 0.30)
+
+
+# ── Viga Intermedia — Cálculo v6.1 ──────────────────────────────────────────
+Mu_int = Vu_int = As_beam_int = As_prov_int = ref_int = 0.0
+if incluir_viga_int and viga_int_b > 0:
+    L_int      = max(Lx, Ly)
+    trib_int   = min(Lx, Ly) / 2.0            # franja tributaria (m)
+    wu_int     = (Wd_kn + carga_viva_kn) * trib_int  # kN/m
+    Mu_int     = wu_int * L_int**2 / 8.0       # kNm (bi-apoyada)
+    Vu_int     = wu_int * L_int / 2.0          # kN
+    d_int      = viga_int_h - 0.05             # peralte efectivo m
+    Rn_int     = Mu_int * 1e6 / (0.90 * viga_int_b * 1000 * (d_int * 1000)**2)
+    disc_int   = max(0.0, 1.0 - 2.0 * Rn_int / (0.85 * fc_concreto))
+    rho_int    = (0.85 * fc_concreto / fy) * (1.0 - math.sqrt(disc_int))
+    rho_int    = max(rho_int, 0.0018)
+    As_beam_int = rho_int * (viga_int_b * 100) * (d_int * 100)  # cm²
+    # Barras óptimas — usando select_rebars() igual que viga de borde
+    _combo_int  = select_rebars(As_beam_int)
+    As_prov_int = _combo_int["total"]
+    ref_int     = f"1{_combo_int['b1']['nom']} + 1{_combo_int['b2']['nom']} (As={As_prov_int:.2f} cm²)"
+
+# Verificaciones normativas
+verificaciones = [
+    {"item":"Luz maxima perfiles","referencia":norma["ref"],
+     "requerido":f"<= {norma['luz_max']:.2f} m","calculado":f"{perfil_largo:.2f} m",
+     "cumple":perfil_largo<=norma["luz_max"],
+     "obs":"Ok" if perfil_largo<=norma["luz_max"] else "Excede — requiere viga intermedia"},
+    {"item":"Espesor torta concreto","referencia":"NSR-10 C.21.6.4.1",
+     "requerido":f">= {norma['topping_min']*100:.0f} cm","calculado":f"{espesor_torta*100:.1f} cm",
+     "cumple":espesor_torta>=norma["topping_min"],
+     "obs":"Ok" if espesor_torta>=norma["topping_min"] else "Incrementar espesor"},
+    {"item":"Resistencia concreto","referencia":"NSR-10 C.21.3.1",
+     "requerido":f">= {norma['concreto_min']} MPa","calculado":f"{fc_concreto:.1f} MPa",
+     "cumple":fc_concreto>=norma["concreto_min"],
+     "obs":"Ok" if fc_concreto>=norma["concreto_min"] else "Usar concreto mayor resistencia"},
+    {"item":"Deflexion (L/360)","referencia":"NSR-10 C.9.5.2",
+     "requerido":f"<= {delta_max*1000:.1f} mm","calculado":f"{delta_calc*1000:.1f} mm",
+     "cumple":cumple_deflexion,"obs":"Ok" if cumple_deflexion else "Aumentar peralte o reducir luz"},
+    {"item":"Cortante en apoyo (placa)","referencia":"NSR-10 C.11",
+     "requerido":f"Vu <= {Vc:.2f} kN","calculado":f"Vu = {Vu:.2f} kN",
+     "cumple":cumple_cortante,"obs":"Ok" if cumple_cortante else "Aumentar seccion de viga"},
+    {"item":"Acero minimo de malla","referencia":"NSR-10 C.7.12",
+     "requerido":f"As >= {As_min*100:.2f} cm2/m","calculado":f"As = {As_malla:.2f} cm2/m",
+     "cumple":cumple_malla,"obs":"Ok" if cumple_malla else "Aumentar diametro o reducir espaciamiento"},
+    {"item":"Viga borde - Momento","referencia":"NSR-10 C.21.6",
+     "requerido":f"As >= {As_beam:.2f} cm2","calculado":f"As prov = {As_prov_beam:.2f} cm2",
+     "cumple":cumple_flexion_beam,"obs":"Ok" if cumple_flexion_beam else "Aumentar acero"},
+    {"item":"Viga borde - Cortante","referencia":"NSR-10 C.11",
+     "requerido":f"Vu <= {Vc_beam:.2f} kN","calculado":f"Vu = {Vu_beam:.2f} kN",
+     "cumple":cumple_cortante_beam,"obs":"Ok" if cumple_cortante_beam else "Aumentar seccion o estribos"},
+    {"item":"Altura total de la placa","referencia":"Practica constructiva",
+     "requerido":">= 13 cm","calculado":f"{(BLOCK_DATA['alto']+espesor_torta)*100:.1f} cm",
+     "cumple":(BLOCK_DATA["alto"]+espesor_torta)>=0.13,
+     "obs":"Ok" if (BLOCK_DATA["alto"]+espesor_torta)>=0.13 else "Aumentar espesor"},
+    {"item":"Vigas de borde","referencia":"NSR-10 C.21.6.4",
+     "requerido":"Incluidas" if norma.get("requiere_viga_borde") else "Opcional",
+     "calculado":"Si" if incluir_vigas else "No",
+     "cumple":incluir_vigas or not norma.get("requiere_viga_borde"),
+     "obs":"Ok" if (incluir_vigas or not norma.get("requiere_viga_borde")) else "Incluir vigas de borde"},
+    {"item":"Zona sismica y confinamiento","referencia":"NSR-10 C.21",
+     "requerido":f"Estribos {'d/4' if stirrup_factor==0.25 else 'd/2'} @ {s_beam*100:.0f} cm",
+     "calculado":f"Zona {zona_sismica} | {sistema_estructural}",
+     "cumple":not (is_high_seismic and "DMO" in sistema_estructural),
+     "obs":"Confinamiento requerido" if stirrup_factor==0.25 else "Ok"},
+]
+
+# APU
+costo_bloques  = n_bloques_desp * precio_bloque
+costo_perfiles = longitud_total_perfiles_desp * precio_perfil
+costo_malla    = area_malla * precio_malla
+costo_concreto = vol_concreto_total_desp * precio_concreto
+dias_mo        = area_total * 0.8
+costo_mo       = dias_mo * precio_mo
+costo_directo  = costo_bloques + costo_perfiles + costo_malla + costo_concreto + costo_mo
+herramienta    = costo_mo * pct_herramienta
+aiu            = costo_directo * pct_aui
+utilidad       = costo_directo * pct_util
+iva_util       = utilidad * iva_pct
+total_proyecto = costo_directo + herramienta + aiu + iva_util
+costo_maciza   = vol_concreto_total * 1.2 * precio_concreto
+ahorro         = max(0, costo_maciza - total_proyecto)
+sobrecosto     = max(0, total_proyecto - costo_maciza)
+
+actividades   = ["Instalacion de perfiles","Colocacion de bloques",
+                 "Colocacion de malla","Fundida de concreto","Curado"]
+duracion_dias = [0.5*area_total/100, 1.0*area_total/100,
+                 0.3*area_total/100, 1.5*area_total/100, 0.5]
+cronograma    = pd.DataFrame({"Actividad": actividades,
+                               "Duracion (dias)": [max(1, round(d)) for d in duracion_dias]})
+
+# Alertas de luz
+if perfil_largo > 3.5 and perfil_largo <= norma["luz_max"]:
+    st.warning(f"Luz de perfiles {perfil_largo:.2f} m — cerca del limite {norma['luz_max']} m.")
+elif perfil_largo > norma["luz_max"]:
+    st.error(f"Luz de perfiles {perfil_largo:.2f} m excede limite {norma['luz_max']} m. Requiere viga intermedia.")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MODELO 3D
+# ══════════════════════════════════════════════════════════════════════════════
+
+tabs = st.tabs(["Configuracion","Resultados","Modelo 3D","DXF e IFC","Memoria DOCX",
                 "Cantidades","APU","Resumen y PDF"])
 
-# ── Tab Resultados ─────────────────────────────────────────────────────────────
+# ── Tab 0: Configuración ─────────────────────────────────────────────────────
 with tabs[0]:
+    (proyecto_nombre, proyecto_direccion, proyecto_cliente,
+     num_pisos, uso_placa, carga_viva_kn,
+     Lx, Ly, orientacion,
+     espesor_torta, fc_concreto, perfil_espaciado,
+     incluir_vigas, viga_b, viga_h,
+     incluir_viga_int, viga_int_b, viga_int_h, viga_int_pos,
+     zona_sismica, sistema_estructural, is_high_seismic,
+     moneda, desp_bloques, desp_concreto, desp_malla, desp_perfiles,
+     precio_bloque, precio_perfil, precio_malla, precio_concreto,
+     precio_mo, pct_herramienta, pct_aui, pct_util, iva_pct,
+     plano_numero, escala_plano, elaboro, revisado, aprobado
+    ) = render_config_tab()
+
+    st.markdown("""
+    <div style="background:linear-gradient(90deg,#1b5e20,#2e7d32);border-radius:8px;
+         padding:12px 20px;margin-top:16px;display:flex;align-items:center;gap:12px;">
+
+      <div>
+        <div style="color:white;font-weight:700;font-size:1rem;">Configuracion lista</div>
+        <div style="color:#a5d6a7;font-size:0.85rem;">
+          Ve a cualquier pestana de resultados para ver los cálculos automáticos.
+        </div>
+      </div>
+    </div>""", unsafe_allow_html=True)
+
+# ── Tab Resultados ─────────────────────────────────────────────────────────────
+with tabs[1]:
     st.subheader("Resultados del diseno")
     c1,c2,c3 = st.columns(3)
     with c1:
@@ -1882,6 +2067,18 @@ with tabs[0]:
     st.write(f"Refuerzo: {ref_beam}, estribos @ {s_beam*100:.0f} cm")
     if confinement_zone_length > 0:
         st.info(f"Zona de confinamiento: {confinement_zone_length*100:.0f} cm desde apoyo | Est. @ {s_beam*100:.0f} cm (NSR-10 C.21)")
+
+    # ── Resultados Viga Intermedia v6.1 ─────────────────────────────────────
+    if incluir_viga_int and viga_int_b > 0:
+        st.markdown("#### Viga intermedia")
+        vi_c1, vi_c2 = st.columns(2)
+        with vi_c1:
+            st.metric("Mu viga int.", f"{Mu_int:.2f} kN·m")
+            st.metric("As requerida", f"{As_beam_int:.2f} cm²")
+        with vi_c2:
+            st.metric("Vu viga int.", f"{Vu_int:.2f} kN")
+            st.metric("As provista", f"{As_prov_int:.2f} cm²")
+        st.write(f"Refuerzo: {ref_int}")
 
     st.markdown("#### Seccion compuesta y longitud de desarrollo")
     cs1,cs2,cs3 = st.columns(3)
@@ -1909,7 +2106,8 @@ with tabs[0]:
         ax2.set_xlabel("Distancia (m)"); ax2.set_ylabel("Cortante (kN)")
         ax2.set_title("Diagrama de Cortante — Viga Borde"); ax2.grid(True,alpha=0.3)
         plt.tight_layout()
-        st.pyplot(fig_d); plt.close()
+        st.pyplot(fig_d)
+        plt.close(fig_d)
     else:
         st.info("Instala matplotlib para ver los diagramas.")
 
@@ -1922,14 +2120,14 @@ with tabs[0]:
         st.caption(f"Referencia: {v['referencia']}")
 
 # ── Tab Modelo 3D ──────────────────────────────────────────────────────────────
-with tabs[1]:
+with tabs[2]:
     st.subheader("Modelo 3D de la placa")
     fig_3d = create_3d_model(Lx,Ly,orientacion,n_profiles,perfil_espaciado,perfil_largo,
                              espesor_torta,incluir_vigas,viga_b,viga_h)
     st.plotly_chart(fig_3d, use_container_width=True)
 
 # ── Tab DXF e IFC ──────────────────────────────────────────────────────────────
-with tabs[2]:
+with tabs[3]:
     st.subheader("Exportar planos — DXF e IFC")
 
     # ── Admin automático por email ─────────────────────────────────────────────
@@ -1987,7 +2185,7 @@ with tabs[2]:
                    "Cambia tu rol en 'Rol de Usuario' en el panel lateral.")
 
 # ── Tab Memoria DOCX ───────────────────────────────────────────────────────────
-with tabs[3]:
+with tabs[4]:
     st.subheader("Memoria de calculo — DOCX")
     _puede3 = st.session_state.get("user_role","free") in ("admin","pro")
     if not _puede3:
@@ -2013,7 +2211,7 @@ with tabs[3]:
                 st.error("Error generando DOCX.")
 
 # ── Tab Cantidades ─────────────────────────────────────────────────────────────
-with tabs[4]:
+with tabs[5]:
     st.subheader("Cantidades de materiales")
     df_qty = pd.DataFrame({
         "Material": ["Bloques","Perfiles Colmena","Malla electrosoldada","Concreto","Cemento"],
@@ -2038,7 +2236,7 @@ with tabs[4]:
     st.plotly_chart(fig_qty, use_container_width=True)
 
 # ── Tab APU ────────────────────────────────────────────────────────────────────
-with tabs[5]:
+with tabs[6]:
     st.subheader("Analisis de Precios Unitarios (APU)")
     df_apu = pd.DataFrame({
         "Item": ["Bloques","Perfiles","Malla","Concreto","Mano de obra",
@@ -2090,7 +2288,7 @@ with tabs[5]:
                     unsafe_allow_html=True)
 
 # ── Tab Resumen y PDF ──────────────────────────────────────────────────────────
-with tabs[6]:
+with tabs[7]:
     st.subheader("Resumen ejecutivo")
     cr1,cr2 = st.columns(2)
     with cr1:

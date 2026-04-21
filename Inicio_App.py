@@ -446,6 +446,7 @@ p_util  = st.Page("pages/20_Utilidades_Comunes.py",      title="Utilidades Comun
 
 # Gestión de Obra
 p_foto  = st.Page("pages/25_Registro_Fotografico.py",    title="Registro Fotográfico",  icon=":material/photo_camera:")
+p_bimet = st.Page("pages/26_Estimador_4D_5D.py",         title="Estimador BIM 4D/5D",   icon=":material/view_timeline:")
 
 all_pages = [
     home,
@@ -455,7 +456,7 @@ all_pages = [
     p_mamp_e, p_mamp_m, p_placa, p_konte, p_mad, p_metal,
     p_calc, p_apu,
     p_a2d, p_a3d, p_gen3d, p_res, p_util,
-    p_foto,
+    p_foto, p_bimet,
 ]
 
 curr_page = st.navigation(all_pages, position="hidden")
