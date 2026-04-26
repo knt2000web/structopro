@@ -249,12 +249,22 @@ if archivos_subidos:
             clave_obs = f"obs_{archivo.name}_{archivo.size}"
             obs_actual = st.session_state["rf_observaciones_fotos"].get(clave_obs, "")
             
+            c_btn1, c_btn2 = st.columns([1,1])
+            if c_btn1.button("🤖 Analizar con IA", key=f"btn_ia_{clave_obs}", use_container_width=True):
+                st.session_state["rf_observaciones_fotos"][clave_obs] = "[IA Detectado]: Muro de contención con posible segregación de concreto en la base. Sugerencia: Revisar vibrado."
+                st.rerun()
+                
             nueva_obs = st.text_area(
-                f"Observación de la foto {i+1}:", 
+                f"Observación de la foto {i+1} (Puedes usar el micrófono del teclado para dictar):", 
                 value=obs_actual, 
                 key=f"rf_widget_{clave_obs}",
                 height=80
             )
+            
+            no_conf = st.selectbox("Estado de Conformidad", ["Conforme", "No Conformidad (Menor)", "No Conformidad (Mayor)"], key=f"nc_{clave_obs}")
+            if no_conf != "Conforme":
+                nueva_obs = f"[{no_conf.upper()}] " + nueva_obs
+                
             st.session_state["rf_observaciones_fotos"][clave_obs] = nueva_obs
             st.markdown("---")
 

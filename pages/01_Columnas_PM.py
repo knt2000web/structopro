@@ -1,10 +1,10 @@
 import streamlit as st
 from normas_referencias import mostrar_referencias_norma
-# st.set_page_config(
-#     page_title="Diagramas de Interacción P-M (Biaxial)",
-#     page_icon="️",
-#     layout="wide"
-# )
+st.set_page_config(
+    page_title="StructoPro — Columnas P-M",
+    page_icon=None,
+    layout="wide"
+)
 
 #  Utilidad: Color AutoCAD segun # de cuartos de pulgada 
 def _color_acero_dxf(db_mm: float) -> int:
@@ -24,10 +24,28 @@ import matplotlib.patches as patches
 import pandas as pd
 import math
 import io
-import ezdxf
-from docx import Document
-from docx.shared import Inches, Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+# ── Imports protegidos (Prompt Maestro UX v6.0) ──────────────────────────────
+try:
+    import ezdxf
+    DXFEXT = True
+except ImportError:
+    ezdxf = None
+    DXFEXT = False
+
+try:
+    from docx import Document
+    from docx.shared import Inches, Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    DOCXOK = True
+except ImportError:
+    DOCXOK = False
+# ─────────────────────────────────────────────────────────────────────────────
+try:
+    import requests
+    REQOK = True
+except ImportError:
+    REQOK = False
+
 import plotly.graph_objects as go
 import json
 import datetime
@@ -323,8 +341,8 @@ def capturar_estado_actual():
         # Factor k de esbeltez
         "c_pm_k", "c_pm_beta_dns",
         # APU concreto premezclado
-        "apu_premix", "apu_premix_precio",
-        "apu_moneda", "apu_cemento", "apu_acero", "apu_arena", "apu_grava", "apu_mo", "apu_aui",
+        "col_apu_premix", "col_apu_premix_p",
+        "col_apu_moneda", "col_apu_cemento", "col_apu_acero", "col_apu_arena", "col_apu_grava", "col_apu_mo", "col_apu_aui",
         # Rótulo ICONTEC para DXF
         "dxf_empresa", "dxf_proyecto", "dxf_plano", "dxf_elaboro", "dxf_reviso", "dxf_aprobo",
         "qr_url",
@@ -564,31 +582,69 @@ def draw_longitudinal_bar(total_len_cm, straight_len_cm, hook_len_cm, bar_diam_m
 
 def draw_stirrup(b_cm, h_cm, hook_len_cm, bar_diam_mm, bar_name=None):
     import math as _math
+    import numpy as _np
     label = bar_name if bar_name else _bar_label(bar_diam_mm)
     fig, ax = plt.subplots(figsize=(max(5, b_cm/12), max(4, h_cm/12)))
     fig.patch.set_facecolor('#1e1e2e')
-    for _ax in fig.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
+    for _ax in fig.get_axes():
+        _ax.set_facecolor('#14142a')
+        _ax.tick_params(colors='#cdd6f4')
+        _ax.xaxis.label.set_color('#cdd6f4')
+        _ax.yaxis.label.set_color('#cdd6f4')
     ax.set_aspect('equal')
-    x0, y0 = 0, 0
-    ax.plot([x0, x0+b_cm], [y0, y0], 'k-', linewidth=2.5)
-    ax.plot([x0+b_cm, x0+b_cm], [y0, y0+h_cm], 'k-', linewidth=2.5)
-    ax.plot([x0+b_cm, x0], [y0+h_cm, y0+h_cm], 'k-', linewidth=2.5)
-    ax.plot([x0, x0], [y0+h_cm, y0], 'k-', linewidth=2.5)
-    angle_rad = _math.radians(45)
-    vis_hook = min(hook_len_cm, b_cm/4.0, h_cm/4.0)
-    hx = vis_hook * _math.cos(angle_rad)
-    hy = -vis_hook * _math.sin(angle_rad)
-    ax.plot([x0, x0 + hx], [y0+h_cm, y0+h_cm + hy], 'k-', linewidth=2.5)
-    ax.plot([x0+b_cm, x0+b_cm - hx], [y0+h_cm, y0+h_cm + hy], 'k--', linewidth=1.5, alpha=0.5)
-    ax.annotate(f"{b_cm:.0f} cm", xy=(b_cm/2, y0-0.8), ha='center', fontsize=9, fontweight='bold')
-    ax.annotate(f"{h_cm:.0f} cm", xy=(x0-0.8, h_cm/2), ha='right', va='center', fontsize=9, fontweight='bold')
-    ax.annotate(f"Gancho 135°\n6d_e = {6*bar_diam_mm/10:.1f} cm",
-                xy=(x0 + hx + 0.2, y0+h_cm + hy - 0.2), fontsize=7.5, color='darkred',
+
+    x0, y0 = 0.0, 0.0
+    # Radio doblez 3db (NSR-10 C.7.2), mínimo 0.3 cm
+    r = max(min(bar_diam_mm / 10.0 * 3.0, b_cm * 0.08, h_cm * 0.08), 0.3)
+
+    def _arc(cx, cy, rad, a0, a1, n=10):
+        angs = _np.linspace(_math.radians(a0), _math.radians(a1), n)
+        return [(cx + rad*_math.cos(a), cy + rad*_math.sin(a)) for a in angs]
+
+    # ── Perímetro con 4 esquinas redondeadas ─────────────────────────────
+    # Arranca desde (x0, y0+h_cm-r) = pie del arco sup-izq, lado izquierdo
+    # Sentido: baja por izq → inf-izq → inf → inf-der → sube por der → sup-der → sup → arco sup-izq
+    pts = []
+    pts.append((x0, y0 + h_cm - r))           # inicio lado izq (donde nace gancho 1)
+    pts += _arc(x0+r, y0+r,       r, 180, 270) # esquina inf-izq
+    pts.append((x0+b_cm-r, y0))               # lado inferior
+    pts += _arc(x0+b_cm-r, y0+r,  r, 270, 360) # esquina inf-der
+    pts.append((x0+b_cm, y0+h_cm-r))          # lado der
+    pts += _arc(x0+b_cm-r, y0+h_cm-r, r, 0, 90)  # esquina sup-der
+    pts.append((x0+r, y0+h_cm))               # lado sup (desde donde nace gancho 2)
+    pts += _arc(x0+r, y0+h_cm-r,  r, 90, 180) # arco sup-izq
+    pts.append((x0, y0+h_cm-r))               # cierra en el mismo punto de inicio
+
+    ax.plot([p[0] for p in pts], [p[1] for p in pts], color='white', linewidth=2.5)
+
+    # ── Dos ganchos 135° — ambos salen de esquina SUP-IZQ hacia NÚCLEO (+X, -Y)
+    vis = min(hook_len_cm, b_cm*0.32, h_cm*0.32)
+    dx =  vis * _math.cos(_math.radians(45))   # +X  (hacia interior)
+    dy = -vis * _math.sin(_math.radians(45))   # -Y  (hacia interior)
+
+    # Gancho 1: desde pie del arco sup-izq en el lado IZQUIERDO
+    ax.plot([x0,     x0+dx],            [y0+h_cm-r, y0+h_cm-r+dy], color='white', linewidth=2.5)
+    ax.plot(x0+dx, y0+h_cm-r+dy, 'o',  color='#ff4444', markersize=5, zorder=5)
+
+    # Gancho 2: desde inicio del lado SUPERIOR (derecha → izquierda)
+    ax.plot([x0+r,   x0+r+dx],          [y0+h_cm,   y0+h_cm+dy],   color='white', linewidth=2.5)
+    ax.plot(x0+r+dx, y0+h_cm+dy, 'o',  color='#ff4444', markersize=5, zorder=5)
+
+    ax.annotate(f"{b_cm:.0f} cm", xy=(b_cm/2, y0-0.8),
+                ha='center', fontsize=9, fontweight='bold', color='#cdd6f4')
+    ax.annotate(f"{h_cm:.0f} cm", xy=(x0-0.8, h_cm/2),
+                ha='right', va='center', fontsize=9, fontweight='bold', color='#cdd6f4')
+    ax.annotate(f"Gancho 135\u00b0\next.=6d\u1d49={6*bar_diam_mm/10:.1f}cm | r=2d\u1d49={2*bar_diam_mm/10:.1f}cm",
+                xy=(x0+dx+0.2, y0+h_cm-r+dy-0.1), fontsize=7.5, color='#ff9999',
                 va='top', ha='left')
+    ax.annotate("alterna estribo\na estribo",
+                xy=(x0+r+dx*0.5, y0+h_cm+dy*0.5), fontsize=6.5, color='#888',
+                va='center', ha='left', style='italic')
     ax.set_xlim(x0 - hook_len_cm*0.3, b_cm + hook_len_cm*0.6)
-    ax.set_ylim(y0 - hook_len_cm*0.5, h_cm + hook_len_cm*0.9)
+    ax.set_ylim(y0 - hook_len_cm*0.5, h_cm + hook_len_cm*1.1)
     ax.axis('off')
-    ax.set_title(f"Estribo E1 — {label} — Perímetro {2*(b_cm+h_cm):.0f} cm", fontsize=9, fontweight='bold')
+    ax.set_title(f"Estribo E1 \u2014 {label} \u2014 Per\u00edmetro {2*(b_cm+h_cm):.0f} cm",
+                 fontsize=9, fontweight='bold', color='white')
     return fig
 
 def draw_crosstie(len_cm, hook_len_cm, bar_diam_mm, bar_name=None):
@@ -1136,287 +1192,347 @@ def check_slenderness(L, b, h, k, beta_dns, Pu, M1, M2, fc, fy, Es, factor_fuerz
 # =============================================================================
 # SIDEBAR - ENTRADAS DEL USUARIO
 # =============================================================================
-with st.sidebar.expander(_t("🏢 Datos del Proyecto","🏢 Project Info"),expanded=False):
-    st.session_state["cpm_empresa"]=st.text_input(_t("Empresa/Firma","Company"),value=st.session_state.get("cpm_empresa",""),key="_wb_e")
-    st.session_state["cpm_proyecto_nombre"]=st.text_input(_t("Nombre Proyecto","Project Name"),value=st.session_state.get("cpm_proyecto_nombre",""),key="_wb_p")
-    st.session_state["cpm_ingeniero"]=st.text_input(_t("Ingeniero Responsable","Engineer"),value=st.session_state.get("cpm_ingeniero",""),key="_wb_i")
-st.sidebar.header(_t("0. Norma de Diseño", "0. Design Code"))
+
+
+# =============================================================================
+# PERSISTENCIA LOCAL — Columnas PM
+# =============================================================================
+import base64 as _b64, json as _json, os as _os
+
+_COL_PERSIST_KEYS = [
+    "cpm_empresa","cpm_proyecto_nombre","cpm_ingeniero","cpm_elaboro","cpm_reviso","cpm_aprobo",
+    "cpm_plano_num","cpm_escala","col_logo_bytes","user_role","nombre_proyecto_actual",
+    "c_pm_norma","c_pm_nivel_sismico","c_pm_fc_unit","c_pm_fc_mpa","c_pm_fy",
+    "c_pm_seccion_type","c_pm_b","c_pm_h","c_pm_D","c_pm_dprime","c_pm_L",
+    "c_pm_unit_system","c_pm_rebar_type","c_pm_num_h","c_pm_num_v","c_pm_n_barras_circ",
+    "c_pm_col_type","c_pm_stirrup_type","c_pm_spiral_type","c_pm_paso_circ","c_pm_paso_rect",
+    "c_pm_output_units","c_pm_mux","c_pm_muy","c_pm_pu","c_pm_cm_chk","c_pm_m1x","c_pm_m1y",
+    "c_pm_beta_dns","c_pm_k_sel",
+]
+
+def save_state_col():
+    snap = {}
+    for k in _COL_PERSIST_KEYS:
+        val = st.session_state.get(k)
+        if k == "col_logo_bytes" and isinstance(val, (bytes, bytearray)):
+            snap[k] = {"type": "bytes_b64", "data": _b64.b64encode(val).decode()}
+        elif val is not None:
+            try:    snap[k] = val
+            except: snap[k] = str(val)
+    try:
+        with open("col_state.json", "w", encoding="utf-8") as f:
+            _json.dump(snap, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def load_state_col():
+    if not _os.path.exists("col_state.json"):
+        return
+    try:
+        with open("col_state.json", "r", encoding="utf-8") as f:
+            data = _json.load(f)
+        for k, v in data.items():
+            if k not in st.session_state:
+                if isinstance(v, dict) and v.get("type") == "bytes_b64":
+                    st.session_state[k] = _b64.b64decode(v["data"])
+                else:
+                    st.session_state[k] = v
+    except Exception:
+        pass
+
+if "col_state_loaded" not in st.session_state:
+    load_state_col()
+    st.session_state["col_state_loaded"] = True
+
+
+# =============================================================================
+# PASO 1 — SIDEBAR: Identidad, logo, norma, rol, plano, guardar/cargar
+#           NO contiene inputs de calculo. Solo identidad y configuracion global.
+# =============================================================================
+
+with st.sidebar.expander("Identidad del Proyecto", expanded=False):
+    st.session_state["cpm_empresa"]         = st.text_input("Empresa / Firma",
+        value=st.session_state.get("cpm_empresa",""), key="_wb_e")
+    st.session_state["cpm_proyecto_nombre"] = st.text_input("Nombre del Proyecto",
+        value=st.session_state.get("cpm_proyecto_nombre",""), key="_wb_p")
+    st.session_state["cpm_ingeniero"]       = st.text_input("Ingeniero Responsable",
+        value=st.session_state.get("cpm_ingeniero",""), key="_wb_i")
+    _c1s, _c2s = st.columns(2)
+    st.session_state["cpm_elaboro"] = _c1s.text_input("Elaboro",
+        value=st.session_state.get("cpm_elaboro",""), key="_wb_elab")
+    st.session_state["cpm_reviso"]  = _c2s.text_input("Reviso",
+        value=st.session_state.get("cpm_reviso",""),  key="_wb_rev")
+    st.session_state["cpm_aprobo"]  = st.text_input("Aprobo",
+        value=st.session_state.get("cpm_aprobo",""), key="_wb_apr")
+    if st.button("Guardar identidad", key="btn_id_col", use_container_width=True):
+        save_state_col()
+        st.success("Identidad guardada")
+
+st.sidebar.markdown("**Logo de empresa**")
+st.sidebar.caption("Aparece en portada de DOCX y PDF. PNG/JPG, fondo blanco recomendado.")
+_logo_file = st.sidebar.file_uploader("Subir logo", type=["png","jpg","jpeg"], key="col_logo_upload")
+if _logo_file is not None:
+    _raw = _logo_file.read()
+    if _raw:
+        st.session_state["col_logo_bytes"] = _raw
+        save_state_col()
+        st.sidebar.success("Logo cargado")
+if st.session_state.get("col_logo_bytes"):
+    try:
+        st.sidebar.image(st.session_state["col_logo_bytes"], width=140, caption="Logo activo")
+    except Exception:
+        st.sidebar.caption("Logo cargado (no previsualizable)")
+    _la, _lb = st.sidebar.columns(2)
+    if _la.button("Quitar logo", key="col_rm_logo", use_container_width=True):
+        st.session_state.pop("col_logo_bytes", None)
+        save_state_col(); st.rerun()
+    _lb.download_button("Descargar", data=st.session_state["col_logo_bytes"],
+                        file_name="logo.png", mime="image/png",
+                        use_container_width=True, key="col_dl_logo")
+else:
+    st.sidebar.caption("Sin logo — documentos solo texto.")
+
+st.sidebar.markdown("---")
+
+st.sidebar.header("0. Norma de Diseno")
 norma_options = list(CODES.keys())
-norma_sel = st.sidebar.selectbox(_t("Norma", "Code"), norma_options, key="c_pm_norma")
+norma_sel = st.sidebar.selectbox("Norma", norma_options, key="c_pm_norma")
 mostrar_referencias_norma(norma_sel, "columnas_pm")
 code = CODES[norma_sel]
 
 nivel_sismico = st.sidebar.selectbox(
-    _t("Nivel Sísmico / Ductilidad:", "Seismic / Ductility Level:"),
+    "Nivel Sismico / Ductilidad:",
     code["seismic_levels"],
     key="c_pm_nivel_sismico"
 )
-
 nivel_lower = nivel_sismico.lower()
-es_des = any(k in nivel_lower for k in ["des", "disipación especial", "smf", "special", "ga", "ductilidad alta", "pe", "pórtico especial", "de", "diseño especial", "mrle", "alta"])
-es_dmo = any(k in nivel_lower for k in ["dmo", "imf", "intermediate", "gm", "moderada", "pm", "mrod", "media", "moderado"]) and not es_des
+es_des = any(k in nivel_lower for k in ["des","disipacion especial","smf","special","ga","ductilidad alta","pe","portico especial","de","diseno especial","mrle","alta"])
+es_dmo = any(k in nivel_lower for k in ["dmo","imf","intermediate","gm","moderada","pm","mrod","media","moderado"]) and not es_des
 es_dmi = not (es_des or es_dmo)
 
-if es_des:
-    rho_max = code["rho_max_des"]
-elif es_dmo:
-    rho_max = code["rho_max_dmo"]
-else:
-    rho_max = code["rho_max_dmi"]
+if es_des:   rho_max = code["rho_max_des"]
+elif es_dmo: rho_max = code["rho_max_dmo"]
+else:        rho_max = code["rho_max_dmi"]
 rho_min = code["rho_min"]
 
-st.sidebar.caption(f" {_t('Referencia', 'Reference')}: {code['ref']}")
-st.sidebar.caption(f" ρ máx según nivel: {rho_max}% | ρ mín: {rho_min}%")
+st.sidebar.caption(f"Referencia: {code['ref']}")
+st.sidebar.caption(f"rho max segun nivel: {rho_max}% | rho min: {rho_min}%")
 
-st.sidebar.header(_t("1. Materiales", "1. Materials"))
-fc_unit = st.sidebar.radio(_t("Unidad de f'c:", "f'c Unit:"), ["MPa", "PSI", "kg/cm²"], horizontal=True, key="c_pm_fc_unit")
-
-if fc_unit == "PSI":
-    psi_options = {"2500 PSI (≈ 17.2 MPa)": 2500, "3000 PSI (≈ 20.7 MPa)": 3000,
-                   "3500 PSI (≈ 24.1 MPa)": 3500, "4000 PSI (≈ 27.6 MPa)": 4000,
-                   "4500 PSI (≈ 31.0 MPa)": 4500, "5000 PSI (≈ 34.5 MPa)": 5000,
-                   "Personalizado": None}
-    psi_choice = st.sidebar.selectbox("Resistencia f'c [PSI]", list(psi_options.keys()), key="c_pm_psi_choice")
-    fc_psi = float(psi_options[psi_choice]) if psi_options[psi_choice] is not None else st.sidebar.number_input("f'c personalizado [PSI]", 2000.0, 12000.0, 3000.0, 100.0, key="c_pm_fc_psi_custom")
-    fc = fc_psi * 0.00689476
-elif fc_unit == "kg/cm²":
-    kgcm2_options = {"175 kg/cm² (≈ 17.2 MPa)": 175, "210 kg/cm² (≈ 20.6 MPa)": 210,
-                     "250 kg/cm² (≈ 24.5 MPa)": 250, "280 kg/cm² (≈ 27.5 MPa)": 280,
-                     "350 kg/cm² (≈ 34.3 MPa)": 350, "420 kg/cm² (≈ 41.2 MPa)": 420,
-                     "Personalizado": None}
-    kgcm2_choice = st.sidebar.selectbox("Resistencia f'c [kg/cm²]", list(kgcm2_options.keys()), key="c_pm_kgcm2_choice")
-    fc_kgcm2 = float(kgcm2_options[kgcm2_choice]) if kgcm2_options[kgcm2_choice] is not None else st.sidebar.number_input("f'c personalizado [kg/cm²]", 100.0, 1200.0, 210.0, 10.0, key="c_pm_fc_kgcm2_custom")
-    fc = fc_kgcm2 / 10.1972
-else:
-    fc = st.sidebar.number_input("Resistencia del Concreto (f'c) [MPa]", 15.0, 80.0, 21.0, 1.0, key="c_pm_fc_mpa")
-
-fy = st.sidebar.number_input("Fluencia del Acero (fy) [MPa]", 240.0, 500.0, 420.0, 10.0, key="c_pm_fy")
-Es = 200000.0
-
-st.sidebar.header(_t("2. Geometría de la Sección", "2. Section Geometry"))
-seccion_type = st.sidebar.selectbox(_t("Tipo de sección", "Section type"), 
-                                    [_t("Rectangular / Cuadrada", "Rectangular / Square"), 
-                                     _t("Circular (con espiral)", "Circular (with spiral)")],
-                                    key="c_pm_seccion_type")
-es_circular = "Circular" in seccion_type
-
-if es_circular:
-    D = st.sidebar.number_input(_t("Diámetro (D) [cm]", "Diameter (D) [cm]"), 15.0, 150.0, 40.0, 5.0, key="c_pm_D")
-    b = D
-    h = D
-    st.sidebar.caption("ℹ Para columnas circulares comunes se usa espiral. **Nota:** Para puentes, silos y pilares circulares de gran diámetro con zuncho verificado según 10 normas, usa el módulo especializado *Pilares Circulares* en el menú.")
-else:
-    b = st.sidebar.number_input(_t("Base (b) [cm]", "Width (b) [cm]"), 15.0, 150.0, 30.0, 5.0, key="c_pm_b")
-    h = st.sidebar.number_input(_t("Altura (h) [cm]", "Height (h) [cm]"), 15.0, 150.0, 40.0, 5.0, key="c_pm_h")
-
-d_prime = st.sidebar.number_input(_t("Recubrimiento al centroide (d') [cm]", "Cover to centroid (d') [cm]"), 2.0, 15.0, 5.0, 0.5, key="c_pm_dprime")
-L_col = st.sidebar.number_input(_t("Altura libre de la columna (L) [cm]", "Column clear height (L) [cm]"), 50.0, 1000.0, 300.0, 25.0, key="c_pm_L")
-
-limite_d = D/2 if es_circular else min(b/2, h/2)
-if d_prime >= limite_d:
-    st.error(f"El recubrimiento al centroide d' ({d_prime:.1f} cm) supera o alcanza el núcleo central de la columna geométrica (límite: {limite_d:.1f} cm). Disminuya d' o aumente la sección.")
-    st.stop()
-
-st.sidebar.header(_t("3. Refuerzo Longitudinal", "3. Longitudinal Reinforcement"))
-unit_system = st.sidebar.radio(_t("Sistema de Unidades de las Varillas:", "Bar Unit System:"), 
-                               [_t("Pulgadas (EE. UU.)", "Inches (US)"), 
-                                _t("Milímetros (SI)", "Millimeters (SI)")], 
-                               key="c_pm_unit_system")
-
-rebar_dict = REBAR_US if "Pulgadas" in unit_system or "Inches" in unit_system else REBAR_MM
-default_rebar = "#5 (5/8\")" if "Pulgadas" in unit_system else "16 mm"
-rebar_type = st.sidebar.selectbox(_t("Diámetro de las Varillas", "Bar Diameter"), list(rebar_dict.keys()), key="c_pm_rebar_type")
-rebar_area = rebar_dict[rebar_type]["area"]
-rebar_diam = rebar_dict[rebar_type]["diam_mm"]
-
-if es_circular:
-    n_barras = st.sidebar.number_input(_t("Número de varillas longitudinales", "Number of longitudinal bars"), 4, 20, 8, 2, key="c_pm_n_barras_circ")
-    Ast = n_barras * rebar_area
-    layers = []
-    angulos = np.linspace(0, 2*np.pi, n_barras, endpoint=False)
-    radio_centro = D/2 - d_prime
-    for i, ang in enumerate(angulos):
-        x_pos = radio_centro * math.cos(ang)
-        y_pos = radio_centro * math.sin(ang)
-        layers.append({'d': D/2 + y_pos, 'As': rebar_area, 'x': x_pos, 'y': y_pos})
-else:
-    num_filas_h = st.sidebar.number_input(_t("# de filas Acero Horiz (Superior e Inferior)", "# of horizontal rows (Top & Bottom)"), 2, 15, 2, 1, key="c_pm_num_h")
-    num_filas_v = st.sidebar.number_input(_t("# de filas Acero Vert (Laterales)", "# of vertical rows (Sides)"), 2, 15, 2, 1, key="c_pm_num_v")
-    
-    layers = []
-    layers.append({'d': d_prime, 'As': num_filas_h * rebar_area})
-    num_capas_intermedias = num_filas_v - 2
-    if num_capas_intermedias > 0:
-        espacio_h = (h - 2 * d_prime) / (num_capas_intermedias + 1)
-        for i in range(1, num_capas_intermedias + 1):
-            layers.append({'d': d_prime + i * espacio_h, 'As': 2 * rebar_area})
-    layers.append({'d': h - d_prime, 'As': num_filas_h * rebar_area})
-    n_barras_total = num_filas_h * 2 + num_capas_intermedias * 2
-    Ast = sum([layer['As'] for layer in layers])
-    n_barras = n_barras_total
-
-Ag = (math.pi * (D/2)**2) if es_circular else (b * h)
-cuantia = Ast / Ag * 100
-
-st.sidebar.markdown(f"**Total varillas:** {n_barras} | **Ast:** {Ast:.2f} cm² | **ρ = {cuantia:.2f}%**")
-
-if es_circular and n_barras < 6:
-    st.sidebar.error(" NSR-10 C.10.9.2: El número mínimo de barras para columnas circulares es 6.")
-elif not es_circular and n_barras < 4:
-    st.sidebar.error(" NSR-10 C.10.9.2: El número mínimo de barras para columnas rectangulares es 4.")
-
-if cuantia < rho_min or cuantia > rho_max:
-    st.sidebar.error(f" CUANTÍA FUERA DE LÍMITES: ρ = {cuantia:.2f}% (límites: {rho_min}% - {rho_max}%)")
-elif cuantia > 4.0:
-    st.sidebar.warning(f" Alerta constructiva: ρ = {cuantia:.2f}% > 4%. NSR-10 recomienda no superar 4% por congestión.")
-
-st.sidebar.header(_t("4. Refuerzo Transversal", "4. Transverse Reinforcement"))
-
-if es_circular:
-    col_type = _t("Espiral (Spiral)", "Spiral")
-    stirrup_dict = STIRRUP_MM if "Milímetros" in unit_system else STIRRUP_US
-    default_stirrup = "8 mm" if "Milímetros" in unit_system else "#3 (3/8\")"
-    spiral_type = st.sidebar.selectbox(_t("Diámetro de la Espiral", "Spiral Diameter"), list(stirrup_dict.keys()), key="c_pm_spiral_type")
-    stirrup_area = stirrup_dict[spiral_type]["area"]
-    stirrup_diam = stirrup_dict[spiral_type]["diam_mm"]
-    paso_espiral = st.sidebar.number_input(_t("Paso de la espiral (s) [cm]", "Spiral pitch (s) [cm]"), 2.0, 20.0, 7.5, 0.5, key="c_pm_paso_circ" if es_circular else "c_pm_paso_rect")
-else:
-    col_type_options = [_t("Estribos (Tied)", "Tied"), _t("Espiral (Spiral)", "Spiral")]
-    col_type = st.sidebar.selectbox(_t("Tipo de Columna", "Column Type"), col_type_options, key="c_pm_col_type")
-    stirrup_dict = STIRRUP_US if "Pulgadas" in unit_system else STIRRUP_MM
-    default_stirrup = "#3 (3/8\")" if "Pulgadas" in unit_system else "8 mm"
-    stirrup_type = st.sidebar.selectbox(_t("Diámetro del Estribo", "Stirrup Diameter"), list(stirrup_dict.keys()), key="c_pm_stirrup_type")
-    stirrup_area = stirrup_dict[stirrup_type]["area"]
-    stirrup_diam = stirrup_dict[stirrup_type]["diam_mm"]
-
-    # REGLAS TÉCNICAS INNEGOCIABLES - NSR-10
-    # 1. Diámetro mínimo estribos = 3/8" (No. 3)
-    if stirrup_diam < 9.5:
-        st.sidebar.warning("NSR-10 C.21: El diámetro mínimo para estribos es No. 3 (3/8''). Ajustando automáticamente.")
-        stirrup_diam = 9.53
-
-if "Espiral" in col_type or es_circular:
-    phi_c_max = code["phi_spiral"]
-    p_max_factor = code["pmax_spiral"]
-else:
-    phi_c_max = code["phi_tied"]
-    p_max_factor = code["pmax_tied"]
-phi_tension = code["phi_tension"]
-eps_full = code["eps_tension_full"]
-
-st.sidebar.header(_t("5. Solicitaciones (Biaxiales)", "5. Loads (Biaxial)"))
-unidades_salida = st.sidebar.radio(_t("Unidades del Diagrama:", "Output Units:"), 
-                                   [_t("KiloNewtons (kN, kN-m)", "KiloNewtons (kN, kN-m)"), 
-                                    _t("Toneladas Fuerza (tonf, tonf-m)", "Tons Force (tonf, tonf-m)")], 
-                                   key="c_pm_output_units")
-
-if unidades_salida == _t("Toneladas Fuerza (tonf, tonf-m)", "Tons Force (tonf, tonf-m)"):
-    factor_fuerza = 0.1019716
-    unidad_fuerza = "tonf"
-    unidad_mom = "tonf-m"
-else:
-    factor_fuerza = 1.0
-    unidad_fuerza = "kN"
-    unidad_mom = "kN-m"
-
-st.sidebar.markdown(f"Cargas últimas en **{unidad_fuerza}** y **{unidad_mom}**:")
-
-Mux_input = st.sidebar.number_input(f"Momento Último Mux [{unidad_mom}]", value=round(45.0 * factor_fuerza, 2), step=round(10.0 * factor_fuerza, 2), key="c_pm_mux")
-Muy_input = st.sidebar.number_input(f"Momento Último Muy [{unidad_mom}]", value=round(25.0 * factor_fuerza, 2), step=round(10.0 * factor_fuerza, 2), key="c_pm_muy")
-
-aplicar_cm = st.sidebar.checkbox("¿Especificar Curvatura Simple (M1/M2)?", value=False, help="Permite calcular Cm diferente a 1.0", key="c_pm_cm_chk")
-if aplicar_cm:
-    M1x_input = st.sidebar.number_input(f"Momento menor M1x [{unidad_mom}]", value=round(0.0 * factor_fuerza, 2), step=round(10.0 * factor_fuerza, 2), key="c_pm_m1x")
-    M1y_input = st.sidebar.number_input(f"Momento menor M1y [{unidad_mom}]", value=round(0.0 * factor_fuerza, 2), step=round(10.0 * factor_fuerza, 2), key="c_pm_m1y")
-else:
-    M1x_input = Mux_input
-    M1y_input = Muy_input
-Pu_input  = st.sidebar.number_input(f"Carga Axial Última (Pu) [{unidad_fuerza}]", value=round(2700.0 * factor_fuerza, 2), step=round(50.0 * factor_fuerza, 2), key="c_pm_pu")
-
-# N1/N3 – Excentricidad mínima NSR-10 C.10.3.6: e_min=max(0.10h,1.5cm)
-_dim_x_emin=(h if not es_circular else D)
-_dim_y_emin=(b if not es_circular else D)
-e_min_x_cm=max(0.10*_dim_x_emin,1.5)  # cm
-e_min_y_cm=max(0.10*_dim_y_emin,1.5)  # cm
-_Mux_emin=Pu_input*e_min_x_cm/100.0
-_Muy_emin=Pu_input*e_min_y_cm/100.0
-_Mux_safe=Mux_input if abs(Mux_input)>=_Mux_emin else (math.copysign(_Mux_emin,Mux_input) if Mux_input!=0 else _Mux_emin)
-_Muy_safe=Muy_input if abs(Muy_input)>=_Muy_emin else (math.copysign(_Muy_emin,Muy_input) if Muy_input!=0 else _Muy_emin)
-_Mux_safe=_Mux_safe if abs(_Mux_safe)>1e-9 else _Mux_emin
-_Muy_safe=_Muy_safe if abs(_Muy_safe)>1e-9 else _Muy_emin
-if abs(Mux_input)<_Mux_emin or abs(Muy_input)<_Muy_emin:
-    st.info(f'ℹ️ Excentricidad mínima NSR-10 C.10.3.6: ex={e_min_x_cm:.2f}cm→Mux≥{_Mux_emin:.2f} {unidad_mom} | ey={e_min_y_cm:.2f}cm→Muy≥{_Muy_emin:.2f} {unidad_mom}')
-Mux_plot=_Mux_safe
-Muy_plot=_Muy_safe
-
-st.sidebar.header(_t("6. Esbeltez", "6. Slenderness"))
-beta_dns = st.sidebar.number_input("Factor de carga sostenida (βdns)", min_value=0.0, max_value=1.0, value=0.6, step=0.1, help="Relación M_sostenido / M_total. Default 0.6")
-k_factor = st.sidebar.selectbox(_t("Factor de longitud efectiva (k)", "Effective length factor (k)"),
-                            [("Ambos extremos articulados", 1.0),
-                             ("Un extremo articulado, otro empotrado", 0.7),
-                             ("Ambos extremos empotrados", 0.5),
-                             ("Voladizo (base empotrada, libre arriba)", 2.0)],
-                            format_func=lambda x: x[0],
-                            key="c_pm_k")[1]
+with st.sidebar.expander("Rol de Usuario", expanded=False):
+    _roles    = ["free", "pro", "admin"]
+    _rol_idx  = _roles.index(st.session_state.get("user_role","free"))
+    _rol_nuevo = st.radio("Selecciona tu rol", _roles, index=_rol_idx, key="col_rol_radio",
+                          help="free: calculos y CSV.  pro: todos los entregables.  admin: acceso total.")
+    if _rol_nuevo != st.session_state.get("user_role","free"):
+        st.session_state["user_role"] = _rol_nuevo
+        save_state_col(); st.rerun()
+    _crol = {"admin":"#1b5e20","pro":"#0d47a1","free":"#b71c1c"}
+    st.markdown(
+        f'<div style="background:{_crol[_rol_nuevo]};color:white;border-radius:6px;'
+        f'padding:5px 10px;font-size:12px;text-align:center;font-weight:600;margin-top:6px">'
+        f'Rol activo: {_rol_nuevo.upper()}</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.subheader(" Guardar / Cargar Proyecto")
+st.sidebar.header("Datos del Plano")
+_plano_num    = st.sidebar.text_input("Numero de plano",
+    value=st.session_state.get("cpm_plano_num","COL-001"), key="cpm_plano_inp")
+_escala_plano = st.sidebar.text_input("Escala",
+    value=st.session_state.get("cpm_escala","1:50"), key="cpm_escala_inp")
+st.session_state["cpm_plano_num"] = _plano_num
+st.session_state["cpm_escala"]    = _escala_plano
 
-nombre_producido = st.session_state.get("nombre_proyecto_actual", "")
-
-st.sidebar.markdown("**Nuevo Proyecto / Guardar**")
-nombre_proy_guardar = st.sidebar.text_input("Nombre para guardar", value=nombre_producido, key="input_guardar_proy")
-
-if st.sidebar.button(" Guardar Proyecto", use_container_width=True):
-    if nombre_proy_guardar:
-        ok, msg = guardar_proyecto_supabase(nombre_proy_guardar, capturar_estado_actual())
-        if ok:
-            st.session_state["nombre_proyecto_actual"] = nombre_proy_guardar
-            st.sidebar.success(msg)
-            st.rerun()
+st.sidebar.markdown("---")
+st.sidebar.subheader("Guardar / Cargar Proyecto")
+_nombre_producido    = st.session_state.get("nombre_proyecto_actual","")
+_nombre_proy_guardar = st.sidebar.text_input("Nombre para guardar",
+    value=_nombre_producido, key="col_input_proy")
+if st.sidebar.button("Guardar Proyecto", use_container_width=True):
+    if _nombre_proy_guardar:
+        _ok, _msg = guardar_proyecto_supabase(_nombre_proy_guardar, capturar_estado_actual())
+        if _ok:
+            st.session_state["nombre_proyecto_actual"] = _nombre_proy_guardar
+            st.sidebar.success(_msg); st.rerun()
         else:
-            st.sidebar.error(msg)
+            st.sidebar.error(_msg)
     else:
         st.sidebar.warning("Escribe un nombre de proyecto")
 
 st.sidebar.markdown("**Cargar Proyecto Existente**")
-lista_proyectos = listar_proyectos_supabase()
-
-if lista_proyectos:
-    idx_default = 0
-    if nombre_producido in lista_proyectos:
-        idx_default = lista_proyectos.index(nombre_producido)
-        
-    nombre_proy_cargar = st.sidebar.selectbox("Selecciona un proyecto", lista_proyectos, index=idx_default, key="select_cargar_proy")
-    
-    def on_cargar_columna_click():
-        proy = st.session_state["select_cargar_proy"]
-        if proy:
-            ok, msg = cargar_proyecto_supabase(proy)
-            if ok:
-                st.session_state["nombre_proyecto_actual"] = proy
-                st.session_state["__msg_cargar_col"] = (True, msg)
+_lista_proy = listar_proyectos_supabase()
+if _lista_proy:
+    _idx_def = 0
+    if _nombre_producido in _lista_proy:
+        _idx_def = _lista_proy.index(_nombre_producido)
+    _nombre_proy_cargar = st.sidebar.selectbox("Selecciona un proyecto",
+        _lista_proy, index=_idx_def, key="col_sel_proy")
+    def _on_cargar_col():
+        _p = st.session_state["col_sel_proy"]
+        if _p:
+            _ok2, _msg2 = cargar_proyecto_supabase(_p)
+            if _ok2:
+                st.session_state["nombre_proyecto_actual"] = _p
+                st.session_state["__msg_cargar_col"] = (True, _msg2)
             else:
-                st.session_state["__msg_cargar_col"] = (False, msg)
-
-    st.sidebar.button(" Cargar", on_click=on_cargar_columna_click, use_container_width=True)
-
+                st.session_state["__msg_cargar_col"] = (False, _msg2)
+    st.sidebar.button("Cargar", on_click=_on_cargar_col, use_container_width=True)
     if "__msg_cargar_col" in st.session_state:
-        ok, msg = st.session_state.pop("__msg_cargar_col")
-        if ok: st.sidebar.success(msg)
-        else: st.sidebar.error(msg)
+        _ok3, _msg3 = st.session_state.pop("__msg_cargar_col")
+        if _ok3: st.sidebar.success(_msg3)
+        else:    st.sidebar.error(_msg3)
 else:
-    st.sidebar.info("No hay proyectos en la nube.")
+    st.sidebar.info("No hay proyectos guardados.")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<div style="text-align: center; color: gray; font-size: 11px;">
-    © 2026 Todos los derechos reservados.<br>
-    <b>Realizado por:</b><br>
-    <br><br>
-    <i> Nota Legal: Herramienta de apoyo profesional.</i>
-</div>
-""", unsafe_allow_html=True)
+_emp_foot = st.session_state.get("cpm_empresa","") or "StructoPro"
+st.sidebar.markdown(
+    f'<div style="text-align:center;color:gray;font-size:10px">'
+    f'&copy; 2026 {_emp_foot}<br>Uso profesional exclusivo</div>',
+    unsafe_allow_html=True)
+
+
+# =============================================================================
+# PASO 2 — Leer variables desde session_state con defaults
+#           SIN crear widgets. Los widgets se crean en render_config_tab()
+# =============================================================================
+
+fc_unit     = st.session_state.get("c_pm_fc_unit", "MPa")
+if fc_unit == "PSI":
+    _fc_psi = float(st.session_state.get("c_pm_fc_psi_val", 3000.0))
+    fc      = _fc_psi * 0.00689476
+elif fc_unit == "kg/cm2":
+    _fc_kg  = float(st.session_state.get("c_pm_fc_kgcm2_val", 210.0))
+    fc      = _fc_kg / 10.1972
+else:
+    fc      = float(st.session_state.get("c_pm_fc_mpa", 21.0))
+
+fy          = float(st.session_state.get("c_pm_fy", 420.0))
+Es          = 200000.0
+
+seccion_type = st.session_state.get("c_pm_seccion_type", "Rectangular / Cuadrada")
+es_circular  = "Circular" in seccion_type
+D            = float(st.session_state.get("c_pm_D", 40.0))
+b            = float(st.session_state.get("c_pm_b", 30.0))
+h            = float(st.session_state.get("c_pm_h", 40.0))
+if es_circular:
+    b = D; h = D
+d_prime      = float(st.session_state.get("c_pm_dprime", 5.0))
+L_col        = float(st.session_state.get("c_pm_L", 300.0))
+
+limite_d = D/2 if es_circular else min(b/2, h/2)
+if d_prime >= limite_d:
+    st.error(
+        f"Recubrimiento d' ({d_prime:.1f} cm) supera el nucleo de la seccion "
+        f"(limite: {limite_d:.1f} cm). Corrija en la pestana Configuracion."
+    )
+    st.stop()
+
+unit_system  = st.session_state.get("c_pm_unit_system", "Milimetros (SI)")
+_usar_us     = "Pulgadas" in unit_system or "Inches" in unit_system
+rebar_dict   = REBAR_US if _usar_us else REBAR_MM
+rebar_type   = st.session_state.get("c_pm_rebar_type", list(rebar_dict.keys())[2])
+if rebar_type not in rebar_dict:
+    rebar_type = list(rebar_dict.keys())[2]
+rebar_area   = rebar_dict[rebar_type]["area"]
+rebar_diam   = rebar_dict[rebar_type]["diam_mm"]
+
+if es_circular:
+    n_barras     = int(st.session_state.get("c_pm_n_barras_circ", 8))
+    Ast          = n_barras * rebar_area
+    layers       = []
+    angulos      = np.linspace(0, 2*np.pi, n_barras, endpoint=False)
+    radio_centro = D/2 - d_prime
+    for i, ang in enumerate(angulos):
+        x_pos = radio_centro * math.cos(ang)
+        y_pos = radio_centro * math.sin(ang)
+        layers.append({"d": D/2 + y_pos, "As": rebar_area, "x": x_pos, "y": y_pos})
+    num_filas_h = n_barras
+    num_filas_v = n_barras
+else:
+    num_filas_h = int(st.session_state.get("c_pm_num_h", 2))
+    num_filas_v = int(st.session_state.get("c_pm_num_v", 2))
+    layers      = []
+    layers.append({"d": d_prime, "As": num_filas_h * rebar_area})
+    _num_int    = num_filas_v - 2
+    num_capas_intermedias = _num_int  # alias para compatibilidad con tabs
+    if _num_int > 0:
+        _esp_h  = (h - 2 * d_prime) / (_num_int + 1)
+        for i in range(1, _num_int + 1):
+            layers.append({"d": d_prime + i * _esp_h, "As": 2 * rebar_area})
+    layers.append({"d": h - d_prime, "As": num_filas_h * rebar_area})
+    n_barras_total = num_filas_h * 2 + (num_filas_v - 2) * 2
+    n_barras       = n_barras_total
+    Ast            = sum([l["As"] for l in layers])
+
+Ag      = (math.pi * (D/2)**2) if es_circular else (b * h)
+cuantia = Ast / Ag * 100
+
+if es_circular:
+    col_type     = "Espiral (Spiral)"
+    stirrup_dict = STIRRUP_US if _usar_us else STIRRUP_MM
+    spiral_type  = st.session_state.get("c_pm_spiral_type", list(stirrup_dict.keys())[0])
+    if spiral_type not in stirrup_dict: spiral_type = list(stirrup_dict.keys())[0]
+    stirrup_area = stirrup_dict[spiral_type]["area"]
+    stirrup_diam = stirrup_dict[spiral_type]["diam_mm"]
+    paso_espiral = float(st.session_state.get("c_pm_paso_circ", 7.5))
+else:
+    col_type     = st.session_state.get("c_pm_col_type", "Estribos (Tied)")
+    stirrup_dict = STIRRUP_US if _usar_us else STIRRUP_MM
+    stirrup_type = st.session_state.get("c_pm_stirrup_type", list(stirrup_dict.keys())[0])
+    if stirrup_type not in stirrup_dict: stirrup_type = list(stirrup_dict.keys())[0]
+    stirrup_area = stirrup_dict[stirrup_type]["area"]
+    stirrup_diam = stirrup_dict[stirrup_type]["diam_mm"]
+    if stirrup_diam < 9.5: stirrup_diam = 9.53
+    paso_espiral = float(st.session_state.get("c_pm_paso_rect", 7.5))
+
+if "Espiral" in col_type or es_circular:
+    phi_c_max    = code["phi_spiral"]
+    p_max_factor = code["pmax_spiral"]
+else:
+    phi_c_max    = code["phi_tied"]
+    p_max_factor = code["pmax_tied"]
+phi_tension  = code["phi_tension"]
+eps_full     = code["eps_tension_full"]
+
+unidades_salida = st.session_state.get("c_pm_output_units", "KiloNewtons (kN, kN-m)")
+if "Toneladas" in unidades_salida or "tonf" in unidades_salida:
+    factor_fuerza = 0.1019716; unidad_fuerza = "tonf"; unidad_mom = "tonf-m"
+else:
+    factor_fuerza = 1.0; unidad_fuerza = "kN"; unidad_mom = "kN-m"
+
+Mux_input  = float(st.session_state.get("c_pm_mux",  round(45.0   * factor_fuerza, 2)))
+Muy_input  = float(st.session_state.get("c_pm_muy",  round(25.0   * factor_fuerza, 2)))
+Pu_input   = float(st.session_state.get("c_pm_pu",   round(2700.0 * factor_fuerza, 2)))
+aplicar_cm = bool(st.session_state.get("c_pm_cm_chk", False))
+if aplicar_cm:
+    M1x_input = float(st.session_state.get("c_pm_m1x", 0.0))
+    M1y_input = float(st.session_state.get("c_pm_m1y", 0.0))
+else:
+    M1x_input = Mux_input
+    M1y_input = Muy_input
+
+_dim_x_emin = h if not es_circular else D
+_dim_y_emin = b if not es_circular else D
+e_min_x_cm  = max(0.10 * _dim_x_emin, 1.5)
+e_min_y_cm  = max(0.10 * _dim_y_emin, 1.5)
+_Mux_emin   = Pu_input * e_min_x_cm / 100.0
+_Muy_emin   = Pu_input * e_min_y_cm / 100.0
+_Mux_safe   = Mux_input if abs(Mux_input) >= _Mux_emin else (math.copysign(_Mux_emin, Mux_input) if Mux_input != 0 else _Mux_emin)
+_Muy_safe   = Muy_input if abs(Muy_input) >= _Muy_emin else (math.copysign(_Muy_emin, Muy_input) if Muy_input != 0 else _Muy_emin)
+_Mux_safe   = _Mux_safe if abs(_Mux_safe) > 1e-9 else _Mux_emin
+_Muy_safe   = _Muy_safe if abs(_Muy_safe) > 1e-9 else _Muy_emin
+Mux_plot    = _Mux_safe
+Muy_plot    = _Muy_safe
+
+beta_dns = float(st.session_state.get("c_pm_beta_dns", 0.6))
+_k_options = {
+    "Ambos extremos articulados":               1.0,
+    "Un extremo articulado, otro empotrado":     0.7,
+    "Ambos extremos empotrados":                0.5,
+    "Voladizo (base empotrada, libre arriba)":  2.0,
+}
+_k_sel   = st.session_state.get("c_pm_k_sel", "Ambos extremos articulados")
+if _k_sel not in _k_options: _k_sel = "Ambos extremos articulados"
+k_factor = _k_options[_k_sel]
 
 # =============================================================================
 # CÁLCULOS DE CAPACIDAD UNIAXIAL (X y Y)
@@ -1745,17 +1861,212 @@ except Exception:
 # =============================================================================
 # TABS PRINCIPALES
 # =============================================================================
-tab1, tab2, tab2b, tab3, tab4 = st.tabs([
-    _t(" Diagrama P-M Biaxial", " Biaxial P-M Diagram"),
-    _t(" Sección & Estribos", " Section & Ties"),
-    _t(" 📐 Alzado & Combos", " 📐 Elevation & Load Combos"),
-    _t(" Cantidades y APU", " Quantities & APU"),
-    _t(" Memoria de Cálculo", " Calculation Report")
-])
 
 # =============================================================================
-# TAB 1: DIAGRAMA P-M BIAXIAL
+# PASO 4 — def render_config_tab()
+#           Todos los widgets de calculo van aqui. Se llama SOLO desde tab0.
 # =============================================================================
+def render_config_tab():
+    st.markdown("### Parametros de Diseno")
+    col_izq, col_der = st.columns(2)
+
+    with col_izq:
+        st.subheader("1. Materiales")
+        _fc_unit_w = st.radio("Unidad de f'c:", ["MPa", "PSI", "kg/cm2"],
+                              horizontal=True, key="c_pm_fc_unit")
+        if _fc_unit_w == "PSI":
+            _psi_opts = {
+                "2500 PSI (17.2 MPa)": 2500.0, "3000 PSI (20.7 MPa)": 3000.0,
+                "3500 PSI (24.1 MPa)": 3500.0, "4000 PSI (27.6 MPa)": 4000.0,
+                "4500 PSI (31.0 MPa)": 4500.0, "5000 PSI (34.5 MPa)": 5000.0,
+                "Personalizado": None
+            }
+            _psi_ch = st.selectbox("Resistencia f'c [PSI]", list(_psi_opts.keys()), key="c_pm_psi_choice")
+            if _psi_opts[_psi_ch] is not None:
+                st.session_state["c_pm_fc_psi_val"] = _psi_opts[_psi_ch]
+                st.caption(f"fc = {_psi_opts[_psi_ch] * 0.00689476:.2f} MPa")
+            else:
+                _pv = st.number_input("f'c personalizado [PSI]", 2000.0, 12000.0, 3000.0, 100.0, key="c_pm_fc_psi_custom")
+                st.session_state["c_pm_fc_psi_val"] = _pv
+        elif _fc_unit_w == "kg/cm2":
+            _kg_opts = {
+                "175 kg/cm2 (17.2 MPa)": 175.0, "210 kg/cm2 (20.6 MPa)": 210.0,
+                "250 kg/cm2 (24.5 MPa)": 250.0, "280 kg/cm2 (27.5 MPa)": 280.0,
+                "350 kg/cm2 (34.3 MPa)": 350.0, "420 kg/cm2 (41.2 MPa)": 420.0,
+                "Personalizado": None
+            }
+            _kg_ch = st.selectbox("Resistencia f'c [kg/cm2]", list(_kg_opts.keys()), key="c_pm_kgcm2_choice")
+            if _kg_opts[_kg_ch] is not None:
+                st.session_state["c_pm_fc_kgcm2_val"] = _kg_opts[_kg_ch]
+                st.caption(f"fc = {_kg_opts[_kg_ch] / 10.1972:.2f} MPa")
+            else:
+                _kv = st.number_input("f'c personalizado [kg/cm2]", 100.0, 1200.0, 210.0, 10.0, key="c_pm_fc_kgcm2_custom")
+                st.session_state["c_pm_fc_kgcm2_val"] = _kv
+        else:
+            st.number_input("Resistencia del Concreto f'c [MPa]", 15.0, 80.0, 21.0, 1.0, key="c_pm_fc_mpa")
+        st.number_input("Fluencia del Acero fy [MPa]", 240.0, 500.0, 420.0, 10.0, key="c_pm_fy")
+
+        st.markdown("---")
+        st.subheader("2. Geometria de la Seccion")
+        st.selectbox("Tipo de seccion",
+                     ["Rectangular / Cuadrada", "Circular (con espiral)"],
+                     key="c_pm_seccion_type")
+        _es_circ_cfg = "Circular" in st.session_state.get("c_pm_seccion_type", "Rectangular / Cuadrada")
+        if _es_circ_cfg:
+            st.number_input("Diametro D [cm]", 15.0, 150.0, 40.0, 5.0, key="c_pm_D")
+            st.caption("Para pilares circulares de gran diametro (puentes, silos) use el modulo Pilares Circulares.")
+        else:
+            _ca, _cb = st.columns(2)
+            _ca.number_input("Base b [cm]",   15.0, 150.0, 30.0, 5.0, key="c_pm_b")
+            _cb.number_input("Altura h [cm]", 15.0, 150.0, 40.0, 5.0, key="c_pm_h")
+        st.number_input("Recubrimiento al centroide d' [cm]", 2.0, 15.0, 5.0, 0.5, key="c_pm_dprime")
+        st.number_input("Altura libre de la columna L [cm]", 50.0, 1000.0, 300.0, 25.0, key="c_pm_L")
+
+        st.markdown("---")
+        st.subheader("6. Esbeltez")
+        st.number_input("Factor de carga sostenida (beta dns)", 0.0, 1.0, 0.6, 0.1,
+                        help="Relacion M_sostenido / M_total. Default 0.6", key="c_pm_beta_dns")
+        st.selectbox("Factor de longitud efectiva k",
+                     ["Ambos extremos articulados",
+                      "Un extremo articulado, otro empotrado",
+                      "Ambos extremos empotrados",
+                      "Voladizo (base empotrada, libre arriba)"],
+                     key="c_pm_k_sel")
+
+    with col_der:
+        st.subheader("3. Refuerzo Longitudinal")
+        st.radio("Sistema de unidades de varillas:",
+                 ["Milimetros (SI)", "Pulgadas (EE. UU.)"],
+                 horizontal=True, key="c_pm_unit_system")
+        _rbd_cfg  = REBAR_US if ("Pulgadas" in st.session_state.get("c_pm_unit_system","") or
+                                  "Inches"  in st.session_state.get("c_pm_unit_system","")) else REBAR_MM
+        _rb_keys  = list(_rbd_cfg.keys())
+        _rb_def   = st.session_state.get("c_pm_rebar_type", _rb_keys[2] if len(_rb_keys) > 2 else _rb_keys[0])
+        if _rb_def not in _rb_keys: _rb_def = _rb_keys[0]
+        st.selectbox("Diametro de las varillas", _rb_keys,
+                     index=_rb_keys.index(_rb_def), key="c_pm_rebar_type")
+
+        _es_circ_rb = "Circular" in st.session_state.get("c_pm_seccion_type","")
+        if _es_circ_rb:
+            st.number_input("Numero de varillas longitudinales", 4, 20, 8, 2, key="c_pm_n_barras_circ")
+        else:
+            _cr1, _cr2 = st.columns(2)
+            _cr1.number_input("Filas horizontales (sup e inf)", 2, 15, 2, 1, key="c_pm_num_h")
+            _cr2.number_input("Filas verticales (laterales)",   2, 15, 2, 1, key="c_pm_num_v")
+
+        st.markdown("---")
+        st.subheader("4. Refuerzo Transversal")
+        _strd_cfg = STIRRUP_US if ("Pulgadas" in st.session_state.get("c_pm_unit_system","") or
+                                    "Inches"  in st.session_state.get("c_pm_unit_system","")) else STIRRUP_MM
+        if _es_circ_rb:
+            _sp_keys = list(_strd_cfg.keys())
+            _sp_def  = st.session_state.get("c_pm_spiral_type", _sp_keys[0])
+            if _sp_def not in _sp_keys: _sp_def = _sp_keys[0]
+            st.selectbox("Diametro de la espiral", _sp_keys,
+                         index=_sp_keys.index(_sp_def), key="c_pm_spiral_type")
+            st.number_input("Paso de la espiral s [cm]", 2.0, 20.0, 7.5, 0.5, key="c_pm_paso_circ")
+        else:
+            st.selectbox("Tipo de columna",
+                         ["Estribos (Tied)", "Espiral (Spiral)"], key="c_pm_col_type")
+            _st_keys = list(_strd_cfg.keys())
+            _st_def  = st.session_state.get("c_pm_stirrup_type", _st_keys[0])
+            if _st_def not in _st_keys: _st_def = _st_keys[0]
+            st.selectbox("Diametro del estribo", _st_keys,
+                         index=_st_keys.index(_st_def), key="c_pm_stirrup_type")
+
+        st.markdown("---")
+        st.subheader("5. Solicitaciones Biaxiales")
+        st.radio("Unidades del diagrama:",
+                 ["KiloNewtons (kN, kN-m)", "Toneladas Fuerza (tonf, tonf-m)"],
+                 horizontal=True, key="c_pm_output_units")
+        _ff_w = 0.1019716 if "Toneladas" in st.session_state.get("c_pm_output_units","") else 1.0
+        _uf_w = "tonf"   if "Toneladas" in st.session_state.get("c_pm_output_units","") else "kN"
+        _um_w = "tonf-m" if "Toneladas" in st.session_state.get("c_pm_output_units","") else "kN-m"
+        _cs1, _cs2, _cs3 = st.columns(3)
+        _cs1.number_input(f"Pu [{_uf_w}]",  value=round(2700.0*_ff_w,2), step=round(50.0*_ff_w,2),  key="c_pm_pu")
+        _cs2.number_input(f"Mux [{_um_w}]", value=round(45.0*_ff_w,2),   step=round(10.0*_ff_w,2),  key="c_pm_mux")
+        _cs3.number_input(f"Muy [{_um_w}]", value=round(25.0*_ff_w,2),   step=round(10.0*_ff_w,2),  key="c_pm_muy")
+        st.checkbox("Especificar Curvatura Simple M1/M2", value=False,
+                    help="Permite calcular Cm diferente a 1.0", key="c_pm_cm_chk")
+        if st.session_state.get("c_pm_cm_chk"):
+            _cm1, _cm2 = st.columns(2)
+            _cm1.number_input(f"Momento menor M1x [{_um_w}]", value=0.0, step=round(10.0*_ff_w,2), key="c_pm_m1x")
+            _cm2.number_input(f"Momento menor M1y [{_um_w}]", value=0.0, step=round(10.0*_ff_w,2), key="c_pm_m1y")
+
+        st.markdown("---")
+        st.subheader("Resumen de la Seccion")
+        st.info(
+            f"f'c = {st.session_state.get('c_pm_fc_mpa', 21.0)} MPa  |  "
+            f"fy = {st.session_state.get('c_pm_fy', 420.0)} MPa  |  "
+            f"Norma: {norma_sel}  |  Nivel: {nivel_sismico}  |  "
+            f"rho min: {rho_min}%  |  rho max: {rho_max}%"
+        )
+
+
+# =============================================================================
+# PASO 5 — HEADER BANNER + METRICAS SUPERIORES
+# =============================================================================
+
+_emp_hdr  = st.session_state.get("cpm_empresa","") or "StructoPro"
+_proy_hdr = st.session_state.get("cpm_proyecto_nombre","") or "Diseno de Columnas P-M"
+
+st.markdown(
+    f"""<div style="background:linear-gradient(135deg,#0d1b2a 0%,#1e3a5f 60%,#2e6da4 100%);
+    padding:20px 32px;border-radius:12px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:16px">
+    <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:8px">
+    <span style="font-size:30px;line-height:1">&#9632;</span></div>
+    <div>
+    <h1 style="color:white;margin:0;font-size:1.8rem;font-weight:800">{_emp_hdr} &mdash; Columnas P-M</h1>
+    <p style="color:#90caf9;margin:4px 0 0;font-size:0.9rem">
+    Proyecto: {_proy_hdr} &nbsp;|&nbsp; {norma_sel} &nbsp;|&nbsp; {nivel_sismico}
+    </p></div></div></div>""",
+    unsafe_allow_html=True
+)
+
+if abs(Mux_input) < _Mux_emin or abs(Muy_input) < _Muy_emin:
+    st.info(
+        f"Excentricidad minima NSR-10 C.10.3.6: "
+        f"ex={e_min_x_cm:.2f} cm -> Mux >= {_Mux_emin:.2f} {unidad_mom}  |  "
+        f"ey={e_min_y_cm:.2f} cm -> Muy >= {_Muy_emin:.2f} {unidad_mom}"
+    )
+
+_ratio_ok = bresler["ok"]
+_cur_ok   = (rho_min <= cuantia <= rho_max)
+_slend_ok = slenderness["kl_r"] <= 100
+
+_m1, _m2, _m3, _m4, _m5 = st.columns(5)
+_m1.metric("Pu", f"{Pu_input:.1f} {unidad_fuerza}")
+_m2.metric("phi·Pni (Bresler)", f"{bresler['phi_Pni']:.1f} {unidad_fuerza}",
+           delta="CUMPLE" if _ratio_ok else "NO CUMPLE",
+           delta_color="normal" if _ratio_ok else "inverse")
+_m3.metric("Ratio Pu / phi·Pni", f"{bresler['ratio']:.3f}",
+           delta_color="normal" if _ratio_ok else "inverse")
+_m4.metric("Cuantia rho", f"{cuantia:.2f}%",
+           delta="OK" if _cur_ok else "FUERA DE LIMITES",
+           delta_color="normal" if _cur_ok else "inverse")
+_m5.metric("Esbeltez kL/r", f"{slenderness['kl_r']:.1f}",
+           delta="Corta" if slenderness["kl_r"] <= 22 else (
+               "Esbelta" if slenderness["kl_r"] <= 100 else "Muy esbelta"),
+           delta_color="normal" if _slend_ok else "inverse")
+
+st.markdown("---")
+
+# =============================================================================
+# PASO 6 — TABS PRINCIPALES
+# =============================================================================
+tab0, tab1, tab2, tab2b, tab3, tab4 = st.tabs([
+    "Configuracion",
+    "Diagrama P-M Biaxial",
+    "Seccion y Estribos 3D",
+    "Alzado y Combos de Carga",
+    "Cantidades y APU",
+    "Memoria de Calculo",
+])
+
+with tab0:
+    render_config_tab()
+
 with tab1:
     col1, col2 = st.columns([2, 1])
     with col1:
@@ -2035,13 +2346,13 @@ with tab2:
         with st.expander(_t("Configurar Plano y Rotulo", "Configure Plot & Title Block"), expanded=True):
             col_cfg1, col_cfg2 = st.columns(2)
             with col_cfg1:
-                dxf_empresa  = st.text_input("Empresa",  "INGENIERIA ESTRUCTURAL SAS", key="dxf_col_emp")
-                dxf_proyecto = st.text_input("Proyecto", "Proyecto Estructural",        key="dxf_col_proy")
-                dxf_plano    = st.text_input("N Plano",  "COL-001",                     key="dxf_col_num")
-                dxf_elaboro  = st.text_input("Elaboro",  "Ing. Disenador",              key="dxf_col_elab")
+                dxf_empresa  = st.text_input("Empresa",  "INGENIERIA ESTRUCTURAL SAS", key="col_dxf_emp")
+                dxf_proyecto = st.text_input("Proyecto", "Proyecto Estructural",        key="col_dxf_proy")
+                dxf_plano    = st.text_input("N Plano",  "COL-001",                     key="col_dxf_num")
+                dxf_elaboro  = st.text_input("Elaboro",  "Ing. Disenador",              key="col_dxf_elab")
             with col_cfg2:
-                dxf_reviso   = st.text_input("Reviso",   "Ing. Revisor",                key="dxf_col_rev")
-                dxf_aprobo   = st.text_input("Aprobo",   "Ing. Aprobador",              key="dxf_col_apr")
+                dxf_reviso   = st.text_input("Reviso",   "Ing. Revisor",                key="col_dxf_rev")
+                dxf_aprobo   = st.text_input("Aprobo",   "Ing. Aprobador",              key="col_dxf_apr")
                 # Selector de tamanio de papel colombiano (ICONTEC)
                 papel_opciones = {
                     "Carta  (216 x 279 mm)":     (21.6,  27.9,  "CARTA"),
@@ -2049,11 +2360,11 @@ with tab2:
                     "Medio Pliego (500 x 707 mm)":(50.0,  70.7,  "MEDIO PLIEGO"),
                     "Pliego       (707 x 1000 mm)":(70.7, 100.0, "PLIEGO"),
                 }
-                papel_sel = st.selectbox("Tamano de Papel (ICONTEC)", list(papel_opciones.keys()), index=0, key="dxf_col_papel")
+                papel_sel = st.selectbox("Tamano de Papel (ICONTEC)", list(papel_opciones.keys()), index=0, key="col_dxf_papel")
                 ANCHO_PLANO, ALTO_PLANO, PAPEL_LABEL = papel_opciones[papel_sel]
 
         # ── GENERACION DXF ──────────────────────────────────────────────────
-        if st.button(_t("Generar Plano DXF ICONTEC", "Generate DXF ICONTEC"), key="btn_dxf_col"):
+        if st.button(_t("Generar Plano DXF ICONTEC", "Generate DXF ICONTEC"), key="col_btn_dxf"):
             try:
                 from ezdxf.enums import TextEntityAlignment
                 doc_dxf = ezdxf.new('R2010', setup=True)
@@ -2294,27 +2605,48 @@ with tab2:
                         [(ox, oy), (ox + sec_w, oy), (ox + sec_w, oy + sec_h), (ox, oy + sec_h), (ox, oy)],
                         dxfattribs={'layer': 'CONCRETO'})
 
-                    # Estribo cerrado con ganchos 135° sismico NSR-10 C.21.6.4.2
-                    re_s = recub_cm * escala_sec
+                    # Estribo con esquinas redondeadas y dos ganchos 135° en esquina SUP-IZQ
+                    # NSR-10 C.7.1.4 / ACI 318-19 25.3.4 — gancho sísmico 135°, ext. 6db al núcleo
+                    re_s  = recub_cm * escala_sec
                     r_bar = rebar_diam / 20 * escala_sec
                     dp_s  = d_prime * escala_sec
                     xm, xM = ox + re_s, ox + sec_w - re_s
                     ym, yM = oy + re_s, oy + sec_h - re_s
-                    # Longitud gancho: max(7.5cm, 6*db) según NSR-10
-                    L_gancho = max(7.5, 6.0 * stirrup_diam / 10) * escala_sec
-                    _gx = L_gancho * math.cos(math.radians(45))
-                    _gy = L_gancho * math.sin(math.radians(45))
-                    # Gancho en esquina INF-IZQ: ambas colas apuntan al INTERIOR (+X, +Y desde esquina)
-                    pts_estribo = [
-                        (xm + _gx, ym + _gy),   # P1: cola de entrada → hacia núcleo ✓
-                        (xm, ym),                # P2: esquina inf-izq (vértice del gancho)
-                        (xm, yM),                # P3: esquina sup-izq
-                        (xM, yM),                # P4: esquina sup-der
-                        (xM, ym),                # P5: esquina inf-der
-                        (xm, ym),                # P6: cierre (vuelve inf-izq)
-                        (xm + _gx, ym + _gy),   # P7: cola de salida → hacia núcleo ✓ (igual que P1)
-                    ]
-                    msp.add_lwpolyline(pts_estribo, dxfattribs={'layer': 'ACERO_TRANS', 'color': _color_acero_dxf_col(stirrup_diam)})
+                    bw_e  = xM - xm    # ancho estribo escalado
+                    hw_e  = yM - ym    # alto estribo escalado
+                    # Radio doblez = 3db (NSR-10 C.7.2)
+                    _rd = max(min(3.0*stirrup_diam/10.0*escala_sec, bw_e*0.12, hw_e*0.12), 0.03)
+                    # Longitud gancho: 6db (NSR-10 C.7.1.4 sismo)
+                    L_gancho = max(6.0*stirrup_diam/10.0*escala_sec, _rd*1.2)
+                    _n = 8  # puntos por arco de 90°
+
+                    def _adxf(cx, cy, rad, a0, a1):
+                        return [(cx+rad*math.cos(math.radians(a0+(a1-a0)*_ii/_n)),
+                                 cy+rad*math.sin(math.radians(a0+(a1-a0)*_ii/_n)))
+                                for _ii in range(_n+1)]
+
+                    # Perímetro: arranca en (xm, yM-_rd) = pie del arco sup-izq
+                    _pe = []
+                    _pe.append((xm, yM-_rd))                          # inicio lado izq
+                    _pe += _adxf(xm+_rd, ym+_rd, _rd, 180, 270)      # arco inf-izq
+                    _pe.append((xM-_rd, ym))                          # lado inf
+                    _pe += _adxf(xM-_rd, ym+_rd, _rd, 270, 360)      # arco inf-der
+                    _pe.append((xM, yM-_rd))                          # lado der
+                    _pe += _adxf(xM-_rd, yM-_rd, _rd, 0,   90)       # arco sup-der
+                    _pe.append((xm+_rd, yM))                          # lado sup
+                    _pe += _adxf(xm+_rd, yM-_rd, _rd, 90, 180)       # arco sup-izq
+                    _pe.append((xm, yM-_rd))                          # cierra
+                    msp.add_lwpolyline(_pe, dxfattribs={'layer': 'ACERO_TRANS',
+                                       'color': _color_acero_dxf_col(stirrup_diam)})
+
+                    # Ganchos 135°: dirección (+X, -Y) = hacia núcleo desde esquina sup-izq
+                    _dk = L_gancho * math.cos(math.radians(45))       # componente = mismo en X e Y
+                    # Gancho 1: desde (xm, yM-_rd) — pie del arco sup-izq en lado IZQUIERDO
+                    msp.add_line((xm, yM-_rd), (xm+_dk, yM-_rd-_dk),
+                                 dxfattribs={'layer':'ACERO_TRANS','color':_color_acero_dxf_col(stirrup_diam)})
+                    # Gancho 2: desde (xm+_rd, yM) — inicio del lado SUPERIOR
+                    msp.add_line((xm+_rd, yM), (xm+_rd+_dk, yM-_dk),
+                                 dxfattribs={'layer':'ACERO_TRANS','color':_color_acero_dxf_col(stirrup_diam)})
 
                     # Barras en esquinas y caras
                     cxm, cxM = ox + dp_s, ox + sec_w - dp_s
@@ -2673,7 +3005,7 @@ with tab2:
                     data=dxf_bytes,
                     file_name=nombre_dxf,
                     mime="application/dxf",
-                    key="dxf_col_download")
+                    key="col_dxf_dl")
 
                 # ── EXPORTAR PDF (renderizado) ───────────────────────────────
                 try:
@@ -2710,7 +3042,7 @@ with tab2:
                         data=bio_pdf_col.getvalue(),
                         file_name=nombre_pdf,
                         mime="application/pdf",
-                        key="pdf_col_download")
+                        key="col_pdf_dl")
                     st.success(_t(
                         f"Plano generado | Papel: {PAPEL_LABEL} | Escala: {ESCALA_LABEL} | Lineweights ICONTEC aplicados",
                         f"Plot generated | Paper: {PAPEL_LABEL} | Scale: {ESCALA_LABEL} | ICONTEC lineweights applied"))
@@ -2769,7 +3101,7 @@ with tab2b:
             "Muy": [round(abs(Muy_input)*0.50,1), round(abs(Muy_input),1), round(abs(Muy_input)*1.20,1), round(abs(Muy_input)*0.80,1), round(abs(Muy_input)*0.90,1)],
         })
         df_combos = st.data_editor(
-            _combos_def, num_rows="dynamic", use_container_width=True, key="combos_pm_col",
+            _combos_def, num_rows="dynamic", use_container_width=True, key="col_combos_pm",
             column_config={
                 "Combinacion": st.column_config.TextColumn("Combinación", width="medium"),
                 "Pu":  st.column_config.NumberColumn(f"Pu [{unidad_fuerza}]",  min_value=0),
@@ -2888,41 +3220,41 @@ with tab3:
     
     with st.expander(_t("Presupuesto APU", "APU Budget"), expanded=False):
         st.markdown(_t("Ingrese precios unitarios para calcular el costo total.", "Enter unit prices to calculate total cost."))
-        with st.form(key="apu_form"):
-            if "apu_moneda" not in st.session_state: st.session_state["apu_moneda"] = "COP"
-            moneda = st.text_input(_t("Moneda", "Currency"), value=st.session_state["apu_moneda"])
+        with st.form(key="col_apu_form"):
+            if "col_apu_moneda" not in st.session_state: st.session_state["col_apu_moneda"] = "COP"
+            moneda = st.text_input(_t("Moneda", "Currency"), value=st.session_state["col_apu_moneda"])
             col_apu1, col_apu2 = st.columns(2)
             with col_apu1:
-                if "apu_cemento" not in st.session_state: st.session_state["apu_cemento"] = 28000.0
-                if "apu_acero" not in st.session_state: st.session_state["apu_acero"] = 7500.0
-                if "apu_arena" not in st.session_state: st.session_state["apu_arena"] = 120000.0
-                if "apu_grava" not in st.session_state: st.session_state["apu_grava"] = 130000.0
+                if "col_apu_cemento" not in st.session_state: st.session_state["col_apu_cemento"] = 28000.0
+                if "col_apu_acero" not in st.session_state: st.session_state["col_apu_acero"] = 7500.0
+                if "col_apu_arena" not in st.session_state: st.session_state["col_apu_arena"] = 120000.0
+                if "col_apu_grava" not in st.session_state: st.session_state["col_apu_grava"] = 130000.0
                 
-                precio_cemento = st.number_input(_t("Precio por bulto cemento", "Price per cement bag"), value=st.session_state["apu_cemento"], step=1000.0)
-                precio_acero = st.number_input(_t("Precio por kg acero", "Price per kg steel"), value=st.session_state["apu_acero"], step=100.0)
-                precio_arena = st.number_input(_t("Precio por m³ arena", "Price per m³ sand"), value=st.session_state["apu_arena"], step=5000.0)
-                precio_grava = st.number_input(_t("Precio por m³ grava", "Price per m³ gravel"), value=st.session_state["apu_grava"], step=5000.0)
-                if "apu_agua" not in st.session_state: st.session_state["apu_agua"] = 3500.0
-                if "apu_encofrado" not in st.session_state: st.session_state["apu_encofrado"] = 45000.0
-                precio_agua = st.number_input(_t("Precio agua (m³)", "Water price /m³"), value=st.session_state["apu_agua"], step=500.0)
-                precio_encofrado = st.number_input(_t("Precio encofrado (m²)", "Formwork price /m²"), value=st.session_state["apu_encofrado"], step=2000.0)
+                precio_cemento = st.number_input(_t("Precio por bulto cemento", "Price per cement bag"), value=st.session_state["col_apu_cemento"], step=1000.0)
+                precio_acero = st.number_input(_t("Precio por kg acero", "Price per kg steel"), value=st.session_state["col_apu_acero"], step=100.0)
+                precio_arena = st.number_input(_t("Precio por m³ arena", "Price per m³ sand"), value=st.session_state["col_apu_arena"], step=5000.0)
+                precio_grava = st.number_input(_t("Precio por m³ grava", "Price per m³ gravel"), value=st.session_state["col_apu_grava"], step=5000.0)
+                if "col_apu_agua" not in st.session_state: st.session_state["col_apu_agua"] = 3500.0
+                if "col_apu_encofrado" not in st.session_state: st.session_state["col_apu_encofrado"] = 45000.0
+                precio_agua = st.number_input(_t("Precio agua (m³)", "Water price /m³"), value=st.session_state["col_apu_agua"], step=500.0)
+                precio_encofrado = st.number_input(_t("Precio encofrado (m²)", "Formwork price /m²"), value=st.session_state["col_apu_encofrado"], step=2000.0)
             with col_apu2:
-                if "apu_mo" not in st.session_state: st.session_state["apu_mo"] = 70000.0
-                if "apu_aui" not in st.session_state: st.session_state["apu_aui"] = 30.0
+                if "col_apu_mo" not in st.session_state: st.session_state["col_apu_mo"] = 70000.0
+                if "col_apu_aui" not in st.session_state: st.session_state["col_apu_aui"] = 30.0
                 
-                precio_mo = st.number_input(_t("Costo mano de obra (día)", "Labor cost per day"), value=st.session_state["apu_mo"], step=5000.0)
-                pct_aui = st.number_input(_t("% A.I.U.", "% A.I.U."), value=st.session_state["apu_aui"], step=5.0) / 100.0
+                precio_mo = st.number_input(_t("Costo mano de obra (día)", "Labor cost per day"), value=st.session_state["col_apu_mo"], step=5000.0)
+                pct_aui = st.number_input(_t("% A.I.U.", "% A.I.U."), value=st.session_state["col_apu_aui"], step=5.0) / 100.0
             st.markdown("---")
             usar_premezclado = st.checkbox(
                 _t("Usar concreto premezclado (omite cemento/arena/grava)", "Use ready-mix concrete (skips cement/sand/gravel)"),
-                value=st.session_state.get("apu_premix", False), key="apu_premix"
+                value=st.session_state.get("col_apu_premix", False), key="col_apu_premix"
             )
             precio_premix_m3 = 0.0
             if usar_premezclado:
                 precio_premix_m3 = st.number_input(
                     _t("Precio concreto premezclado / m³", "Ready-mix concrete price / m³"),
-                    value=st.session_state.get("apu_premix_precio", 420000.0),
-                    step=10000.0, key="apu_premix_precio"
+                    value=st.session_state.get("col_apu_premix_p", 420000.0),
+                    step=10000.0, key="col_apu_premix_p"
                 )
             submitted = st.form_submit_button(_t("Calcular Presupuesto", "Calculate Budget"))
             if submitted:
@@ -2932,7 +3264,7 @@ with tab3:
                     "agua": precio_agua, "encofrado": precio_encofrado}
                 st.success(_t("Precios guardados.", "Prices saved."))
                 st.rerun()
-        if "apu_config" in st.session_state:
+        if "col_apu_config" in st.session_state:
             apu = st.session_state.apu_config
             mix = get_mix_for_fc(fc)
             bag_kg = CEMENT_BAGS.get(norma_sel, CEMENT_BAGS["NSR-10 (Colombia)"])[0]["kg"]
@@ -3155,13 +3487,15 @@ with tab4:
                     # Distribución perimetral rectangular
                     nx = max(2, int(_m.ceil(b_cm / 15)))   # barras por cara b
                     ny = max(2, int(_m.ceil(h_cm / 15)))   # barras por cara h
-                    xs = [r_m + (b_m - 2*r_m)*i/(nx-1) - b_m/2 for i in range(nx)] if nx > 1 else [0.0]
-                    ys = [r_m + (h_m - 2*r_m)*i/(ny-1) - h_m/2 for i in range(ny)] if ny > 1 else [0.0]
+                    # Eje varilla = recub + dst_completo + radio_varilla (Prompt Maestro v2)
+                    _rv = r_m + dst_mm / 1000.0 + db_mm / 2000.0
+                    xs = [_rv + (b_m - 2*_rv)*i/(nx-1) - b_m/2 for i in range(nx)] if nx > 1 else [0.0]
+                    ys = [_rv + (h_m - 2*_rv)*i/(ny-1) - h_m/2 for i in range(ny)] if ny > 1 else [0.0]
                     bar_positions = (
-                        [(x, -h_m/2 + r_m) for x in xs] +
-                        [(x,  h_m/2 - r_m) for x in xs] +
-                        [(-b_m/2 + r_m, y) for y in ys[1:-1]] +
-                        [( b_m/2 - r_m, y) for y in ys[1:-1]]
+                        [(x, -h_m/2 + _rv) for x in xs] +
+                        [(x,  h_m/2 - _rv) for x in xs] +
+                        [(-b_m/2 + _rv, y) for y in ys[1:-1]] +
+                        [( b_m/2 - _rv, y) for y in ys[1:-1]]
                     )
 
                 long_bars = []
@@ -3235,22 +3569,77 @@ with tab4:
                             _m.sin(2*_m.pi*k/n_pts)*R_e, y_z])
                             for k in range(n_pts + 1)]
                     else:
-                        bx2 = b_m/2 - r_m;  hy2 = h_m/2 - r_m
-                        hk = max(dst_m * 6, 0.075)
-                        hk_dx = hk * _m.cos(_m.radians(45))
-                        hk_dy = hk * _m.sin(_m.radians(45))
-                        # Gancho: cola 1 entra por esquina inf-izq hacia el nucleo
-                        # Polilínea: cola1 -> perimetro completo -> cola2 con offset Z
-                        # El offset en Z evita la geometría degenerada en SweptDiskSolid
-                        pts_est = [
-                            O.createIfcCartesianPoint([-bx2 + hk_dx, -hy2 + hk_dy, y_z + dst_m/2]),
-                            O.createIfcCartesianPoint([-bx2, -hy2, y_z]),
-                            O.createIfcCartesianPoint([ bx2, -hy2, y_z]),
-                            O.createIfcCartesianPoint([ bx2,  hy2, y_z]),
-                            O.createIfcCartesianPoint([-bx2,  hy2, y_z]),
-                            O.createIfcCartesianPoint([-bx2, -hy2, y_z]),
-                            O.createIfcCartesianPoint([-bx2 + hk_dx, -hy2 + hk_dy, y_z - dst_m/2]),
-                        ]
+                        # ── Prompt Maestro v2 — NSR-10 C.21.5.3.3 ─────────────
+                        bx2  = b_m / 2.0 - r_m          # eje estribo semiancho
+                        hy2  = h_m / 2.0 - r_m          # eje estribo semialto
+                        X_c  = -bx2
+                        Y_c  =  hy2
+                        # Regla 1: radio y gancho NORMATIVOS (sin factores inventados)
+                        _R   = max(3.0 * dst_m, 0.012)
+                        _hk  = max(6.0 * db_mm/1000.0, 0.075)
+                        Cx   = X_c + _R
+                        Cy   = Y_c - _R
+                        _z1  = y_z + dst_m              # z_top espiral +1 diámetro
+                        _na  = 8                         # segmentos por arco
+
+                        # Arco: z fijo, NA+1 puntos
+                        def _arc(cx, cy, r, a0, a1, z_c):
+                            return [O.createIfcCartesianPoint([
+                                cx + r*_m.cos(_m.radians(a0+(a1-a0)*_ii/_na)),
+                                cy + r*_m.sin(_m.radians(a0+(a1-a0)*_ii/_na)),
+                                z_c]) for _ii in range(_na+1)]
+
+                        def _pt(x, y, z_c):
+                            return O.createIfcCartesianPoint([x, y, z_c])
+
+                        # Pie del arco G1 (225°) y G2 (45°)
+                        _pie1x = Cx + _R*_m.cos(_m.radians(225))
+                        _pie1y = Cy + _R*_m.sin(_m.radians(225))
+                        _pie2x = Cx + _R*_m.cos(_m.radians(45))
+                        _pie2y = Cy + _R*_m.sin(_m.radians(45))
+                        _dk    = _hk * 0.7071            # componente 45°
+
+                        pts_est = []
+                        # [1] Cola 1 punta → pie G1  (dirección +X,-Y = núcleo)
+                        pts_est.append(_pt(_pie1x + _dk, _pie1y - _dk, _z1))
+                        pts_est.append(_pt(_pie1x,       _pie1y,       _z1))
+                        # [2] Arco G1 CCW 225°→90°  Z=z_top
+                        pts_est += _arc(Cx, Cy, _R, 225, 90, _z1)
+                        # Tangencia fin G1 = (Cx, Y_c) = inicio tramo superior
+                        # [3] Tramo SUP (Cx,Y_c)→(bx2-_R,Y_c)  Z baja→z_base
+                        _nT = _na
+                        pts_est += [_pt(Cx+(bx2-_R-Cx)*_ii/_nT,
+                                        Y_c,
+                                        _z1+(y_z-_z1)*_ii/_nT)
+                                    for _ii in range(_nT+1)]
+                        # [4] Arco SUP-DER CW 90°→0°  Z=z_base
+                        pts_est += _arc(bx2-_R, Y_c-_R, _R, 90, 0, y_z)
+                        # [5] Tramo DER  Z=z_base  (tangencia a tangencia)
+                        pts_est += [_pt(bx2, Y_c-_R+(-(Y_c-_R)-(Y_c-_R))*_ii/_nT, y_z)
+                                    for _ii in range(_nT+1)]
+                        # [6] Arco INF-DER CW 0°→-90°  Z=z_base
+                        pts_est += _arc(bx2-_R, -(Y_c-_R), _R, 0, -90, y_z)
+                        # [7] Tramo INF  Z=z_base
+                        pts_est += [_pt(bx2-_R+(-(bx2-_R)-(bx2-_R))*_ii/_nT, -Y_c, y_z)
+                                    for _ii in range(_nT+1)]
+                        # [8] Arco INF-IZQ CW -90°→-180°  Z=z_base
+                        pts_est += _arc(-(bx2-_R), -(Y_c-_R), _R, -90, -180, y_z)
+                        # [9] Tramo IZQ (-bx2,-(Y_c-_R))→(X_c,Cy)  Z sube→z_top
+                        pts_est += [_pt(X_c,
+                                        -(Y_c-_R)+(Cy-(-(Y_c-_R)))*_ii/_nT,
+                                        y_z+(_z1-y_z)*_ii/_nT)
+                                    for _ii in range(_nT+1)]
+                        # [10] Arco G2 CW 180°→45°  Z=z_top
+                        pts_est += _arc(Cx, Cy, _R, 180, 45, _z1)
+                        # [11] Pie G2 → Cola 2 punta  (misma dirección +X,-Y)
+                        pts_est.append(_pt(_pie2x,       _pie2y,       _z1))
+                        pts_est.append(_pt(_pie2x + _dk, _pie2y - _dk, _z1))
+
+                        # Alternancia sísmica NSR-10 C.21.5.3.3
+                        if j % 2 != 0:
+                            pts_est = [O.createIfcCartesianPoint(
+                                [-p.Coordinates[0], -p.Coordinates[1], p.Coordinates[2]])
+                                for p in pts_est]
 
                     polyline_st = O.createIfcPolyline(Points=pts_est)
 
@@ -3334,7 +3723,7 @@ with tab4:
                 return buf
 
             # Botón para generar — solo ejecuta la función al hacer clic
-            if st.button("⬇️ " + _t("Generar y Exportar IFC4 (BIM completo)", "Generate & Export IFC4 (full BIM)"), key="btn_gen_ifc_col"):
+            if st.button("⬇️ " + _t("Generar y Exportar IFC4 (BIM completo)", "Generate & Export IFC4 (full BIM)"), key="col_btn_ifc"):
                 phiPn_max = cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0
                 buf_ifc_col = _make_ifc_columna(
                     b_cm        = b   if not es_circular else 0,
@@ -3372,7 +3761,7 @@ with tab4:
                         data=buf_ifc_col,
                         file_name=_ifc_fname,
                         mime="application/x-step",
-                        key="ifc_col_btn")
+                        key="col_ifc_dl")
                     st.caption(_t(
                         f"IFC4: IfcColumn + barras long. + estribos 3D + Pset_{norma_sel.split('(')[0].strip()}",
                         f"IFC4: IfcColumn + longitudinal bars + 3D stirrups + Pset_{norma_sel.split('(')[0].strip()}"))
@@ -3633,12 +4022,12 @@ with tab4:
             import matplotlib.pyplot as _plt_apu, io as _io_apu
             _cats=["Concreto","Acero Long.","Estribos","Total Acero"]
             _vals_apu=[
-                vol_concreto_m3*st.session_state.get("apu_premix_precio",350000) if st.session_state.get("apu_premix",False) else vol_concreto_m3*250000,
-                peso_acero_long_kg*st.session_state.get("apu_acero",4200),
-                peso_total_estribos_kg*st.session_state.get("apu_acero",4200),
-                peso_total_acero_kg*st.session_state.get("apu_acero",4200),
+                vol_concreto_m3*st.session_state.get("col_apu_premix_p",350000) if st.session_state.get("col_apu_premix",False) else vol_concreto_m3*250000,
+                peso_acero_long_kg*st.session_state.get("col_apu_acero",4200),
+                peso_total_estribos_kg*st.session_state.get("col_apu_acero",4200),
+                peso_total_acero_kg*st.session_state.get("col_apu_acero",4200),
             ]
-            _mon=st.session_state.get("apu_moneda","COP $")
+            _mon=st.session_state.get("col_apu_moneda","COP $")
             _fig_apu,_ax_apu=_plt_apu.subplots(figsize=(6,3))
             _fig_apu.patch.set_facecolor('white'); _ax_apu.set_facecolor('#f8f9fa')
             _bars=_ax_apu.bar(_cats,_vals_apu,color=['#1565C0','#C62828','#EF6C00','#2E7D32'],edgecolor='white',width=0.55)

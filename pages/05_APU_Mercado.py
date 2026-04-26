@@ -49,6 +49,25 @@ def _t(es, en):
 st.title(_t("Análisis de Precios Unitarios (APU) — En Vivo", " Unit Price Analysis (APU) — Live"))
 st.cache_data.clear()
 
+# ─── BANNER: estado de configuracion global ─────────────────────────────────
+_cfg_actual = st.session_state.get("apu_config", {})
+if _cfg_actual:
+    _mon_act = _cfg_actual.get("moneda", "COP")
+    st.success(
+        f"✅ **Precios globales activos** — Columnas, Vigas y demás módulos estructurales "
+        f"usarán estos valores:\n\n"
+        f"Cemento **${_cfg_actual.get('cemento',0):,.0f}** {_mon_act}/bulto · "
+        f"Acero **${_cfg_actual.get('acero',0):,.0f}** {_mon_act}/kg · "
+        f"MO **${_cfg_actual.get('costo_dia_mo',0):,.0f}** {_mon_act}/dia · "
+        f"A.I.U. **{_cfg_actual.get('pct_aui',0.30)*100:.0f}%**"
+    )
+else:
+    st.info(
+        "⚙️ **Configura los precios aquí una sola vez.** Todos los módulos estructurales "
+        "(Columnas, Vigas, Zapatas…) los usarán automáticamente. "
+        "Usa el **Cotizador Global** al final de esta página y pulsa *Aplicar estos precios como default*."
+    )
+
 # 
 # PIE DE PÁGINA / DERECHOS RESERVADOS
 # 
@@ -562,7 +581,28 @@ with c3:
 st.markdown(_t("####  Mano de Obra e Impuestos", "####  Labor and Taxes"))
 c4, c5 = st.columns(2)
 with c4:
-    salario_base = st.number_input(_t(f"Salario Mensual Base (ej: SMMLV) [{moneda}]", f"Base Monthly Salary (e.g., Minimum Wage) [{moneda}]"), value=st.session_state.get("apu_sal", 1300000.0 if pais_manual=="Colombia" else 400.0), key="apu_sal")
+    import datetime
+    current_year = datetime.datetime.now().year
+    
+    # Calcular SMMLV base según el país y el año actual
+    def get_smmlv(pais, year):
+        if pais == "Colombia":
+            if year <= 2024: return 1300000.0
+            elif year == 2025: return 1423500.0
+            else: return 1423500.0 * (1.09 ** (year - 2025)) # Proyección inflacionaria
+        elif pais == "México":
+            if year <= 2024: return 7468.0
+            else: return 7468.0 * (1.10 ** (year - 2024))
+        elif pais == "Perú":
+            return 1025.0 * (1.05 ** max(0, year - 2024))
+        elif pais == "Chile":
+            return 500000.0 * (1.05 ** max(0, year - 2024))
+        else:
+            return 400.0
+            
+    default_sal = get_smmlv(pais_manual, current_year)
+    
+    salario_base = st.number_input(_t(f"Salario Mensual Base (SMMLV {current_year}) [{moneda}]", f"Base Monthly Salary (Min Wage {current_year}) [{moneda}]"), value=st.session_state.get("apu_sal", default_sal), key="apu_sal")
     dias_mes = st.number_input(_t("Días laborables al mes", "Working days per month"), 1, 31, st.session_state.get("apu_dias", 26), 1, key="apu_dias")
     factor_prestacional = st.number_input(_t("Factor Prestacional (Sociales+Parafiscales) [%]", "Labor Burden (Social+Parafiscal) [%]"), 1.0, 150.0, st.session_state.get("apu_fact", 65.0), 1.0, key="apu_fact") / 100.0
     costo_dia_real = (salario_base / dias_mes) * (1 + factor_prestacional)

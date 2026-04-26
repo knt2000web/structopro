@@ -308,6 +308,63 @@ def _t(es, en):
     return en if lang == "English" else es
 # 
 
+# ── Persistencia del módulo 02 ──────────────────────────────────────────────
+import json as _json_vc, os as _os_vc
+_STATE_FILE_VC = "state_viga_dmo.json"
+_PERSIST_KEYS_VC = [
+    "empresa","proyecto","ingeniero","normasel","idioma","unidades_sa",
+    "dxfelaboro","dxfreviso","dxfaprobo","userrole",
+    "b_vc","h_vc","L_vc_m","dp_vc","Wu_vc_input","fc_vc","fy_vc",
+    "nb_izq_sup","nb_izq_inf","nb_der_sup","nb_der_inf","nb_cen_inf",
+    "bar_izq_sup","bar_izq_inf","bar_der_sup","bar_der_inf","bar_cen_inf",
+    "usar_bast_sup","nb_bast_sup","bar_bast_sup","L_bast_modo","L_bast_cm",
+    "st_bar_vc","bcol_vc_cm","Mu_izq_neg","Mu_cen_pos","Mu_der_neg",
+    "vg_empresa","vg_proyecto","vg_plano","vg_elaboro","vg_reviso","vg_aprobo",
+]
+
+def _save_vc():
+    try:
+        snap = {}
+        for k in _PERSIST_KEYS_VC:
+            val = st.session_state.get(k)
+            if val is not None:
+                try:
+                    _json_vc.dumps(val); snap[k] = val
+                except (TypeError, ValueError):
+                    snap[k] = str(val)
+        with open(_STATE_FILE_VC, "w", encoding="utf-8") as _f:
+            _json_vc.dump(snap, _f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def _load_vc():
+    if not _os_vc.path.exists(_STATE_FILE_VC):
+        return
+    try:
+        with open(_STATE_FILE_VC, "r", encoding="utf-8") as _f:
+            _data = _json_vc.load(_f)
+        for k, val in _data.items():
+            if k not in st.session_state:
+                st.session_state[k] = val
+    except Exception:
+        pass
+
+_load_vc()
+
+# ── Ejemplo precargado (Demo) ────────────────────────────────────────────────
+if st.sidebar.button(_t("Cargar Ejemplo NSR-10", "Load ACI 318 Example"), key="vg_demo"):
+    _DEMO_VALS = {
+        "b_vc": 30.0, "h_vc": 50.0, "L_vc_m": 6.0, "dp_vc": 6.0,
+        "Wu_vc_input": 5.5, "fc_vc": 28.0, "fy_vc": 420.0,
+        "nb_izq_sup": 3, "nb_izq_inf": 2, "nb_der_sup": 3, "nb_der_inf": 2, "nb_cen_inf": 3,
+        "Mu_izq_neg": 120.0, "Mu_cen_pos": 80.0, "Mu_der_neg": 100.0,
+        "usar_bast_sup": True, "nb_bast_sup": 2, "L_bast_modo": "Automático (envolvente)",
+        "bcol_vc_cm": 30.0,
+    }
+    for _dk, _dv in _DEMO_VALS.items():
+        st.session_state[_dk] = _dv
+    st.rerun()
+
 st.set_page_config(page_title=_t("Suite Hormigón Armado", "Reinforced Concrete Suite"), layout="wide")
 st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 32px #0008;">
 <svg viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;background:linear-gradient(135deg,#060f0a 0%,#0d2630 100%);">
@@ -912,6 +969,14 @@ bar_sys = st.sidebar.radio("Sistema Varillas:", ["Pulgadas (# US)","Milímetros 
 rebar_dict = REBAR_US if "Pulgadas" in bar_sys else REBAR_MM
 diam_dict  = DIAM_US  if "Pulgadas" in bar_sys else DIAM_MM
 
+# ── Helper de etiqueta de varilla (reutilizable en alzado, As(x) y DXF) ──────
+def _bar_label_v(d_mm):
+    if "Pulgadas" in bar_sys:
+        for k, vv in diam_dict.items():
+            if abs(vv - d_mm) < 0.1:
+                return k
+    return f"O{d_mm:.0f}mm"
+
 phi_f = code["phi_flex"]
 phi_v = code["phi_shear"]
 lam   = code["lambda"]
@@ -1028,7 +1093,7 @@ if modulo_sel == " Diseño Completo de Viga (Flujo Guiado)":
         with c3p1:
             # Estribo principal
             _est_opts_vm = ["Ø6mm","Ø8mm","Ø10mm","Ø12mm","#2","#3","#4"]
-            vm_est = st.selectbox("Estribo transversal", _est_opts_vm,
+            vm_est = st.selectbox(_t("Estribo transversal", "Transverse Stirrup"), _est_opts_vm,
                                   index=_est_opts_vm.index(st.session_state.get("vm_est","Ø8mm")) if st.session_state.get("vm_est","Ø8mm") in _est_opts_vm else 1,
                                   key="vm_est")
             vm_ramas = st.number_input("# Ramas del estribo", 2, 6, st.session_state.get("vm_ramas", 2), 1, key="vm_ramas")
@@ -1036,7 +1101,7 @@ if modulo_sel == " Diseño Completo de Viga (Flujo Guiado)":
             varillas_vm = list(rebar_dict.keys())
             _def_vm = "#4 (Ø12.7mm)" if "Pulgadas" in bar_sys else "12mm"
             _idx_vm = varillas_vm.index(_def_vm) if _def_vm in varillas_vm else 1
-            vm_bar = st.selectbox("Barra longitudinal", varillas_vm,
+            vm_bar = st.selectbox(_t("Barra longitudinal", "Longitudinal Bar"), varillas_vm,
                                   index=varillas_vm.index(st.session_state.get("vm_bar", _def_vm)) if st.session_state.get("vm_bar", _def_vm) in varillas_vm else _idx_vm,
                                   key="vm_bar")
 
@@ -1514,12 +1579,12 @@ if modulo_sel == " Diseño a Flexión — Viga Rectangular":
                         "Parámetro": ["Recubrimiento cc","fs servicio","s_max permitido (§24.3.2)","s_real entre barras","Verificación"],
                         "Valor": [f"{gr['cc_mm']:.0f} mm", f"{gr['fs_serv']:.1f} MPa",
                                   f"{gr['s_max']:.1f} mm", f"{gr['s_real']:.1f} mm",
-                                  "✅ CUMPLE" if gr['ok'] else "❌ NO CUMPLE — aumentar barras"]})
+                                  "[OK] CUMPLE" if gr['ok'] else "[X] NO CUMPLE — aumentar barras"]})
                     st.dataframe(df_gr, use_container_width=True, hide_index=True)
                     if not gr['ok']:
-                        st.warning(f"⚠️ s_real ({gr['s_real']:.1f} mm) > s_max ({gr['s_max']:.1f} mm). Aumente el número de barras o reduzca su separación.")
+                        st.warning(f"[!] s_real ({gr['s_real']:.1f} mm) > s_max ({gr['s_max']:.1f} mm). Aumente el número de barras o reduzca su separación.")
                     else:
-                        st.success(f"✅ Separación OK: {gr['s_real']:.1f} mm ≤ {gr['s_max']:.1f} mm.")
+                        st.success(f"[OK] Separación OK: {gr['s_real']:.1f} mm ≤ {gr['s_max']:.1f} mm.")
                 st.caption(f"Ref: {coderef} — ACI 318-25 §24.3.2 / NSR-10 C.9.4.2")
             with tab_3d:
                 st.subheader("Visualización 3D de Viga Rectangular")
@@ -1765,7 +1830,7 @@ if modulo_sel == " Diseño a Flexión — Viga T":
         # ?ndice por defecto: #4 (12.7mm) en US, 12mm en SI
         _def_vt = "#4 (Ø12.7mm)" if "Pulgadas" in bar_sys else "12mm"
         _def_idx_vt = varillas_vt.index(_def_vt) if _def_vt in varillas_vt else 1
-        bar_vt = st.selectbox("Varilla:", varillas_vt, 
+        bar_vt = st.selectbox(_t("Varilla:", "Bar:"), varillas_vt, 
                               index=varillas_vt.index(st.session_state.vt_bar) if "vt_bar" in st.session_state and st.session_state.vt_bar in varillas_vt else _def_idx_vt,
                               key="vt_bar")
         Ab_vt = rebar_dict[bar_vt]; db_vt = diam_dict[bar_vt]
@@ -2184,7 +2249,7 @@ if modulo_sel == " Diseño a Cortante — Vigas de Concreto":
     with c2:
         h_cv  = st.number_input("h total [cm]", 20.0, 200.0, st.session_state.get("cv_h", 50.0), 5.0, key="cv_h")
         est_opts = ["Ø6mm","Ø8mm","Ø10mm","Ø12mm","#2","#3","#4"]
-        st_bar_cv = st.selectbox("Estribo:", est_opts, 
+        st_bar_cv = st.selectbox(_t("Estribo:", "Stirrup:"), est_opts, 
                                  index=est_opts.index(st.session_state.cv_st) if "cv_st" in st.session_state and st.session_state.cv_st in est_opts else 1,
                                  key="cv_st")
         st_area = {"Ø6mm":0.283,"Ø8mm":0.503,"Ø10mm":0.785,"Ø12mm":1.131,"#2":0.32,"#3":0.71,"#4":1.29}[st_bar_cv]
@@ -2473,7 +2538,7 @@ if modulo_sel == " Resistencia a Cortante por Punzonamiento — Losas":
         else:
             Vu_pz = Vu_pz_input
         pz_opts = ["Interior (αs=40)","Borde (αs=30)","Esquina (αs=20)"]
-        tipo_col = st.selectbox("Posición columna:", pz_opts, 
+        tipo_col = st.selectbox(_t("Posición columna:", "Column Position:"), pz_opts, 
                                 index=pz_opts.index(st.session_state.pz_tipo) if "pz_tipo" in st.session_state and st.session_state.pz_tipo in pz_opts else 0,
                                 key="pz_tipo")
     alpha_s = {"Interior (αs=40)":40,"Borde (αs=30)":30,"Esquina (αs=20)":20}[tipo_col]
@@ -2633,7 +2698,7 @@ if modulo_sel == " Inercia Fisurada y Deflexiones en Vigas":
         wD_de = st.number_input("Carga muerta wD [kN/m]", 0.0, 200.0, st.session_state.get("de_wD", 15.0), 1.0, key="de_wD")
         wL_de = st.number_input("Carga viva wL [kN/m]", 0.0, 200.0, st.session_state.get("de_wL", 10.0), 1.0, key="de_wL")
         cond_opts = ["Simplemente apoyada","Continua un extremo","Continua dos extremos"]
-        cond_de = st.selectbox("Condición de apoyo:", cond_opts, 
+        cond_de = st.selectbox(_t("Condición de apoyo:", "Support Condition:"), cond_opts, 
                                index=cond_opts.index(st.session_state.de_cond) if "de_cond" in st.session_state and st.session_state.de_cond in cond_opts else 0,
                                key="de_cond")
 
@@ -2785,12 +2850,12 @@ if modulo_sel == " Diseño de Losa en Una Dirección":
     with c2:
         wL_ls = st.number_input("Carga viva (L) [kN/m²]", 0.5, 30.0, st.session_state.get("ls_wL", 5.0), 0.5, key="ls_wL")
         varillas_ls = list(rebar_dict.keys())
-        bar_ls = st.selectbox("Varilla losa:", varillas_ls, 
+        bar_ls = st.selectbox(_t("Varilla losa:", "Slab Bar:"), varillas_ls, 
                               index=varillas_ls.index(st.session_state.ls_bar) if "ls_bar" in st.session_state and st.session_state.ls_bar in varillas_ls else 0,
                               key="ls_bar")
         Ab_ls = rebar_dict[bar_ls]; db_ls = diam_dict[bar_ls]
         apoyo_opts = ["Simplemente apoyada","Continua 2 extremos","Voladizo"]
-        apoyo_ls = st.selectbox("Condición:", apoyo_opts, 
+        apoyo_ls = st.selectbox(_t("Condición:", "Condition:"), apoyo_opts, 
                                 index=apoyo_opts.index(st.session_state.ls_apoyo) if "ls_apoyo" in st.session_state and st.session_state.ls_apoyo in apoyo_opts else 0,
                                 key="ls_apoyo")
 
@@ -3080,25 +3145,25 @@ if modulo_sel == " Longitud de Desarrollo y Empalmes":
     c1,c2 = st.columns(2)
     with c1:
         varillas_ld = list(rebar_dict.keys())
-        bar_ld = st.selectbox("Varilla:", varillas_ld, 
+        bar_ld = st.selectbox(_t("Varilla:", "Bar:"), varillas_ld, 
                               index=varillas_ld.index(st.session_state.ld_bar) if "ld_bar" in st.session_state and st.session_state.ld_bar in varillas_ld else 0,
                               key="ld_bar")
         db_ld = diam_dict[bar_ld]
         psit_opts = ["1.3 — Barra superior (>30cm betón fresco abajo)","1.0 — Otras posiciones"]
-        psi_t = st.selectbox("ψt (posición):", psit_opts, 
+        psi_t = st.selectbox(_t("ψt (posición):", "ψt (position):"), psit_opts, 
                              index=psit_opts.index(st.session_state.ld_psit) if "ld_psit" in st.session_state and st.session_state.ld_psit in psit_opts else 1,
                              key="ld_psit")
         psie_opts = ["1.5 — Ep. y >3db o <6mm cub.","1.2 — Otros epoxy","1.0 — Sin epoxy"]
-        psi_e = st.selectbox("ψe (epoxy):", psie_opts, 
+        psi_e = st.selectbox(_t("ψe (epoxy):", "ψe (epoxy):"), psie_opts, 
                              index=psie_opts.index(st.session_state.ld_psie) if "ld_psie" in st.session_state and st.session_state.ld_psie in psie_opts else 2,
                              key="ld_psie")
     with c2:
         psis_opts = ["0.8 — Barras ≤ #6 ó ≤19mm","1.0 — Barras > #6 ó >19mm"]
-        psi_s = st.selectbox("ψs (tamaño):", psis_opts, 
+        psi_s = st.selectbox(_t("ψs (tamaño):", "ψs (size):"), psis_opts, 
                              index=psis_opts.index(st.session_state.ld_psis) if "ld_psis" in st.session_state and st.session_state.ld_psis in psis_opts else (0 if db_ld <= 19 else 1),
                              key="ld_psis")
         psig_opts = ["0.75 — fy ≤ 420 MPa (ACI 318-19+)","1.0 — fy > 420 MPa"]
-        psi_g = st.selectbox("ψg (resistencia):", psig_opts, 
+        psi_g = st.selectbox(_t("ψg (resistencia):", "ψg (strength):"), psig_opts, 
                              index=psig_opts.index(st.session_state.ld_psig) if "ld_psig" in st.session_state and st.session_state.ld_psig in psig_opts else (0 if fy <= 420 else 1),
                              key="ld_psig")
         cb_ld = st.number_input("cb (recubrim. al centro barra) [mm]", 20.0, 100.0, st.session_state.get("ld_cb", 40.0), 2.5, key="ld_cb")
@@ -3228,94 +3293,172 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
         Mu_der_neg = Mu_der_neg_in / factor_fuerza if unidades_salida == "Toneladas fuerza (tonf, tonf·m)" else Mu_der_neg_in
         Mu_cen_pos = Mu_cen_pos_in / factor_fuerza if unidades_salida == "Toneladas fuerza (tonf, tonf·m)" else Mu_cen_pos_in
 
+    # ── Valores por defecto bastones (se sobreescriben en sección 2) ────────
+    usar_bastones  = st.session_state.get("usar_bast_sup", False)
+    nb_bast_sup    = int(st.session_state.get("nb_bast_sup",  0))
+    L_bast_izq_m   = 0.0
+    L_bast_der_m   = 0.0
+    phiMn_corr_izq = 0.0
+    factor_fuerza  = factor_fuerza  # ya definido arriba
+
     #  BLOQUE 1: DIAGRAMA ENVOLVENTE DE MOMENTOS 
     st.markdown("---")
     st.subheader("Diagrama de Envolvente de Momentos")
     st.caption("Distribución esquemática de momentos últimos a lo largo del vano")
 
-    fig_env, ax_env = plt.subplots(figsize=(9, 3.2))
-    fig_env.patch.set_facecolor('#1e1e2e')
-    ax_arr = fig_env.get_axes()
-    for _ax in ax_arr: _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
-    fig_env.patch.set_facecolor('#1a1a2e')
-    ax_env.set_facecolor('#1a1a2e')
+    # ── Curvas suaves (coseno negativo + parábola positiva) ──
+    _N   = 300
+    _xv  = np.linspace(0, L_vc, _N)
+    _L   = L_vc if L_vc > 0 else 1.0
+    _Mi  = float(Mu_izq_neg_in)
+    _Md  = float(Mu_der_neg_in)
+    _Mc  = float(Mu_cen_pos_in)
+    _hsc = max(abs(_Mi), abs(_Md), abs(_Mc), 1.0)
 
-    hscale = max(abs(Mu_izq_neg_in), abs(Mu_der_neg_in), abs(Mu_cen_pos_in))
-    hscale = hscale if hscale > 0 else 1.0
-    def norm_env(v): return abs(v) / hscale * 1.2
+    # Negativo izq: coseno suave 0→L/4
+    _yn  = np.zeros(_N)
+    _ml  = _xv <= _L/4
+    _mr  = _xv >= 3*_L/4
+    _yn[_ml] = _Mi * 0.5 * (1 + np.cos(np.pi * _xv[_ml] / (_L/4)))
+    _yn[_mr] = _Md * 0.5 * (1 - np.cos(np.pi * (_xv[_mr] - 3*_L/4) / (_L/4)))
 
-    # Zonas superiores negativas — ROJO
-    ax_env.fill_between(
-        [0, L_vc*0.25], [norm_env(Mu_izq_neg_in), 0],
-        color='#e74c3c', alpha=0.88)
-    ax_env.fill_between(
-        [L_vc*0.75, L_vc], [0, norm_env(Mu_der_neg_in)],
-        color='#e74c3c', alpha=0.88)
-    ax_env.fill_between(
-        [L_vc*0.25, L_vc*0.75],
-        [0, 0], [-norm_env(Mu_cen_pos_in)*0.10, -norm_env(Mu_cen_pos_in)*0.10],
-        color='#e74c3c', alpha=0.4)
+    # Positivo centro: parábola NSR-10 (máximo exacto en L/2)
+    _yp = _Mc * 4 * (_xv / _L) * (1 - _xv / _L)
 
-    # Zonas inferiores positivas — AMARILLO
-    ax_env.fill_between(
-        [0, L_vc*0.25], [0, -norm_env(Mu_izq_neg_in)*0.45],
-        color='#f1c40f', alpha=0.88)
-    ax_env.fill_between(
-        [L_vc*0.25, L_vc*0.50], [-norm_env(Mu_izq_neg_in)*0.45, -norm_env(Mu_cen_pos_in)],
-        color='#f1c40f', alpha=0.88)
-    ax_env.fill_between(
-        [L_vc*0.50, L_vc*0.75], [-norm_env(Mu_cen_pos_in), -norm_env(Mu_der_neg_in)*0.45],
-        color='#f1c40f', alpha=0.88)
-    ax_env.fill_between(
-        [L_vc*0.75, L_vc], [-norm_env(Mu_der_neg_in)*0.45, 0],
-        color='#f1c40f', alpha=0.88)
+    # Hover text
+    _ht_neg = [f"x = {x:.2f} m<br>M⁻ = {y:.1f} {unidad_mom}"
+               for x, y in zip(_xv.tolist(), _yn.tolist())]
+    _ht_pos = [f"x = {x:.2f} m<br>M⁺ = {y:.1f} {unidad_mom}"
+               for x, y in zip(_xv.tolist(), _yp.tolist())]
+
+    _fig_env = go.Figure()
+
+    # Zona negativa (superior) — rojo
+    _fig_env.add_trace(go.Scatter(
+        x=np.concatenate([_xv, _xv[::-1]]).tolist(),
+        y=np.concatenate([_yn, np.zeros(_N)]).tolist(),
+        fill='toself',
+        fillcolor='rgba(231, 76, 60, 0.72)',
+        line=dict(color='rgba(231, 76, 60, 1.0)', width=1.8),
+        name='M negativo (superior)',
+        hoverinfo='skip',
+    ))
+    # Contorno visible del negativo
+    _fig_env.add_trace(go.Scatter(
+        x=_xv.tolist(), y=_yn.tolist(),
+        mode='lines', line=dict(color='#e74c3c', width=2.2),
+        showlegend=False, hovertext=_ht_neg, hoverinfo='text',
+    ))
+
+    # Zona positiva (inferior, invertida) — amarillo
+    _fig_env.add_trace(go.Scatter(
+        x=np.concatenate([_xv, _xv[::-1]]).tolist(),
+        y=np.concatenate([-_yp, np.zeros(_N)]).tolist(),
+        fill='toself',
+        fillcolor='rgba(241, 196, 15, 0.78)',
+        line=dict(color='rgba(241, 196, 15, 1.0)', width=1.8),
+        name='M positivo (inferior)',
+        hoverinfo='skip',
+    ))
+    # Contorno visible del positivo
+    _fig_env.add_trace(go.Scatter(
+        x=_xv.tolist(), y=(-_yp).tolist(),
+        mode='lines', line=dict(color='#f1c40f', width=2.2),
+        showlegend=False, hovertext=_ht_pos, hoverinfo='text',
+    ))
 
     # Línea base y apoyos
-    ax_env.axhline(0, color='white', linewidth=1.4, alpha=0.7)
-    ax_env.plot(0,     0, 'w^', markersize=10, zorder=5)
-    ax_env.plot(L_vc, 0, 'w^', markersize=10, zorder=5)
+    _fig_env.add_shape(type='line', x0=0, y0=0, x1=_L, y1=0,
+        line=dict(color='rgba(255,255,255,0.60)', width=1.4))
+    for _xap in [0, _L]:
+        _fig_env.add_annotation(
+            x=_xap, y=0, text='▲', showarrow=False,
+            font=dict(size=14, color='white'), yshift=-4)
 
-    # Etiquetas superiores (negativos)
-    ax_env.text(L_vc*0.02,  norm_env(Mu_izq_neg_in)*1.06,
-                f"Mu_top_izq\n{Mu_izq_neg_in:.2f} {unidad_mom}",
-                color='white', fontsize=7.5, ha='left', va='bottom', fontweight='bold')
-    ax_env.text(L_vc*0.50,  norm_env(Mu_cen_pos_in)*0.12,
-                "Mu_top_cen",
-                color='#e07070', fontsize=7, ha='center', va='bottom', style='italic')
-    ax_env.text(L_vc*0.98,  norm_env(Mu_der_neg_in)*1.06,
-                f"Mu_top_der\n{Mu_der_neg_in:.2f} {unidad_mom}",
-                color='white', fontsize=7.5, ha='right', va='bottom', fontweight='bold')
+    # Etiquetas valores
+    _pad = _hsc * 0.08
+    _fig_env.add_annotation(x=0,      y=_Mi + _pad,
+        text=f"<b>Mu_top_izq<br>{_Mi:.2f} {unidad_mom}</b>",
+        showarrow=False, font=dict(size=11, color='white'),
+        xanchor='left', yanchor='bottom')
+    _fig_env.add_annotation(x=_L,     y=_Md + _pad,
+        text=f"<b>Mu_top_der<br>{_Md:.2f} {unidad_mom}</b>",
+        showarrow=False, font=dict(size=11, color='white'),
+        xanchor='right', yanchor='bottom')
+    _fig_env.add_annotation(x=_L/2,   y=-_Mc - _pad*1.8,
+        text=f"<b>Mu_bot_cen<br>{_Mc:.2f} {unidad_mom}</b>",
+        showarrow=False, font=dict(size=11, color='white'),
+        xanchor='center', yanchor='top')
+    _fig_env.add_annotation(x=_L*0.10, y=-_Mi*0.38,
+        text="Mu_bot_izq", showarrow=False,
+        font=dict(size=9.5, color='#f1c40f', style='italic'),
+        xanchor='left', yanchor='top')
+    _fig_env.add_annotation(x=_L*0.50, y=_hsc*0.05,
+        text="Mu_top_cen", showarrow=False,
+        font=dict(size=9.5, color='#e07070', style='italic'),
+        xanchor='center', yanchor='bottom')
+    _fig_env.add_annotation(x=_L*0.90, y=-_Md*0.38,
+        text="Mu_bot_der", showarrow=False,
+        font=dict(size=9.5, color='#f1c40f', style='italic'),
+        xanchor='right', yanchor='top')
 
-    # Etiquetas inferiores (positivos)
-    ax_env.text(L_vc*0.02,  -norm_env(Mu_izq_neg_in)*0.44,
-                "Mu_bot_izq",
-                color='#f1c40f', fontsize=7, ha='left', va='top', style='italic')
-    ax_env.text(L_vc*0.50,  -norm_env(Mu_cen_pos_in)*1.08,
-                f"Mu_bot_cen\n{Mu_cen_pos_in:.2f} {unidad_mom}",
-                color='white', fontsize=7.5, ha='center', va='top', fontweight='bold')
-    ax_env.text(L_vc*0.98,  -norm_env(Mu_der_neg_in)*0.44,
-                "Mu_bot_der",
-                color='#f1c40f', fontsize=7, ha='right', va='top', style='italic')
+    # ── Bastones: marcar punto de corte en la envolvente ────────────────────
+    if usar_bastones and nb_bast_sup > 0 and L_bast_izq_m > 0:
+        for _xc, _lbl in [
+            (L_bast_izq_m,      f"✂ {L_bast_izq_m*100:.0f} cm"),
+            (_L - L_bast_der_m, f"✂ {L_bast_der_m*100:.0f} cm"),
+        ]:
+            _fig_env.add_vline(x=_xc,
+                line=dict(color="rgba(255,215,50,0.80)", width=1.8, dash="dash"))
+            _fig_env.add_annotation(x=_xc, y=_hsc * 0.33, text=_lbl,
+                showarrow=False,
+                font=dict(size=9, color="rgba(255,215,50,0.95)"),
+                xanchor="center", yanchor="top")
+        _phiMn_c_plot = phiMn_corr_izq * factor_fuerza
+        _fig_env.add_hline(y=_phiMn_c_plot,
+            line=dict(color="rgba(100,215,255,0.70)", width=1.4, dash="dot"),
+            annotation_text=f"φMn corridas = {_phiMn_c_plot:.0f} {unidad_mom}",
+            annotation_font_color="rgba(100,215,255,0.95)",
+            annotation_font_size=9, annotation_position="top right")
 
-    ax_env.set_xlim(-0.08, L_vc*1.08)
-    ax_env.set_xlabel("Posición a lo largo del vano (m)", color='white', fontsize=8)
-    ax_env.tick_params(colors='white')
-    ax_env.set_yticks([])
-    for spine in ax_env.spines.values():
-        spine.set_visible(False)
-    from matplotlib.patches import Patch
-    ax_env.legend(
-        handles=[Patch(color='#e74c3c', label='M negativo (superior)'),
-                 Patch(color='#f1c40f', label='M positivo (inferior)')],
-        loc='lower right', fontsize=7.5, facecolor='#1a1a2e',
-        labelcolor='white', framealpha=0.6)
-    fig_env.tight_layout()
-    st.pyplot(fig_env)
-    plt.close(fig_env)
+    _fig_env.update_layout(
+        height=370,
+        margin=dict(l=10, r=10, t=52, b=72),
+        paper_bgcolor='#131320',
+        plot_bgcolor='#1a1a2e',
+        title=dict(
+            text="Envolvente de Momentos Flectores Últimos<br>"
+                 "<span style='font-size:12px;font-weight:normal;color:#aaa;'>"
+                 f"Vano {_L:.1f} m  ·  Distribución esquemática de Mᵘ ltimos</span>",
+            font=dict(color='white', size=13), x=0.02,
+        ),
+        xaxis=dict(
+            title_text='Posición en vano (m)',
+            tickfont=dict(color='#cdd6f4', size=10),
+            tickmode='linear', tick0=0, dtick=max(round(_L/10, 1), 0.5),
+            showgrid=True, gridcolor='rgba(255,255,255,0.06)',
+            zeroline=False, range=[-_L*0.03, _L*1.03],
+        ),
+        yaxis=dict(
+            title_text=f'Momento [kN·m]',
+            tickfont=dict(color='#cdd6f4', size=10),
+            showgrid=True, gridcolor='rgba(255,255,255,0.05)',
+            zeroline=False, tickformat='.0f',
+            range=[-_hsc*1.60, _hsc*1.60],
+        ),
+        legend=dict(
+            orientation='h', x=0.5, xanchor='center', y=-0.22, yanchor='top',
+            bgcolor='rgba(0,0,0,0)', font=dict(color='#ddd', size=11),
+        ),
+        hovermode='x unified',
+    )
+    st.plotly_chart(_fig_env, use_container_width=True, config={"displayModeBar": False})
     st.caption("Fig. N°01 — Diagrama esquemático de momentos flectores últimos.")
+
+
     st.markdown("---")
 
-    st.subheader("2. Armadura Propuesta")
+    st.subheader(_t("2. Armadura Propuesta", "2. Proposed Reinforcement"))
     c4, c5, c6 = st.columns(3)
     varillas_vc = list(rebar_dict.keys())
     _def_vc = "#5 (Ø15.9mm)" if "Pulgadas" in bar_sys else "16mm"
@@ -3324,23 +3467,60 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
     with c4:
         st.markdown("**Acero Nudo Izquierdo**")
         nb_izq_sup = st.number_input("Cant. Barras Superiores Izq", 2, 20, 3, key="nb_izq_sup")
-        bar_izq_sup = st.selectbox("Ø Barras Sup. Izq", varillas_vc, index=_def_idx_vc, key="bar_izq_sup")
+        bar_izq_sup = st.selectbox(_t("Ø Barras Sup. Izq", "Ø Top Bars Left"), varillas_vc, index=_def_idx_vc, key="bar_izq_sup")
         nb_izq_inf = st.number_input("Cant. Barras Inferiores Izq", 2, 20, 2, key="nb_izq_inf")
-        bar_izq_inf = st.selectbox("Ø Barras Inf. Izq", varillas_vc, index=_def_idx_vc, key="bar_izq_inf")
+        bar_izq_inf = st.selectbox(_t("Ø Barras Inf. Izq", "Ø Bot Bars Left"), varillas_vc, index=_def_idx_vc, key="bar_izq_inf")
     with c5:
         st.markdown("**Acero Nudo Derecho**")
         nb_der_sup = st.number_input("Cant. Barras Superiores Der", 2, 20, 3, key="nb_der_sup")
-        bar_der_sup = st.selectbox("Ø Barras Sup. Der", varillas_vc, index=_def_idx_vc, key="bar_der_sup")
+        bar_der_sup = st.selectbox(_t("Ø Barras Sup. Der", "Ø Top Bars Right"), varillas_vc, index=_def_idx_vc, key="bar_der_sup")
         nb_der_inf = st.number_input("Cant. Barras Inferiores Der", 2, 20, 2, key="nb_der_inf")
-        bar_der_inf = st.selectbox("Ø Barras Inf. Der", varillas_vc, index=_def_idx_vc, key="bar_der_inf")
+        bar_der_inf = st.selectbox(_t("Ø Barras Inf. Der", "Ø Bot Bars Right"), varillas_vc, index=_def_idx_vc, key="bar_der_inf")
     with c6:
         st.markdown("**Acero Centro**")
         nb_cen_inf = st.number_input("Cant. Barras Inferiores Cen", 2, 20, 3, key="nb_cen_inf")
-        bar_cen_inf = st.selectbox("Ø Barras Inf. Cen", varillas_vc, index=_def_idx_vc, key="bar_cen_inf")
+        bar_cen_inf = st.selectbox(_t("Ø Barras Inf. Cen", "Ø Bot Bars Mid"), varillas_vc, index=_def_idx_vc, key="bar_cen_inf")
         st.markdown("**Estribos**")
         est_opts_vc = ["Ø8mm","Ø10mm","Ø12mm","#3","#4"]
-        st_bar_vc = st.selectbox("Ø Estribo", est_opts_vc, index=3 if "Pulgadas"in bar_sys else 1, key="st_bar_vc")
+        st_bar_vc = st.selectbox(_t("Ø Estribo", "Ø Stirrup"), est_opts_vc, index=3 if "Pulgadas"in bar_sys else 1, key="st_bar_vc")
         n_ramas_vc = st.number_input("Ramas de estribo", 2, 6, 2, 1, key="n_ramas_vc")
+
+    with st.expander("🔩 Bastones — Refuerzo Adicional Superior", expanded=False):
+        st.caption("Barras cortas desde el apoyo hasta el punto de corte teórico + ld. "
+                   "Ahorra acero respecto a llevar la barra completa hasta el apoyo opuesto.")
+        usar_bastones = st.checkbox(
+            "Activar bastones superiores",
+            value=st.session_state.get("usar_bast_sup", False),
+            key="usar_bast_sup")
+        if usar_bastones:
+            _cb1, _cb2, _cb3 = st.columns(3)
+            with _cb1:
+                nb_bast_sup  = st.number_input(
+                    "Cant. bastones sup.", 1, 6,
+                    int(st.session_state.get("nb_bast_sup", 2)),
+                    key="nb_bast_sup")
+                bar_bast_sup = st.selectbox(
+                    "Ø bastón sup.", varillas_vc,
+                    index=_def_idx_vc, key="bar_bast_sup")
+            with _cb2:
+                L_bast_modo = st.radio(
+                    "Modo longitud bastón",
+                    ["Automático (envolvente)", "Manual"],
+                    index=0, key="L_bast_modo")
+            with _cb3:
+                if L_bast_modo == "Manual":
+                    L_bast_cm = float(st.number_input(
+                        "Longitud bastón (cm)", 20.0, L_vc * 50.0,
+                        float(st.session_state.get("L_bast_cm", round(L_vc * 25.0, 0))),
+                        key="L_bast_cm"))
+                else:
+                    L_bast_cm = None
+                    st.info("Se calculará desde la curva de momentos + ld (NSR-10 C.25.4.2).")
+        else:
+            nb_bast_sup  = 0
+            bar_bast_sup = varillas_vc[_def_idx_vc]
+            L_bast_modo  = "Manual"
+            L_bast_cm    = None
 
     # --- C?LCULOS INTERNOS ---
     d_vc = h_vc - dp_vc
@@ -3368,6 +3548,49 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
     phiMn_izq_neg = calc_phi_Mn(As_izq_sup, b_vc_mm, d_vc_mm)
     phiMn_der_neg = calc_phi_Mn(As_der_sup, b_vc_mm, d_vc_mm)
     phiMn_cen_pos = calc_phi_Mn(As_cen_inf, b_vc_mm, d_vc_mm)
+
+    # ── Bastones superiores: punto de corte + longitud de desarrollo ─────────
+    db_bast_mm = diam_dict.get(bar_bast_sup, 12.0) if usar_bastones else 0.0
+    if usar_bastones and nb_bast_sup > 0:
+        _nb_ci = max(nb_izq_sup - nb_bast_sup, 0)
+        _nb_cd = max(nb_der_sup - nb_bast_sup, 0)
+        As_corr_izq    = calc_As(max(_nb_ci, 1), bar_izq_sup) if _nb_ci > 0 else 0.001
+        As_corr_der    = calc_As(max(_nb_cd, 1), bar_der_sup) if _nb_cd > 0 else 0.001
+        phiMn_corr_izq = calc_phi_Mn(As_corr_izq, b_vc_mm, d_vc_mm)
+        phiMn_corr_der = calc_phi_Mn(As_corr_der, b_vc_mm, d_vc_mm)
+        # ld NSR-10 C.25.4.2 simplificada (barra recta, sin epóxico, posición normal)
+        ld_bast_m = max(0.9 * fy * db_bast_mm / (10.0 * math.sqrt(max(fc, 1.0))), 0.30)
+        if "Automático" in L_bast_modo:
+            _Mi_n = Mu_izq_neg_in * factor_fuerza
+            _Md_n = Mu_der_neg_in * factor_fuerza
+            # Curva de envolvente coseno → inversa analítica
+            if phiMn_corr_izq < _Mi_n and _Mi_n > 0:
+                _ri = max(-1.0, min(1.0, 2.0 * phiMn_corr_izq / _Mi_n - 1.0))
+                x_cut_izq = (L_vc / 4.0) * math.acos(_ri) / math.pi
+            else:
+                x_cut_izq = L_vc / 4.0
+            if phiMn_corr_der < _Md_n and _Md_n > 0:
+                _rd = max(-1.0, min(1.0, 2.0 * phiMn_corr_der / _Md_n - 1.0))
+                x_cut_der = (L_vc / 4.0) * math.acos(_rd) / math.pi
+            else:
+                x_cut_der = L_vc / 4.0
+            L_bast_izq_m = min(x_cut_izq + ld_bast_m, L_vc / 2.0)
+            L_bast_der_m = min(x_cut_der + ld_bast_m, L_vc / 2.0)
+            st.info(_t(
+                f"Longitud bastion izq = **{L_bast_izq_m*100:.1f} cm** | "
+                f"Longitud bastion der = **{L_bast_der_m*100:.1f} cm** | "
+                f"ld = {ld_bast_m*100:.1f} cm (NSR-10 C.25.4.2)",
+                f"Cutoff length left = **{L_bast_izq_m*100:.1f} cm** | "
+                f"Cutoff length right = **{L_bast_der_m*100:.1f} cm** | "
+                f"ld = {ld_bast_m*100:.1f} cm (ACI 25.5.2)"))
+        else:                              # Manual
+            L_bast_izq_m = float(L_bast_cm) / 100.0
+            L_bast_der_m = float(L_bast_cm) / 100.0
+    else:
+        phiMn_corr_izq = phiMn_izq_neg
+        phiMn_corr_der = phiMn_der_neg
+        L_bast_izq_m   = 0.0
+        L_bast_der_m   = 0.0
 
     # 3. Momentos Probables de los Nudos (Mpr) para plastificación
     Mpr_izq = calc_Mpr(As_izq_sup, b_vc_mm, d_vc_mm)
@@ -3431,10 +3654,234 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
     s_diseno_conf_cm = math.floor(s_diseno_conf / 10)
     if s_diseno_conf_cm < 5: s_diseno_conf_cm = 5
 
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # BLOQUE 1b: PANEL DE METRICAS EN TIEMPO REAL
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("---")
+    st.subheader(_t("Verificacion Rapida — Tiempo Real", "Quick Check — Real Time"))
+    _mc1, _mc2, _mc3, _mc4, _mc5 = st.columns(5)
+    _dm_izq = phiMn_izq_neg  * factor_fuerza - Mu_izq_neg_in
+    _dm_cen = phiMn_cen_pos  * factor_fuerza - Mu_cen_pos_in
+    _dm_der = phiMn_der_neg  * factor_fuerza - Mu_der_neg_in
+    _rho_s  = As_izq_sup / (b_vc * d_vc) * 100
+    _rho_i  = As_cen_inf / (b_vc * d_vc) * 100
+    _mc1.metric(f"phiMn izq ({unidad_mom})",
+                f"{phiMn_izq_neg*factor_fuerza:.1f}",
+                delta=f"{_dm_izq:+.1f}",
+                delta_color="normal")
+    _mc2.metric(f"phiMn cen ({unidad_mom})",
+                f"{phiMn_cen_pos*factor_fuerza:.1f}",
+                delta=f"{_dm_cen:+.1f}",
+                delta_color="normal")
+    _mc3.metric(f"phiMn der ({unidad_mom})",
+                f"{phiMn_der_neg*factor_fuerza:.1f}",
+                delta=f"{_dm_der:+.1f}",
+                delta_color="normal")
+    _mc4.metric(f"rho sup (%)",
+                f"{_rho_s:.3f}",
+                delta=f"{'OK' if _rho_s <= 2.5 else 'EXCEDE'} 2.5%",
+                delta_color="normal" if _rho_s <= 2.5 else "inverse")
+    _mc5.metric(f"Ve ({unidad_fuerza})",
+                f"{Ve_cortante_diseno*factor_fuerza:.1f}",
+                delta=f"DMO/DES",
+                delta_color="off")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # BLOQUE 2: ALZADO 2D — VIGA CON ARMADO (Plotly interactivo)
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("---")
+    st.subheader(_t("Alzado Longitudinal — Armado", "Longitudinal Elevation — Reinforcement"))
+    _LA = L_vc;  _HA = h_vc/100;  _bA = b_vc/100
+    _recA = dp_vc/100
+    _fig_alz = go.Figure()
+    # Concreto
+    _fig_alz.add_shape(type="rect", x0=0, y0=0, x1=_LA, y1=_HA,
+        fillcolor="rgba(180,180,180,0.25)", line=dict(color="#888", width=1.5))
+    # Barras superiores corridas
+    _y_sup_a = _HA - _recA
+    _y_inf_a = _recA
+    _fig_alz.add_trace(go.Scatter(
+        x=[0, _LA], y=[_y_sup_a, _y_sup_a],
+        mode="lines", line=dict(color="#2196F3", width=3),
+        name=f"{nb_izq_sup}{_bar_label_v(diam_dict.get(bar_izq_sup,16))} sup"))
+    # Barras inferiores corridas
+    _fig_alz.add_trace(go.Scatter(
+        x=[0, _LA], y=[_y_inf_a, _y_inf_a],
+        mode="lines", line=dict(color="#4CAF50", width=3),
+        name=f"{nb_cen_inf}{_bar_label_v(diam_dict.get(bar_cen_inf,16))} inf"))
+    # Bastones superiores (si existen)
+    if usar_bastones and nb_bast_sup > 0 and L_bast_izq_m > 0:
+        _y_bst = _HA - _recA - diam_dict.get(bar_izq_sup,16)/1000
+        _fig_alz.add_trace(go.Scatter(
+            x=[0, L_bast_izq_m], y=[_y_bst, _y_bst],
+            mode="lines", line=dict(color="#FF9800", width=4),
+            name=f"{nb_bast_sup} bastones izq ({L_bast_izq_m*100:.0f}cm)"))
+        _fig_alz.add_trace(go.Scatter(
+            x=[_LA-L_bast_der_m, _LA], y=[_y_bst, _y_bst],
+            mode="lines", line=dict(color="#FF9800", width=4),
+            name=f"{nb_bast_sup} bastones der ({L_bast_der_m*100:.0f}cm)",
+            showlegend=True))
+    # Estribos verticales
+    _s_c  = s_diseno_conf_cm / 100.0
+    _s_ce = min(d_vc_mm/2/10, 60.0) / 100.0
+    _zon  = 2 * _HA
+    _xe = _s_c / 2.0
+    while _xe <= _LA:
+        _s_use = _s_c if (_xe <= _zon or _xe >= _LA - _zon) else _s_ce
+        _fig_alz.add_shape(type="line", x0=_xe, y0=_recA, x1=_xe, y1=_HA-_recA,
+            line=dict(color="rgba(244,67,54,0.6)", width=1))
+        _xe += _s_use
+    # Cotas zonas de confinamiento
+    _fig_alz.add_shape(type="line", x0=_zon, y0=0, x1=_zon, y1=_HA,
+        line=dict(color="rgba(255,235,59,0.7)", width=1.2, dash="dash"))
+    _fig_alz.add_shape(type="line", x0=_LA-_zon, y0=0, x1=_LA-_zon, y1=_HA,
+        line=dict(color="rgba(255,235,59,0.7)", width=1.2, dash="dash"))
+    _fig_alz.add_annotation(x=_zon/2, y=_HA+0.012, text=f"Conf. {_zon*100:.0f}cm",
+        showarrow=False, font=dict(size=9, color="rgba(255,235,59,0.9)"))
+    _fig_alz.update_layout(
+        height=200, margin=dict(t=30,b=20,l=30,r=10),
+        showlegend=True, legend=dict(orientation="h", y=-0.35, x=0.5, xanchor="center"),
+        xaxis=dict(title="Posicion (m)", showgrid=False, zeroline=False),
+        yaxis=dict(showticklabels=False, showgrid=False, zeroline=False,
+                   scaleanchor="x", scaleratio=1),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(_fig_alz, use_container_width=True, config={"displayModeBar": False})
+    st.caption("Fig. N02 — Alzado longitudinal: azul=sup corridas, verde=inf corridas, naranja=bastones, rojo=estribos, amarillo=zona confinamiento.")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # BLOQUE 3: DIAGRAMA As(x) — AREA DE ARMADURA REQUERIDA vs PROVISTA
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("---")
+    st.subheader(_t("Area de Armadura As(x) — Requerida vs Provista", "Reinforcement Area As(x) — Required vs Provided"))
+    _Nx = 200
+    _xs  = [i * L_vc / (_Nx-1) for i in range(_Nx)]
+    _Mi_n = Mu_izq_neg_in * factor_fuerza   # kNm
+    _Md_n = Mu_der_neg_in * factor_fuerza
+    _Mc_p = Mu_cen_pos_in * factor_fuerza
+
+    def _calc_As_req(Mu_kNm, b_mm, d_mm, fc_v, fy_v):
+        if Mu_kNm <= 0: return 0.0
+        Mu_Nmm = Mu_kNm * 1e6
+        _As = Mu_Nmm / (0.9 * fy_v * 0.85 * d_mm)
+        for _ in range(5):
+            _a = _As * fy_v / (0.85 * fc_v * b_mm)
+            _As = Mu_Nmm / (0.9 * fy_v * (d_mm - _a/2))
+        return max(_As / 100, 0.0)   # cm²
+
+    # As requerida superior e inferior a lo largo de x
+    _As_req_sup = []
+    _As_req_inf = []
+    for _xi in _xs:
+        # Envolvente superior (negativo) — coseno en apoyos
+        if _xi <= L_vc/4:
+            _Mu_s = _Mi_n * 0.5 * (1 + math.cos(math.pi * _xi / (L_vc/4)))
+        elif _xi >= 3*L_vc/4:
+            _Mu_s = _Md_n * 0.5 * (1 + math.cos(math.pi * (L_vc-_xi) / (L_vc/4)))
+        else:
+            _Mu_s = 0.0
+        # Envolvente inferior (positivo) — parábola
+        _Mu_i = _Mc_p * 4 * (_xi/L_vc) * (1 - _xi/L_vc)
+        _As_req_sup.append(_calc_As_req(_Mu_s, b_vc*10, d_vc_mm, fc, fy))
+        _As_req_inf.append(_calc_As_req(_Mu_i, b_vc*10, d_vc_mm, fc, fy))
+
+    # As provista superior e inferior — función escalón
+    _As_prov_sup = []
+    _As_prov_inf = []
+    for _xi in _xs:
+        # Superior: barras corridas + bastones en zonas de apoyo
+        _as_s = As_izq_sup if _xi <= L_vc/2 else As_der_sup
+        if usar_bastones and nb_bast_sup > 0:
+            if _xi <= L_bast_izq_m or _xi >= L_vc - L_bast_der_m:
+                _as_s += nb_bast_sup * (math.pi * db_bast_mm**2 / 4) / 100
+        _As_prov_sup.append(_as_s)
+        # Inferior: barras corridas
+        _As_prov_inf.append(As_cen_inf)
+
+    _fig_as = go.Figure()
+    # As requerida sup (rojo)
+    _fig_as.add_trace(go.Scatter(x=_xs, y=_As_req_sup, mode="lines",
+        line=dict(color="#F44336", width=2, dash="solid"),
+        name="As req. sup", fill=None))
+    # As provista sup (azul)
+    _fig_as.add_trace(go.Scatter(x=_xs, y=_As_prov_sup, mode="lines",
+        line=dict(color="#2196F3", width=2.5),
+        name="As prov. sup",
+        fill="tonexty", fillcolor="rgba(33,150,243,0.12)"))
+    # As requerida inf (verde claro)
+    _fig_as.add_trace(go.Scatter(x=_xs, y=[-v for v in _As_req_inf], mode="lines",
+        line=dict(color="#4CAF50", width=2, dash="solid"),
+        name="As req. inf"))
+    # As provista inf (verde oscuro)
+    _fig_as.add_trace(go.Scatter(x=_xs, y=[-v for v in _As_prov_inf], mode="lines",
+        line=dict(color="#1B5E20", width=2.5),
+        name="As prov. inf",
+        fill="tonexty", fillcolor="rgba(76,175,80,0.12)"))
+    # Línea cero
+    _fig_as.add_hline(y=0, line=dict(color="rgba(255,255,255,0.3)", width=1))
+    # Líneas de bastones
+    if usar_bastones and nb_bast_sup > 0 and L_bast_izq_m > 0:
+        for _xc in [L_bast_izq_m, L_vc - L_bast_der_m]:
+            _fig_as.add_vline(x=_xc, line=dict(color="rgba(255,200,50,0.65)", width=1.5, dash="dash"))
+    _fig_as.update_layout(
+        height=320, margin=dict(t=30,b=40,l=60,r=10),
+        hovermode="x unified",
+        xaxis=dict(title="Posicion (m)", dtick=0.5),
+        yaxis=dict(title="As (cm2)", zeroline=True, zerolinecolor="rgba(255,255,255,0.3)"),
+        legend=dict(orientation="h", y=-0.35, x=0.5, xanchor="center"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(_fig_as, use_container_width=True, config={"displayModeBar": False})
+    st.caption("Fig. N03 — Sup(+): rojo=As requerida, azul=As provista. Inf(-): verde claro=requerida, verde oscuro=provista. Zona azul/verde = exceso de acero. Lineas amarillas = corte de bastion.")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # BLOQUE 4: ENVOLVENTE DE CORTANTE Vz(x)
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("---")
+    st.subheader(_t("Envolvente de Cortante Vz(x)", "Shear Envelope Vz(x)"))
+    _R_izq = Wu_vc * L_vc / 2 + (_Mi_n - _Md_n) / L_vc if L_vc > 0 else 0
+    _Vz_x  = [(_R_izq - Wu_vc * _xi) * factor_fuerza for _xi in _xs]
+    # Límites phi_Vc (aproximación)
+    _Vc_ap = 0.17 * math.sqrt(max(fc,1)) * b_vc * 10 * d_vc_mm / 1000 * factor_fuerza
+    _phi_Vc_half = 0.75 * _Vc_ap / 2
+
+    _fig_vz = go.Figure()
+    _fig_vz.add_trace(go.Scatter(
+        x=_xs, y=_Vz_x, mode="lines",
+        line=dict(color="#9C27B0", width=2.5),
+        fill="tozeroy", fillcolor="rgba(156,39,176,0.12)",
+        name=f"Vz(x) [{unidad_fuerza}]"))
+    _fig_vz.add_hline(y=Ve_cortante_diseno*factor_fuerza,
+        line=dict(color="rgba(244,67,54,0.8)", width=1.8, dash="dash"),
+        annotation_text=f"Ve = {Ve_cortante_diseno*factor_fuerza:.0f} {unidad_fuerza}",
+        annotation_font_color="rgba(244,67,54,0.9)", annotation_font_size=9)
+    _fig_vz.add_hline(y=-Ve_cortante_diseno*factor_fuerza,
+        line=dict(color="rgba(244,67,54,0.8)", width=1.8, dash="dash"))
+    _fig_vz.add_hline(y=_phi_Vc_half,
+        line=dict(color="rgba(100,210,100,0.6)", width=1.2, dash="dot"),
+        annotation_text=f"phiVc/2 = {_phi_Vc_half:.0f} {unidad_fuerza}",
+        annotation_font_color="rgba(100,210,100,0.8)", annotation_font_size=9)
+    _fig_vz.add_hline(y=-_phi_Vc_half,
+        line=dict(color="rgba(100,210,100,0.6)", width=1.2, dash="dot"))
+    # Zonas de confinamiento
+    for _xc in [_zon, L_vc - _zon]:
+        _fig_vz.add_vline(x=_xc, line=dict(color="rgba(255,235,59,0.5)", width=1.2, dash="dash"))
+    _fig_vz.update_layout(
+        height=280, margin=dict(t=30,b=40,l=60,r=10),
+        hovermode="x unified",
+        xaxis=dict(title="Posicion (m)", dtick=0.5),
+        yaxis=dict(title=f"Vz ({unidad_fuerza})"),
+        legend=dict(orientation="h", y=-0.40, x=0.5, xanchor="center"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(_fig_vz, use_container_width=True, config={"displayModeBar": False})
+    st.caption("Fig. N04 — Envolvente de cortante. Rojo=Ve diseno sismico, Verde=phiVc/2 (limite diseno estribo), Amarillo=zona confinamiento.")
+
     st.markdown("---")
     st.subheader("Reporte de Verificaciones (NSR-10 / ACI 318)")
     
-    t1, t2, t3 = st.tabs(["Chequeos Sísmicos", "Momentos y Flexión", " Cortante Plástico ($V_p$)"])
+    t1, t2, t3 = st.tabs([
+        _t("Chequeos Sísmicos",        "Seismic Checks"),
+        _t("Momentos y Flexión",       "Moments & Flexure"),
+        _t("Cortante Plástico (Vp)",   "Plastic Shear (Vp)")])
     with t1:
         st.markdown("**(A) Geometría**")
         st.write(f"- bw ≥ 25 cm: {'CUMPLE' if chk_b_min else f'NO CUMPLE ({b_vc} cm)'}")
@@ -3457,6 +3904,31 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
             ("Nudo Derecho (-)",  f"φMn = {phiMn_der_neg*factor_fuerza:.2f}", f"Mu = {Mu_der_neg*factor_fuerza:.2f}", " OK" if phiMn_der_neg>=Mu_der_neg else "? FALLA"),
         ]
         st.dataframe(pd.DataFrame(rows_flex, columns=["Zona", f"Capacidad [{unidad_mom}]", f"Demanda [{unidad_mom}]", "Estado"]), use_container_width=True, hide_index=True)
+
+
+        # ── Semáforo cuantías mín/máx ─────────────────────────────────────────
+        _rho_s  = As_izq_sup / (b_vc * d_vc) * 100
+        _rho_i  = As_cen_inf / (b_vc * d_vc) * 100
+        _rho_mn = max(0.25 * math.sqrt(max(fc,1)) / fy, 1.4 / fy) * 100
+        _rho_mx = 2.5   # NSR-10 C.21.5.2.1 / ACI 18.6.3.1
+        _sm1, _sm2, _sm3, _sm4 = st.columns(4)
+        _sm1.metric(
+            _t("rho sup (%)", "rho top (%)"), f"{_rho_s:.3f}",
+            delta=_t(f"{'OK' if _rho_mn<=_rho_s<=_rho_mx else 'EXCEDE RANGO'}",
+                     f"{'OK' if _rho_mn<=_rho_s<=_rho_mx else 'OUT OF RANGE'}"),
+            delta_color="normal" if _rho_mn<=_rho_s<=_rho_mx else "inverse")
+        _sm2.metric(
+            _t("rho inf (%)", "rho bot (%)"), f"{_rho_i:.3f}",
+            delta=_t(f"{'OK' if _rho_mn<=_rho_i<=_rho_mx else 'EXCEDE RANGO'}",
+                     f"{'OK' if _rho_mn<=_rho_i<=_rho_mx else 'OUT OF RANGE'}"),
+            delta_color="normal" if _rho_mn<=_rho_i<=_rho_mx else "inverse")
+        _sm3.metric(
+            _t("rho min (%)", "rho min (%)"), f"{_rho_mn:.3f}",
+            delta=_t("NSR-10 C.9.6.1", "ACI 9.6.1.2"), delta_color="off")
+        _sm4.metric(
+            _t("rho max (%)", "rho max (%)"), f"{_rho_mx:.3f}",
+            delta=_t("NSR-10 C.21.5.2.1", "ACI 18.6.3.1"), delta_color="off")
+
 
         #  Sugerencias de solución para zonas con FALLA 
         _fallos = []
@@ -3490,17 +3962,17 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                     col_s1, col_s2 = st.columns(2)
                     with col_s1:
                         st.markdown(
-                            f"**1?⃣ Aumentar el número de varillas**  \n"
+                            f"**1. Aumentar el número de varillas**  \n"
                             f"As actual ≈ {_As_actual:.2f} cm²  \n"
                             f"As requerido ≈ **{max(_As_req_aprox, _As_actual*_ratio):.2f} cm²**  \n"
                             f"→ Agrega varillas del mismo diámetro o usa barras de mayor calibre en la selección de arriba."
                         )
                     with col_s2:
                         st.markdown(
-                            f"**2?⃣ Aumentar el peralte h**  \n"
+                            f"**2. Aumentar el peralte h**  \n"
                             f"h actual = {h_vc:.0f} cm  \n"
                             f"→ Incrementar h ≈ **{h_vc * math.sqrt(_ratio):.0f} cm** reduciría el Rn.  \n\n"
-                            f"**3?⃣ Reducir el momento de demanda Mu**  \n"
+                            f"**3. Reducir el momento de demanda Mu**  \n"
                             f"→ Verificar la combinación de cargas o el modelo estructural."
                         )
 
@@ -3708,7 +4180,27 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                 mode='lines', line=dict(color='red', width=5),
                 name=f'Acero Inf ({bar_cen_inf})', showlegend=(idx == 0)))
 
-        #  Flejes (estribos) 
+        # ── BASTONES en 3D (si están activos) ──────────────────────────────────
+        if usar_bastones and nb_bast_sup > 0 and L_bast_izq_m > 0:
+            _db_bst3 = diam_dict.get(bar_bast_sup, 12.0)
+            _y_bst3  = h_mm_3d - dp_mm - _db_bst3
+            _n_bst   = max(nb_bast_sup, 1)
+            _xs_bst3 = ([dp_mm + i*(b_mm_3d-2*dp_mm)/(_n_bst-1) for i in range(_n_bst)]
+                        if _n_bst > 1 else [b_mm_3d/2])
+            _Liz3    = L_bast_izq_m * 1000
+            _Ldr3    = L_bast_der_m * 1000
+            for _ib3, _xb3 in enumerate(_xs_bst3):
+                fig3d.add_trace(go.Scatter3d(
+                    x=[_xb3, _xb3], y=[_y_bst3, _y_bst3], z=[0, _Liz3],
+                    mode='lines', line=dict(color='#FF9800', width=7),
+                    name=f'Bastón {_db_bst3:.0f}mm izq', showlegend=(_ib3==0)))
+                fig3d.add_trace(go.Scatter3d(
+                    x=[_xb3, _xb3], y=[_y_bst3, _y_bst3],
+                    z=[L_mm_3d-_Ldr3, L_mm_3d],
+                    mode='lines', line=dict(color='#FF9800', width=7),
+                    name=f'Bastón {_db_bst3:.0f}mm der', showlegend=False))
+
+        #  Flejes (estribos)
         # Posición interior del estribo (cara interior del recubrimiento)
         cov_est = dp_mm - db_est_vc / 2  # distancia al borde exterior del estribo
         xe1, xe2 = cov_est, b_mm_3d - cov_est
@@ -3870,7 +4362,7 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
             t_shear.rows[2].cells[1].text = f"{Ve_cortante_diseno*factor_fuerza:.2f} {unidad_fuerza}"
 
 
-            p_conf = doc.add_paragraph(f"\nLongitud de Confinamiento Hacia Ambos Nudos L_o = {zona_conf:.2f} m.\n")
+            p_conf = doc.add_paragraph(f"\nLongitud de Confinamiento Hacia Ambos Nudos L_o = {max(2*h_vc/100, 0.45):.2f} m (NSR-10 C.21.5.3.2).\n")
 
             p_conf.add_run(f"Disposición Transversal: Estribos {st_bar_vc} ({n_ramas_vc} Ramas) @ {math.floor(s_diseno_conf_cm)} cm.").bold = True
 
@@ -3896,6 +4388,88 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
 
             # --- EXPORT ---
 
+            # ── SECCIÓN 6: DIAGRAMAS TÉCNICOS (As(x), Vz(x), Alzado 2D) ─────────────
+            doc.add_heading("6. DIAGRAMAS TÉCNICOS DE DISEÑO", level=1)
+
+            # 6.1 Alzado longitudinal
+            doc.add_heading("6.1 Alzado Longitudinal con Armado", level=2)
+            try:
+                import plotly.io as _pio_d
+                _buf_alz_d = io.BytesIO(_pio_d.to_image(_fig_alz, format='png',
+                                          width=950, height=220, scale=1.5))
+                _buf_alz_d.seek(0)
+                doc.add_picture(_buf_alz_d, width=Inches(6.2))
+                doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                doc.add_paragraph(
+                    "Fig. 6.1 — Alzado longitudinal: azul=sup corridas, verde=inf corridas, "
+                    "naranja=bastones, rojo=estribos, amarillo=zona de confinamiento.")
+            except Exception as _e_alz:
+                doc.add_paragraph(f"[Nota] Alzado no disponible: {_e_alz}")
+
+            # 6.2 As(x) requerida vs provista
+            doc.add_heading("6.2 Area de Armadura As(x) — Requerida vs Provista", level=2)
+            try:
+                _buf_as_d = io.BytesIO(_pio_d.to_image(_fig_as, format='png',
+                                         width=950, height=320, scale=1.5))
+                _buf_as_d.seek(0)
+                doc.add_picture(_buf_as_d, width=Inches(6.2))
+                doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                doc.add_paragraph(
+                    "Fig. 6.2 — Superior(+): rojo=As requerida, azul=As provista. "
+                    "Inferior(-): verde=As requerida/provista. "
+                    "Zona coloreada=exceso de acero. Lineas amarillas=punto de corte de bastones.")
+            except Exception as _e_as:
+                doc.add_paragraph(f"[Nota] Diagrama As(x) no disponible: {_e_as}")
+
+            # 6.3 Envolvente de cortante
+            doc.add_heading("6.3 Envolvente de Cortante Vz(x)", level=2)
+            try:
+                _buf_vz_d = io.BytesIO(_pio_d.to_image(_fig_vz, format='png',
+                                         width=950, height=280, scale=1.5))
+                _buf_vz_d.seek(0)
+                doc.add_picture(_buf_vz_d, width=Inches(6.2))
+                doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                doc.add_paragraph(
+                    f"Fig. 6.3 — Ve diseño sismico = {Ve_cortante_diseno*factor_fuerza:.1f} {unidad_fuerza}. "
+                    f"Linea roja=Ve, linea verde=phiVc/2, amarillo=zona de confinamiento.")
+            except Exception as _e_vz:
+                doc.add_paragraph(f"[Nota] Envolvente Vz(x) no disponible: {_e_vz}")
+
+            # 6.4 Tabla resumen de verificaciones
+            doc.add_heading("6.4 Resumen de Verificaciones y Cantidades", level=2)
+            _tbl_doc = doc.add_table(rows=1, cols=5)
+            _tbl_doc.style = 'Table Grid'
+            _hdr_cells = _tbl_doc.rows[0].cells
+            for _ci, _ch in enumerate(["phiMn izq", "phiMn cen", "phiMn der",
+                                        "Ve diseno", "rho sup %"]):
+                _hdr_cells[_ci].text = _ch
+            _row2_cells = _tbl_doc.add_row().cells
+            _row2_cells[0].text = f"{phiMn_izq_neg*factor_fuerza:.1f} {unidad_mom}"
+            _row2_cells[1].text = f"{phiMn_cen_pos*factor_fuerza:.1f} {unidad_mom}"
+            _row2_cells[2].text = f"{phiMn_der_neg*factor_fuerza:.1f} {unidad_mom}"
+            _row2_cells[3].text = f"{Ve_cortante_diseno*factor_fuerza:.1f} {unidad_fuerza}"
+            _row2_cells[4].text = f"{As_izq_sup/(b_vc*d_vc)*100:.3f}%"
+            doc.add_paragraph("")
+
+            # 6.5 Cantidades de materiales
+            doc.add_heading("6.5 Cuantificacion de Materiales", level=2)
+            _vol_doc = b_vc/100 * h_vc/100 * L_vc
+            _enc_doc = 2*(b_vc/100 + h_vc/100) * L_vc
+            _kg_long = (As_izq_sup + As_cen_inf) * L_vc * 7850 / 10000
+            _cant_tbl = doc.add_table(rows=1, cols=4)
+            _cant_tbl.style = 'Table Grid'
+            _ch2 = _cant_tbl.rows[0].cells
+            for _ci2, _txt in enumerate(["Vol. Concreto (m3)", "Encofrado (m2)",
+                                          "Acero Long. (kg aprox.)", "Barras totales"]):
+                _ch2[_ci2].text = _txt
+            _cr2 = _cant_tbl.add_row().cells
+            _cr2[0].text = f"{_vol_doc:.3f}"
+            _cr2[1].text = f"{_enc_doc:.2f}"
+            _cr2[2].text = f"{_kg_long:.1f}"
+            _cr2[3].text = f"{nb_izq_sup+nb_cen_inf+nb_der_sup}"
+            doc.add_paragraph("")
+
+            # --- EXPORT ---
             doc_mem = io.BytesIO()
 
             doc.save(doc_mem)
@@ -3907,7 +4481,29 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
 
             st.success("Memoria Exhaustiva (DOCX) acoplada. Ubíquela en el Centro de Entregables inferior para su descarga.")
     st.markdown("---")
-    st.subheader("Exportacion de Planos DXF e IFC (Viga DMO/DES) — Protocolo ICONTEC")
+    # ── Diccionario de normas de dibujo técnico por país ────────────────────────
+    _DXF_STD = {
+        "NSR-10":       {"short": "ICONTEC", "ref": "NTC 1777 / NTC 1916",
+                         "papel_lbl": "Tamaño Papel (ICONTEC)"},
+        "ACI 318-19":   {"short": "ANSI",    "ref": "ANSI/ASME Y14.100",
+                         "papel_lbl": "Paper Size (ANSI)"},
+        "ACI 318-25":   {"short": "ANSI",    "ref": "ANSI/ASME Y14.100",
+                         "papel_lbl": "Paper Size (ANSI)"},
+        "NTE E.060":    {"short": "NTP",     "ref": "NTP-ISO 128",
+                         "papel_lbl": "Tamaño Papel (NTP)"},
+        "NEC-15":       {"short": "NTE INEN","ref": "NTE INEN-ISO 128",
+                         "papel_lbl": "Tamaño Papel (NTE INEN)"},
+        "NMX-C":        {"short": "NMX",     "ref": "NMX-Z-099-SCFI",
+                         "papel_lbl": "Tamaño Papel (NMX)"},
+    }
+    _norm_key_dxf = next((k for k in _DXF_STD if k in norma_sel), "NSR-10")
+    _std_short    = _DXF_STD[_norm_key_dxf]["short"]
+    _std_ref      = _DXF_STD[_norm_key_dxf]["ref"]
+    _papel_lbl_ui = _DXF_STD[_norm_key_dxf]["papel_lbl"]
+    # Papeles ISO/ANSI para normas no colombianas
+    _es_icontec   = (_norm_key_dxf == "NSR-10")
+
+    st.subheader(f"Exportación de Planos DXF e IFC (Viga DMO/DES) — Protocolo {_std_short}")
 
     col_d1, col_d2, col_d3 = st.columns(3)
     with col_d1:
@@ -3923,20 +4519,56 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
     # Selector de tipo de seccion y tamano de papel
     col_sel1, col_sel2 = st.columns(2)
     with col_sel1:
-        tipo_viga_dxf = st.selectbox("Seccion para Despiece DXF:", ["Viga Rectangular", "Viga T (con aletas)"], key="vg_tipo_sec")
+        tipo_viga_dxf = st.selectbox(_t("Seccion para Despiece DXF:", "Section for DXF Detail:"), ["Viga Rectangular", "Viga T (con aletas)"], key="vg_tipo_sec")
     with col_sel2:
-        papel_opciones_v = {
-            "Carta  (216 x 279 mm)":       (21.6,  27.9,  "CARTA"),
-            "Oficio (216 x 330 mm)":       (21.6,  33.0,  "OFICIO"),
-            "Medio Pliego (500 x 707 mm)": (50.0,  70.7,  "MEDIO PLIEGO"),
-            "Pliego       (707 x 1000 mm)":(70.7, 100.0,  "PLIEGO"),
-        }
-        papel_sel_v = st.selectbox("Tamano de Papel (ICONTEC)", list(papel_opciones_v.keys()), index=2, key="vg_papel")
+        # Papeles disponibles según norma
+        if _es_icontec:
+            papel_opciones_v = {
+                "Carta        (216 × 279 mm)": (21.6,  27.9,  "CARTA"),
+                "Oficio       (216 × 330 mm)": (21.6,  33.0,  "OFICIO"),
+                "Medio Pliego (500 × 707 mm)": (50.0,  70.7,  "MEDIO PLIEGO"),
+                "Pliego       (707 × 1000 mm)":(70.7, 100.0,  "PLIEGO"),
+            }
+        elif "ACI" in norma_sel:
+            papel_opciones_v = {
+                "Letter  (216 × 279 mm)":  (21.6,  27.9,  "LETTER"),
+                "Legal   (216 × 356 mm)":  (21.6,  35.6,  "LEGAL"),
+                "Tabloid (279 × 432 mm)":  (27.9,  43.2,  "TABLOID"),
+                "ANSI C  (432 × 559 mm)":  (43.2,  55.9,  "ANSI-C"),
+                "ANSI D  (559 × 864 mm)":  (55.9,  86.4,  "ANSI-D"),
+            }
+        else:   # ISO (NTE E.060, NEC-15, NMX-C, etc.)
+            papel_opciones_v = {
+                "A4  (210 × 297 mm)":  (21.0,  29.7,  "A4"),
+                "A3  (297 × 420 mm)":  (29.7,  42.0,  "A3"),
+                "A2  (420 × 594 mm)":  (42.0,  59.4,  "A2"),
+                "A1  (594 × 841 mm)":  (59.4,  84.1,  "A1"),
+                "A0  (841 × 1189 mm)": (84.1, 118.9,  "A0"),
+            }
+        # Auto-selección: menor papel que contenga la viga a escala 1:50
+        _MARGIN_EST = 3.0;  _ROT_EST = 6.5
+        # L_vc en metros → *100 = cm → /50 = papel 1:50
+        # h_vc ya en cm  → /50  = papel 1:50  (NO multiplica x100)
+        _area_min_w = L_vc * 100 / 50 + _MARGIN_EST * 2
+        _area_min_h = h_vc / 50 * 2 + _MARGIN_EST * 2 + _ROT_EST  # ×2 por alzado + sección
+        _papel_keys = list(papel_opciones_v.keys())
+        _papel_default_idx = 0
+        for _pi, (_pk, (_pw, _ph, _)) in enumerate(papel_opciones_v.items()):
+            if _pw >= _area_min_w and _ph >= _area_min_h:
+                _papel_default_idx = _pi; break
+        else:
+            _papel_default_idx = len(_papel_keys) - 1  # mayor formato si nada cabe
+        papel_sel_v = st.selectbox(
+            _papel_lbl_ui,
+            _papel_keys,
+            index=_papel_default_idx,
+            key="vg_papel")
         ANCHO_V, ALTO_V, PAPEL_LBL_V = papel_opciones_v[papel_sel_v]
+
 
     col_x1, col_x2 = st.columns(2)
     with col_x1:
-        flag_dxf = st.button("Generar Plano DXF ICONTEC - Viga", use_container_width=True, key="vg_btn_dxf")
+        flag_dxf = st.button(f"Generar Plano DXF {_std_short} - Viga", use_container_width=True, key="vg_btn_dxf")
     with col_x2:
         flag_ifc = st.button("Generar Modelo IFC4 (BIM) - Viga", use_container_width=True, key="vg_btn_ifc")
 
@@ -3955,7 +4587,9 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                                s_conf_cm2, s_centro_cm2, zona_conf_cm2,
                                Mu_kNm, phi_Mn_kNm, Vu_kN, phi_Vn_kN,
                                vol_m3, peso_kg,
-                               empresa, proyecto, norma, nivel_sis):
+                               empresa, proyecto, norma, nivel_sis,
+                               nb_bast=0, db_bast_mm=0.0,
+                               L_bast_izq=0.0, L_bast_der=0.0):
                 O = ifcopenshell.file(schema="IFC4")
 
 
@@ -3991,15 +4625,19 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                         ProfileType="AREA", ProfileName=f"VigaRect_{bw_cm:.0f}x{h_cm:.0f}",
                         XDim=bw_m, YDim=h_m)
 
-                # Viga a lo largo de eje X
+                # Viga a lo largo de eje X (perfil en plano YZ, extrude → X)
+                # Axis=[1,0,0] = Z_local = X_global (eje de longitud)
+                # RefDir=[0,1,0] = X_local = Y_global (ancho)
+                # → local_Y = cross([1,0,0],[0,1,0]) = [0,0,1] = Z_global (altura) ✓
+                # ExtrudedDir=[0,0,1] local = [1,0,0] global (a lo largo de X) ✓
                 origin  = O.createIfcCartesianPoint([0.0, 0.0, 0.0])
-                x_dir   = O.createIfcDirection([1.0, 0.0, 0.0])
-                z_dir   = O.createIfcDirection([0.0, 0.0, 1.0])
-                y_dir   = O.createIfcDirection([0.0, 1.0, 0.0])
-                place3d = O.createIfcAxis2Placement3D(Location=origin, Axis=z_dir, RefDirection=x_dir)
+                place3d = O.createIfcAxis2Placement3D(
+                    Location=origin,
+                    Axis=O.createIfcDirection([1.0, 0.0, 0.0]),
+                    RefDirection=O.createIfcDirection([0.0, 1.0, 0.0]))
                 solid   = O.createIfcExtrudedAreaSolid(
                     SweptArea=profile, Position=place3d,
-                    ExtrudedDirection=O.createIfcDirection([1.0, 0.0, 0.0]),
+                    ExtrudedDirection=O.createIfcDirection([0.0, 0.0, 1.0]),
                     Depth=L_m)
                 shape_rep = O.createIfcShapeRepresentation(
                     ContextOfItems=body, RepresentationIdentifier="Body",
@@ -4021,14 +4659,20 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
 
                 # Barras longitudinales superiores
                 db_sup_m = db_sup_mm/1000; db_inf_m = db_inf_mm/1000
-                y_sup_m  = h_m/2 - r_m;   y_inf_m  = -h_m/2 + r_m
+                dst_m    = dst_mm/1000                                  # adelantar: eje real NSR-10 C.7.7
+                y_sup_m  = h_m/2  - (r_m + dst_m + db_sup_m/2)         # eje barra sup real
+                y_inf_m  = -h_m/2 + (r_m + dst_m + db_inf_m/2)         # eje barra inf real
 
                 for tag, n_b, db_m, y_pos in [
                     ("LS", n_sup, db_sup_m, y_sup_m),
                     ("LI", n_inf, db_inf_m, y_inf_m),
                 ]:
-                    xs = ([bw_m * i/(n_b-1) - bw_m/2 + r_m for i in range(n_b)]
-                          if n_b > 1 else [0.0])
+                    # REGLA 4: eje varilla = recub + dst + db/2 (no solo recub)
+                    _rv = r_m + dst_m + db_m / 2.0
+                    _y_left  = -bw_m / 2.0 + _rv
+                    _y_right =  bw_m / 2.0 - _rv
+                    xs = ([_y_left + i*(_y_right - _y_left)/max(n_b-1,1)
+                           for i in range(n_b)] if n_b > 1 else [0.0])
                     for i, xb in enumerate(xs):
                         bar = ifcopenshell.api.run("root.create_entity", O,
                             ifc_class="IfcReinforcingBar", name=f"{tag}{i+1}")
@@ -4041,13 +4685,14 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                         p1 = O.createIfcCartesianPoint([L_m,  xb, y_pos])
                         pl = O.createIfcPolyline(Points=[p0, p1])
                         b_prof = O.createIfcCircleProfileDef(ProfileType="AREA", Radius=db_m/2)
+                        # Barra: perfil círculo en YZ, extrude → X
                         b_place = O.createIfcAxis2Placement3D(
                             Location=O.createIfcCartesianPoint([0.0, xb, y_pos]),
                             Axis=O.createIfcDirection([1.0, 0.0, 0.0]),
-                            RefDirection=O.createIfcDirection([0.0, 0.0, 1.0]))
+                            RefDirection=O.createIfcDirection([0.0, 1.0, 0.0]))
                         b_solid = O.createIfcExtrudedAreaSolid(
                             SweptArea=b_prof, Position=b_place,
-                            ExtrudedDirection=O.createIfcDirection([1.0, 0.0, 0.0]),
+                            ExtrudedDirection=O.createIfcDirection([0.0, 0.0, 1.0]),
                             Depth=L_m)
                         b_rep = O.createIfcShapeRepresentation(
                             ContextOfItems=body, RepresentationIdentifier="Body",
@@ -4062,26 +4707,157 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                         O.createIfcStyledItem(Item=b_solid, Styles=[surface_style])
 
                         ifcopenshell.api.run("geometry.assign_representation", O, product=bar, representation=b_rep)
-                        ifcopenshell.api.run("geometry.edit_object_placement", O, product=bar)
+                        ifcopenshell.api.run("geometry.edit_object_placement", O, product=bar)  # placement inherits from solid origin
                         ifcopenshell.api.run("spatial.assign_container", O, relating_structure=storey, products=[bar])
                         ifcopenshell.api.run("material.assign_material", O, products=[bar], material=mat_steel)
 
-                # Estribos: polilínea cerrada en plano YZ a cada posicion X
-                dst_m = dst_mm/1000
-                zona_c_m = zona_conf_cm2/100
+                # ── BASTONES SUPERIORES IFC ─────────────────────────────────────────────
+                if nb_bast > 0 and db_bast_mm > 0 and L_bast_izq > 0:
+                    db_bst_m  = db_bast_mm / 1000.0
+                    _rv_bst   = r_m + dst_m + db_bst_m / 2.0
+                    _y_lft_b  = -bw_m/2.0 + _rv_bst
+                    _y_rgt_b  =  bw_m/2.0 - _rv_bst
+                    y_bst_m   = h_m/2.0 - (r_m + dst_m + db_sup_m/2.0 + db_bst_m)
+                    _xs_bst   = ([_y_lft_b + i*(_y_rgt_b-_y_lft_b)/max(nb_bast-1,1)
+                                  for i in range(nb_bast)] if nb_bast > 1 else [0.0])
+                    for _ib, _xb in enumerate(_xs_bst):
+                        for _side, _z0, _lbst in [(f"BI{_ib+1}L", 0.0, L_bast_izq),
+                                                   (f"BI{_ib+1}R", L_m - L_bast_der, L_bast_der)]:
+                            if _lbst <= 0: continue
+                            _bb = ifcopenshell.api.run("root.create_entity", O,
+                                ifc_class="IfcReinforcingBar", name=_side)
+                            _bb.NominalDiameter = db_bst_m
+                            _bb.SteelGrade      = f"fy={fy_mpa:.0f}MPa"
+                            _bb.BarSurface      = "TEXTURED"
+                            _bb.PredefinedType  = "MAIN"
+                            _bp = O.createIfcCircleProfileDef(ProfileType="AREA", Radius=db_bst_m/2)
+                            _bpl = O.createIfcAxis2Placement3D(
+                                Location=O.createIfcCartesianPoint([_z0, _xb, y_bst_m]),
+                                Axis=O.createIfcDirection([1.0, 0.0, 0.0]),
+                                RefDirection=O.createIfcDirection([0.0, 1.0, 0.0]))
+                            _bsol = O.createIfcExtrudedAreaSolid(
+                                SweptArea=_bp, Position=_bpl,
+                                ExtrudedDirection=O.createIfcDirection([0.0, 0.0, 1.0]),
+                                Depth=_lbst)
+                            _brep = O.createIfcShapeRepresentation(
+                                ContextOfItems=body, RepresentationIdentifier="Body",
+                                RepresentationType="SweptSolid", Items=[_bsol])
+                            _bc = _color_diam(db_bst_m * 1000)
+                            _bstyle = O.createIfcSurfaceStyleRendering(
+                                SurfaceColour=O.createIfcColourRgb(
+                                    Red=_bc[0], Green=_bc[1], Blue=_bc[2]),
+                                ReflectanceMethod="FLAT")
+                            O.createIfcStyledItem(Item=_bsol,
+                                Styles=[O.createIfcSurfaceStyle(
+                                    Name="AceroBaston", Side="BOTH", Styles=[_bstyle])])
+                            ifcopenshell.api.run("geometry.assign_representation", O,
+                                product=_bb, representation=_brep)
+                            ifcopenshell.api.run("geometry.edit_object_placement", O, product=_bb)
+                            ifcopenshell.api.run("spatial.assign_container", O,
+                                relating_structure=storey, products=[_bb])
+                            ifcopenshell.api.run("material.assign_material", O,
+                                products=[_bb], material=mat_steel)
 
-                def _stirrup_positions(L_total, s_conf, s_cen, zona):
-                    pos = []
-                    x = s_conf/100/2
+                # ── ESTRIBOS MAESTRO v2 ── NSR-10 C.25.3 ──────────────────────────────────────────
+                # Error 1 corregido: arcos en plano YZ constante (Z no varía en arcos)
+                # Error 2 corregido: colas con ΔX opuesto → ambas visibles
+                # Error 3 corregido: G1 CCW 225→90°, G2 CW 180→45° (sentidos opuestos)
+                # Error 4 corregido: centros de arco dentro de la sección
+                # Error 5 corregido: tramos terminan en punto de tangencia, nunca en vértice
+                # Error 6 corregido: eje del estribo = recub + dst/2 (no cara interna)
+                # Error 7 corregido: alternancia sísmica con flip en estribos impares
+                # dst_m ya definido arriba (Cirugía 1)
+                zona_c_m = zona_conf_cm2 / 100.0
+
+                def _st_positions(L_total, s_conf_cm, s_cen_cm, zona_m):
+                    pos  = []
+                    s_c  = s_conf_cm / 100.0
+                    s_ce = s_cen_cm  / 100.0
+                    x    = s_c / 2.0
                     while x <= L_total:
                         pos.append(x)
-                        sep = s_conf/100 if (x < zona or x > L_total - zona) else s_cen/100
-                        x += sep
+                        x += s_c if (x <= zona_m or x >= L_total - zona_m) else s_ce
                     return pos
 
-                st_positions = _stirrup_positions(L_m, s_conf_cm2, s_centro_cm2, zona_c_m)
+                st_positions = _st_positions(L_m, s_conf_cm2, s_centro_cm2, zona_c_m)
 
-                bx2 = bw_m/2 - r_m;  hy2 = h_m/2 - r_m
+                # NSR-10 exacto – sin factores propios
+                R_st  = max(3.0 * dst_m, 0.012)    # C.25.3.2
+                hk_st = max(6.0 * dst_m, 0.075)    # C.25.3.4 gancho 135°
+
+                # Error 6: eje del estribo = recub + radio estribo (no cara)
+                by2 = bw_m / 2.0 - r_m - dst_m / 2.0
+                hz2 = h_m  / 2.0 - r_m - dst_m / 2.0
+
+                def _arc_yz(x0, cy, cz, r, a0_deg, a1_deg, n=10):
+                    """Arco en plano YZ a X=constante. Z NO varía aquí (Error 1)."""
+                    out = []
+                    for i in range(n + 1):
+                        ang = _m.radians(a0_deg + (a1_deg - a0_deg) * i / n)
+                        out.append([x0, cy + r * _m.cos(ang), cz + r * _m.sin(ang)])
+                    return out
+
+                # ══ MOTOR GEOMÉTRICO MAESTRO NSR-10 ══════════════════════════════════
+                # Arcos reales con IfcIndexedPolyCurve + IfcCartesianPointList2D
+                # REGLA 1: R = max(3*dst, 0.012) | hk = max(6*dst, 0.075) — NSR-10 exacto
+                # Plano YZ (beam en X): Y=ancho, Z=altura
+                # ─────────────────────────────────────────────────────────────────────────
+                def _make_stir_maestro(x0, flip=False):
+                    """Motor Geométrico Maestro NSR-10 — estribo rectangular.
+                    Arcos reales en las 4 esquinas + arcos de doblez en ganchos 135°.
+                    Sin spikes: cada transición tiene tangencia G1-continua.
+                    Plano YZ (viga en X): Y=ancho, Z=altura.
+                    """
+                    import math as _m2
+                    R    = max(3.0 * dst_m, 0.012)     # NSR-10 REGLA 1
+                    hk   = max(6.0 * dst_m, 0.075)     # NSR-10 REGLA 1
+                    by2  = bw_m / 2.0 - r_m - dst_m / 2.0
+                    hz2  = h_m  / 2.0 - r_m - dst_m / 2.0
+                    s2   = _m2.sqrt(2.0)
+
+                    def _arc(cy, cz, r, a0, a1, n=8):
+                        out = []
+                        for k in range(n + 1):
+                            a = _m2.radians(a0 + (a1 - a0) * k / n)
+                            out.append((cy + r * _m2.cos(a), cz + r * _m2.sin(a)))
+                        return out
+
+                    def _stir_pts(fl):
+                        p = []
+                        if not fl:
+                            # G1: arco bend 45°→180° (invertido → punta queda primero)
+                            g1 = list(reversed(_arc(-by2+R, hz2-R, R, 45, 180, 8)))
+                            pG1 = (g1[0][0] + hk/s2, g1[0][1] - hk/s2)
+                            p.append(pG1)
+                            p += g1                              # termina en (-by2, hz2-R)
+                            p.append((-by2,  -hz2 + R))         # lateral izq ↓
+                            p += _arc(-by2+R, -hz2+R, R, 180, 270, 6)[1:]  # inf-izq
+                            p.append(( by2-R, -hz2   ))         # inferior →
+                            p += _arc( by2-R, -hz2+R, R, 270, 360, 6)[1:]  # inf-der
+                            p.append(( by2,   hz2 - R))         # lateral der ↑
+                            p += _arc( by2-R,  hz2-R, R,   0,  90, 6)[1:]  # sup-der
+                            p.append((-by2+R,  hz2   ))         # superior ←
+                            p += _arc(-by2+R,  hz2-R, R,  90, 180, 6)[1:]  # sup-izq → llega a (-by2, hz2-R)
+                            # G2: arco bend 180°→315° CW desde (-by2, hz2-R)
+                            g2 = _arc(-by2+R, hz2-R, R, 180, 315, 8)
+                            p += g2[1:]
+                            a2 = _m2.radians(315)
+                            g2e = (-by2+R + R*_m2.cos(a2), hz2-R + R*_m2.sin(a2))
+                            p.append((g2e[0] - hk/s2, g2e[1] - hk/s2))  # punta G2
+                        else:
+                            # flip: simetría 180° en YZ (alternancia sísmica)
+                            base = _stir_pts(False)
+                            p = [(-y, -z) for (y, z) in base]
+                        return p
+
+                    pts2d = _stir_pts(flip)
+                    return [O.createIfcCartesianPoint([x0, py, pz]) for (py, pz) in pts2d]
+
+                # Alias para el loop
+                def _stir_curve(x0, flip=False):
+                    return _make_stir_maestro(x0, flip)
+
+
                 for j, x_pos in enumerate(st_positions):
                     st_bar = ifcopenshell.api.run("root.create_entity", O,
                         ifc_class="IfcReinforcingBar", name=f"E{j+1}")
@@ -4090,25 +4866,13 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                     st_bar.BarSurface      = "TEXTURED"
                     st_bar.PredefinedType  = "MAIN"
 
-                    hk = max(dst_m * 6, 0.075)
-                    hk_dx = hk * _m.cos(_m.radians(45))
-                    hk_dy = hk * _m.sin(_m.radians(45))
-                    pts = [
-                        O.createIfcCartesianPoint([x_pos + dst_m/2, -bx2 + hk_dx, -hy2 + hk_dy]),
-                        O.createIfcCartesianPoint([x_pos, -bx2, -hy2]),
-                        O.createIfcCartesianPoint([x_pos,  bx2, -hy2]),
-                        O.createIfcCartesianPoint([x_pos,  bx2,  hy2]),
-                        O.createIfcCartesianPoint([x_pos, -bx2,  hy2]),
-                        O.createIfcCartesianPoint([x_pos, -bx2, -hy2]),
-                        O.createIfcCartesianPoint([x_pos - dst_m/2, -bx2 + hk_dx, -hy2 + hk_dy]),
-                    ]
-                    polyline_st = O.createIfcPolyline(Points=pts)
-                    # Volumen físico para que Revit lo reconozca como Armadura
-                    st_swept = O.createIfcSweptDiskSolid(Directrix=polyline_st, Radius=dst_m/2)
-                    
+                    polyline_st = O.createIfcPolyline(Points=_stir_curve(x_pos, flip=(j % 2 == 1)))
+                    st_swept    = O.createIfcSweptDiskSolid(Directrix=polyline_st, Radius=dst_m / 2.0)
+
                     stirrup_color = _color_diam(dst_m * 1000)
                     st_style_rend = O.createIfcSurfaceStyleRendering(
-                        SurfaceColour=O.createIfcColourRgb(Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
+                        SurfaceColour=O.createIfcColourRgb(
+                            Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
                         ReflectanceMethod="FLAT")
                     st_surface_style = O.createIfcSurfaceStyle(
                         Name=f"Estribo_{dst_m*1000:.0f}mm", Side="BOTH", Styles=[st_style_rend])
@@ -4123,7 +4887,7 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                     ifcopenshell.api.run("material.assign_material", O, products=[st_bar], material=mat_steel)
 
                 # Pset_NSR10_Viga
-                _pset_name = f"Pset_{normasel.split('(')[0].strip().replace('-','_').replace(' ','_')}_Viga"
+                _pset_name = f"Pset_{norma.split('(')[0].strip().replace('-','_').replace(' ','_')}_Viga"
                 pset = ifcopenshell.api.run("pset.add_pset", O, product=beam, name=_pset_name)
                 ifcopenshell.api.run("pset.edit_pset", O, pset=pset, properties={
                     "Norma":                norma,
@@ -4192,24 +4956,31 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
             _s1   = s_diseno_conf_cm
             _sc   = min(d_vc_mm/2/10, 60.0)
             _zc   = 2 * _h
-            _Mu   = Mux_pos_max
+            _Mu   = Mu_cen_pos
             _phiMn= phiMn_cen_pos
-            _Vu   = Vu_cv_input
-            _phiVn= phi_Vn_kN
+            _Vu   = Ve_cortante_diseno
+            _phiVn= st.session_state.get("phi_Vn_kN", Ve_cortante_diseno)
             _vol  = ((_bw * _h) / 10000) * L_vc
             _pkg  = (nb_izq_sup * (L_vc*100 + 30)/100 * rebar_dict.get(bar_izq_sup, 0.001)*100*7.85e-3 +
                      nb_cen_inf * (L_vc*100 + 30)/100 * rebar_dict.get(bar_cen_inf, 0.001)*100*7.85e-3)
+            if usar_bastones and nb_bast_sup > 0:
+                _L_bast_total = (L_bast_izq_m + L_bast_der_m) + 2 * 12 * db_bast_mm / 1000
+                _pkg += nb_bast_sup * _L_bast_total * rebar_dict.get(bar_bast_sup, 0.001)*100*7.85e-3
 
             buf_ifc_viga, n_est_ifc = _make_ifc_viga(
                 bw_cm=_bw, h_cm=_h, L_m=L_vc, bf_cm=_bf, hf_cm=_hf, es_t=_es_t_v,
                 fc_mpa=fc, fy_mpa=fy,
                 n_sup=_nb_s, db_sup_mm=_db_s, n_inf=_nb_i, db_inf_mm=_db_i, dst_mm=_dst,
-                As_sup_cm2=As_req_izq_sup, As_inf_cm2=As_req_cen_inf, recub=r_vc,
+                As_sup_cm2=As_izq_sup,     As_inf_cm2=As_cen_inf,     recub=dp_vc,
                 s_conf_cm2=_s1, s_centro_cm2=_sc, zona_conf_cm2=_zc,
                 Mu_kNm=_Mu, phi_Mn_kNm=_phiMn, Vu_kN=_Vu, phi_Vn_kN=_phiVn,
                 vol_m3=_vol, peso_kg=_pkg,
                 empresa=dxf_empresa, proyecto=dxf_proyecto,
-                norma=norma_sel, nivel_sis=nivel_sis)
+                norma=norma_sel, nivel_sis=nivel_sis,
+                nb_bast=nb_bast_sup if usar_bastones else 0,
+                db_bast_mm=diam_dict.get(bar_bast_sup, 12.0) if usar_bastones else 0.0,
+                L_bast_izq=L_bast_izq_m if usar_bastones else 0.0,
+                L_bast_der=L_bast_der_m if usar_bastones else 0.0)
 
             _ifc_fname_v = f"Viga_{'T' if _es_t_v else 'Rect'}_{_bw:.0f}x{_h:.0f}_IFC4.ifc"
             st.download_button(
@@ -4218,7 +4989,7 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
                 file_name=_ifc_fname_v,
                 mime="application/x-step",
                 key="ifc_viga_btn")
-            st.caption(f"IFC4: IfcBeam + {_nb_s+_nb_i} barras long. + {n_est_ifc} estribos 3D + Pset_{normasel.split('(')[0].strip()}_Viga")
+            st.caption(f"IFC4: IfcBeam + {_nb_s+_nb_i} barras long. + {n_est_ifc} estribos 3D + Pset_{norma_sel.split('(')[0].strip()}_Viga")
         except ImportError as e_imp_v:
             import sys as _sys_ifc_v
             import importlib
@@ -4226,7 +4997,7 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
             _pyver_v = f"{_sys_ifc_v.version_info.major}.{_sys_ifc_v.version_info.minor}"
             _pyexe_v = _sys_ifc_v.executable
             st.error(
-                f"⚠️ Error cargando **IfcOpenShell** en este entorno Python.\n\n"
+                f"[!] Error cargando **IfcOpenShell** en este entorno Python.\n\n"
                 f"**Python activo:** `{_pyexe_v}` (versión {_pyver_v})\n\n"
                 f"**Detalle del error:** `{str(e_imp_v)}`\n\n"
                 f"**Solución 1:** Si acabas de instalar mediante pip, **REINICIA EL SERVIDOR DE STREAMLIT** (`Ctrl+C` y luego `streamlit run app.py`).\n\n"
@@ -4288,7 +5059,7 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
         # Escala automatica
         ESCALAS_V = [200, 100, 50, 25, 20, 10]
         MARGEN_V  = 1.0
-        ROT_H_V   = 4.0
+        ROT_H_V   = 6.5   # Altura cajetín aumentada (5 filas de información)
         AREA_W_V  = ANCHO_V - 2*MARGEN_V
         AREA_H_V  = ALTO_V  - 2*MARGEN_V - ROT_H_V - 0.5
 
@@ -4296,7 +5067,7 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
         for den in reversed(ESCALAS_V):
             drawn_l = L_cm_d / den
             drawn_h = H_cm   / den
-            if drawn_l <= AREA_W_V * 0.60 and drawn_h <= AREA_H_V * 0.50:
+            if drawn_l <= AREA_W_V * 0.82 and drawn_h <= AREA_H_V * 0.65:
                 escala_den_v = den
                 break
         ESCALA_V   = 1.0 / escala_den_v
@@ -4370,6 +5141,40 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
         msp.add_text(f"{nb_inf_d} {_bar_label_v(db_inf_d)} (inf)",
             dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.22,
                         'insert':(ALZ_X0+L_d*0.25, y_inf_d-0.35)})
+
+        # ── Bastones en alzado DXF ───────────────────────────────────────────
+        if usar_bastones and nb_bast_sup > 0 and L_bast_izq_m > 0:
+            db_bst_dxf = diam_dict.get(bar_bast_sup, 12.0)
+            _y_bst_d   = y_sup_d - db_sup_d / 1000 * ESCALA_V * 100 - 0.04
+            _L_bst_izq = L_bast_izq_m * ESCALA_V * 100
+            _L_bst_der = L_bast_der_m * ESCALA_V * 100
+            # Bastón izquierdo (más grueso, naranja)
+            msp.add_lwpolyline(
+                [(ALZ_X0, _y_bst_d),
+                 (ALZ_X0 + _L_bst_izq, _y_bst_d)],
+                dxfattribs={'layer':'ACERO_LONG','color':40,
+                            'lineweight':40})
+            # Bastón derecho
+            msp.add_lwpolyline(
+                [(ALZ_X0 + L_d - _L_bst_der, _y_bst_d),
+                 (ALZ_X0 + L_d, _y_bst_d)],
+                dxfattribs={'layer':'ACERO_LONG','color':40,
+                            'lineweight':40})
+            # Línea de corte punteada izq
+            msp.add_line(
+                (ALZ_X0 + _L_bst_izq, ALZ_Y0),
+                (ALZ_X0 + _L_bst_izq, ALZ_Y0 + H_d),
+                dxfattribs={'layer':'COTAS','linetype':'DASHED','color':3})
+            # Línea de corte punteada der
+            msp.add_line(
+                (ALZ_X0 + L_d - _L_bst_der, ALZ_Y0),
+                (ALZ_X0 + L_d - _L_bst_der, ALZ_Y0 + H_d),
+                dxfattribs={'layer':'COTAS','linetype':'DASHED','color':3})
+            # Cota bastón izq
+            msp.add_text(
+                f"{nb_bast_sup}{_bar_label_v(db_bst_dxf)} bast. L={L_bast_izq_m*100:.0f}cm",
+                dxfattribs={'layer':'COTAS','style':'ROMANS','height':0.17,
+                            'insert':(ALZ_X0 + _L_bst_izq*0.4, _y_bst_d - 0.30)})
 
         # Estribos en alzado
         s_conf_d   = s_diseno_conf_cm
@@ -4623,48 +5428,116 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
         msp.add_text(f"ext.={12*db_sup_d:.0f}mm",
             dxfattribs={'layer':'COTAS','style':'ROMANS','height':0.17,'insert':(DOBL_XV2+0.5,DOBL_YV-0.7)})
 
-        # ── ROTULO ICONTEC ──────────────────────────────────────────────────
+        # ── CAJETÍN TÉCNICO (adaptado por norma) ────────────────────────────────────
         ROT_X_V = MARGEN_V;  ROT_Y_V = MARGEN_V
-        ROT_W_V = ANCHO_V - 2*MARGEN_V
+        ROT_W_V = ANCHO_V - 2 * MARGEN_V
+        # Borde exterior del cajetín
         msp.add_lwpolyline(
             [(ROT_X_V, ROT_Y_V), (ROT_X_V+ROT_W_V, ROT_Y_V),
              (ROT_X_V+ROT_W_V, ROT_Y_V+ROT_H_V),
              (ROT_X_V, ROT_Y_V+ROT_H_V), (ROT_X_V, ROT_Y_V)],
             dxfattribs={'layer':'ROTULO'})
 
-        celdas_rot_v = [
-            ("EMPRESA",  dxf_empresa,  0.0,          2.5,  ROT_W_V*0.46, 1.0),
-            ("PROYECTO", dxf_proyecto, 0.0,          1.5,  ROT_W_V*0.46, 1.0),
-            ("CONTENIDO",f"Viga {tipo_sec_d} — Despiece ICONTEC", 0.0, 0.5, ROT_W_V*0.46, 1.0),
-            ("N. PLANO", dxf_plano,    ROT_W_V*0.46, 2.5,  ROT_W_V*0.18, 1.0),
-            ("ESCALA",   ESCALA_LBL_V, ROT_W_V*0.46, 1.5,  ROT_W_V*0.18, 1.0),
-            ("FECHA",    _dt_v.now().strftime("%d/%m/%Y"), ROT_W_V*0.46, 0.5, ROT_W_V*0.18, 1.0),
-            ("NORMA",    st.session_state.get('norma_sel','NSR-10')[:10], ROT_W_V*0.64, 2.5,  ROT_W_V*0.12, 1.0),
-            ("REVISION", "0",          ROT_W_V*0.76, 2.5,  ROT_W_V*0.08, 1.0),
-            ("HOJA",     "1/1",        ROT_W_V*0.76, 1.5,  ROT_W_V*0.08, 1.0),
-            ("PAPEL",    PAPEL_LBL_V,  ROT_W_V*0.64, 1.5,  ROT_W_V*0.12, 1.0),
-            ("ELABORO",  dxf_elaboro,  ROT_W_V*0.84, 2.5,  ROT_W_V*0.08, 1.0),
-            ("REVISO",   dxf_reviso,   ROT_W_V*0.84, 1.5,  ROT_W_V*0.08, 1.0),
-            ("APROBO",   dxf_aprobo,   ROT_W_V*0.92, 2.5,  ROT_W_V*0.08, 1.0),
-            ("ACERO kg", f"{tot_acero_v:.1f}", ROT_W_V*0.76, 0.5, ROT_W_V*0.12, 2.0),
-            ("CONC. m3", f"{_vol_c_v:.3f}",   ROT_W_V*0.88, 0.5, ROT_W_V*0.12, 2.0),
-        ]
-        for etiq, valor, xr, yr, cw2, ch2 in celdas_rot_v:
-            cx2_v = ROT_X_V + xr;  cy2_v = ROT_Y_V + yr
-            msp.add_lwpolyline(
-                [(cx2_v,cy2_v),(cx2_v+cw2,cy2_v),(cx2_v+cw2,cy2_v+ch2),(cx2_v,cy2_v+ch2),(cx2_v,cy2_v)],
-                dxfattribs={'layer':'ROTULO'})
-            msp.add_text(etiq,
-                dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.13,
-                            'insert':(cx2_v+0.07, cy2_v+ch2-0.17),'color':8})
-            msp.add_text(valor,
-                dxfattribs={'layer':'TEXTO','style':'ROMANS',
-                            'height':0.28 if etiq in("EMPRESA","PROYECTO") else 0.20,
-                            'insert':(cx2_v+cw2/2, cy2_v+ch2/2-0.08),
-                            'align_point':(cx2_v+cw2/2, cy2_v+ch2/2-0.08),
-                            'halign':1,'valign':2})
+        # Etiquetas adaptadas por idioma/norma
+        _lbl_ciudad  = "LOCATION" if "ACI" in norma_sel else "CIUDAD"
+        _lbl_plano   = "DWG NO."  if "ACI" in norma_sel else "N. PLANO"
+        _lbl_elab    = "DRAWN BY" if "ACI" in norma_sel else "ELABORÓ"
+        _lbl_rev     = "CHECKED"  if "ACI" in norma_sel else "REVISÓ"
+        _lbl_apr     = "APPROVED" if "ACI" in norma_sel else "APROBÓ"
+        _lbl_cont    = "CONTENT"  if "ACI" in norma_sel else "CONTENIDO"
+        _lbl_mat     = "MATERIALS"if "ACI" in norma_sel else "MATERIALES"
+        _lbl_fecha   = "DATE"     if "ACI" in norma_sel else "FECHA"
+        _lbl_esc     = "SCALE"    if "ACI" in norma_sel else "ESCALA"
+        _lbl_rev_num = "REV."     if "ACI" in norma_sel else "REV."
+        _cont_txt    = f"Viga {tipo_sec_d} — {_std_short}"
+        _mat_txt     = f"f'c={fc:.0f}MPa  fy={fy:.0f}MPa"
+        _ciudad_txt  = st.session_state.get("vg_ciudad", "")
 
-        # Linea sobre rotulo
+        # ── 5 filas del cajetín (alturas: 1.5 | 1.0 | 1.0 | 1.0 | 1.0 — suma = 6.5 cm) ──
+        # Fila 5 (superior): EMPRESA — ancho completo, 1.5 cm
+        _F5_Y = ROT_Y_V + 5.0;  _F5_H = 1.5
+        msp.add_lwpolyline(
+            [(ROT_X_V, _F5_Y), (ROT_X_V+ROT_W_V, _F5_Y),
+             (ROT_X_V+ROT_W_V, _F5_Y+_F5_H), (ROT_X_V, _F5_Y+_F5_H), (ROT_X_V, _F5_Y)],
+            dxfattribs={'layer':'ROTULO'})
+        msp.add_text("EMPRESA / COMPANY",
+            dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.14,
+                        'insert':(ROT_X_V+0.08, _F5_Y+_F5_H-0.20),'color':8})
+        msp.add_text(dxf_empresa,
+            dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.34,
+                        'insert':(ROT_X_V+ROT_W_V/2, _F5_Y+0.55),
+                        'align_point':(ROT_X_V+ROT_W_V/2, _F5_Y+0.55),
+                        'halign':1,'valign':2})
+        # Fila 4: PROYECTO | CIUDAD
+        _F4_Y = ROT_Y_V + 4.0;  _F4_H = 1.0
+        _W_PROY = ROT_W_V * 0.65;  _W_CIU = ROT_W_V * 0.35
+        for _xf, _wf, _lf, _vf in [
+            (ROT_X_V,          _W_PROY, "PROYECTO / PROJECT", dxf_proyecto),
+            (ROT_X_V+_W_PROY,  _W_CIU,  _lbl_ciudad,           _ciudad_txt),
+        ]:
+            msp.add_lwpolyline(
+                [(_xf,_F4_Y),(_xf+_wf,_F4_Y),(_xf+_wf,_F4_Y+_F4_H),(_xf,_F4_Y+_F4_H),(_xf,_F4_Y)],
+                dxfattribs={'layer':'ROTULO'})
+            msp.add_text(_lf, dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.13,
+                'insert':(_xf+0.08, _F4_Y+_F4_H-0.18),'color':8})
+            msp.add_text(_vf, dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.26,
+                'insert':(_xf+_wf/2, _F4_Y+0.32),
+                'align_point':(_xf+_wf/2, _F4_Y+0.32),'halign':1,'valign':2})
+        # Fila 3: CONTENIDO | MATERIALES
+        _F3_Y = ROT_Y_V + 3.0;  _F3_H = 1.0
+        _W_CONT = ROT_W_V * 0.55;  _W_MAT = ROT_W_V * 0.45
+        for _xf, _wf, _lf, _vf in [
+            (ROT_X_V,          _W_CONT, _lbl_cont, _cont_txt),
+            (ROT_X_V+_W_CONT,  _W_MAT,  _lbl_mat,  _mat_txt),
+        ]:
+            msp.add_lwpolyline(
+                [(_xf,_F3_Y),(_xf+_wf,_F3_Y),(_xf+_wf,_F3_Y+_F3_H),(_xf,_F3_Y+_F3_H),(_xf,_F3_Y)],
+                dxfattribs={'layer':'ROTULO'})
+            msp.add_text(_lf, dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.13,
+                'insert':(_xf+0.08, _F3_Y+_F3_H-0.18),'color':8})
+            msp.add_text(_vf, dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.24,
+                'insert':(_xf+_wf/2, _F3_Y+0.30),
+                'align_point':(_xf+_wf/2, _F3_Y+0.30),'halign':1,'valign':2})
+        # Fila 2: NORMA | REFERENCIA STD | N.PLANO | ESCALA | REV.
+        _F2_Y = ROT_Y_V + 2.0;  _F2_H = 1.0
+        _F2_cols = [
+            (ROT_X_V,                  ROT_W_V*0.18, "NORMA",     norma_sel[:14]),
+            (ROT_X_V+ROT_W_V*0.18,    ROT_W_V*0.24, "REF. PLANO",_std_ref[:18]),
+            (ROT_X_V+ROT_W_V*0.42,    ROT_W_V*0.18, _lbl_plano,  dxf_plano),
+            (ROT_X_V+ROT_W_V*0.60,    ROT_W_V*0.18, _lbl_esc,    ESCALA_LBL_V),
+            (ROT_X_V+ROT_W_V*0.78,    ROT_W_V*0.12, "HOJA",      "1/1"),
+            (ROT_X_V+ROT_W_V*0.90,    ROT_W_V*0.10, _lbl_rev_num,"0"),
+        ]
+        for _xf, _wf, _lf, _vf in _F2_cols:
+            msp.add_lwpolyline(
+                [(_xf,_F2_Y),(_xf+_wf,_F2_Y),(_xf+_wf,_F2_Y+_F2_H),(_xf,_F2_Y+_F2_H),(_xf,_F2_Y)],
+                dxfattribs={'layer':'ROTULO'})
+            msp.add_text(_lf, dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.13,
+                'insert':(_xf+0.07, _F2_Y+_F2_H-0.18),'color':8})
+            msp.add_text(_vf, dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.22,
+                'insert':(_xf+_wf/2, _F2_Y+0.28),
+                'align_point':(_xf+_wf/2, _F2_Y+0.28),'halign':1,'valign':2})
+        # Fila 1 (inferior): ELABORÓ | REVISÓ | APROBÓ | FECHA | PAPEL | ACERO | CONC.
+        _F1_Y = ROT_Y_V;  _F1_H = 2.0
+        _F1_cols = [
+            (ROT_X_V,               ROT_W_V*0.17, _lbl_elab, dxf_elaboro),
+            (ROT_X_V+ROT_W_V*0.17, ROT_W_V*0.17, _lbl_rev,  dxf_reviso),
+            (ROT_X_V+ROT_W_V*0.34, ROT_W_V*0.17, _lbl_apr,  dxf_aprobo),
+            (ROT_X_V+ROT_W_V*0.51, ROT_W_V*0.13, _lbl_fecha,_dt_v.now().strftime("%d/%m/%Y")),
+            (ROT_X_V+ROT_W_V*0.64, ROT_W_V*0.12, "PAPEL",   PAPEL_LBL_V),
+            (ROT_X_V+ROT_W_V*0.76, ROT_W_V*0.12, "ACERO kg",f"{tot_acero_v:.1f}"),
+            (ROT_X_V+ROT_W_V*0.88, ROT_W_V*0.12, "CONC. m3",f"{_vol_c_v:.3f}"),
+        ]
+        for _xf, _wf, _lf, _vf in _F1_cols:
+            msp.add_lwpolyline(
+                [(_xf,_F1_Y),(_xf+_wf,_F1_Y),(_xf+_wf,_F1_Y+_F1_H),(_xf,_F1_Y+_F1_H),(_xf,_F1_Y)],
+                dxfattribs={'layer':'ROTULO'})
+            msp.add_text(_lf, dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.14,
+                'insert':(_xf+0.08, _F1_Y+_F1_H-0.22),'color':8})
+            msp.add_text(_vf, dxfattribs={'layer':'TEXTO','style':'ROMANS','height':0.28,
+                'insert':(_xf+_wf/2, _F1_Y+0.70),
+                'align_point':(_xf+_wf/2, _F1_Y+0.70),'halign':1,'valign':2})
+                # Linea sobre rotulo
         msp.add_line(
             (MARGEN_V, ROT_H_V+MARGEN_V),
             (ANCHO_V-MARGEN_V, ROT_H_V+MARGEN_V),
@@ -4680,8 +5553,19 @@ if modulo_sel == " Diseño Sísmico Integral y Plano DXF (Viga DMO / DES)":
         _os_v.unlink(tmp_path_v)
 
         nombre_dxf_v = f"Viga_{tipo_sec_d}_{B_cm:.0f}x{H_cm:.0f}_{PAPEL_LBL_V.replace(' ','_')}.dxf"
+
+        # ── Tabla de cantidades visible ───────────────────────────────────────
+        st.markdown("---")
+        st.subheader(_t("Cuantificacion de Materiales", "Bill of Materials"))
+        _qc1, _qc2, _qc3, _qc4 = st.columns(4)
+        _qc1.metric(_t("Acero total (kg)", "Total Steel (kg)"),   f"{tot_acero_v:.1f}")
+        _qc2.metric(_t("Concreto (m3)",    "Concrete (m3)"),      f"{_vol_c_v:.3f}")
+        _qc3.metric(_t("Encofrado (m2)",   "Formwork (m2)"),
+                    f"{2*(B_cm/100 + H_cm/100)*L_cm_d/100:.2f}")
+        _qc4.metric(_t("Estribos totales", "Total Stirrups"),     f"{total_est_d}")
+        st.markdown("---")
         st.download_button(
-            label=_t("Descargar DXF ICONTEC - Viga", "Download DXF ICONTEC - Beam"),
+            label=_t(f"Descargar DXF {_std_short} — Viga", "Download DXF ICONTEC - Beam"),
             data=dxf_bytes_v, file_name=nombre_dxf_v, mime="application/dxf",
             key="dxf_viga_dl")
 
@@ -4872,6 +5756,8 @@ if modulo_sel == " Cuadro de Mando General":
             st.download_button("Exportar Historial CSV", data=csv_hist,
                                file_name=f"historial_disenos_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                                mime="text/csv")
+
+        _save_vc()
         with col_exp2:
             if st.button("Limpiar Historial", type="secondary"):
                 st.session_state.historial_disenos = []

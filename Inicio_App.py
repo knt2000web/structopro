@@ -436,6 +436,7 @@ p_metal  = st.Page("pages/18_Estructuras_Metalicas.py",   title="Estructuras Met
 # Presupuesto
 p_calc  = st.Page("pages/06_Calculadora_de_Materiales.py", title="Calculadora Materiales", icon=":material/calculate:")
 p_apu   = st.Page("pages/05_APU_Mercado.py",               title="APU Mercado",            icon=":material/payments:")
+p_apu_pro = st.Page("pages/05_1_Presupuesto_APU.py",       title="Presupuesto Pro",        icon=":material/request_quote:")
 
 # Análisis
 p_a2d   = st.Page("pages/21_Analisis_Estructural_2D.py", title="Análisis 2D",         icon=":material/polyline:")
@@ -454,7 +455,7 @@ all_pages = [
     p_zap, p_pil, p_dad, p_mcont,
     p_sismo, p_viento, p_irreg,
     p_mamp_e, p_mamp_m, p_placa, p_konte, p_mad, p_metal,
-    p_calc, p_apu,
+    p_calc, p_apu, p_apu_pro,
     p_a2d, p_a3d, p_gen3d, p_res, p_util,
     p_foto, p_bimet,
 ]
@@ -547,6 +548,9 @@ with st.sidebar:
 
     with st.expander("Analisis & Utilidades", expanded=False):
         menu_container_analysis = st.container()
+
+    with st.expander("💼 Gestión & ERP de Obra", expanded=False):
+        menu_container_gestion = st.container()
 
     # ── PROYECTO ──────────────────────────────────────────────────
     st.markdown("---")
@@ -660,12 +664,14 @@ with menu_container_mamp:
         _nav_btn(p, menu_container_mamp, curr_page)
 
 with menu_container_budget:
-    for p in [p_calc, p_apu]:
+    for p in [p_calc, p_apu, p_apu_pro]:
         _nav_btn(p, menu_container_budget, curr_page)
 
 with menu_container_analysis:
     for p in [p_a2d, p_a3d, p_gen3d, p_res, p_util]:
         _nav_btn(p, menu_container_analysis, curr_page)
 
-
+with menu_container_gestion:
+    for p in [p_foto, p_bimet]:
+        _nav_btn(p, menu_container_gestion, curr_page)
 curr_page.run()
