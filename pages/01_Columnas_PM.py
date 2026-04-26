@@ -3220,6 +3220,20 @@ with tab3:
     
     with st.expander(_t("Presupuesto APU", "APU Budget"), expanded=False):
         st.markdown(_t("Ingrese precios unitarios para calcular el costo total.", "Enter unit prices to calculate total cost."))
+        # ── Jornal actualizado desde SMLMV oficial ──
+        try:
+            import sys as _sys2, os as _os2
+            if "utils" not in _sys2.path: _sys2.path.append("utils")
+            from utils.smlmv_colombia import obtener_salario_minimo
+            import datetime as _dt_smlmv
+            anio_actual = _dt_smlmv.datetime.now().year
+            _, smlmv = obtener_salario_minimo(anio_actual)
+            # Jornal con factor prestacional civil aprox (SMLMV * 1.7 / 30)
+            jornal_base = smlmv * 1.7 / 30
+            jornal_oficial = float(round(jornal_base / 1000) * 1000)  # Redondear a miles
+        except Exception:
+            jornal_oficial = 70000.0
+
         with st.form(key="col_apu_form"):
             if "col_apu_moneda" not in st.session_state: st.session_state["col_apu_moneda"] = "COP"
             moneda = st.text_input(_t("Moneda", "Currency"), value=st.session_state["col_apu_moneda"])
@@ -3239,7 +3253,7 @@ with tab3:
                 precio_agua = st.number_input(_t("Precio agua (m³)", "Water price /m³"), value=st.session_state["col_apu_agua"], step=500.0)
                 precio_encofrado = st.number_input(_t("Precio encofrado (m²)", "Formwork price /m²"), value=st.session_state["col_apu_encofrado"], step=2000.0)
             with col_apu2:
-                if "col_apu_mo" not in st.session_state: st.session_state["col_apu_mo"] = 70000.0
+                if "col_apu_mo" not in st.session_state: st.session_state["col_apu_mo"] = jornal_oficial
                 if "col_apu_aui" not in st.session_state: st.session_state["col_apu_aui"] = 30.0
                 
                 precio_mo = st.number_input(_t("Costo mano de obra (día)", "Labor cost per day"), value=st.session_state["col_apu_mo"], step=5000.0)
