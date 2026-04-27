@@ -647,6 +647,146 @@ def draw_stirrup(b_cm, h_cm, hook_len_cm, bar_diam_mm, bar_name=None):
                  fontsize=9, fontweight='bold', color='white')
     return fig
 
+
+def draw_stirrup_with_ties(b_cm, h_cm, hook_len_cm, bar_diam_mm,
+                           n_ties_x=0, n_ties_y=0,
+                           nivel_sismico_str="DES", bar_name=None,
+                           bar_coords=None):
+    """Estribo perimetral + flejes NSR-10 C.21.6.4.2.
+    bar_coords: lista [(x,y),...] en cm de todas las varillas.
+    Si supera 15 cm entre varillas no arriostradas genera fleje automático.
+    """
+    import math as _m, numpy as _np
+    label   = bar_name if bar_name else _bar_label(bar_diam_mm)
+    _is_des = "DES" in nivel_sismico_str.upper() or "ESPECIAL" in nivel_sismico_str.upper()
+    _is_dmo = "DMO" in nivel_sismico_str.upper() or "MODERADA" in nivel_sismico_str.upper()
+    _ang1   = 135 if (_is_des or _is_dmo) else 90
+    MAX_LIB = 15.0   # cm — NSR-10 C.21.6.4.2 / ACI 318-19 §25.7.2.3
+
+    fig, ax = plt.subplots(figsize=(max(5, b_cm/10), max(4, h_cm/10)))
+    fig.patch.set_facecolor('#1e1e2e')
+    for _a in fig.get_axes():
+        _a.set_facecolor('#14142a'); _a.tick_params(colors='#cdd6f4')
+        _a.xaxis.label.set_color('#cdd6f4'); _a.yaxis.label.set_color('#cdd6f4')
+    ax.set_aspect('equal')
+
+    r  = max(min(bar_diam_mm/10.0*3, b_cm*0.08, h_cm*0.08), 0.3)
+    hk = hook_len_cm
+
+    def _arc_pts(cx, cy, rad, a0, a1, n=10):
+        angs = _np.linspace(_m.radians(a0), _m.radians(a1), n)
+        return [(cx+rad*_m.cos(a), cy+rad*_m.sin(a)) for a in angs]
+
+    # ── Estribo perimetral ───────────────────────────────────────────────────
+    pts = []
+    pts.append((0, h_cm-r)); pts += _arc_pts(r, r, r, 180, 270)
+    pts.append((b_cm-r, 0)); pts += _arc_pts(b_cm-r, r, r, 270, 360)
+    pts.append((b_cm, h_cm-r)); pts += _arc_pts(b_cm-r, h_cm-r, r, 0, 90)
+    pts.append((r, h_cm)); pts += _arc_pts(r, h_cm-r, r, 90, 180)
+    pts.append((0, h_cm-r))
+    ax.plot([p[0] for p in pts], [p[1] for p in pts],
+            color='#00d4ff', linewidth=2.5, zorder=3)
+    # Ganchos 135° estribo perimetral
+    _dk = hk * 0.707
+    ax.annotate("", xy=(0+_dk, h_cm-r-_dk), xytext=(0, h_cm-r),
+                arrowprops=dict(arrowstyle="-", color='#00d4ff', lw=2.5))
+    ax.annotate("", xy=(r+_dk, h_cm+_dk),   xytext=(r, h_cm),
+                arrowprops=dict(arrowstyle="-", color='#00d4ff', lw=2.5))
+
+    # ── Flejes dinámicos basados en coordenadas de varillas ──────────────────
+    _tie_drawn = 0
+    if bar_coords and len(bar_coords) >= 2:
+        # Agrupar por fila horizontal (±2 mm tolerancia)
+        _rows = {}
+        for (xb, yb) in bar_coords:
+            _ky = round(yb / 0.2) * 0.2
+            _rows.setdefault(_ky, []).append(float(xb))
+        # Flejes horizontales (dir-X): une barras de la misma fila que > 15 cm
+        for _yrow, _xs in _rows.items():
+            _xs = sorted(set(_xs))
+            for _k in range(len(_xs)-1):
+                if _xs[_k+1] - _xs[_k] > MAX_LIB:
+                    x1, x2 = _xs[_k], _xs[_k+1]
+                    ax.plot([x1, x2], [_yrow, _yrow],
+                            color='#ff9500', linewidth=2, zorder=4,
+                            label='Fleje X' if _tie_drawn == 0 else "")
+                    # Ganchos 135° alternados hacia el núcleo
+                    _sg = 1 if (_tie_drawn % 2 == 0) else -1
+                    _ak_i = 180 - _sg*45   # izquierdo
+                    _ak_d = -_sg*45         # derecho
+                    for (_xp, _ang) in [(x1, _ak_i), (x2, _ak_d)]:
+                        ax.annotate("",
+                            xy=(_xp + hk*_m.cos(_m.radians(_ang)),
+                                _yrow + hk*_m.sin(_m.radians(_ang))),
+                            xytext=(_xp, _yrow),
+                            arrowprops=dict(arrowstyle="-", color='#ff9500', lw=1.8))
+                    _tie_drawn += 1
+        # Flejes verticales (dir-Y): columnas con separación > 15 cm
+        _cols = {}
+        for (xb, yb) in bar_coords:
+            _kx = round(xb / 0.2) * 0.2
+            _cols.setdefault(_kx, []).append(float(yb))
+        for _xcol, _ys in _cols.items():
+            _ys = sorted(set(_ys))
+            for _k in range(len(_ys)-1):
+                if _ys[_k+1] - _ys[_k] > MAX_LIB:
+                    y1, y2 = _ys[_k], _ys[_k+1]
+                    ax.plot([_xcol, _xcol], [y1, y2],
+                            color='#f0e040', linewidth=2, zorder=4,
+                            label='Fleje Y' if _tie_drawn == 1 else "")
+                    _sg = 1 if (_tie_drawn % 2 == 0) else -1
+                    for (_yp, _ang) in [(y1, -90+_sg*45), (y2, 90-_sg*45)]:
+                        ax.annotate("",
+                            xy=(_xcol + hk*_m.cos(_m.radians(_ang)),
+                                _yp  + hk*_m.sin(_m.radians(_ang))),
+                            xytext=(_xcol, _yp),
+                            arrowprops=dict(arrowstyle="-", color='#f0e040', lw=1.8))
+                    _tie_drawn += 1
+    else:
+        # Fallback uniforme cuando no vienen coordenadas
+        for _i in range(1, n_ties_x+1):
+            _yf = h_cm * _i / (n_ties_x+1)
+            ax.plot([0, b_cm], [_yf, _yf], color='#ff9500', linewidth=2, zorder=4,
+                    label='Fleje X' if _i==1 else "")
+            _sg = 1 if _i%2==1 else -1
+            for (_xp, _ang) in [(0, 180-_sg*45), (b_cm, -_sg*45)]:
+                ax.annotate("", xy=(_xp+hk*_m.cos(_m.radians(_ang)),
+                                    _yf+hk*_m.sin(_m.radians(_ang))),
+                            xytext=(_xp, _yf),
+                            arrowprops=dict(arrowstyle="-", color='#ff9500', lw=1.8))
+        for _j in range(1, n_ties_y+1):
+            _xf = b_cm * _j / (n_ties_y+1)
+            ax.plot([_xf, _xf], [0, h_cm], color='#f0e040', linewidth=2, zorder=4,
+                    label='Fleje Y' if _j==1 else "")
+            _sg = 1 if _j%2==1 else -1
+            for (_yp, _ang) in [(0, -90+_sg*45), (h_cm, 90-_sg*45)]:
+                ax.annotate("", xy=(_xf+hk*_m.cos(_m.radians(_ang)),
+                                    _yp+hk*_m.sin(_m.radians(_ang))),
+                            xytext=(_xf, _yp),
+                            arrowprops=dict(arrowstyle="-", color='#f0e040', lw=1.8))
+
+    # ── Cotas dinámicas: b_int = b_cm, h_int = h_cm (ya vienen como interiores) ──
+    ax.annotate(f"← {b_cm:.1f} cm →", xy=(b_cm/2, -hk*0.7), ha='center',
+                fontsize=9, fontweight='bold', color='#cdd6f4')
+    ax.annotate(f"↓ {h_cm:.1f} cm ↑", xy=(-hk*0.6, h_cm/2), ha='right', va='center',
+                fontsize=9, fontweight='bold', color='#cdd6f4',
+                rotation=90, rotation_mode='anchor')
+    _gancho_str = f"Gancho {_ang1}°"
+    _n_tx = _tie_drawn
+    ax.set_title(
+        f"Sección Transversal — Estribos + Flejes | {label}\n"
+        f"{_gancho_str} ({nivel_sismico_str}) | {_n_tx} flete(s) NSR-10 C.21.6.4.2",
+        fontsize=9, fontweight='bold', color='white')
+    ax.set_xlim(-hk*0.8, b_cm+hk*1.5)
+    ax.set_ylim(-hk*1.2, h_cm+hk*1.5)
+    ax.axis('off')
+    handles, labels_l = ax.get_legend_handles_labels()
+    if handles:
+        ax.legend(handles, labels_l, fontsize=8, loc='upper right',
+                  facecolor='#1e1e2e', labelcolor='white', edgecolor='#444')
+    return fig
+
+
 def draw_crosstie(len_cm, hook_len_cm, bar_diam_mm, bar_name=None):
     label = bar_name if bar_name else _bar_label(bar_diam_mm)
     fig, ax = plt.subplots(figsize=(max(6, len_cm/15), 2))
@@ -1713,6 +1853,36 @@ if not es_circular:
     Ash_req = max(Ash_req_1, Ash_req_2)
 
     ash_ok = Ash_prov >= Ash_req
+
+    # ── AUTO CROSS-TIES NSR-10 C.21.6.4.4 / ACI 318-19 Table 18.7.5.4 ──────
+    _n_flejes_auto  = 0
+    _Ash_prov_auto  = Ash_prov
+    _tipo_flete     = ""
+    if not ash_ok and not es_circular and stirrup_area > 0:
+        _n_ramas_min    = math.ceil(Ash_req / stirrup_area)
+        _flejes_min     = max(0, _n_ramas_min - 2)
+        _n_flejes_auto  = max(0, _flejes_min - max(num_flejes_x, num_flejes_y))
+        num_flejes_x    = max(num_flejes_x, _flejes_min)
+        num_flejes_y    = max(num_flejes_y, _flejes_min)
+        ramas_x         = 2 + num_flejes_y
+        ramas_y         = 2 + num_flejes_x
+        Ash_prov_x      = ramas_x * stirrup_area
+        Ash_prov_y      = ramas_y * stirrup_area
+        Ash_prov        = min(Ash_prov_x, Ash_prov_y)
+        _Ash_prov_auto  = Ash_prov
+        ash_ok          = Ash_prov >= Ash_req
+        if es_des:
+            _tipo_flete = _t(
+                "Gancho 135°-135° ambos extremos (NSR-10 C.21.6.4.2a — DES)",
+                "135°-135° hooks both ends (NSR-10 C.21.6.4.2a — DES)")
+        elif es_dmo:
+            _tipo_flete = _t(
+                "Gancho 135°-90° alternados en capas contiguas (NSR-10 C.21.5.3.3 — DMO)",
+                "Alternating 135°-90° hooks in adjacent layers (NSR-10 C.21.5.3.3 — DMO)")
+        else:
+            _tipo_flete = _t(
+                "Gancho 90°-90° permitido (NSR-10 DMI / ACI 318)",
+                "90°-90° hook permitted (NSR-10 DMI / ACI 318)")
     
     n_est_por_Lo = math.ceil(Lo_conf / s_conf)
     n_estribos_zona = n_est_por_Lo * 2
@@ -1769,7 +1939,7 @@ else:
 # CANTIDADES DE MATERIALES
 # =============================================================================
 vol_concreto_m3 = (Ag / 10000) * (L_col / 100) if not es_circular else (math.pi * (D/2)**2 / 10000) * (L_col / 100)
-peso_acero_long_kg = Ast * (L_col * 10) * 7.85e-3
+peso_acero_long_kg = Ast * L_col * 7.85e-3      # Ast(cm²)×L(cm)×ρ(g/cm³)/1000→kg
 
 if not es_circular:
     peso_unit_estribo = (perim_estribo / 100.0) * (stirrup_area * 100) * 7.85e-3
@@ -1782,29 +1952,160 @@ peso_total_acero_kg = peso_acero_long_kg + peso_total_estribos_kg
 # =============================================================================
 # GRÁFICO 3D BIAXIAL
 # =============================================================================
-def create_biaxial_3d_plot(cap_x, cap_y, Pu, Mux, Muy, phi_factor_eval):
-    Mx_vals = np.linspace(0, max(cap_x['phi_M_n']) * 1.1, 30)
-    My_vals = np.linspace(0, max(cap_y['phi_M_n']) * 1.1, 30)
-    Mx_grid, My_grid = np.meshgrid(Mx_vals, My_vals)
-    P_grid = np.zeros_like(Mx_grid)
-    
-    for i in range(len(Mx_vals)):
-        for j in range(len(My_vals)):
-            res = biaxial_bresler(Pu, Mx_grid[i,j], My_grid[i,j], cap_x, cap_y, cap_x['Po'], phi_factor_eval)
-            P_grid[i,j] = res['phi_Pni'] if res['phi_Pni'] > 0 else 0
-    
-    fig = go.Figure()
-    fig.add_trace(go.Surface(x=Mx_grid, y=My_grid, z=P_grid, colorscale='Viridis', opacity=0.85,
-                             name='Superficie de Interacción', showscale=True,
-                             colorbar=dict(title=f"φPn [{unidad_fuerza}]")))
-    fig.add_trace(go.Scatter3d(x=[Mux], y=[Muy], z=[Pu], mode='markers',
-                               marker=dict(size=8, color='red', symbol='circle'),
-                               name=f'Punto de Diseño (Mux={Mux:.1f}, Muy={Muy:.1f}, Pu={Pu:.1f})'))
-    fig.update_layout(title=_t("Superficie de Interacción Biaxial (Método de Bresler)", "Biaxial Interaction Surface (Bresler Method)"),
-                      scene=dict(xaxis_title=f"Mux [{unidad_mom}]", yaxis_title=f"Muy [{unidad_mom}]",
-                                 zaxis_title=f"φPn [{unidad_fuerza}]", aspectmode='manual', aspectratio=dict(x=1, y=1, z=0.8)),
-                      height=600, margin=dict(l=0, r=0, b=0, t=40))
+
+# =============================================================================
+#  gen_df_cap_3d — Nube de puntos 3D de la superficie de interacción
+#  Método: interpolación elíptica entre cap_x y cap_y  (~0.01 s)
+# =============================================================================
+def gen_df_cap_3d(cap_x, cap_y, n_theta=24, n_P=80):
+    """Superficie P-M 3D por barrido radial θ=0→360°.
+    Genera columnas nominales (P,Mx,My) Y de diseño (phi_Pn,phi_Mx,phi_My)
+    para que plot_pm_3d use ambas capas desde el mismo DataFrame.
+    """
+    from scipy.interpolate import interp1d
+
+    def _arr(d, *keys):
+        for k in keys:
+            v = d.get(k)
+            if v is not None and len(v) > 0:
+                return np.array(v)
+        return np.array([])
+
+    Px   = _arr(cap_x, 'P_n',    'phi_P_n', 'phi_Pn')
+    Mx_  = _arr(cap_x, 'M_n',    'phi_M_n', 'phi_Mn')
+    Py   = _arr(cap_y, 'P_n',    'phi_P_n', 'phi_Pn')
+    My_  = _arr(cap_y, 'M_n',    'phi_M_n', 'phi_Mn')
+    phiPx  = _arr(cap_x, 'phi_P_n', 'phi_Pn', 'P_n')
+    phiMx_ = _arr(cap_x, 'phi_M_n', 'phi_Mn', 'M_n')
+    phiPy  = _arr(cap_y, 'phi_P_n', 'phi_Pn', 'P_n')
+    phiMy_ = _arr(cap_y, 'phi_M_n', 'phi_Mn', 'M_n')
+
+    if len(Px) == 0 or len(Py) == 0:
+        return pd.DataFrame({'P':[],'Mx':[],'My':[],'phi_Pn':[],'phi_Mx':[],'phi_My':[]})
+
+    P_min = min(Px.min(), Py.min()); P_max = max(Px.max(), Py.max())
+    P_grid = np.linspace(P_min, P_max, n_P)
+
+    fx   = interp1d(Px,    Mx_,    kind='linear', fill_value=0.0, bounds_error=False)
+    fy   = interp1d(Py,    My_,    kind='linear', fill_value=0.0, bounds_error=False)
+    pfx  = interp1d(phiPx, phiMx_, kind='linear', fill_value=0.0, bounds_error=False)
+    pfy  = interp1d(phiPy, phiMy_, kind='linear', fill_value=0.0, bounds_error=False)
+
+    Mxc  = np.maximum(fx(P_grid),  0.0)
+    Myc  = np.maximum(fy(P_grid),  0.0)
+    pMxc = np.maximum(pfx(P_grid), 0.0)
+    pMyc = np.maximum(pfy(P_grid), 0.0)
+
+    rows = []
+    for theta in np.linspace(0, 2*np.pi, n_theta, endpoint=False):
+        ct = np.cos(theta);  st = np.sin(theta)
+        ca = abs(ct);         sa = abs(st)
+        for i, P in enumerate(P_grid):
+            d  = ca**2/(Mxc[i] +1e-9)**2 + sa**2/(Myc[i] +1e-9)**2
+            Mn = 1.0/np.sqrt(d +1e-18) if d > 0 else 0.0
+            dp = ca**2/(pMxc[i]+1e-9)**2 + sa**2/(pMyc[i]+1e-9)**2
+            Mp = 1.0/np.sqrt(dp+1e-18) if dp > 0 else 0.0
+            if Mn > 1e-3:
+                rows.append({'P': float(P), 'Mx': Mn*ct, 'My': Mn*st,
+                             'phi_Pn': float(P), 'phi_Mx': Mp*ct, 'phi_My': Mp*st})
+    for Pp in [P_max, P_min]:
+        rows.append({'P':float(Pp),'Mx':0.,'My':0.,'phi_Pn':float(Pp),'phi_Mx':0.,'phi_My':0.})
+    return pd.DataFrame(rows)
+
+
+def plot_pm_3d(df_cap_3d, df_combos, factor_fuerza=1.0,
+               unidad_fuerza='kN', unidad_mom='kN·m'):
+    """Diagrama P-M Biaxial 3D — calidad comercial (estilo ETABS/CSiCol).
+    Escala consistente: nominal vs diseñoφ vienen del mismo df_cap_3d.
+    """
+    import plotly.graph_objects as _go3
+
+    fig = _go3.Figure()
+    _L  = dict(ambient=0.5, diffuse=0.8, fresnel=0.2, specular=0.2, roughness=0.5)
+    _FF = factor_fuerza
+
+    # ── Superficie Nominal (gris translúcido) ───────────────────────────────────
+    fig.add_trace(_go3.Mesh3d(
+        x=df_cap_3d['Mx'] * _FF,
+        y=df_cap_3d['My'] * _FF,
+        z=df_cap_3d['P']  * _FF,
+        alphahull=0, opacity=0.12, color='#a0aab5',
+        flatshading=False, lighting=_L,
+        name='Nominal (Pn, Mn)', hoverinfo='skip', showlegend=True,
+    ))
+
+    # ── Superficie Diseño φ (usa phi_Mx/phi_My/phi_Pn del df) ───────────────────
+    _hp = 'phi_Mx' in df_cap_3d.columns and 'phi_My' in df_cap_3d.columns
+    fig.add_trace(_go3.Mesh3d(
+        x=df_cap_3d['phi_Mx' if _hp else 'Mx'] * _FF,
+        y=df_cap_3d['phi_My' if _hp else 'My'] * _FF,
+        z=df_cap_3d['phi_Pn' if _hp else 'P']  * _FF,
+        alphahull=0, opacity=0.55, color='#2ecc71',
+        flatshading=False, lighting=_L,
+        name='φPn, φMn — Diseño',
+        hovertemplate=(
+            '<b>φPn:</b> %{z:.1f} ' + unidad_fuerza + '<br>'
+            '<b>φMnx:</b> %{x:.1f} ' + unidad_mom + '<br>'
+            '<b>φMny:</b> %{y:.1f} ' + unidad_mom + '<extra></extra>'
+        ),
+        contour=dict(show=True, color='rgba(255,255,255,0.55)', width=2),
+        showlegend=True,
+    ))
+
+    # ── Combinaciones de carga — MISMA escala nominal ─────────────────────────
+    if df_combos is not None and len(df_combos) > 0:
+        _cp  = next((c for c in ['Pu','P','pu']    if c in df_combos.columns), None)
+        _cmx = next((c for c in ['Mux','Mx','mux'] if c in df_combos.columns), None)
+        _cmy = next((c for c in ['Muy','My','muy'] if c in df_combos.columns), None)
+        _clb = next((c for c in ['Combo','combo','Combinacion'] if c in df_combos.columns), None)
+        if _cp and _cmx and _cmy:
+            _P  = df_combos[_cp]  * _FF
+            _Mx = df_combos[_cmx] * _FF
+            _My = df_combos[_cmy] * _FF
+            _lb = df_combos[_clb].tolist() if _clb else ['']*len(_P)
+            fig.add_trace(_go3.Scatter3d(
+                x=_Mx, y=_My, z=_P,
+                mode='markers+text',
+                marker=dict(size=7, color='#e74c3c', symbol='circle',
+                            line=dict(color='white', width=1.5)),
+                text=_lb, textposition='top center',
+                textfont=dict(size=10, color='white'),
+                name='Cargas (Pu, Mu)',
+                hovertemplate='<b>%{text}</b><br>Pu: %{z:.1f}<br>Mx: %{x:.1f}<br>My: %{y:.1f}<extra></extra>',
+            ))
+        _pmax = float(df_cap_3d['P'].max()) * _FF * 1.1
+        _pmin = float(df_cap_3d['P'].min()) * _FF * 1.1
+        fig.add_trace(_go3.Scatter3d(
+            x=[0,0], y=[0,0], z=[_pmin, _pmax],
+            mode='lines',
+            line=dict(color='rgba(255,255,255,0.45)', width=2, dash='dash'),
+            name='Eje Neutro (0,0)', hoverinfo='skip',
+        ))
+
+    # ── Escenario CAD limpio ─────────────────────────────────────────────────
+    _ax = dict(showbackground=False,
+               gridcolor='rgba(255,255,255,0.1)',
+               zerolinecolor='rgba(255,255,255,0.55)', zerolinewidth=2,
+               title_font=dict(size=12, color='#bdc3c7'),
+               tickfont=dict(size=10, color='#7f8c8d'))
+    fig.update_layout(
+        scene=dict(
+            xaxis_title=f'Mx [{unidad_mom}]',
+            yaxis_title=f'My [{unidad_mom}]',
+            zaxis_title=f'P [{unidad_fuerza}]',
+            xaxis=_ax, yaxis=_ax, zaxis=_ax,
+            aspectmode='cube',
+            camera=dict(eye=dict(x=1.5, y=1.5, z=0.8)),
+            bgcolor='rgba(0,0,0,0)',
+        ),
+        paper_bgcolor='#1e1e2e', plot_bgcolor='#1e1e2e',
+        margin=dict(l=0, r=0, b=0, t=30),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02,
+                    xanchor='right', x=1, font=dict(color='white')),
+        hovermode='closest',
+    )
     return fig
+
 
 def create_pm_2d_plot(cap_x, Pu, Mu, unidad_mom, unidad_fuerza):
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -1848,7 +2149,17 @@ fig_pm_2d = create_pm_2d_plot(cap_x, Pu_input, Mux_input, unidad_mom, unidad_fue
 pm_2d_img = io.BytesIO()
 fig_pm_2d.savefig(pm_2d_img, facecolor='white', edgecolor='none', format='png', dpi=150, bbox_inches='tight')
 pm_2d_img.seek(0)
-fig_3d = create_biaxial_3d_plot(cap_x, cap_y, Pu_input, Mux_input, Muy_input, phi_factor)
+# Generar superficie 3D — elipse entre cap_x y cap_y (36 ángulos × 80 niveles ≈ 0.01 s)
+df_cap_3d = gen_df_cap_3d(cap_x, cap_y, n_theta=36, n_P=80)
+# Figura tab1: punto actual (Pu, Mux, Muy) como única carga
+_df_single = pd.DataFrame({
+    'Combinacion': [_t('Punto actual', 'Current point')],
+    'Pu':  [Pu_input  / factor_fuerza],
+    'Mux': [Mux_input / factor_fuerza],
+    'Muy': [Muy_input / factor_fuerza],
+})
+fig_3d = plot_pm_3d(df_cap_3d, _df_single, factor_fuerza,
+                    unidad_fuerza=unidad_fuerza, unidad_mom=unidad_mom)
 
 try:
     pm_3d_img = io.BytesIO()
@@ -2066,6 +2377,38 @@ tab0, tab1, tab2, tab2b, tab3, tab4 = st.tabs([
 
 with tab0:
     render_config_tab()
+    # ── VISTA EN VIVO ─────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader(_t("🧊 Vista en Vivo — Superficie Biaxial 3D + Verificación",
+                    "🧊 Live View — 3D Biaxial Surface + Verification"))
+    _ca_live, _cb_live = st.columns([1, 2])
+    with _ca_live:
+        st.metric(
+            label=_t("Ratio Pu / φPni", "Ratio Pu / φPni"),
+            value=f"{bresler['ratio']:.3f}",
+            delta=_t("✅ CUMPLE", "✅ PASS") if bresler['ok'] else _t("❌ NO CUMPLE", "❌ FAIL"),
+            delta_color="normal" if bresler['ok'] else "inverse",
+        )
+        st.metric(_t("φPni (Bresler)", "φPni (Bresler)"),
+                  f"{bresler['phi_Pni']:.1f} {unidad_fuerza}")
+        st.metric(_t("Pu aplicado", "Applied Pu"),
+                  f"{Pu_input:.1f} {unidad_fuerza}")
+        st.markdown("---")
+        if not es_circular:
+            if ash_ok:
+                st.success(f"✅ Ash OK\n{Ash_prov:.2f} ≥ {Ash_req:.2f} cm²")
+            else:
+                st.error(f"❌ Ash DÉFICIT\n{Ash_prov:.2f} < {Ash_req:.2f} cm²")
+                st.info(_t(
+                    f"Auto-solución: +{_n_flejes_auto} flejes/cara añadidos\nAsh_prov = {_Ash_prov_auto:.2f} cm²",
+                    f"Auto-fix: +{_n_flejes_auto} ties/face added\nAsh_prov = {_Ash_prov_auto:.2f} cm²",
+                ))
+        st.metric(_t("Esbeltez kL/r", "Slenderness kL/r"),
+                  f"{slenderness['kl_r']:.1f}",
+                  delta=slenderness['classification'],
+                  delta_color="normal" if slenderness['kl_r'] <= 22 else "inverse")
+    with _cb_live:
+        st.plotly_chart(fig_3d, use_container_width=True, key="fig_3d_live_tab0")
 
 with tab1:
     col1, col2 = st.columns([2, 1])
@@ -2073,8 +2416,16 @@ with tab1:
         st.subheader(_t("Diagrama P-M 2D (Eje X)", " P-M 2D Diagram (X-Axis)"))
         configurar_pdf_comercial(fig_pm_2d)
         st.pyplot(fig_pm_2d)
-        st.subheader(_t("Superficie de Interacción Biaxial 3D", "Biaxial Interaction Surface 3D"))
+        st.subheader(_t("🧊 Superficie de Interacción Biaxial 3D — Punto actual",
+                        "🧊 Biaxial 3D Interaction Surface — Current point"))
         st.plotly_chart(fig_3d, use_container_width=True)
+        st.caption(_t(
+            "▶ Arrastra para rotar · Scroll = zoom · Doble-clic = resetear. "
+            "Verde = envolvente φ · Gris = nominal. "
+            "Cambia b, h, ρ en el sidebar → diagrama en vivo.",
+            "▶ Drag to rotate · Scroll = zoom · Double-click = reset. "
+            "Green = design envelope φ · Grey = nominal. "
+            "Change b, h, ρ in sidebar → live updates."))
     with col2:
         st.subheader(_t("Verificación Biaxial (Bresler)", " Biaxial Verification (Bresler)"))
         st.markdown(f"""
@@ -2159,16 +2510,24 @@ with tab1:
             | **N° estribos + Crossties** | {n_estribos_total} juegos de ramas | C.21.3.5 | |
             """)
 
+            if _n_flejes_auto > 0:
+                st.success(
+                    f"✅ **Auto-solución aplicada:** Se añadieron **{_n_flejes_auto} flete(s)/cara** "
+                    f"para cumplir Ash_req = {Ash_req:.2f} cm².\n\n"
+                    f"- Ash provisto corregido: **{_Ash_prov_auto:.2f} cm²** ≥ {Ash_req:.2f} cm²\n"
+                    f"- Ramas efectivas: **{ramas_x} en X · {ramas_y} en Y**\n"
+                    f"- Tipo gancho: {_tipo_flete}"
+                )
             if not ash_ok:
                 ratio_ash = Ash_prov / Ash_req if Ash_req > 0 else 1.0
                 s_req1 = Ash_prov / (0.3 * bc * fc / fyt * (Ag/Ach - 1)) if (Ag/Ach - 1) > 0 else 999
                 s_req2 = Ash_prov * fyt / (0.09 * bc * fc)
                 s_correcto = min(s_req1, s_req2)
-                
-                if ratio_ash < 0.5:
-                    st.error(f" **Déficit crítico de estribos.** Para cumplir con las estribos actuales, usar separación $s \\le {s_correcto:.1f}$ cm o proponer más ramas.")
-                else:
-                    st.warning(f"Para cumplir Ash con los estribos actuales → reducir separación a $s \\le {s_correcto:.1f}$ cm.")
+                st.error(
+                    f"❌ **Déficit persistente** aún con {num_flejes_x} flejes/cara.\n\n"
+                    f"Opciones: reducir separación a **s ≤ {s_correcto:.1f} cm**, "
+                    f"aumentar diámetro de estribo, o aumentar b/h de la sección."
+                )
         else:
             st.markdown(f"""
             | Parámetro | Valor | Requerido | Estado |
@@ -2237,22 +2596,106 @@ with tab2:
                         showlegend=False, name='Barra lat.'
                     ))
 
-    #  ESTRIBOS 3D 
+    #  ESTRIBOS + FLEJES EN CRUZ 3D 
     if not es_circular:
         paso_3d = s_conf if (es_des or es_dmo) else s_basico
-        z_est = np.arange(0, L_col + paso_3d, paso_3d)
-        bw = b/2 - recub_cm
-        hw = h/2 - recub_cm
-        estr_x = [-bw, bw, bw, -bw, -bw]
-        estr_y = [-hw, -hw, hw, hw, -hw]
-        for ze in z_est:
+        z_est   = np.arange(0, L_col + paso_3d, paso_3d)
+        bw = b/2 - recub_cm    # semiancho eje estribo
+        hw = h/2 - recub_cm    # semialto  eje estribo
+        _lv = min(bw, hw) * 0.18  # longitud del gancho 135° en 3D
+        _estr_shown = False
+        _flet_shown = False
+        for _iz, ze in enumerate(z_est):
+            # ── Estribo perimetral (rectángulo redondeado simplificado) ────
+            _n_arc = 6
+            _r3 = min(bw, hw) * 0.12
+            _ex, _ey = [], []
+            for _seg, (_x0,_y0,_x1,_y1,_a0,_a1) in enumerate([
+                (-bw+_r3,-hw, bw-_r3,-hw, 180,270),
+                (bw-_r3,-hw, bw,-hw+_r3, 270,360),
+                (bw,-hw+_r3, bw, hw-_r3, None,None),
+                (bw-_r3,hw, -bw+_r3,hw, 0,90),
+                (-bw,hw-_r3,-bw,-hw+_r3, 90,180),
+            ]):
+                if _a0 is not None:
+                    _cxs = [_x0+(_x1-_x0)/2, _x0+(_x1-_x0)/2][0]
+                    _cys = [_y0+(_y1-_y0)/2, _y0+(_y1-_y0)/2][0]
+                    # esquina: centro del arco
+                    if _seg==0:   _cx,_cy = -bw+_r3, -hw+_r3
+                    elif _seg==1: _cx,_cy =  bw-_r3, -hw+_r3
+                    elif _seg==3: _cx,_cy =  bw-_r3,  hw-_r3
+                    elif _seg==4: _cx,_cy = -bw+_r3,  hw-_r3
+                    else:         _cx,_cy = 0,0
+                    for _k in range(_n_arc+1):
+                        _a = np.radians(_a0+(_a1-_a0)*_k/_n_arc)
+                        _ex.append(_cx + _r3*np.cos(_a))
+                        _ey.append(_cy + _r3*np.sin(_a))
+                else:
+                    _ex += [_x0,_x1]; _ey += [_y0,_y1]
+            _ex.append(_ex[0]); _ey.append(_ey[0])  # cerrar
+            # Ganchos 135° alternados (j%2)
+            _s45 = _lv * 0.707
+            if _iz % 2 == 0:
+                _hkx = [-bw, -bw+_s45];  _hky = [hw-_r3, hw-_r3+_s45]   # sup-izq
+            else:
+                _hkx = [ bw,  bw-_s45];  _hky = [-hw+_r3,-hw+_r3-_s45]  # inf-der (espejo)
             fig3d_col.add_trace(go.Scatter3d(
-                x=estr_x, y=estr_y,
-                z=[ze]*5,
-                mode='lines',
-                line=dict(color='#00d4ff', width=2),
-                showlegend=False, name='Estribo'
+                x=_ex+_hkx, y=_ey+_hky, z=[ze]*(len(_ex)+len(_hkx)),
+                mode='lines', line=dict(color='#00d4ff', width=2),
+                showlegend=not _estr_shown, name='Estribo perimetral',
+                legendgroup='estribo'
             ))
+            _estr_shown = True
+            # ── Flejes en X (paralelos al eje X, a lo largo de la altura h) ─
+            if num_flejes_x > 0:
+                esp_fx = (2*hw) / (num_flejes_x + 1)
+                for _nfx in range(1, num_flejes_x + 1):
+                    _yf = -hw + esp_fx * _nfx
+                    # gancho 135° en extremo izq → derecho → gancho 135° en extremo der
+                    _hk_ang = _s45 if _iz % 2 == 0 else -_s45
+                    _fx = [-bw, -bw+_s45,  None,  bw-_s45, bw]
+                    _fy = [_yf,  _yf+_hk_ang, None, _yf+_hk_ang, _yf]
+                    fig3d_col.add_trace(go.Scatter3d(
+                        x=[-bw, bw], y=[_yf, _yf], z=[ze, ze],
+                        mode='lines', line=dict(color='#ff9500', width=2.5),
+                        showlegend=not _flet_shown, name=f'Flete en X ({num_flejes_x})',
+                        legendgroup='flejeX'
+                    ))
+                    # ganchos visuales
+                    fig3d_col.add_trace(go.Scatter3d(
+                        x=[-bw,-bw+_s45], y=[_yf,_yf+_hk_ang], z=[ze,ze],
+                        mode='lines', line=dict(color='#ff9500', width=2.5),
+                        showlegend=False, legendgroup='flejeX'
+                    ))
+                    fig3d_col.add_trace(go.Scatter3d(
+                        x=[bw,bw-_s45], y=[_yf,_yf-_hk_ang], z=[ze,ze],
+                        mode='lines', line=dict(color='#ff9500', width=2.5),
+                        showlegend=False, legendgroup='flejeX'
+                    ))
+                    _flet_shown = True
+            # ── Flejes en Y (paralelos al eje Y, a lo largo del ancho b) ───
+            if num_flejes_y > 0:
+                esp_fy = (2*bw) / (num_flejes_y + 1)
+                for _nfy in range(1, num_flejes_y + 1):
+                    _xf = -bw + esp_fy * _nfy
+                    _hk_ang = _s45 if _iz % 2 == 0 else -_s45
+                    fig3d_col.add_trace(go.Scatter3d(
+                        x=[_xf, _xf], y=[-hw, hw], z=[ze, ze],
+                        mode='lines', line=dict(color='#f0e040', width=2.5),
+                        showlegend=not _flet_shown, name=f'Flete en Y ({num_flejes_y})',
+                        legendgroup='flejeY'
+                    ))
+                    fig3d_col.add_trace(go.Scatter3d(
+                        x=[_xf,_xf+_hk_ang], y=[-hw,-hw+_s45], z=[ze,ze],
+                        mode='lines', line=dict(color='#f0e040', width=2.5),
+                        showlegend=False, legendgroup='flejeY'
+                    ))
+                    fig3d_col.add_trace(go.Scatter3d(
+                        x=[_xf,_xf-_hk_ang], y=[hw,hw-_s45], z=[ze,ze],
+                        mode='lines', line=dict(color='#f0e040', width=2.5),
+                        showlegend=False, legendgroup='flejeY'
+                    ))
+                    _flet_shown = True
     else:
         rc_sp = D/2 - recub_cm
         theta_sp = np.linspace(0, 2*np.pi, 36)
@@ -2273,6 +2716,34 @@ with tab2:
     ar_x = (D / _dim_max) if es_circular else (b / _dim_max)
     ar_y = (D / _dim_max) if es_circular else (h / _dim_max)
     ar_z = L_col / _dim_max
+    # ── Zonas confinadas (Lo_conf) — cajas semitransparentes ─────────────────
+    if not es_circular:
+        _Lo = Lo_conf   # cm
+        _bw3 = b/2 - recub_cm
+        _hw3 = h/2 - recub_cm
+        for _z0_zona, _z1_zona, _color_zona in [
+            (0,     _Lo,          'rgba(255,100,0,0.15)'),   # base
+            (L_col-_Lo, L_col,    'rgba(255,100,0,0.15)'),   # tope
+        ]:
+            _xz = [-b/2, b/2, b/2, -b/2, -b/2, b/2,  b/2, -b/2]
+            _yz = [-h/2,-h/2, h/2,  h/2, -h/2,-h/2,  h/2,  h/2]
+            _zz = [_z0_zona]*4 + [_z1_zona]*4
+            fig3d_col.add_trace(go.Mesh3d(
+                x=_xz, y=_yz, z=_zz,
+                alphahull=0, opacity=0.25,
+                color='orange', showlegend=False,
+                name='Zona confinada Lo',
+                hovertemplate=f'Zona confinada Lo={_Lo:.0f}cm<extra></extra>',
+            ))
+        # Etiquetas Lo en el alzado
+        for _zl, _lbl in [(0, f'Lo={_Lo:.0f}cm'), (L_col, f'Lo={_Lo:.0f}cm')]:
+            fig3d_col.add_trace(go.Scatter3d(
+                x=[b/2+2], y=[0], z=[_zl + _Lo/2],
+                mode='text', text=[_lbl],
+                textfont=dict(color='orange', size=10),
+                showlegend=False,
+            ))
+
     fig3d_col.update_layout(
         scene=dict(
             aspectmode='manual',
@@ -2621,9 +3092,9 @@ with tab2:
                     _n = 8  # puntos por arco de 90°
 
                     def _adxf(cx, cy, rad, a0, a1):
-                        return [(cx+rad*math.cos(math.radians(a0+(a1-a0)*_ii/_n)),
-                                 cy+rad*math.sin(math.radians(a0+(a1-a0)*_ii/_n)))
-                                for _ii in range(_n+1)]
+                        return [(cx+rad*math.cos(math.radians(a0+(a1-a0)*i/_n)),
+                                 cy+rad*math.sin(math.radians(a0+(a1-a0)*i/_n)))
+                                for i in range(_n+1)]
 
                     # Perímetro: arranca en (xm, yM-_rd) = pie del arco sup-izq
                     _pe = []
@@ -3113,6 +3584,14 @@ with tab2b:
             fig_pm_c = plot_pm_combos(cap_x, Pu_col, Mux_col, puntos_combo,
                                       factor_fuerza, unidad_fuerza, unidad_mom)
             st.pyplot(fig_pm_c); plt.close(fig_pm_c)
+            # ── Superficie 3D interactiva con TODOS los combos ───────────
+            with st.expander(_t('🧊 Superficie 3D — Todos los combos',
+                                '🧊 3D Surface — All load combinations'), expanded=True):
+                fig_3d_combos = plot_pm_3d(df_cap_3d, df_combos, factor_fuerza,
+                                           unidad_fuerza=unidad_fuerza, unidad_mom=unidad_mom)
+                st.plotly_chart(fig_3d_combos, use_container_width=True)
+                st.caption(_t('🟢 Dentro  🔴 Fuera de la superficie φ',
+                              '🟢 Inside  🔴 Outside design surface φ'))
             # Tabla de estado por combinación
             try:
                 from scipy.interpolate import interp1d as _i1d
@@ -3198,6 +3677,7 @@ with tab3:
     ax_bars.set_title(_t("Distribución de pesos", "Weight distribution"))
     ax_bars.grid(True, alpha=0.3)
     st.pyplot(fig_bars)
+    plt.close(fig_bars)
     
     with st.expander(_t("Dibujo de Figurado para Taller", "Shop Drawing Details"), expanded=False):
         st.markdown(_t("Formas reales de las barras con ganchos y dimensiones.", "Actual bar shapes with hooks and dimensions."))
@@ -3206,184 +3686,29 @@ with tab3:
             straight_len_cm = long_bar_m * 100 - 2 * hook_len_cm
             fig_l1 = draw_longitudinal_bar(long_bar_m*100, straight_len_cm, hook_len_cm, rebar_diam, _bar_label(rebar_diam))
             st.pyplot(fig_l1)
+            plt.close(fig_l1)
             fig_spiral = draw_spiral(D, paso_espiral, stirrup_diam, _bar_label(stirrup_diam))
             st.pyplot(fig_spiral)
+            plt.close(fig_spiral)
         else:
             straight_len_cm = long_bar_m * 100 - 2 * hook_len_cm
             fig_l1 = draw_longitudinal_bar(long_bar_m*100, straight_len_cm, hook_len_cm, rebar_diam, _bar_label(rebar_diam))
             st.pyplot(fig_l1)
+            plt.close(fig_l1)
             inside_b = b - 2 * recub_cm
             inside_h = h - 2 * recub_cm
             hook_len_est = 12 * stirrup_diam / 10
-            fig_e1 = draw_stirrup(inside_b, inside_h, hook_len_est, stirrup_diam, _bar_label(stirrup_diam))
-            st.pyplot(fig_e1)
-    
-    with st.expander(_t("Presupuesto APU", "APU Budget"), expanded=False):
-        st.markdown(_t("Ingrese precios unitarios para calcular el costo total.", "Enter unit prices to calculate total cost."))
-        # ── Jornal actualizado desde SMLMV oficial ──
-        try:
-            import sys as _sys2, os as _os2
-            if "utils" not in _sys2.path: _sys2.path.append("utils")
-            from utils.smlmv_colombia import obtener_salario_minimo
-            import datetime as _dt_smlmv
-            anio_actual = _dt_smlmv.datetime.now().year
-            _, smlmv = obtener_salario_minimo(anio_actual)
-            # Jornal con factor prestacional civil aprox (SMLMV * 1.7 / 30)
-            jornal_base = smlmv * 1.7 / 30
-            jornal_oficial = float(round(jornal_base / 1000) * 1000)  # Redondear a miles
-        except Exception:
-            jornal_oficial = 70000.0
-
-        with st.form(key="col_apu_form"):
-            if "col_apu_moneda" not in st.session_state: st.session_state["col_apu_moneda"] = "COP"
-            moneda = st.text_input(_t("Moneda", "Currency"), value=st.session_state["col_apu_moneda"])
-            col_apu1, col_apu2 = st.columns(2)
-            with col_apu1:
-                if "col_apu_cemento" not in st.session_state: st.session_state["col_apu_cemento"] = 28000.0
-                if "col_apu_acero" not in st.session_state: st.session_state["col_apu_acero"] = 7500.0
-                if "col_apu_arena" not in st.session_state: st.session_state["col_apu_arena"] = 120000.0
-                if "col_apu_grava" not in st.session_state: st.session_state["col_apu_grava"] = 130000.0
-                
-                precio_cemento = st.number_input(_t("Precio por bulto cemento", "Price per cement bag"), value=st.session_state["col_apu_cemento"], step=1000.0)
-                precio_acero = st.number_input(_t("Precio por kg acero", "Price per kg steel"), value=st.session_state["col_apu_acero"], step=100.0)
-                precio_arena = st.number_input(_t("Precio por m³ arena", "Price per m³ sand"), value=st.session_state["col_apu_arena"], step=5000.0)
-                precio_grava = st.number_input(_t("Precio por m³ grava", "Price per m³ gravel"), value=st.session_state["col_apu_grava"], step=5000.0)
-                if "col_apu_agua" not in st.session_state: st.session_state["col_apu_agua"] = 3500.0
-                if "col_apu_encofrado" not in st.session_state: st.session_state["col_apu_encofrado"] = 45000.0
-                precio_agua = st.number_input(_t("Precio agua (m³)", "Water price /m³"), value=st.session_state["col_apu_agua"], step=500.0)
-                precio_encofrado = st.number_input(_t("Precio encofrado (m²)", "Formwork price /m²"), value=st.session_state["col_apu_encofrado"], step=2000.0)
-            with col_apu2:
-                if "col_apu_mo" not in st.session_state: st.session_state["col_apu_mo"] = jornal_oficial
-                if "col_apu_aui" not in st.session_state: st.session_state["col_apu_aui"] = 30.0
-                
-                precio_mo = st.number_input(_t("Costo mano de obra (día)", "Labor cost per day"), value=st.session_state["col_apu_mo"], step=5000.0)
-                pct_aui = st.number_input(_t("% A.I.U.", "% A.I.U."), value=st.session_state["col_apu_aui"], step=5.0) / 100.0
-            st.markdown("---")
-            usar_premezclado = st.checkbox(
-                _t("Usar concreto premezclado (omite cemento/arena/grava)", "Use ready-mix concrete (skips cement/sand/gravel)"),
-                value=st.session_state.get("col_apu_premix", False), key="col_apu_premix"
-            )
-            precio_premix_m3 = 0.0
-            if usar_premezclado:
-                precio_premix_m3 = st.number_input(
-                    _t("Precio concreto premezclado / m³", "Ready-mix concrete price / m³"),
-                    value=st.session_state.get("col_apu_premix_p", 420000.0),
-                    step=10000.0, key="col_apu_premix_p"
-                )
-            submitted = st.form_submit_button(_t("Calcular Presupuesto", "Calculate Budget"))
-            if submitted:
-                st.session_state.apu_config = {"moneda": moneda, "cemento": precio_cemento, "acero": precio_acero,
-                    "arena": precio_arena, "grava": precio_grava, "costo_dia_mo": precio_mo, "pct_aui": pct_aui,
-                    "premix": usar_premezclado, "precio_premix_m3": precio_premix_m3,
-                    "agua": precio_agua, "encofrado": precio_encofrado}
-                st.success(_t("Precios guardados.", "Prices saved."))
-                st.rerun()
-        if "col_apu_config" in st.session_state:
-            apu = st.session_state.apu_config
-            mix = get_mix_for_fc(fc)
-            bag_kg = CEMENT_BAGS.get(norma_sel, CEMENT_BAGS["NSR-10 (Colombia)"])[0]["kg"]
-            bultos_col = vol_concreto_m3 * mix["cem"] / bag_kg
-            _usar_premix = apu.get("premix", False)
-            _precio_premix_m3 = apu.get("precio_premix_m3", 0.0)
-            if _usar_premix:
-                costo_cemento = 0.0
-                costo_arena   = 0.0
-                costo_grava   = 0.0
-                costo_conc_premix = vol_concreto_m3 * _precio_premix_m3
-            else:
-                costo_cemento = bultos_col * apu["cemento"]
-                costo_arena   = (mix["arena"] * vol_concreto_m3 / 1500) * apu["arena"]
-                costo_grava   = (mix["grava"] * vol_concreto_m3 / 1600) * apu["grava"]
-                costo_conc_premix = 0.0
-            costo_acero = peso_total_acero_kg * apu["acero"]
-            costo_mo = (peso_total_acero_kg * 0.04 + vol_concreto_m3 * 0.4) * apu["costo_dia_mo"]
-            # P-1 Agua
-            _mix_apu = get_mix_for_fc(fc)
-            _litros_apu = _mix_apu.get("agua", 180) * vol_concreto_m3
-            costo_agua = (_litros_apu / 1000) * apu.get("agua", 3500)
-            # P-3 Encofrado
-            _dim_enc_b = D if es_circular else b
-            _dim_enc_h = D if es_circular else h
-            _area_enc_apu = (3.14159 * _dim_enc_b / 100) * (L_col / 100) if es_circular else (2 * (_dim_enc_b + _dim_enc_h) / 100) * (L_col / 100)
-            costo_encofrado = _area_enc_apu * apu.get("encofrado", 45000)
-            costo_directo = costo_cemento + costo_acero + costo_arena + costo_grava + costo_conc_premix + costo_mo + costo_agua + costo_encofrado
-            aiu = costo_directo * apu["pct_aui"]
-            total = costo_directo + aiu
-            #  Métricas cards 
-            _c1, _c2, _c3 = st.columns(3)
-            _c1.metric(_t(" Total Proyecto", " Total Project"), f"{total:,.0f} {apu['moneda']}")
-            _c2.metric(_t(" Costo Directo", "Direct Cost"), f"{costo_directo:,.0f} {apu['moneda']}")
-            _c3.metric(_t(" Mano de Obra", "Labor"), f"{costo_mo:,.0f} {apu['moneda']}")
-
-            #  Gráfica Plotly — Desglose de costos 
-            import plotly.graph_objects as _go
-            _items_label = (
-                [_t("Concreto PM", "Ready-mix"), _t("Acero", "Steel"), _t("M.O.", "Labor"), _t("Agua","Water"), _t("Encofrado","Formwork"), "A.I.U."]
-                if _usar_premix else
-                [_t("Cemento", "Cement"), _t("Acero", "Steel"), _t("Arena", "Sand"),
-                 _t("Grava", "Gravel"), _t("M.O.", "Labor"), _t("Agua","Water"), _t("Encofrado","Formwork"), "A.I.U."]
-            )
-            _items_val = (
-                [costo_conc_premix, costo_acero, costo_mo, costo_agua, costo_encofrado, aiu]
-                if _usar_premix else
-                [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, costo_agua, costo_encofrado, aiu]
-            )
-            _colors = ["#3fb950", "#79c0ff", "#ffa657", "#d2a8ff", "#58a6ff", "#f0883e"][:len(_items_label)]
-            _fig_apu = _go.Figure(_go.Bar(
-                x=_items_label, y=_items_val,
-                marker_color=_colors,
-                text=[f"{v:,.0f}" for v in _items_val],
-                textposition='outside',
-                textfont=dict(size=11, color='white')
-            ))
-            _fig_apu.update_layout(
-                title=_t("Desglose de Costos — Columna", "Cost Breakdown — Column"),
-                paper_bgcolor='#161b22', plot_bgcolor='#0d1117',
-                font=dict(color='#cdd6f4'),
-                xaxis=dict(gridcolor='#30363d'),
-                yaxis=dict(gridcolor='#30363d', tickformat=',.0f'),
-                margin=dict(t=40, b=20, l=20, r=20),
-                height=320
-            )
-            st.plotly_chart(_fig_apu, use_container_width=True)
-            if _usar_premix:
-                st.info(_t(
-                    f" Concreto premezclado: {vol_concreto_m3:.3f} m³ × {_precio_premix_m3:,.0f} {apu['moneda']}/m³ = {costo_conc_premix:,.0f} {apu['moneda']}",
-                    f" Ready-mix concrete: {vol_concreto_m3:.3f} m³ × {_precio_premix_m3:,.0f} {apu['moneda']}/m³ = {costo_conc_premix:,.0f} {apu['moneda']}"
-                ))
-
-            output_excel = io.BytesIO()
-            with pd.ExcelWriter(output_excel, engine='xlsxwriter') as writer:
-                if _usar_premix:
-                    df_apu = pd.DataFrame({
-                        "Item":     ["Concreto Premezclado", "Acero", "Mano de Obra", "Agua", "Encofrado", "A.I.U.", "TOTAL"],
-                        "Cantidad": [vol_concreto_m3, peso_total_acero_kg,
-                                     peso_total_acero_kg * 0.04 + vol_concreto_m3 * 0.4,
-                                     round(_litros_apu, 0), round(_area_enc_apu, 2), "", ""],
-                        "Unidad":   ["m³", "kg", "días", "litros", "m²", f"{apu['pct_aui']*100:.0f}%", ""],
-                        "Subtotal": [costo_conc_premix, costo_acero, costo_mo, costo_agua, costo_encofrado, aiu, total]
-                    })
-                else:
-                    df_apu = pd.DataFrame({
-                        "Item":     ["Cemento", "Acero", "Arena", "Grava", "Mano de Obra", "Agua", "Encofrado", "A.I.U.", "TOTAL"],
-                        "Cantidad": [bultos_col, peso_total_acero_kg, mix["arena"]*vol_concreto_m3/1500,
-                                     mix["grava"]*vol_concreto_m3/1600,
-                                     peso_total_acero_kg*0.04 + vol_concreto_m3*0.4,
-                                     round(_litros_apu, 0), round(_area_enc_apu, 2), "", ""],
-                        "Unidad":   [f"bultos ({bag_kg}kg)", "kg", "m³", "m³", "días", "litros", "m²",
-                                     f"{apu['pct_aui']*100:.0f}%", ""],
-                        "Subtotal": [costo_cemento, costo_acero, costo_arena, costo_grava, costo_mo, costo_agua, costo_encofrado, aiu, total]
-                    })
-                df_apu.to_excel(writer, index=False, sheet_name='APU')
-                workbook = writer.book
-                worksheet = writer.sheets['APU']
-                money_fmt = workbook.add_format({'num_format': '#,##0.00'})
-                worksheet.set_column('D:D', 15, money_fmt)
-            output_excel.seek(0)
-            st.download_button(_t("Descargar Presupuesto Excel", "Download Budget Excel"), 
-                               data=output_excel, file_name=f"APU_Columna_{b:.0f}x{h:.0f}.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
+            # BUG-03 FIX — coordenadas barras con variables correctas e indentación fija
+            _bcoords = None
+            _rv_cm = recub_cm + stirrup_diam / 10.0 + rebar_diam / 20.0
+            _bx2c  = b / 2.0 - _rv_cm
+            _hy2c  = h / 2.0 - _rv_cm
+            _nxb   = max(2, round(n_barras_total * b / (2*(b+h))))
+            _nyb   = max(2, round(n_barras_total * h / (2*(b+h))))
+            _xs_c  = [(-_bx2c + 2*_bx2c*i/(_nxb-1)) for i in range(_nxb)]
+            _ys_c  = [(-_hy2c + 2*_hy2c*i/(_nyb-1)) for i in range(_nyb)]
+            _bcoords = ([(x,-_hy2c) for x in _xs_c] + [(x,_hy2c) for x in _xs_c] +
+                        [(-_bx2c,y) for y in _ys_c[1:-1]] + [(_bx2c,y) for y in _ys_c[1:-1]])
 # =============================================================================
 # TAB 4: MEMORIA DE CÁLCULO COMPLETA
 # =============================================================================
@@ -3408,7 +3733,8 @@ with tab4:
                                   s_conf_cm, s_bas_cm, Lo_cm,
                                   n_estrib, Pu_kN, phiPn_kN, bresler_ratio, bresler_ok,
                                   ash_ok_flag, vol_m3, peso_kg,
-                                  empresa, proyecto, norma, nivel_sis):
+                                  empresa, proyecto, norma, nivel_sis,
+                                  n_flejes_x=0, n_flejes_y=0):
                 """Genera un IFC4 con IfcColumn + barras longitudinales + estribos + Pset_NSR10."""
                 O = ifcopenshell.file(schema="IFC4")
                 # ── Cabecera de proyecto ────────────────────────────────────
@@ -3501,15 +3827,13 @@ with tab4:
                     # Distribución perimetral rectangular
                     nx = max(2, int(_m.ceil(b_cm / 15)))   # barras por cara b
                     ny = max(2, int(_m.ceil(h_cm / 15)))   # barras por cara h
-                    # Eje varilla = recub + dst_completo + radio_varilla (Prompt Maestro v2)
-                    _rv = r_m + dst_mm / 1000.0 + db_mm / 2000.0
-                    xs = [_rv + (b_m - 2*_rv)*i/(nx-1) - b_m/2 for i in range(nx)] if nx > 1 else [0.0]
-                    ys = [_rv + (h_m - 2*_rv)*i/(ny-1) - h_m/2 for i in range(ny)] if ny > 1 else [0.0]
+                    xs = [r_m + (b_m - 2*r_m)*i/(nx-1) - b_m/2 for i in range(nx)] if nx > 1 else [0.0]
+                    ys = [r_m + (h_m - 2*r_m)*i/(ny-1) - h_m/2 for i in range(ny)] if ny > 1 else [0.0]
                     bar_positions = (
-                        [(x, -h_m/2 + _rv) for x in xs] +
-                        [(x,  h_m/2 - _rv) for x in xs] +
-                        [(-b_m/2 + _rv, y) for y in ys[1:-1]] +
-                        [( b_m/2 - _rv, y) for y in ys[1:-1]]
+                        [(x, -h_m/2 + r_m) for x in xs] +
+                        [(x,  h_m/2 - r_m) for x in xs] +
+                        [(-b_m/2 + r_m, y) for y in ys[1:-1]] +
+                        [( b_m/2 - r_m, y) for y in ys[1:-1]]
                     )
 
                 long_bars = []
@@ -3583,20 +3907,18 @@ with tab4:
                             _m.sin(2*_m.pi*k/n_pts)*R_e, y_z])
                             for k in range(n_pts + 1)]
                     else:
-                        # ── Prompt Maestro v2 — NSR-10 C.21.5.3.3 ─────────────
-                        bx2  = b_m / 2.0 - r_m          # eje estribo semiancho
-                        hy2  = h_m / 2.0 - r_m          # eje estribo semialto
+                        # ── Prompt Maestro v2 — NSR-10 C.21.5.3.3 ─────────────────────
+                        bx2  = b_m / 2.0 - r_m
+                        hy2  = h_m / 2.0 - r_m
                         X_c  = -bx2
                         Y_c  =  hy2
-                        # Regla 1: radio y gancho NORMATIVOS (sin factores inventados)
-                        _R   = max(3.0 * dst_m, 0.012)
-                        _hk  = max(6.0 * db_mm/1000.0, 0.075)
+                        _R   = max(3.0 * dst_m, 0.012)           # radio doblez NSR-10 C.7.2
+                        _hk  = max(6.0 * db_mm / 1000.0, 0.075)  # extensión gancho NSR-10 C.7.1.4
                         Cx   = X_c + _R
                         Cy   = Y_c - _R
-                        _z1  = y_z + dst_m              # z_top espiral +1 diámetro
-                        _na  = 8                         # segmentos por arco
+                        _z1  = y_z + dst_m   # z_top: cara sup del estribo (+1 diámetro)
+                        _na  = 8             # segmentos por arco → curva suave
 
-                        # Arco: z fijo, NA+1 puntos
                         def _arc(cx, cy, r, a0, a1, z_c):
                             return [O.createIfcCartesianPoint([
                                 cx + r*_m.cos(_m.radians(a0+(a1-a0)*_ii/_na)),
@@ -3606,20 +3928,18 @@ with tab4:
                         def _pt(x, y, z_c):
                             return O.createIfcCartesianPoint([x, y, z_c])
 
-                        # Pie del arco G1 (225°) y G2 (45°)
                         _pie1x = Cx + _R*_m.cos(_m.radians(225))
                         _pie1y = Cy + _R*_m.sin(_m.radians(225))
                         _pie2x = Cx + _R*_m.cos(_m.radians(45))
                         _pie2y = Cy + _R*_m.sin(_m.radians(45))
-                        _dk    = _hk * 0.7071            # componente 45°
+                        _dk    = _hk * 0.7071
 
                         pts_est = []
-                        # [1] Cola 1 punta → pie G1  (dirección +X,-Y = núcleo)
+                        # [1] Cola 1 punta → pie G1
                         pts_est.append(_pt(_pie1x + _dk, _pie1y - _dk, _z1))
                         pts_est.append(_pt(_pie1x,       _pie1y,       _z1))
                         # [2] Arco G1 CCW 225°→90°  Z=z_top
                         pts_est += _arc(Cx, Cy, _R, 225, 90, _z1)
-                        # Tangencia fin G1 = (Cx, Y_c) = inicio tramo superior
                         # [3] Tramo SUP (Cx,Y_c)→(bx2-_R,Y_c)  Z baja→z_base
                         _nT = _na
                         pts_est += [_pt(Cx+(bx2-_R-Cx)*_ii/_nT,
@@ -3628,7 +3948,7 @@ with tab4:
                                     for _ii in range(_nT+1)]
                         # [4] Arco SUP-DER CW 90°→0°  Z=z_base
                         pts_est += _arc(bx2-_R, Y_c-_R, _R, 90, 0, y_z)
-                        # [5] Tramo DER  Z=z_base  (tangencia a tangencia)
+                        # [5] Tramo DER  Z=z_base
                         pts_est += [_pt(bx2, Y_c-_R+(-(Y_c-_R)-(Y_c-_R))*_ii/_nT, y_z)
                                     for _ii in range(_nT+1)]
                         # [6] Arco INF-DER CW 0°→-90°  Z=z_base
@@ -3638,30 +3958,38 @@ with tab4:
                                     for _ii in range(_nT+1)]
                         # [8] Arco INF-IZQ CW -90°→-180°  Z=z_base
                         pts_est += _arc(-(bx2-_R), -(Y_c-_R), _R, -90, -180, y_z)
-                        # [9] Tramo IZQ (-bx2,-(Y_c-_R))→(X_c,Cy)  Z sube→z_top
+                        # [9] Tramo IZQ sube Z
                         pts_est += [_pt(X_c,
                                         -(Y_c-_R)+(Cy-(-(Y_c-_R)))*_ii/_nT,
                                         y_z+(_z1-y_z)*_ii/_nT)
                                     for _ii in range(_nT+1)]
                         # [10] Arco G2 CW 180°→45°  Z=z_top
                         pts_est += _arc(Cx, Cy, _R, 180, 45, _z1)
-                        # [11] Pie G2 → Cola 2 punta  (misma dirección +X,-Y)
+                        # [11] Pie G2 → Cola 2 punta
                         pts_est.append(_pt(_pie2x,       _pie2y,       _z1))
                         pts_est.append(_pt(_pie2x + _dk, _pie2y - _dk, _z1))
-
                         # Alternancia sísmica NSR-10 C.21.5.3.3
                         if j % 2 != 0:
                             pts_est = [O.createIfcCartesianPoint(
                                 [-p.Coordinates[0], -p.Coordinates[1], p.Coordinates[2]])
                                 for p in pts_est]
 
+
                     polyline_st = O.createIfcPolyline(Points=pts_est)
 
                     # Volumen físico para que Revit lo reconozca como Armadura
                     st_swept = O.createIfcSweptDiskSolid(Directrix=polyline_st, Radius=dst_m/2)
                     
+                    # Color: zona confinada = más saturado, zona central = normal
+                    _in_conf_z = (y_z*100 <= Lo_cm) or (y_z*100 >= L_cm - Lo_cm)
+                    _scol = stirrup_color
+                    if _in_conf_z:
+                        # Ligeramente más brillante para indicar zona confinada
+                        _scol = (min(1.0,stirrup_color[0]*1.2),
+                                 min(1.0,stirrup_color[1]*1.2),
+                                 min(1.0,stirrup_color[2]*1.2))
                     st_style_rend = O.createIfcSurfaceStyleRendering(
-                        SurfaceColour=O.createIfcColourRgb(Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
+                        SurfaceColour=O.createIfcColourRgb(Red=_scol[0], Green=_scol[1], Blue=_scol[2]),
                         ReflectanceMethod="FLAT")
                     st_surface_style = O.createIfcSurfaceStyle(
                         Name=f"Estribo_{dst_mm:.0f}mm", Side="BOTH", Styles=[st_style_rend])
@@ -3679,6 +4007,105 @@ with tab4:
                     ifcopenshell.api.run("material.assign_material", O, products=[st_bar], material=mat_acero)
                     stirrup_bars.append(st_bar)
 
+                # ── Flejes en Cruz / Cross-Ties (IfcReinforcingBar) ─────────
+                # n_flejes_x = parámetro pasado a la función (calculado automáticamente)
+                _tie_color = _color_by_diam(dst_mm)
+                for _jt, _yz_t in enumerate(y_positions):
+                    _yz_t_m = _yz_t  # ya está en metros
+                    _bx2 = b_m/2 - r_m          # semiancho eje estribo
+                    _hy2 = h_m/2 - r_m           # semialto  eje estribo
+                    _hk_tie = max(6*dst_m, 0.075) # longitud gancho NSR-10
+                    # Ángulo gancho según nivel sísmico y alternancia
+                    _ang_tie = 135 if nivel_sis in ('DES','DMO') else 90
+                    _flip    = (_jt % 2 == 1)    # alternar NSR-10 C.21.5.3.3
+                    _sign    = -1 if _flip else 1
+                    import math as _mt
+                    # ── Flejes en X: de x=-bx2 a x=+bx2, a alturas equidistantes en Y ─
+                    # ── Flejes en X: tangentes a varillas laterales (R_tie = db/2 + dst/2) ────
+                    _R_tie = (db_mm / 2000.0) + (dst_m / 2.0)
+                    _n_hk  = 8
+                    for _nfx in range(1, n_flejes_x + 1):
+                        _yf = -_hy2 + (2*_hy2)*_nfx/(n_flejes_x+1)
+                        _cx_izq = -_bx2
+                        _cx_der =  _bx2
+                        _a0_izq = 0.0;   _a1_izq = 135.0 * _sign
+                        _hk_pts_izq = [O.createIfcCartesianPoint([
+                            _cx_izq + _R_tie*_mt.cos(_mt.radians(_a0_izq+(_a1_izq-_a0_izq)*_ki/_n_hk)),
+                            _yf     + _R_tie*_mt.sin(_mt.radians(_a0_izq+(_a1_izq-_a0_izq)*_ki/_n_hk)),
+                            _yz_t_m]) for _ki in range(_n_hk+1)]
+                        _a0_der = 180.0; _a1_der = 180.0 - 135.0*_sign
+                        _hk_pts_der = [O.createIfcCartesianPoint([
+                            _cx_der + _R_tie*_mt.cos(_mt.radians(_a0_der+(_a1_der-_a0_der)*_ki/_n_hk)),
+                            _yf     + _R_tie*_mt.sin(_mt.radians(_a0_der+(_a1_der-_a0_der)*_ki/_n_hk)),
+                            _yz_t_m]) for _ki in range(_n_hk+1)]
+                        _pts_fx = (
+                            list(reversed(_hk_pts_izq)) +
+                            [O.createIfcCartesianPoint([_cx_izq + _R_tie, _yf, _yz_t_m]),
+                             O.createIfcCartesianPoint([_cx_der - _R_tie, _yf, _yz_t_m])] +
+                            _hk_pts_der)
+                        _pline_fx = O.createIfcPolyline(Points=_pts_fx)
+                        _swept_fx = O.createIfcSweptDiskSolid(Directrix=_pline_fx, Radius=dst_m/2)
+                        _stl_fx = O.createIfcSurfaceStyleRendering(
+                            SurfaceColour=O.createIfcColourRgb(
+                                Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
+                            ReflectanceMethod='FLAT')
+                        O.createIfcStyledItem(Item=_swept_fx, Styles=[
+                            O.createIfcSurfaceStyle(Name=f'Flete_X_{dst_mm:.0f}mm',
+                                Side='BOTH', Styles=[_stl_fx])])
+                        _bar_fx = ifcopenshell.api.run('root.create_entity', O,
+                            ifc_class='IfcReinforcingBar', name=f'FX{_jt+1}_{_nfx}')
+                        _bar_fx.NominalDiameter = dst_m
+                        _bar_fx.SteelGrade      = f'fy={fy_mpa:.0f}MPa'
+                        _bar_fx.PredefinedType  = 'LIGATURE'
+                        _rep_fx = O.createIfcShapeRepresentation(
+                            ContextOfItems=context3d, RepresentationIdentifier='Body',
+                            RepresentationType='SolidModel', Items=[_swept_fx])
+                        _bar_fx.Representation = O.createIfcProductDefinitionShape(Representations=[_rep_fx])
+                        ifcopenshell.api.run('spatial.assign_container', O,
+                            relating_structure=storey, products=[_bar_fx])
+                        ifcopenshell.api.run('aggregate.assign_object', O,
+                            relating_object=col_entity, products=[_bar_fx])
+                    # ── Flejes en Y ────────────────────────────────────────────────────────────
+                    for _nfy in range(1, n_flejes_y + 1):
+                        _xf = -_bx2 + (2*_bx2)*_nfy/(n_flejes_y+1)
+                        _cy_bot = -_hy2;  _cy_top = _hy2
+                        _a0_bot = -90.0;  _a1_bot = -90.0 + 135.0*_sign
+                        _hk_pts_bot = [O.createIfcCartesianPoint([
+                            _xf     + _R_tie*_mt.cos(_mt.radians(_a0_bot+(_a1_bot-_a0_bot)*_ki/_n_hk)),
+                            _cy_bot + _R_tie*_mt.sin(_mt.radians(_a0_bot+(_a1_bot-_a0_bot)*_ki/_n_hk)),
+                            _yz_t_m]) for _ki in range(_n_hk+1)]
+                        _a0_top = 90.0;   _a1_top = 90.0 - 135.0*_sign
+                        _hk_pts_top = [O.createIfcCartesianPoint([
+                            _xf     + _R_tie*_mt.cos(_mt.radians(_a0_top+(_a1_top-_a0_top)*_ki/_n_hk)),
+                            _cy_top + _R_tie*_mt.sin(_mt.radians(_a0_top+(_a1_top-_a0_top)*_ki/_n_hk)),
+                            _yz_t_m]) for _ki in range(_n_hk+1)]
+                        _pts_fy = (
+                            list(reversed(_hk_pts_bot)) +
+                            [O.createIfcCartesianPoint([_xf, _cy_bot + _R_tie, _yz_t_m]),
+                             O.createIfcCartesianPoint([_xf, _cy_top - _R_tie, _yz_t_m])] +
+                            _hk_pts_top)
+                        _pline_fy = O.createIfcPolyline(Points=_pts_fy)
+                        _swept_fy = O.createIfcSweptDiskSolid(Directrix=_pline_fy, Radius=dst_m/2)
+                        _stl_fy = O.createIfcSurfaceStyleRendering(
+                            SurfaceColour=O.createIfcColourRgb(
+                                Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
+                            ReflectanceMethod='FLAT')
+                        O.createIfcStyledItem(Item=_swept_fy, Styles=[
+                            O.createIfcSurfaceStyle(Name=f'Flete_Y_{dst_mm:.0f}mm',
+                                Side='BOTH', Styles=[_stl_fy])])
+                        _bar_fy = ifcopenshell.api.run('root.create_entity', O,
+                            ifc_class='IfcReinforcingBar', name=f'FY{_jt+1}_{_nfy}')
+                        _bar_fy.NominalDiameter = dst_m
+                        _bar_fy.SteelGrade      = f'fy={fy_mpa:.0f}MPa'
+                        _bar_fy.PredefinedType  = 'LIGATURE'
+                        _rep_fy = O.createIfcShapeRepresentation(
+                            ContextOfItems=context3d, RepresentationIdentifier='Body',
+                            RepresentationType='SolidModel', Items=[_swept_fy])
+                        _bar_fy.Representation = O.createIfcProductDefinitionShape(Representations=[_rep_fy])
+                        ifcopenshell.api.run('spatial.assign_container', O,
+                            relating_structure=storey, products=[_bar_fy])
+                        ifcopenshell.api.run('aggregate.assign_object', O,
+                            relating_object=col_entity, products=[_bar_fy])
                 # ── Pset_NSR10 y Pset_ColGeometry ──────────────────────────
                 psets_data = {
                     "Pset_ConcreteElementGeneral": {
@@ -3766,6 +4193,8 @@ with tab4:
                     proyecto    = st.session_state.get("cpm_proyecto_nombre","________________"),
                     norma       = norma_sel,
                     nivel_sis   = nivel_sismico,
+                    n_flejes_x  = num_flejes_x if not es_circular else 0,
+                    n_flejes_y  = num_flejes_y if not es_circular else 0,
                 )
                 if buf_ifc_col:
                     _ifc_fname = f"Columna_{'Circ_D'+str(int(D)) if es_circular else str(int(b))+'x'+str(int(h))}_IFC4.ifc"
@@ -3860,7 +4289,7 @@ with tab4:
             p_esb = doc.add_paragraph("[ADVERTENCIA] Columna MUY esbelta (kL/r > 100). Las ecuaciones estándar pierden validez, requiere análisis P-delta riguroso.")
             p_esb.bold = True
         elif slenderness['kl_r'] > 22:
-            doc.add_paragraph(f"Columna Esbelta — δns = {slenderness['delta_ns']:.3f} ({coderef}, método no-sway). Si estructura desplazable: aplicar P-Δ e ingresar Mux/Muy amplificados.").runs[0].bold=True
+            doc.add_paragraph(f"Columna Esbelta — δns = {slenderness['delta_ns']:.3f} ({code['ref']}, método no-sway). Si estructura desplazable: aplicar P-Δ e ingresar Mux/Muy amplificados.").runs[0].bold=True
             if 'Pc' in dir(): doc.add_paragraph(f"Carga crítica Euler (Pc) = {Pc:.1f} kN")
             doc.add_paragraph(f"Momento magnificado Mux* = {Mux_input*slenderness['delta_ns']:.2f} {unidad_mom}")
             _r_min = (h if not es_circular else D)*0.289
@@ -4105,8 +4534,13 @@ with tab4:
                 inside_b = b - 2 * recub_cm
                 inside_h = h - 2 * recub_cm
                 hook_len_est = 12 * stirrupdiam_saf / 10
-                fig_e1_mem = draw_stirrup(inside_b, inside_h, hook_len_est,
-                                          stirrupdiam_saf, _bar_label(stirrupdiam_saf))
+                fig_e1_mem = draw_stirrup_with_ties(
+                    inside_b, inside_h, hook_len_est,
+                    bar_diam_mm=stirrupdiam_saf,
+                    n_ties_x=num_flejes_x if not es_circular else 0,
+                    n_ties_y=num_flejes_y if not es_circular else 0,
+                    nivel_sismico_str=nivel_sismico,
+                    bar_name=_bar_label(stirrupdiam_saf))
                 configurar_pdf_comercial(fig_e1_mem)
                 buf_e1 = _io_e1.BytesIO()
                 fig_e1_mem.savefig(buf_e1, facecolor='white', format='png', dpi=200,
@@ -4120,10 +4554,10 @@ with tab4:
             
         doc.add_heading("8. REFERENCIAS NORMATIVAS", level=1)
         _refs = [
-            (f"{coderef} — Flexocompresión",   "Hipótesis de diseño — distribución lineal de deformaciones"),
-            (f"{coderef} — Cuantías",           "Límites de cuantía: ρ_min=1%, ρ_max según nivel sísmico y norma activa"),
-            (f"{coderef} — Esbeltez",           "Efectos de esbeltez — método de magnificación de momentos δns (no-sway)"),
-            (f"{coderef} — Factor δns",         "Factor δns = Cm/(1 − Pu/0.75Pc) ≥ 1.0  |  Para sway: usar análisis P-Δ directo"),
+            (f"{code['ref']} — Flexocompresión",   "Hipótesis de diseño — distribución lineal de deformaciones"),
+            (f"{code['ref']} — Cuantías",           "Límites de cuantía: ρ_min=1%, ρ_max según nivel sísmico y norma activa"),
+            (f"{code['ref']} — Esbeltez",           "Efectos de esbeltez — método de magnificación de momentos δns (no-sway)"),
+            (f"{code['ref']} — Factor δns",         "Factor δns = Cm/(1 − Pu/0.75Pc) ≥ 1.0  |  Para sway: usar análisis P-Δ directo"),
             ("NSR-10 C.21.6.3",  "Cuantía máxima zona de rótula plástica — DES: ρ ≤ 4%"),
             ("NSR-10 C.21.6.4",  "Confinamiento en columnas — zona de rótula plástica"),
             ("NSR-10 C.21.6.4.1","Lo_min = max(h, b, Lu/6, 45 cm)"),
