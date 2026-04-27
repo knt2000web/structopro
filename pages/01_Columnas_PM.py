@@ -2021,7 +2021,7 @@ def plot_pm_3d(df_cap_3d, df_combos, factor_fuerza=1.0,
     import plotly.graph_objects as _go3
 
     fig = _go3.Figure()
-    _L  = dict(ambient=0.5, diffuse=0.8, fresnel=0.2, specular=0.2, roughness=0.5)
+    _L  = dict(ambient=0.5, diffuse=0.8, fresnel=0.2, specular=0.5, roughness=0.1)
     _FF = factor_fuerza
 
     # ── Superficie Nominal (gris translúcido) ───────────────────────────────────
@@ -2094,7 +2094,7 @@ def plot_pm_3d(df_cap_3d, df_combos, factor_fuerza=1.0,
             yaxis_title=f'My [{unidad_mom}]',
             zaxis_title=f'P [{unidad_fuerza}]',
             xaxis=_ax, yaxis=_ax, zaxis=_ax,
-            aspectmode='cube',
+            aspectmode='data',
             camera=dict(eye=dict(x=1.5, y=1.5, z=0.8)),
             bgcolor='rgba(0,0,0,0)',
         ),
@@ -3709,6 +3709,9 @@ with tab3:
             _ys_c  = [(-_hy2c + 2*_hy2c*i/(_nyb-1)) for i in range(_nyb)]
             _bcoords = ([(x,-_hy2c) for x in _xs_c] + [(x,_hy2c) for x in _xs_c] +
                         [(-_bx2c,y) for y in _ys_c[1:-1]] + [(_bx2c,y) for y in _ys_c[1:-1]])
+            # Transformar del sistema centrado (±bx2c, ±hy2c) al sistema origen (0..b, 0..h)
+            # que usa draw_stirrup_with_ties, sumando el offset (inside_b/2, inside_h/2)
+            _bcoords_draw = [(x + inside_b/2, y + inside_h/2) for (x, y) in _bcoords] if _bcoords else None
             fig_e1 = draw_stirrup_with_ties(
                 inside_b, inside_h, hook_len_est,
                 bar_diam_mm=stirrup_diam,
@@ -3716,7 +3719,7 @@ with tab3:
                 n_ties_y=num_flejes_y if not es_circular else 0,
                 nivel_sismico_str=nivel_sismico,
                 bar_name=_bar_label(stirrup_diam),
-                bar_coords=_bcoords if _bcoords else None)
+                bar_coords=_bcoords_draw)
             st.pyplot(fig_e1)
             plt.close(fig_e1)
 
@@ -4226,7 +4229,7 @@ with tab4:
                         _bar_fx.SteelGrade      = f'fy={fy_mpa:.0f}MPa'
                         _bar_fx.PredefinedType  = 'LIGATURE'
                         _rep_fx = O.createIfcShapeRepresentation(
-                            ContextOfItems=context3d, RepresentationIdentifier='Body',
+                            ContextOfItems=body, RepresentationIdentifier='Body',
                             RepresentationType='SolidModel', Items=[_swept_fx])
                         _bar_fx.Representation = O.createIfcProductDefinitionShape(Representations=[_rep_fx])
                         ifcopenshell.api.run('spatial.assign_container', O,
@@ -4267,7 +4270,7 @@ with tab4:
                         _bar_fy.SteelGrade      = f'fy={fy_mpa:.0f}MPa'
                         _bar_fy.PredefinedType  = 'LIGATURE'
                         _rep_fy = O.createIfcShapeRepresentation(
-                            ContextOfItems=context3d, RepresentationIdentifier='Body',
+                            ContextOfItems=body, RepresentationIdentifier='Body',
                             RepresentationType='SolidModel', Items=[_swept_fy])
                         _bar_fy.Representation = O.createIfcProductDefinitionShape(Representations=[_rep_fy])
                         ifcopenshell.api.run('spatial.assign_container', O,
