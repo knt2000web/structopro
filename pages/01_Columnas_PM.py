@@ -3725,18 +3725,32 @@ with tab3:
 
     with st.expander(_t("Presupuesto APU", "APU Budget"), expanded=False):
         st.markdown(_t("Ingrese precios unitarios para calcular el costo total.", "Enter unit prices to calculate total cost."))
-        # ── Jornal actualizado desde SMLMV oficial ──
+        # ── Jornal actualizado desde SMLMV oficial (calcular_jornales_todos) ──
         try:
-            import sys as _sys2, os as _os2
+            import sys as _sys2
             if "utils" not in _sys2.path: _sys2.path.append("utils")
-            from utils.smlmv_colombia import obtener_salario_minimo
-            import datetime as _dt_smlmv
-            anio_actual = _dt_smlmv.datetime.now().year
-            _, smlmv = obtener_salario_minimo(anio_actual)
-            jornal_base = smlmv * 1.7 / 30
-            jornal_oficial = float(round(jornal_base / 1000) * 1000)
-        except Exception:
-            jornal_oficial = 70000.0
+            from utils.smlmv_colombia import calcular_jornales_todos, obtener_smlmv, CUADRILLAS_ESTANDAR
+            _jornales   = calcular_jornales_todos()
+            _smlmv_info = obtener_smlmv()
+            _smlmv_val  = _smlmv_info["valor"]
+            _smlmv_src  = _smlmv_info["fuente"]
+            # Opciones de cargo para selector
+            _cargos_ops = {
+                "ayudante":         f"Ayudante  — ${_jornales['ayudante']['jornal_con_prestaciones']:,.0f}/día",
+                "oficial":          f"Oficial   — ${_jornales['oficial']['jornal_con_prestaciones']:,.0f}/día",
+                "maestro":          f"Maestro   — ${_jornales['maestro']['jornal_con_prestaciones']:,.0f}/día",
+                "cuadrilla_vaciado": f"Cuadrilla vaciado (1M+2Of+4Ay) — precio por m³ MO"
+            }
+            _jornal_default = _jornales["oficial"]["jornal_con_prestaciones"]
+            _smlmv_ok = True
+        except Exception as _e_smlmv:
+            _jornales, _smlmv_val, _smlmv_src = {}, 0, "sin conexión"
+            _cargos_ops = {"oficial": "Oficial (manual)"}
+            _jornal_default = 102000.0   # Oficial 2026 aprox si falla todo
+            _smlmv_ok = False
+
+        if _smlmv_ok:
+            st.caption(f"📊 SMLMV {_smlmv_info['anio']}: **${_smlmv_val:,.0f}** — Fuente: *{_smlmv_src}*")
 
         with st.form(key="col_apu_form"):
             if "col_apu_moneda" not in st.session_state: st.session_state["col_apu_moneda"] = "COP"
@@ -3756,9 +3770,29 @@ with tab3:
                 precio_agua = st.number_input(_t("Precio agua (m³)", "Water price /m³"), value=st.session_state["col_apu_agua"], step=500.0)
                 precio_encofrado = st.number_input(_t("Precio encofrado (m²)", "Formwork price /m²"), value=st.session_state["col_apu_encofrado"], step=2000.0)
             with col_apu2:
-                if "col_apu_mo" not in st.session_state: st.session_state["col_apu_mo"] = jornal_oficial
+                # Selector de tipo de cargo MO
+                _cargo_sel = st.selectbox(
+                    _t("Tipo de mano de obra", "Labor type"),
+                    options=list(_cargos_ops.keys()),
+                    format_func=lambda k: _cargos_ops[k],
+                    index=list(_cargos_ops.keys()).index("oficial") if "oficial" in _cargos_ops else 0,
+                    key="col_apu_cargo_sel"
+                )
+                # Jornal auto desde SMLMV según cargo seleccionado
+                if _smlmv_ok and _cargo_sel in _jornales:
+                    _jornal_auto = _jornales[_cargo_sel]["jornal_con_prestaciones"]
+                else:
+                    _jornal_auto = _jornal_default
+                if "col_apu_mo" not in st.session_state:
+                    st.session_state["col_apu_mo"] = _jornal_auto
+                precio_mo = st.number_input(
+                    _t("Costo mano de obra (día) — SMLMV auto", "Labor cost per day — SMLMV auto"),
+                    value=float(_jornal_auto),
+                    step=1000.0,
+                    help=_t(f"Calculado: SMLMV × escala × factor prest. / 26 días  |  Fuente: {_smlmv_src}",
+                            f"Calculated from SMLMV scale × prest. factor / 26 days  |  Source: {_smlmv_src}")
+                )
                 if "col_apu_aui" not in st.session_state: st.session_state["col_apu_aui"] = 30.0
-                precio_mo = st.number_input(_t("Costo mano de obra (día)", "Labor cost per day"), value=st.session_state["col_apu_mo"], step=5000.0)
                 pct_aui = st.number_input(_t("% A.I.U.", "% A.I.U."), value=st.session_state["col_apu_aui"], step=5.0) / 100.0
             st.markdown("---")
             usar_premezclado = st.checkbox(
