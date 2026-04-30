@@ -23,6 +23,46 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import pandas as pd
 import math
+
+# === GRAPAS CROSS-TIES — funciones exactas n=12 (ÚNICA FUENTE DE VERDAD) =====
+import math as _gm
+
+def generar_puntos_grapa_x(X_v, Y_f, R, L_cola):
+    """Grapa H. Barras en (±X_v, Y_f). Tramo recto por Y_f+R."""
+    pts = []; n = 12
+    pf = (-X_v + R*_gm.cos(_gm.radians(225)), Y_f + R*_gm.sin(_gm.radians(225)))
+    pts.append((pf[0] + L_cola*(-_gm.sin(_gm.radians(225))),
+                pf[1] + L_cola*( _gm.cos(_gm.radians(225)))))
+    for i in range(n, -1, -1):
+        a = _gm.radians(90 + 135*(i/n))
+        pts.append((-X_v + R*_gm.cos(a), Y_f + R*_gm.sin(a)))
+    pts.append((X_v, Y_f + R))
+    for i in range(1, n+1):
+        a = _gm.radians(90 - 135*(i/n))
+        pts.append((X_v + R*_gm.cos(a), Y_f + R*_gm.sin(a)))
+    pf = (X_v + R*_gm.cos(_gm.radians(-45)), Y_f + R*_gm.sin(_gm.radians(-45)))
+    pts.append((pf[0] + L_cola*( _gm.sin(_gm.radians(-45))),
+                pf[1] + L_cola*(-_gm.cos(_gm.radians(-45)))))
+    return pts
+
+def generar_puntos_grapa_y(X_f, Y_v, R, L_cola):
+    """Grapa V. Barras en (X_f, ±Y_v). Tramo recto por X_f+R."""
+    pts = []; n = 12
+    pf = (X_f + R*_gm.cos(_gm.radians(-135)), -Y_v + R*_gm.sin(_gm.radians(-135)))
+    pts.append((pf[0] + L_cola*( _gm.sin(_gm.radians(-135))),
+                pf[1] + L_cola*(-_gm.cos(_gm.radians(-135)))))
+    for i in range(n, -1, -1):
+        a = _gm.radians(-135*(i/n))
+        pts.append((X_f + R*_gm.cos(a), -Y_v + R*_gm.sin(a)))
+    pts.append((X_f + R, Y_v))
+    for i in range(1, n+1):
+        a = _gm.radians(135*(i/n))
+        pts.append((X_f + R*_gm.cos(a), Y_v + R*_gm.sin(a)))
+    pf = (X_f + R*_gm.cos(_gm.radians(135)), Y_v + R*_gm.sin(_gm.radians(135)))
+    pts.append((pf[0] + L_cola*(-_gm.sin(_gm.radians(135))),
+                pf[1] + L_cola*( _gm.cos(_gm.radians(135)))))
+    return pts
+# =============================================================================
 import io
 # ── Imports protegidos (Prompt Maestro UX v6.0) ──────────────────────────────
 try:
@@ -648,131 +688,105 @@ def draw_stirrup(b_cm, h_cm, hook_len_cm, bar_diam_mm, bar_name=None):
     return fig
 
 
-def draw_stirrup_with_ties(b_cm, h_cm, hook_len_cm, bar_diam_mm,
+def draw_stirrup_with_ties(b_cm, h_cm, recub_cm, hook_len_cm, bar_diam_mm,
                            n_ties_x=0, n_ties_y=0,
                            nivel_sismico_str="DES", bar_name=None,
-                           bar_coords=None):
+                           bar_coords=None, long_bar_diam_mm=None):
     """Estribo perimetral + flejes NSR-10 C.21.6.4.2.
     bar_coords: lista [(x,y),...] en cm de todas las varillas.
     Si supera 15 cm entre varillas no arriostradas genera fleje automático.
     """
     import math as _m, numpy as _np
+    Ancho_Estribo = b_cm - (2 * recub_cm)
+    Alto_Estribo  = h_cm - (2 * recub_cm)
+    
     label   = bar_name if bar_name else _bar_label(bar_diam_mm)
     _is_des = "DES" in nivel_sismico_str.upper() or "ESPECIAL" in nivel_sismico_str.upper()
     _is_dmo = "DMO" in nivel_sismico_str.upper() or "MODERADA" in nivel_sismico_str.upper()
     _ang1   = 135 if (_is_des or _is_dmo) else 90
     MAX_LIB = 15.0   # cm — NSR-10 C.21.6.4.2 / ACI 318-19 §25.7.2.3
 
-    fig, ax = plt.subplots(figsize=(max(5, b_cm/10), max(4, h_cm/10)))
+    fig, ax = plt.subplots(figsize=(max(5, Ancho_Estribo/10), max(4, Alto_Estribo/10)))
     fig.patch.set_facecolor('#1e1e2e')
     for _a in fig.get_axes():
         _a.set_facecolor('#14142a'); _a.tick_params(colors='#cdd6f4')
         _a.xaxis.label.set_color('#cdd6f4'); _a.yaxis.label.set_color('#cdd6f4')
     ax.set_aspect('equal')
 
-    r  = max(min(bar_diam_mm/10.0*3, b_cm*0.08, h_cm*0.08), 0.3)
+    r  = max(min(bar_diam_mm/10.0*3, Ancho_Estribo*0.08, Alto_Estribo*0.08), 0.3)
     hk = hook_len_cm
 
-    def _arc_pts(cx, cy, rad, a0, a1, n=10):
+    db_cm = (long_bar_diam_mm / 10.0) if long_bar_diam_mm else (bar_diam_mm / 10.0 * 1.5)
+    dst_cm = bar_diam_mm / 10.0
+    R_grapa = (db_cm / 2.0) + (dst_cm / 2.0)
+
+    def _arc_pts(cx, cy, rad, a0, a1, n=8):
         angs = _np.linspace(_m.radians(a0), _m.radians(a1), n)
         return [(cx+rad*_m.cos(a), cy+rad*_m.sin(a)) for a in angs]
 
+    import math as _mg
+    # Centro del estribo en coords locales (origen = esquina inf-izq)
+    _Cx = Ancho_Estribo / 2.0
+    _Cy = Alto_Estribo  / 2.0
+    # xv_max / yv_max en coords centradas: semiancho hasta CENTRO de la varilla
+    _xv_max_m = _Cx - dst_cm - (db_cm / 2.0)   # = Ancho/2 - dst - radio_varilla
+    _yv_max_m = _Cy - dst_cm - (db_cm / 2.0)
+    _n_g = 10
+
+    def _get_grapa_pts(x1, y1, x2, y2, orientation='X'):
+        _Lc = hk
+        if orientation == 'X':
+            _yv_c = y1 - _Cy
+            _pc = generar_puntos_grapa_x(_xv_max_m, _yv_c, R_grapa, _Lc)
+            return [(x + _Cx, y + _Cy) for x, y in _pc]
+        else:
+            _xv_c = x1 - _Cx
+            _pc = generar_puntos_grapa_y(_xv_c, _yv_max_m, R_grapa, _Lc)
+            return [(x + _Cx, y + _Cy) for x, y in _pc]
+
     # ── Estribo perimetral ───────────────────────────────────────────────────
     pts = []
-    pts.append((0, h_cm-r)); pts += _arc_pts(r, r, r, 180, 270)
-    pts.append((b_cm-r, 0)); pts += _arc_pts(b_cm-r, r, r, 270, 360)
-    pts.append((b_cm, h_cm-r)); pts += _arc_pts(b_cm-r, h_cm-r, r, 0, 90)
-    pts.append((r, h_cm)); pts += _arc_pts(r, h_cm-r, r, 90, 180)
-    pts.append((0, h_cm-r))
+    pts.append((0, Alto_Estribo-r)); pts += _arc_pts(r, r, r, 180, 270)
+    pts.append((Ancho_Estribo-r, 0)); pts += _arc_pts(Ancho_Estribo-r, r, r, 270, 360)
+    pts.append((Ancho_Estribo, Alto_Estribo-r)); pts += _arc_pts(Ancho_Estribo-r, Alto_Estribo-r, r, 0, 90)
+    pts.append((r, Alto_Estribo)); pts += _arc_pts(r, Alto_Estribo-r, r, 90, 180)
+    pts.append((0, Alto_Estribo-r))
     ax.plot([p[0] for p in pts], [p[1] for p in pts],
             color='#00d4ff', linewidth=2.5, zorder=3)
     # Ganchos 135° estribo perimetral
     _dk = hk * 0.707
-    ax.annotate("", xy=(0+_dk, h_cm-r-_dk), xytext=(0, h_cm-r),
+    ax.annotate("", xy=(0+_dk, Alto_Estribo-r-_dk), xytext=(0, Alto_Estribo-r),
                 arrowprops=dict(arrowstyle="-", color='#00d4ff', lw=2.5))
-    ax.annotate("", xy=(r+_dk, h_cm+_dk),   xytext=(r, h_cm),
+    ax.annotate("", xy=(r+_dk, Alto_Estribo-_dk),   xytext=(r, Alto_Estribo),
                 arrowprops=dict(arrowstyle="-", color='#00d4ff', lw=2.5))
 
-    # ── Flejes dinámicos basados en coordenadas de varillas ──────────────────
-    _tie_drawn = 0
-    if bar_coords and len(bar_coords) >= 2:
-        # Agrupar por fila horizontal (±2 mm tolerancia)
-        _rows = {}
-        for (xb, yb) in bar_coords:
-            _ky = round(yb / 0.2) * 0.2
-            _rows.setdefault(_ky, []).append(float(xb))
-        # Flejes horizontales (dir-X): une barras de la misma fila que > 15 cm
-        for _yrow, _xs in _rows.items():
-            _xs = sorted(set(_xs))
-            for _k in range(len(_xs)-1):
-                if _xs[_k+1] - _xs[_k] > MAX_LIB:
-                    x1, x2 = _xs[_k], _xs[_k+1]
-                    ax.plot([x1, x2], [_yrow, _yrow],
-                            color='#ff9500', linewidth=2, zorder=4,
-                            label='Fleje X' if _tie_drawn == 0 else "")
-                    # Ganchos 135° alternados hacia el núcleo
-                    _sg = 1 if (_tie_drawn % 2 == 0) else -1
-                    _ak_i = 180 - _sg*45   # izquierdo
-                    _ak_d = -_sg*45         # derecho
-                    for (_xp, _ang) in [(x1, _ak_i), (x2, _ak_d)]:
-                        ax.annotate("",
-                            xy=(_xp + hk*_m.cos(_m.radians(_ang)),
-                                _yrow + hk*_m.sin(_m.radians(_ang))),
-                            xytext=(_xp, _yrow),
-                            arrowprops=dict(arrowstyle="-", color='#ff9500', lw=1.8))
-                    _tie_drawn += 1
-        # Flejes verticales (dir-Y): columnas con separación > 15 cm
-        _cols = {}
-        for (xb, yb) in bar_coords:
-            _kx = round(xb / 0.2) * 0.2
-            _cols.setdefault(_kx, []).append(float(yb))
-        for _xcol, _ys in _cols.items():
-            _ys = sorted(set(_ys))
-            for _k in range(len(_ys)-1):
-                if _ys[_k+1] - _ys[_k] > MAX_LIB:
-                    y1, y2 = _ys[_k], _ys[_k+1]
-                    ax.plot([_xcol, _xcol], [y1, y2],
-                            color='#f0e040', linewidth=2, zorder=4,
-                            label='Fleje Y' if _tie_drawn == 1 else "")
-                    _sg = 1 if (_tie_drawn % 2 == 0) else -1
-                    for (_yp, _ang) in [(y1, -90+_sg*45), (y2, 90-_sg*45)]:
-                        ax.annotate("",
-                            xy=(_xcol + hk*_m.cos(_m.radians(_ang)),
-                                _yp  + hk*_m.sin(_m.radians(_ang))),
-                            xytext=(_xcol, _yp),
-                            arrowprops=dict(arrowstyle="-", color='#f0e040', lw=1.8))
-                    _tie_drawn += 1
-    else:
-        # Fallback uniforme cuando no vienen coordenadas
-        for _i in range(1, n_ties_x+1):
-            _yf = h_cm * _i / (n_ties_x+1)
-            ax.plot([0, b_cm], [_yf, _yf], color='#ff9500', linewidth=2, zorder=4,
-                    label='Fleje X' if _i==1 else "")
-            _sg = 1 if _i%2==1 else -1
-            for (_xp, _ang) in [(0, 180-_sg*45), (b_cm, -_sg*45)]:
-                ax.annotate("", xy=(_xp+hk*_m.cos(_m.radians(_ang)),
-                                    _yf+hk*_m.sin(_m.radians(_ang))),
-                            xytext=(_xp, _yf),
-                            arrowprops=dict(arrowstyle="-", color='#ff9500', lw=1.8))
-        for _j in range(1, n_ties_y+1):
-            _xf = b_cm * _j / (n_ties_y+1)
-            ax.plot([_xf, _xf], [0, h_cm], color='#f0e040', linewidth=2, zorder=4,
-                    label='Fleje Y' if _j==1 else "")
-            _sg = 1 if _j%2==1 else -1
-            for (_yp, _ang) in [(0, -90+_sg*45), (h_cm, 90-_sg*45)]:
-                ax.annotate("", xy=(_xf+hk*_m.cos(_m.radians(_ang)),
-                                    _yp+hk*_m.sin(_m.radians(_ang))),
-                            xytext=(_xf, _yp),
-                            arrowprops=dict(arrowstyle="-", color='#f0e040', lw=1.8))
+    # ── Flejes (Cross-Ties) distribuidos equitativamente (Sincronizado con IFC) ──
+    color_transversal = '#00d4ff'  # Unifica estribos y grapas visualmente
 
-    # ── Cotas dinámicas: b_int = b_cm, h_int = h_cm (ya vienen como interiores) ──
-    ax.annotate(f"← {b_cm:.1f} cm →", xy=(b_cm/2, -hk*0.7), ha='center',
+    # Flejes horizontales (dir-X)
+    if n_ties_x > 0:
+        esp_fx = Alto_Estribo / (n_ties_x + 1)
+        for _i in range(1, n_ties_x + 1):
+            _yf = esp_fx * _i
+            _pgx = _get_grapa_pts(0, _yf, Ancho_Estribo, _yf, 'X')
+            ax.plot([p[0] for p in _pgx], [p[1] for p in _pgx], color=color_transversal, linewidth=2.5, zorder=4)
+
+    # Flejes verticales (dir-Y)
+    if n_ties_y > 0:
+        esp_fy = Ancho_Estribo / (n_ties_y + 1)
+        for _j in range(1, n_ties_y + 1):
+            _xf = esp_fy * _j
+            _pgy = _get_grapa_pts(_xf, 0, _xf, Alto_Estribo, 'Y')
+            ax.plot([p[0] for p in _pgy], [p[1] for p in _pgy], color=color_transversal, linewidth=2.5, zorder=4)
+
+    # ── Cotas dinámicas ──
+    ax.annotate(f"Ancho_Estribo = {Ancho_Estribo:.1f} cm", xy=(Ancho_Estribo/2, -hk*0.7), ha='center',
                 fontsize=9, fontweight='bold', color='#cdd6f4')
-    ax.annotate(f"↓ {h_cm:.1f} cm ↑", xy=(-hk*0.6, h_cm/2), ha='right', va='center',
+    ax.annotate(f"Alto_Estribo = {Alto_Estribo:.1f} cm", xy=(-hk*0.6, Alto_Estribo/2), ha='right', va='center',
                 fontsize=9, fontweight='bold', color='#cdd6f4',
                 rotation=90, rotation_mode='anchor')
     _gancho_str = f"Gancho {_ang1}°"
-    _n_tx = _tie_drawn
+    _n_tx = n_ties_x + n_ties_y
     ax.set_title(
         f"Sección Transversal — Estribos + Flejes | {label}\n"
         f"{_gancho_str} ({nivel_sismico_str}) | {_n_tx} flete(s) NSR-10 C.21.6.4.2",
@@ -1819,8 +1833,9 @@ if not es_circular:
     claro_libre_x = (b - 2 * d_prime) / (num_filas_h - 1) - rebar_diam / 10 if num_filas_h > 1 else 0
     claro_libre_y = (h - 2 * d_prime) / (num_filas_v - 1) - rebar_diam / 10 if num_filas_v > 1 else 0
     
-    num_flejes_y = max(0, math.ceil((b - 2 * d_prime - 15) / 15)) if claro_libre_x > 15.0 else 0
-    num_flejes_x = max(0, math.ceil((h - 2 * d_prime - 15) / 15)) if claro_libre_y > 15.0 else 0
+    # 1 varilla intermedia = 1 grapa cobrada en APU
+    num_flejes_x = max(0, num_filas_v - 2)
+    num_flejes_y = max(0, num_filas_h - 2)
     
     ramas_x = 2 + num_flejes_y
     ramas_y = 2 + num_flejes_x
@@ -1962,7 +1977,7 @@ def gen_df_cap_3d(cap_x, cap_y, n_theta=24, n_P=80):
     Genera columnas nominales (P,Mx,My) Y de diseño (phi_Pn,phi_Mx,phi_My)
     para que plot_pm_3d use ambas capas desde el mismo DataFrame.
     """
-    from scipy.interpolate import interp1d
+    # [FIX] scipy→np.interp
 
     def _arr(d, *keys):
         for k in keys:
@@ -1986,15 +2001,15 @@ def gen_df_cap_3d(cap_x, cap_y, n_theta=24, n_P=80):
     P_min = min(Px.min(), Py.min()); P_max = max(Px.max(), Py.max())
     P_grid = np.linspace(P_min, P_max, n_P)
 
-    fx   = interp1d(Px,    Mx_,    kind='linear', fill_value=0.0, bounds_error=False)
-    fy   = interp1d(Py,    My_,    kind='linear', fill_value=0.0, bounds_error=False)
-    pfx  = interp1d(phiPx, phiMx_, kind='linear', fill_value=0.0, bounds_error=False)
-    pfy  = interp1d(phiPy, phiMy_, kind='linear', fill_value=0.0, bounds_error=False)
+    _sx=np.argsort(Px)
+    _sy=np.argsort(Py)
+    _spx=np.argsort(phiPx)
+    _spy=np.argsort(phiPy)
 
-    Mxc  = np.maximum(fx(P_grid),  0.0)
-    Myc  = np.maximum(fy(P_grid),  0.0)
-    pMxc = np.maximum(pfx(P_grid), 0.0)
-    pMyc = np.maximum(pfy(P_grid), 0.0)
+    Mxc  = np.maximum(np.interp(P_grid,np.array(Px)[_sx],np.array(Mx_)[_sx],left=0.,right=0.),0.)
+    Myc  = np.maximum(np.interp(P_grid,np.array(Py)[_sy],np.array(My_)[_sy],left=0.,right=0.),0.)
+    pMxc = np.maximum(np.interp(P_grid,np.array(phiPx)[_spx],np.array(phiMx_)[_spx],left=0.,right=0.),0.)
+    pMyc = np.maximum(np.interp(P_grid,np.array(phiPy)[_spy],np.array(phiMy_)[_spy],left=0.,right=0.),0.)
 
     rows = []
     for theta in np.linspace(0, 2*np.pi, n_theta, endpoint=False):
@@ -2008,8 +2023,10 @@ def gen_df_cap_3d(cap_x, cap_y, n_theta=24, n_P=80):
             if Mn > 1e-3:
                 rows.append({'P': float(P), 'Mx': Mn*ct, 'My': Mn*st,
                              'phi_Pn': float(P), 'phi_Mx': Mp*ct, 'phi_My': Mp*st})
-    for Pp in [P_max, P_min]:
-        rows.append({'P':float(Pp),'Mx':0.,'My':0.,'phi_Pn':float(Pp),'phi_Mx':0.,'phi_My':0.})
+    phi_P_max = max(phiPx.max(), phiPy.max()) if len(phiPx) > 0 else P_max
+    phi_P_min = min(phiPx.min(), phiPy.min()) if len(phiPx) > 0 else P_min
+    rows.append({'P':float(P_max),'Mx':0.,'My':0.,'phi_Pn':float(phi_P_max),'phi_Mx':0.,'phi_My':0.})
+    rows.append({'P':float(P_min),'Mx':0.,'My':0.,'phi_Pn':float(phi_P_min),'phi_Mx':0.,'phi_My':0.})
     return pd.DataFrame(rows)
 
 
@@ -2416,6 +2433,7 @@ with tab1:
         st.subheader(_t("Diagrama P-M 2D (Eje X)", " P-M 2D Diagram (X-Axis)"))
         configurar_pdf_comercial(fig_pm_2d)
         st.pyplot(fig_pm_2d)
+        plt.close(fig_pm_2d)
         st.subheader(_t("🧊 Superficie de Interacción Biaxial 3D — Punto actual",
                         "🧊 Biaxial 3D Interaction Surface — Current point"))
         st.plotly_chart(fig_3d, use_container_width=True)
@@ -2561,10 +2579,12 @@ with tab2:
     #  BARRAS LONGITUDINALES 3D 
     z_barras = [0, L_col]
     if es_circular:
-        radio_c = D/2 - d_prime
-        for layer in layers:
-            xb = layer.get('x', 0)
-            yb = layer.get('y', 0)
+        offset_real_cm = recub_cm + (stirrup_diam / 10.0) + (rebar_diam / 20.0)
+        radio_plot = D/2 - offset_real_cm
+        ang_step = 2 * math.pi / n_barras
+        for i_bar in range(n_barras):
+            xb = radio_plot * math.cos(i_bar * ang_step)
+            yb = radio_plot * math.sin(i_bar * ang_step)
             fig3d_col.add_trace(go.Scatter3d(
                 x=[xb, xb], y=[yb, yb], z=z_barras,
                 mode='lines',
@@ -2572,10 +2592,11 @@ with tab2:
                 showlegend=False, name='Barra long.'
             ))
     else:
+        offset_real_cm = recub_cm + (stirrup_diam / 10.0) + (rebar_diam / 20.0)
         r_bar3d = rebar_diam / 20.0
-        xs3d = np.linspace(d_prime - b/2, b/2 - d_prime, num_filas_h) if num_filas_h > 1 else [0.0]
-        ys3d_bot = -(h/2 - d_prime)
-        ys3d_top =   h/2 - d_prime
+        xs3d = np.linspace(offset_real_cm - b/2, b/2 - offset_real_cm, num_filas_h) if num_filas_h > 1 else [0.0]
+        ys3d_bot = -(h/2 - offset_real_cm)
+        ys3d_top =   h/2 - offset_real_cm
         for x3 in xs3d:
             for y3 in [ys3d_bot, ys3d_top]:
                 fig3d_col.add_trace(go.Scatter3d(
@@ -2585,10 +2606,10 @@ with tab2:
                     showlegend=False, name='Barra long.'
                 ))
         if num_capas_intermedias > 0:
-            esp3d = (h - 2*d_prime) / (num_capas_intermedias + 1)
+            esp3d = (h - 2*offset_real_cm) / (num_capas_intermedias + 1)
             for ci in range(1, num_capas_intermedias + 1):
-                yi = -(h/2) + d_prime + ci * esp3d
-                for xi in [-(b/2 - d_prime), b/2 - d_prime]:
+                yi = -(h/2) + offset_real_cm + ci * esp3d
+                for xi in [-(b/2 - offset_real_cm), b/2 - offset_real_cm]:
                     fig3d_col.add_trace(go.Scatter3d(
                         x=[xi, xi], y=[yi, yi], z=z_barras,
                         mode='lines',
@@ -2598,8 +2619,21 @@ with tab2:
 
     #  ESTRIBOS + FLEJES EN CRUZ 3D 
     if not es_circular:
-        paso_3d = s_conf if (es_des or es_dmo) else s_basico
-        z_est   = np.arange(0, L_col + paso_3d, paso_3d)
+        # Sincronizar alturas 3D EXACTAMENTE con la cantidad del APU
+        z_est = []
+        _esp_real_conf = Lo_conf / n_est_por_Lo if n_est_por_Lo > 0 else s_conf
+        # Zona inferior confinada (incluye z=0 y z=Lo_conf)
+        for i in range(n_est_por_Lo + 1):
+            z_est.append(i * _esp_real_conf)
+        # Zona central (distribuida uniformemente)
+        if n_estribos_centro > 0:
+            esp_real_centro = longitud_zona_libre / (n_estribos_centro + 1)
+            for i in range(1, n_estribos_centro + 1):
+                z_est.append(Lo_conf + i * esp_real_centro)
+        # Zona superior confinada (hasta L_col - _esp_real_conf para encajar exacto con APU)
+        if n_est_por_Lo > 0:
+            for i in range(n_est_por_Lo):
+                z_est.append(L_col - Lo_conf + (i+1) * _esp_real_conf)
         bw = b/2 - recub_cm    # semiancho eje estribo
         hw = h/2 - recub_cm    # semialto  eje estribo
         _lv = min(bw, hw) * 0.18  # longitud del gancho 135° en 3D
@@ -2646,55 +2680,31 @@ with tab2:
                 legendgroup='estribo'
             ))
             _estr_shown = True
-            # ── Flejes en X (paralelos al eje X, a lo largo de la altura h) ─
-            if num_flejes_x > 0:
-                esp_fx = (2*hw) / (num_flejes_x + 1)
-                for _nfx in range(1, num_flejes_x + 1):
-                    _yf = -hw + esp_fx * _nfx
-                    # gancho 135° en extremo izq → derecho → gancho 135° en extremo der
+            # ── Flejes en X (Anclados a varillas reales) ──
+            if num_flejes_x > 0 and (num_filas_v - 2) > 0:
+                n_int_3d = num_filas_v - 2
+                n_ties_3d = min(num_flejes_x, n_int_3d)
+                idx_ties_3d = np.linspace(1, n_int_3d, n_ties_3d).round().astype(int)
+                esp_3d_y = (h - 2*offset_real_cm) / (n_int_3d + 1)
+                for _nfx in idx_ties_3d:
+                    _yf = -(h/2) + offset_real_cm + esp_3d_y * _nfx
                     _hk_ang = _s45 if _iz % 2 == 0 else -_s45
-                    _fx = [-bw, -bw+_s45,  None,  bw-_s45, bw]
-                    _fy = [_yf,  _yf+_hk_ang, None, _yf+_hk_ang, _yf]
-                    fig3d_col.add_trace(go.Scatter3d(
-                        x=[-bw, bw], y=[_yf, _yf], z=[ze, ze],
-                        mode='lines', line=dict(color='#ff9500', width=2.5),
-                        showlegend=not _flet_shown, name=f'Flete en X ({num_flejes_x})',
-                        legendgroup='flejeX'
-                    ))
-                    # ganchos visuales
-                    fig3d_col.add_trace(go.Scatter3d(
-                        x=[-bw,-bw+_s45], y=[_yf,_yf+_hk_ang], z=[ze,ze],
-                        mode='lines', line=dict(color='#ff9500', width=2.5),
-                        showlegend=False, legendgroup='flejeX'
-                    ))
-                    fig3d_col.add_trace(go.Scatter3d(
-                        x=[bw,bw-_s45], y=[_yf,_yf-_hk_ang], z=[ze,ze],
-                        mode='lines', line=dict(color='#ff9500', width=2.5),
-                        showlegend=False, legendgroup='flejeX'
-                    ))
+                    fig3d_col.add_trace(go.Scatter3d(x=[-bw, bw], y=[_yf, _yf], z=[ze, ze], mode='lines', line=dict(color='#00d4ff', width=2.5), showlegend=not _flet_shown, name=f'Flete en X ({n_ties_3d})', legendgroup='flejeX'))
+                    fig3d_col.add_trace(go.Scatter3d(x=[-bw,-bw+_s45], y=[_yf,_yf+_hk_ang], z=[ze,ze], mode='lines', line=dict(color='#00d4ff', width=2.5), showlegend=False, legendgroup='flejeX'))
+                    fig3d_col.add_trace(go.Scatter3d(x=[bw,bw-_s45], y=[_yf,_yf-_hk_ang], z=[ze,ze], mode='lines', line=dict(color='#00d4ff', width=2.5), showlegend=False, legendgroup='flejeX'))
                     _flet_shown = True
-            # ── Flejes en Y (paralelos al eje Y, a lo largo del ancho b) ───
-            if num_flejes_y > 0:
-                esp_fy = (2*bw) / (num_flejes_y + 1)
-                for _nfy in range(1, num_flejes_y + 1):
-                    _xf = -bw + esp_fy * _nfy
+            # ── Flejes en Y (Anclados a varillas reales) ──
+            if num_flejes_y > 0 and (num_filas_h - 2) > 0:
+                n_int_3d = num_filas_h - 2
+                n_ties_3d = min(num_flejes_y, n_int_3d)
+                idx_ties_3d = np.linspace(1, n_int_3d, n_ties_3d).round().astype(int)
+                esp_3d_x = (b - 2*offset_real_cm) / (n_int_3d + 1)
+                for _nfy in idx_ties_3d:
+                    _xf = -(b/2) + offset_real_cm + esp_3d_x * _nfy
                     _hk_ang = _s45 if _iz % 2 == 0 else -_s45
-                    fig3d_col.add_trace(go.Scatter3d(
-                        x=[_xf, _xf], y=[-hw, hw], z=[ze, ze],
-                        mode='lines', line=dict(color='#f0e040', width=2.5),
-                        showlegend=not _flet_shown, name=f'Flete en Y ({num_flejes_y})',
-                        legendgroup='flejeY'
-                    ))
-                    fig3d_col.add_trace(go.Scatter3d(
-                        x=[_xf,_xf+_hk_ang], y=[-hw,-hw+_s45], z=[ze,ze],
-                        mode='lines', line=dict(color='#f0e040', width=2.5),
-                        showlegend=False, legendgroup='flejeY'
-                    ))
-                    fig3d_col.add_trace(go.Scatter3d(
-                        x=[_xf,_xf-_hk_ang], y=[hw,hw-_s45], z=[ze,ze],
-                        mode='lines', line=dict(color='#f0e040', width=2.5),
-                        showlegend=False, legendgroup='flejeY'
-                    ))
+                    fig3d_col.add_trace(go.Scatter3d(x=[_xf, _xf], y=[-hw, hw], z=[ze, ze], mode='lines', line=dict(color='#00d4ff', width=2.5), showlegend=not _flet_shown, name=f'Flete en Y ({n_ties_3d})', legendgroup='flejeY'))
+                    fig3d_col.add_trace(go.Scatter3d(x=[_xf,_xf+_hk_ang], y=[-hw,-hw+_s45], z=[ze,ze], mode='lines', line=dict(color='#00d4ff', width=2.5), showlegend=False, legendgroup='flejeY'))
+                    fig3d_col.add_trace(go.Scatter3d(x=[_xf,_xf-_hk_ang], y=[hw,hw-_s45], z=[ze,ze], mode='lines', line=dict(color='#00d4ff', width=2.5), showlegend=False, legendgroup='flejeY'))
                     _flet_shown = True
     else:
         rc_sp = D/2 - recub_cm
@@ -2756,8 +2766,90 @@ with tab2:
         title=dict(text="Visualizacion 3D de la Columna — Proporciones Reales", font=dict(size=13))
     )
     st.plotly_chart(fig3d_col, use_container_width=True)
+
+    # ─────────────────────────────────────────────────────────────────
+    # RESUMEN DE ESTRIBOS Y VERIFICACIONES BAJO EL 3D
+    # ─────────────────────────────────────────────────────────────────
+    _col3d_a, _col3d_b = st.columns(2)
+
+    with _col3d_a:
+        st.subheader(_t("Distribucion de Estribos (NSR-10)", "Stirrup Distribution (NSR-10)"))
+        # Calcular cantidad real dibujada en el 3D (zona-aware)
+        _n_conf_bot = sum(1 for z in z_est if z <= Lo_conf)          if not es_circular else 0
+        _n_conf_top = sum(1 for z in z_est if z >= L_col - Lo_conf)  if not es_circular else 0
+        _n_medio    = sum(1 for z in z_est if Lo_conf < z < L_col - Lo_conf) if not es_circular else 0
+        _n_3d_total = len(z_est) if not es_circular else 0
+
+        _estr_rows = {
+            _t("Zona", "Zone"): [
+                _t("Confinada inferior", "Bottom confined"),
+                _t("Zona central",       "Mid zone"),
+                _t("Confinada superior", "Top confined"),
+                _t("TOTAL dibujado 3D",  "TOTAL drawn 3D"),
+                _t("TOTAL APU (calculo)","TOTAL APU (calc)"),
+            ],
+            _t("Long. zona", "Zone length"): [
+                f"{Lo_conf:.0f} cm",
+                f"{max(0, L_col - 2*Lo_conf):.0f} cm",
+                f"{Lo_conf:.0f} cm",
+                "", ""
+            ],
+            _t("Sep.", "Spacing"): [
+                f"s = {s_conf:.0f} cm",
+                f"s = {s_basico:.0f} cm",
+                f"s = {s_conf:.0f} cm",
+                "", ""
+            ],
+            _t("Nº estribos", "# Stirrups"): [
+                str(_n_conf_bot),
+                str(_n_medio),
+                str(_n_conf_top),
+                str(_n_3d_total),
+                str(n_estribos_total),
+            ],
+        }
+        st.dataframe(pd.DataFrame(_estr_rows), use_container_width=True, hide_index=True)
+
+        if not es_circular:
+            _diff = n_estribos_total - _n_3d_total
+            if _diff > 0:
+                st.info(f"[INFO] El modelo 3D dibuja {_n_3d_total} estribos. El APU calcula {n_estribos_total}. "
+                        f"Diferencia: {_diff} estribos en los extremos (margen de 5 cm en cada tope).")
+            else:
+                st.success(f"[OK] El modelo 3D coincide con el APU: {n_estribos_total} estribos totales.")
+
+    with _col3d_b:
+        st.subheader(_t("Resumen de Verificaciones", "Verification Summary"))
+        _checks_3d = {
+            _t("Verificacion", "Check"): [
+                _t("Cuantia longitudinal", "Long. ratio"),
+                _t("Verificacion biaxial", "Biaxial check"),
+                _t("Esbeltez (kl/r <= 22)", "Slenderness"),
+                _t(f"Ash {'espiral' if es_circular else 'estribos'}", f"Ash {'spiral' if es_circular else 'stirrups'}"),
+                _t("Longitud confinamiento Lo", "Conf. length Lo"),
+                _t("Separacion maxima", "Max spacing"),
+            ],
+            _t("Valor", "Value"): [
+                f"rho={cuantia*100:.2f}% [{rho_min*100:.1f}-{rho_max*100:.1f}%]",
+                f"phi*Mn/Mu = {bresler.get('ratio', 0):.2f}" if bresler.get('ok') else "No cumple",
+                f"kl/r = {slenderness['kl_r']:.1f}",
+                f"Ash_prov >= Ash_req" if ash_ok else f"Ash insuficiente",
+                f"Lo = {Lo_conf:.0f} cm",
+                f"s_conf={s_conf:.0f} cm | s_bas={s_basico:.0f} cm",
+            ],
+            _t("Estado", "Status"): [
+                "[OK]" if rho_min <= cuantia <= rho_max else "[!]",
+                "[OK]" if bresler['ok'] else "[!]",
+                "[OK]" if slenderness['kl_r'] <= 22 else "[!]",
+                "[OK]" if ash_ok else "[!]",
+                "[OK]",
+                "[OK]" if (es_des and s_conf <= 15) or (es_dmo and s_conf <= 20) or es_dmi else "[!]",
+            ],
+        }
+        st.dataframe(pd.DataFrame(_checks_3d), use_container_width=True, hide_index=True)
+
     st.markdown("---")
-    st.subheader(_t("Sección Transversal", "Cross Section"))
+    st.subheader(_t("Seccion Transversal", "Cross Section"))
     col_s1, col_s2 = st.columns(2)
     with col_s1:
         fig_sec, ax_s = plt.subplots(figsize=(5, 5))
@@ -2771,10 +2863,12 @@ with tab2:
             ax_s.add_patch(circle)
             circle_rec = plt.Circle((0, 0), D/2 - recub_cm, linewidth=1.5, edgecolor='#00d4ff', facecolor='none', linestyle='--')
             ax_s.add_patch(circle_rec)
-            radio_centro = D/2 - d_prime
-            for layer in layers:
-                x_pos = layer.get('x', 0)
-                y_pos = layer.get('y', 0)
+            offset_real_cm = recub_cm + (stirrup_diam / 10.0) + (rebar_diam / 20.0)
+            radio_plot = D/2 - offset_real_cm
+            ang_step = 2 * math.pi / n_barras
+            for i_bar in range(n_barras):
+                x_pos = radio_plot * math.cos(i_bar * ang_step)
+                y_pos = radio_plot * math.sin(i_bar * ang_step)
                 ax_s.add_patch(plt.Circle((x_pos, y_pos), rebar_diam/20, color='#ff6b35', zorder=5))
             ax_s.set_xlim(-D/2 - 5, D/2 + 5)
             ax_s.set_ylim(-D/2 - 5, D/2 + 5)
@@ -2782,34 +2876,74 @@ with tab2:
             ax_s.add_patch(patches.Rectangle((0, 0), b, h, linewidth=2, edgecolor='white', facecolor='#4a4a6a'))
             ax_s.add_patch(patches.Rectangle((recub_cm, recub_cm), b-2*recub_cm, h-2*recub_cm,
                 linewidth=1.5, edgecolor='#00d4ff', facecolor='none', linestyle='--'))
+            offset_real_cm = recub_cm + (stirrup_diam / 10.0) + (rebar_diam / 20.0)
             r_bar = rebar_diam / 20.0
-            xs = np.linspace(d_prime, b - d_prime, num_filas_h) if num_filas_h > 1 else [b/2]
-            for x in xs:
-                ax_s.add_patch(plt.Circle((x, h - d_prime), r_bar, color='#ff6b35', zorder=5))
-                ax_s.add_patch(plt.Circle((x, d_prime), r_bar, color='#ff6b35', zorder=5))
+            xs = np.linspace(offset_real_cm, b - offset_real_cm, num_filas_h) if num_filas_h > 1 else [b/2]
+            for i_x, x in enumerate(xs):
+                ax_s.add_patch(plt.Circle((x, h - offset_real_cm), r_bar, color='#ff6b35', zorder=5))
+                ax_s.add_patch(plt.Circle((x, offset_real_cm), r_bar, color='#ff6b35', zorder=5))
+                
             if num_capas_intermedias > 0:
-                esp = (h - 2*d_prime) / (num_capas_intermedias + 1)
+                esp = (h - 2*offset_real_cm) / (num_capas_intermedias + 1)
                 for i in range(1, num_capas_intermedias + 1):
-                    y_int = d_prime + i * esp
-                    ax_s.add_patch(plt.Circle((d_prime, y_int), r_bar, color='#ff6b35', zorder=5))
-                    ax_s.add_patch(plt.Circle((b - d_prime, y_int), r_bar, color='#ff6b35', zorder=5))
+                    y_int = offset_real_cm + i * esp
+                    ax_s.add_patch(plt.Circle((offset_real_cm, y_int), r_bar, color='#ff6b35', zorder=5))
+                    ax_s.add_patch(plt.Circle((b - offset_real_cm, y_int), r_bar, color='#ff6b35', zorder=5))
+            # ── LÍNEAS PUNTEADAS ANCLADAS A LAS VARILLAS EXACTAS ──
+            ys_reales = np.linspace(offset_real_cm, h - offset_real_cm, num_filas_v)
+            if num_flejes_x > 0 and len(ys_reales) > 2:
+                ys_int = ys_reales[1:-1]
+                idx = np.linspace(0, len(ys_int)-1, min(num_flejes_x, len(ys_int))).round().astype(int)
+                for i in idx:
+                    ax_s.plot([offset_real_cm, b - offset_real_cm], [ys_int[i], ys_int[i]], color='#00d4ff', linewidth=1.5, linestyle='--', zorder=4)
+
+            xs_reales = np.linspace(offset_real_cm, b - offset_real_cm, num_filas_h)
+            if num_flejes_y > 0 and len(xs_reales) > 2:
+                xs_int = xs_reales[1:-1]
+                idx = np.linspace(0, len(xs_int)-1, min(num_flejes_y, len(xs_int))).round().astype(int)
+                for i in idx:
+                    ax_s.plot([xs_int[i], xs_int[i]], [offset_real_cm, h - offset_real_cm], color='#00d4ff', linewidth=1.5, linestyle='--', zorder=4)
             ax_s.set_xlim(-5, b + 5)
             ax_s.set_ylim(-5, h + 5)
         ax_s.axis('off')
         ax_s.set_title(f"Sección {'Circular' if es_circular else 'Rectangular'} — {n_barras} varillas {_bar_label_short(rebar_diam)}", color='white', fontsize=9)
         configurar_pdf_comercial(fig_sec)
         st.pyplot(fig_sec)
+        plt.close(fig_sec)
     with col_s2:
-        st.subheader(_t("Resumen de Verificaciones", "Verification Summary"))
-        checks_data = {
-            "Verificación": ["Cuantía longitudinal", "Verificación biaxial", "Esbeltez (kl/r ≤ 22)",
-                             f"Ash {'espiral' if es_circular else 'estribos'}", "Longitud confinamiento Lo", "Separación máxima"],
-            "Estado": ["" if rho_min <= cuantia <= rho_max else "", "" if bresler['ok'] else "",
-                       "" if slenderness['kl_r'] <= 22 else "", "" if ash_ok else "",
-                       "",
-                       "" if (es_des and s_conf <= 15) or (es_dmo and s_conf <= 20) or es_dmi else ""]
+        st.subheader(_t("Resumen de Grapas (Cross-Ties)", "Cross-Tie Summary"))
+        _grapa_rows = {
+            _t("Elemento", "Element"): [],
+            _t("Cant.", "Qty"): [],
+            _t("Long. (m)", "Length (m)"): [],
+            _t("Peso (kg)", "Weight (kg)"): [],
         }
-        st.dataframe(pd.DataFrame(checks_data), use_container_width=True, hide_index=True)
+        # Estribo perimetral
+        _le_r = (2*(b-2*recub_cm) + 2*(h-2*recub_cm) + 12*stirrup_diam/10) / 100
+        _pe_r = n_estribos_total * _le_r * (stirrup_area*100) * 7.85e-3
+        _grapa_rows[_t("Elemento","Element")].append("E1 - Estribo perim.")
+        _grapa_rows[_t("Cant.","Qty")].append(str(n_estribos_total))
+        _grapa_rows[_t("Long. (m)","Length (m)")].append(f"{_le_r:.2f}")
+        _grapa_rows[_t("Peso (kg)","Weight (kg)")].append(f"{_pe_r:.1f}")
+        # Grapas X
+        if num_flejes_x > 0:
+            _cgx = n_estribos_total * num_flejes_x
+            _lgx = long_fleje_x / 100
+            _pgx = _cgx * _lgx * (stirrup_area*100) * 7.85e-3
+            _grapa_rows[_t("Elemento","Element")].append(f"GX ({num_flejes_x}/estribo)")
+            _grapa_rows[_t("Cant.","Qty")].append(str(_cgx))
+            _grapa_rows[_t("Long. (m)","Length (m)")].append(f"{_lgx:.2f}")
+            _grapa_rows[_t("Peso (kg)","Weight (kg)")].append(f"{_pgx:.1f}")
+        # Grapas Y
+        if num_flejes_y > 0:
+            _cgy = n_estribos_total * num_flejes_y
+            _lgy = long_fleje_y / 100
+            _pgy = _cgy * _lgy * (stirrup_area*100) * 7.85e-3
+            _grapa_rows[_t("Elemento","Element")].append(f"GY ({num_flejes_y}/estribo)")
+            _grapa_rows[_t("Cant.","Qty")].append(str(_cgy))
+            _grapa_rows[_t("Long. (m)","Length (m)")].append(f"{_lgy:.2f}")
+            _grapa_rows[_t("Peso (kg)","Weight (kg)")].append(f"{_pgy:.1f}")
+        st.dataframe(pd.DataFrame(_grapa_rows), use_container_width=True, hide_index=True)
         st.markdown("---")
         st.subheader(_t("Exportar Plano DXF (ICONTEC)", "Export DXF (ICONTEC)"))
 
@@ -2977,18 +3111,26 @@ with tab2:
                         (xb, AY0 + ALZ_HDRAW),
                         dxfattribs={'layer': 'ACERO_LONG', 'color': _color_acero_dxf_col(rebar_diam)})
 
-                # Estribos (alzado) - distribucion real
-                y_curr = 5.0
-                while y_curr <= L_col - 5.0:
+                # Estribos (alzado) - distribucion real EXACTA (Sincronizada con APU)
+                y_pos_dxf = []
+                _esp_real_conf = Lo_conf / n_est_por_Lo if n_est_por_Lo > 0 else s_conf
+                for i in range(n_est_por_Lo + 1):
+                    y_pos_dxf.append(i * _esp_real_conf)
+                if n_estribos_centro > 0:
+                    _esp_real_centro = longitud_zona_libre / (n_estribos_centro + 1)
+                    for i in range(1, n_estribos_centro + 1):
+                        y_pos_dxf.append(Lo_conf + i * _esp_real_centro)
+                if n_est_por_Lo > 0:
+                    for i in range(n_est_por_Lo):
+                        y_pos_dxf.append(L_col - Lo_conf + i * _esp_real_conf)
+
+                for y_curr in y_pos_dxf:
                     in_conf = (y_curr <= Lo_conf) or (y_curr >= L_col - Lo_conf)
-                    sep = s_conf if in_conf else s_basico
                     ye = AY0 + y_curr * ESCALA
-                    lw_estribo = 35 if in_conf else 25
                     msp.add_line(
                         (AX0 + rec_s, ye),
                         (AX0 + ALZ_WDRAW - rec_s, ye),
                         dxfattribs={'layer': 'ACERO_TRANS', 'color': _color_acero_dxf_col(stirrup_diam)})
-                    y_curr += sep
 
                 # Cotas alzado - L total
                 cx_cota = AX0 - 1.4
@@ -3060,9 +3202,10 @@ with tab2:
                     r_esp = (D / 2 - recub_cm) * escala_sec
                     msp.add_circle((cxc, cyc), r_esp, dxfattribs={'layer': 'ACERO_TRANS', 'color': _color_acero_dxf_col(stirrup_diam)})
                     r_bar = rebar_diam / 20 * escala_sec
+                    offset_real_cm = recub_cm + (stirrup_diam / 10.0) + (rebar_diam / 20.0)
                     for ang in np.linspace(0, 2 * math.pi, n_barras, endpoint=False):
-                        xb_c = cxc + (D / 2 - d_prime) * escala_sec * math.cos(ang)
-                        yb_c = cyc + (D / 2 - d_prime) * escala_sec * math.sin(ang)
+                        xb_c = cxc + (D / 2 - offset_real_cm) * escala_sec * math.cos(ang)
+                        yb_c = cyc + (D / 2 - offset_real_cm) * escala_sec * math.sin(ang)
                         # HATCH sólido NSR-10 / ICONTEC (no círculo vacío)
                         _hatch_c = msp.add_hatch(color=_color_acero_dxf_col(rebar_diam), dxfattribs={'layer': 'ACERO_LONG'})
                         _hatch_c.set_solid_fill()
@@ -3080,7 +3223,8 @@ with tab2:
                     # NSR-10 C.7.1.4 / ACI 318-19 25.3.4 — gancho sísmico 135°, ext. 6db al núcleo
                     re_s  = recub_cm * escala_sec
                     r_bar = rebar_diam / 20 * escala_sec
-                    dp_s  = d_prime * escala_sec
+                    offset_real_cm = recub_cm + (stirrup_diam / 10.0) + (rebar_diam / 20.0)
+                    offset_s  = offset_real_cm * escala_sec
                     xm, xM = ox + re_s, ox + sec_w - re_s
                     ym, yM = oy + re_s, oy + sec_h - re_s
                     bw_e  = xM - xm    # ancho estribo escalado
@@ -3120,8 +3264,8 @@ with tab2:
                                  dxfattribs={'layer':'ACERO_TRANS','color':_color_acero_dxf_col(stirrup_diam)})
 
                     # Barras en esquinas y caras
-                    cxm, cxM = ox + dp_s, ox + sec_w - dp_s
-                    cym, cyM = oy + dp_s, oy + sec_h - dp_s
+                    cxm, cxM = ox + offset_s, ox + sec_w - offset_s
+                    cym, cyM = oy + offset_s, oy + sec_h - offset_s
                     xs_bar = np.linspace(cxm, cxM, num_filas_h) if num_filas_h > 1 else [ox + sec_w / 2]
                     ys_bar = np.linspace(cym, cyM, num_filas_v) if num_filas_v > 1 else [oy + sec_h / 2]
                     for xb in xs_bar:
@@ -3137,11 +3281,33 @@ with tab2:
                             _h2.set_solid_fill()
                             _h2.paths.add_edge_path().add_ellipse((xb, yb), major_axis=(r_bar, 0), ratio=1.0)
 
-                    # Grapas interiores si > 2 filas
-                    if num_filas_h > 2:
-                        for xb in xs_bar[1:-1]:
-                            pts_g = [(xb - L_gancho * 0.5, yM - L_gancho * 0.5), (xb, yM), (xb, ym), (xb + L_gancho * 0.5, ym + L_gancho * 0.5)]
-                            msp.add_lwpolyline(pts_g, dxfattribs={'layer': 'ACERO_TRANS', 'color': _color_acero_dxf_col(stirrup_diam)})
+                    # Grapas interiores con ganchos a 135° en ambos extremos
+                    _n_hx = 8
+                    def _arc_dxf(cx, cy, rad, a0, a1):
+                        return [(cx+rad*math.cos(math.radians(a)), cy+rad*math.sin(math.radians(a)))
+                                for a in np.linspace(a0, a1, _n_hx+1)]
+                    
+                    # ── GRAPAS DXF ANCLADAS A LAS VARILLAS REALES ──
+                    _R_grapa_dxf = ((rebar_diam / 20.0) + (stirrup_diam / 20.0)) * escala_sec
+                    _Cx_dxf  = (cxm + cxM) / 2.0
+                    _Cy_dxf  = (cym + cyM) / 2.0
+                    _xv_dxf  = (cxM - cxm) / 2.0 - _R_grapa_dxf
+                    _yv_dxf  = (cyM - cym) / 2.0 - _R_grapa_dxf
+
+                    # GRAPAS DXF ANCLADAS A CADA VARILLA INTERMEDIA (SIN CANDADOS)
+                    if num_flejes_x > 0 and len(ys_bar) > 2:
+                        for y_coord in ys_bar[1:-1]:
+                            _yv_c = y_coord - _Cy_dxf
+                            _pc = generar_puntos_grapa_x(_xv_dxf, _yv_c, _R_grapa_dxf, L_gancho)
+                            _pts_gx = [(_x + _Cx_dxf, _y + _Cy_dxf) for _x, _y in _pc]
+                            msp.add_lwpolyline(_pts_gx, dxfattribs={'layer': 'ACERO_TRANS', 'color': _color_acero_dxf_col(stirrup_diam)})
+
+                    if num_flejes_y > 0 and len(xs_bar) > 2:
+                        for x_coord in xs_bar[1:-1]:
+                            _xv_c = x_coord - _Cx_dxf
+                            _pc = generar_puntos_grapa_y(_xv_c, _yv_dxf, _R_grapa_dxf, L_gancho)
+                            _pts_gy = [(_x + _Cx_dxf, _y + _Cy_dxf) for _x, _y in _pc]
+                            msp.add_lwpolyline(_pts_gy, dxfattribs={'layer': 'ACERO_TRANS', 'color': _color_acero_dxf_col(stirrup_diam)})
 
                     # Cotas seccion
                     yc_dim = oy - 0.7
@@ -3173,7 +3339,7 @@ with tab2:
 
                 # ── TABLA DE DESPIECE (zona derecha DENTRO de Carta) ─────────────
                 # Carta: 21.6cm ancho. Margen derecho: 20.6cm. Alzado+Sec ocupa ~13cm.
-                TAB_X0 = SEC_X0 + SEC_AVAILABLE_W + 0.3
+                TAB_X0 = SEC_X0 + SEC_AVAILABLE_W + 0.3 - 2.0  # Desplazado 2 cm a la izq
                 # Clamp: si la tabla no cabe a la derecha, colocar debajo de la sección
                 TAB_MAX_W = (ANCHO_PLANO - MARGEN - TAB_X0)
                 if TAB_MAX_W < 4.0:  # mínimo 4cm para tabla legible
@@ -3191,32 +3357,40 @@ with tab2:
                 ROW_H  = 0.42
                 K_DXF = min(1.0, ANCHO_PLANO / 50.0)  # Restaurar escala real
                 # Tabla empieza en la parte superior de la zona de dibujo
-                TAB_Y0 = AY0 + AREA_H - 0.5
+                TAB_Y0 = AY0 + AREA_H - 0.5 - 1.0  # Desplazado 1 cm abajo
                 HEADERS = ["MARCA", "DIAMETRO", "CANT.", "L (m)", "FORMA", "PESO kg"]
 
-                # Calcular datos barras
+                # Calcular datos barras y separar Grapas para pedido de Ferreteria
                 if es_circular:
                     _lb  = (L_col + 2 * (ld_mm / 10) + 2 * (12 * rebar_diam / 10)) / 100
                     _pw  = n_barras * _lb * (rebar_area * 100) * 7.85e-3
                     _lt  = long_espiral_total / 100
                     _pt  = peso_total_estribos_kg
                     barras_despiece = [
-                        ("L1 - Long.", _bar_label(rebar_diam), str(n_barras),
-                         f"{_lb:.2f}", "Recta + gancho sup.", f"{_pw:.1f}"),
-                        ("E1 - Espiral", _bar_label(stirrup_diam), "1 esp.",
-                         f"{_lt:.2f}", "Espiral continuaa", f"{_pt:.1f}"),
+                        ("L1 - Long.", _bar_label(rebar_diam), str(n_barras), f"{_lb:.2f}", "Recta + gancho sup.", f"{_pw:.1f}"),
+                        ("E1 - Espiral", _bar_label(stirrup_diam), "1 esp.", f"{_lt:.2f}", "Espiral continua", f"{_pt:.1f}"),
                     ]
                 else:
                     _lb  = (L_col + 2 * (ld_mm / 10) + 2 * (12 * rebar_diam / 10)) / 100
                     _pw  = n_barras_total * _lb * (rebar_area * 100) * 7.85e-3
-                    _le  = perim_estribo / 100 + 2 * (13 * stirrup_diam / 10) / 100  # incluye ganchos 135
-                    _pt  = peso_total_estribos_kg
+                    _le  = (2*(b-2*recub_cm) + 2*(h-2*recub_cm) + 12*stirrup_diam/10) / 100
+                    _pt_e = n_estribos_total * _le * (stirrup_area * 100) * 7.85e-3
                     barras_despiece = [
-                        ("L1 - Long.", _bar_label(rebar_diam), str(n_barras_total),
-                         f"{_lb:.2f}", "Recta + gan.180 inf.", f"{_pw:.1f}"),
-                        ("E1 - Estribo", _bar_label(stirrup_diam), str(n_estribos_total),
-                         f"{_le:.2f}", "Cerrado 135 (sism.)", f"{_pt:.1f}"),
+                        ("L1 - Long.",    _bar_label(rebar_diam),    str(n_barras_total),   f"{_lb:.2f}",  "Recta + gan.180",   f"{_pw:.1f}"),
+                        ("E1 - Perimetral",_bar_label(stirrup_diam), str(n_estribos_total),  f"{_le:.2f}",  "Cerrado 135",       f"{_pt_e:.1f}"),
                     ]
+                    # Grapas X
+                    if num_flejes_x > 0:
+                        _lgx = long_fleje_x / 100
+                        _cgx = n_estribos_total * num_flejes_x
+                        _pgx = _cgx * _lgx * (stirrup_area * 100) * 7.85e-3
+                        barras_despiece.append(("GX - Grapas X", _bar_label(stirrup_diam), str(_cgx), f"{_lgx:.2f}", "Grapa 135-135", f"{_pgx:.1f}"))
+                    # Grapas Y
+                    if num_flejes_y > 0:
+                        _lgy = long_fleje_y / 100
+                        _cgy = n_estribos_total * num_flejes_y
+                        _pgy = _cgy * _lgy * (stirrup_area * 100) * 7.85e-3
+                        barras_despiece.append(("GY - Grapas Y", _bar_label(stirrup_diam), str(_cgy), f"{_lgy:.2f}", "Grapa 135-135", f"{_pgy:.1f}"))
 
                 def draw_despiece_table(x0, y_top):
                     TH = 0.16  # Altura texto tabla (pequeño para no desbordarse)
@@ -3260,7 +3434,13 @@ with tab2:
                             cx += cw
                         y -= ROW_H
                     # Totales
-                    _tot_acero = _pw + _pt
+                    _tot_acero = _pw + _pt_e + sum(
+                        _cgx * (long_fleje_x/100) * (stirrup_area*100) * 7.85e-3 if num_flejes_x > 0 else 0
+                        for _cgx in [n_estribos_total * num_flejes_x]
+                    ) + sum(
+                        _cgy * (long_fleje_y/100) * (stirrup_area*100) * 7.85e-3 if num_flejes_y > 0 else 0
+                        for _cgy in [n_estribos_total * num_flejes_y]
+                    )
                     cx = x0
                     totales = [("TOTAL ACERO", "", "", "", "", f"{_tot_acero:.1f} kg"),
                                ("CONCRETO", f"f'c={fc:.0f}MPa", f"{vol_concreto_m3:.3f}m3", "", "", "")]
@@ -3279,54 +3459,65 @@ with tab2:
                         cx = x0
                         y -= ROW_H
                     return y  # y final de la tabla
-                    # Totales
-                    _tot_acero = _pw + _pt
-                    cx = x0
-                    totales = [("TOTAL ACERO", "", "", "", "", f"{_tot_acero:.1f} kg"),
-                               ("CONCRETO", f"f'c={fc:.0f}MPa", f"{vol_concreto_m3:.3f}m3", "", "", "")]
-                    for tot in totales:
-                        for val, cw in zip(tot, COL_WS):
-                            msp.add_lwpolyline(
-                                [(cx, y - ROW_H), (cx + cw, y - ROW_H),
-                                 (cx + cw, y), (cx, y), (cx, y - ROW_H)],
-                                dxfattribs={'layer': 'ROTULO'})
-                            msp.add_text(val,
-                                dxfattribs={'layer': 'TEXTO', 'style': 'ROMANS', 'height': 0.20 * max(0.6, K_DXF),
-                                            'insert': (cx + cw / 2, y - ROW_H / 2),
-                                            'align_point': (cx + cw / 2, y - ROW_H / 2),
-                                            'halign': 1, 'valign': 2})
-                            cx += cw
-                        cx = x0
-                        y -= ROW_H
-                    return y  # y final de la tabla
 
                 y_after_table = draw_despiece_table(TAB_X0, TAB_Y0)
 
                 # ── DIAGRAMA DE GANCHOS (DOBLECES) ──────────────────────────
                 # Dibuja el esquema de cada tipo de gancho a escala 1:5
                 ESCALA_DOBL = 1 / 5
-                DOBL_X = TAB_X0
-                DOBL_Y = y_after_table - 1.5
+                DOBL_X = TAB_X0 - 10.0  # Movido 2 cm a la derecha
+                DOBL_Y = y_after_table - 1.5 + 5.0  # Subido 5 cm
                 db_dobl = stirrup_diam  # mm
 
                 # Gancho 135 grados (sismico - estribo)
-                r_dobl = 3 * db_dobl / 10 * ESCALA_DOBL  # radio doblez = 3db (no confinado)
-                ext_gancho = 6 * db_dobl / 10 * ESCALA_DOBL  # extension libre 6db
-                msp.add_text("Gancho 135 sismic. (estrib.)",
+                msp.add_text("Gancho 135 (estrib.)",
                     dxfattribs={'layer': 'TEXTO', 'style': 'ROMANS', 'height': 0.20 * max(0.6, K_DXF),
                                 'insert': (DOBL_X, DOBL_Y)})
-                # Trazo simplificado del gancho 135
+                # Trazo simplificado del gancho 135 (L pequeña con gancho)
                 pts_g135 = [
                     (DOBL_X + 0.2, DOBL_Y - 0.5),
                     (DOBL_X + 0.2, DOBL_Y - 1.2),
-                    (DOBL_X + 0.2 + ext_gancho * 1.4, DOBL_Y - 1.2 + ext_gancho * 1.4)
+                    (DOBL_X + 0.6, DOBL_Y - 0.8)
                 ]
                 msp.add_lwpolyline(pts_g135, dxfattribs={'layer': 'DOBLEZ'})
-                msp.add_text(f"ext.={6*stirrup_diam:.0f}mm (6db)",
+                msp.add_text(f"ext.={6*stirrup_diam:.0f}mm",
                     dxfattribs={'layer': 'COTAS', 'style': 'ROMANS', 'height': 0.18,
                                 'insert': (DOBL_X + 0.8, DOBL_Y - 0.7)})
 
-                DOBL_X2 = DOBL_X + TAB_TW * 0.5
+                DOBL_X2 = DOBL_X + 3.5
+                # Gancho 180 (barra longitudinal)
+                msp.add_text("Gancho 180 (long.)",
+                    dxfattribs={'layer': 'TEXTO', 'style': 'ROMANS', 'height': 0.20 * max(0.6, K_DXF),
+                                'insert': (DOBL_X2, DOBL_Y)})
+                # Trazo simplificado U
+                pts_g180 = [
+                    (DOBL_X2 + 0.2, DOBL_Y - 0.3),
+                    (DOBL_X2 + 0.2, DOBL_Y - 1.0),
+                    (DOBL_X2 + 0.7, DOBL_Y - 1.0),
+                    (DOBL_X2 + 0.7, DOBL_Y - 0.6)
+                ]
+                msp.add_lwpolyline(pts_g180, dxfattribs={'layer': 'DOBLEZ'})
+                msp.add_text(f"ext.={4*rebar_diam:.0f}mm",
+                    dxfattribs={'layer': 'COTAS', 'style': 'ROMANS', 'height': 0.18,
+                                'insert': (DOBL_X2 + 0.9, DOBL_Y - 0.7)})
+
+                if num_flejes_x > 0 or num_flejes_y > 0:
+                    DOBL_X3 = DOBL_X2 + 3.5
+                    msp.add_text("Grapa (ext. 135)",
+                        dxfattribs={'layer': 'TEXTO', 'style': 'ROMANS', 'height': 0.20 * max(0.6, K_DXF),
+                                    'insert': (DOBL_X3, DOBL_Y)})
+                    # Trazo simplificado grapa
+                    pts_grapa = [
+                        (DOBL_X3 + 0.2 + 0.4, DOBL_Y - 1.0 + 0.4),
+                        (DOBL_X3 + 0.2,       DOBL_Y - 1.0),
+                        (DOBL_X3 + 2.0,       DOBL_Y - 1.0),
+                        (DOBL_X3 + 2.0 - 0.4, DOBL_Y - 1.0 + 0.4)
+                    ]
+                    msp.add_lwpolyline(pts_grapa, dxfattribs={'layer': 'DOBLEZ'})
+                    msp.add_text(f"ext.={6*stirrup_diam:.0f}mm",
+                        dxfattribs={'layer': 'COTAS', 'style': 'ROMANS', 'height': 0.18,
+                                    'insert': (DOBL_X3 + 0.5, DOBL_Y - 0.7)})
+
                 # --- NUEVA TABLA EMPALMES Y MATERIALES (DXF) ---
                 Y_MAT = DOBL_Y - 2.5
                 msp.add_text("TABLA DE EMPALMES (A TENSION) Ld", dxfattribs={'layer': 'TEXTO', 'style': 'ROMANS', 'height': 0.25 * max(0.6, K_DXF), 'insert': (DOBL_X, Y_MAT)})
@@ -3347,27 +3538,12 @@ with tab2:
                 else:
                     msp.add_text("Requiere diseno de mezcla.", dxfattribs={'layer': 'COTAS', 'style': 'ROMANS', 'height': 0.20 * max(0.6, K_DXF), 'insert': (DOBL_X, Y_MAT - 0.4)})
 
-                # Gancho 180 (barra longitudinal)
-                db_long = rebar_diam
-                msp.add_text("Gancho 180 (barra long.)",
-                    dxfattribs={'layer': 'TEXTO', 'style': 'ROMANS', 'height': 0.20 * max(0.6, K_DXF),
-                                'insert': (DOBL_X2, DOBL_Y)})
-                pts_g180 = [
-                    (DOBL_X2 + 0.2, DOBL_Y - 0.3),
-                    (DOBL_X2 + 0.2, DOBL_Y - 1.0),
-                    (DOBL_X2 + 0.2 + 4 * db_long / 10 * ESCALA_DOBL, DOBL_Y - 1.0),
-                    (DOBL_X2 + 0.2 + 4 * db_long / 10 * ESCALA_DOBL, DOBL_Y - 0.7)
-                ]
-                msp.add_lwpolyline(pts_g180, dxfattribs={'layer': 'DOBLEZ'})
-                msp.add_text(f"ext.={4*rebar_diam:.0f}mm (4db)",
-                    dxfattribs={'layer': 'COTAS', 'style': 'ROMANS', 'height': 0.18,
-                                'insert': (DOBL_X2 + 0.5, DOBL_Y - 0.7)})
 
                 # ── CUADRO VERIFICACIONES (debajo del dibujo alzado) ───────
                 # ── CUADRO VERIFICACIONES (debajo de la seccion, zona derecha) ──
-                VER_X = TAB_X0  # Mismo X que la tabla de despiece
+                VER_X = TAB_X0 - 3.0  # Movido 3 cm a la izquierda
                 # Posicionar BAJO el cuadro de doblez/dosificacion
-                VER_Y = AY0 + (AREA_H * 0.35)  # en la zona media-inferior del papel
+                VER_Y = AY0 + (AREA_H * 0.35) + 8.0  # Subido 8 cm
                 ver_rows = []
                 if not es_circular:
                     ver_rows = [
@@ -3485,28 +3661,42 @@ with tab2:
                     import matplotlib.pyplot as _mpdf
                     from ezdxf.addons.drawing import RenderContext, Frontend
                     from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
-                    # Tamano en pulgadas (1 cm = 0.3937 inch)
+                    # ¡AQUÍ SE IMPORTA ColorPolicy!
+                    from ezdxf.addons.drawing.config import Configuration, BackgroundPolicy, ColorPolicy 
+                    
+                    # Tamaño en pulgadas (1 cm = 0.3937 inch)
                     fig_w = ANCHO_PLANO * 0.3937
                     fig_h = ALTO_PLANO  * 0.3937
                     fig_pdf, ax_pdf = _mpdf.subplots(figsize=(fig_w, fig_h))
                     fig_pdf.patch.set_facecolor('white')
                     ax_pdf.set_facecolor('white')
+                    
                     _ctx     = RenderContext(doc_dxf)
                     _backend = MatplotlibBackend(ax_pdf)
-                    from ezdxf.addons.drawing.config import Configuration, BackgroundPolicy
-                    _config = Configuration.defaults().with_changes(background_policy=BackgroundPolicy.WHITE)
+                    
+                    # PLOTEO PROFESIONAL: Fondo blanco, líneas negras y escalado de grosor
+                    _config = Configuration.defaults().with_changes(
+                        background_policy=BackgroundPolicy.WHITE,
+                        color_policy=ColorPolicy.BLACK, 
+                        lineweight_scaling=1.5 
+                    )
+                    
                     Frontend(_ctx, _backend, config=_config).draw_layout(msp, finalize=True)
                     ax_pdf.set_aspect('equal')
                     ax_pdf.axis('off')
-                    # Límites reales del DXF: la hoja Carta está centrada en (108, 140)
-                    _cx = ANCHO_PLANO / 2  # = 108.0 para Carta
-                    _cy = ALTO_PLANO  / 2  # = 140.0 para Carta
+                    
+                    # Límites reales del DXF
+                    _cx = ANCHO_PLANO / 2  
+                    _cy = ALTO_PLANO  / 2  
                     ax_pdf.set_xlim(_cx - ANCHO_PLANO/2 - 0.5, _cx + ANCHO_PLANO/2 + 0.5)
                     ax_pdf.set_ylim(_cy - ALTO_PLANO /2 - 0.5, _cy + ALTO_PLANO /2 + 0.5)
+                    
                     bio_pdf_col = io.BytesIO()
-                    fig_pdf.savefig(bio_pdf_col, format='pdf', bbox_inches='tight',dpi=200, facecolor='white', pad_inches=0.05)
+                    # Resolución alta (DPI=300) para evitar borrosidad
+                    fig_pdf.savefig(bio_pdf_col, format='pdf', bbox_inches='tight', dpi=300, facecolor='white', pad_inches=0.05)
                     bio_pdf_col.seek(0)
                     _mpdf.close(fig_pdf)
+                    
                     nombre_pdf = nombre_dxf.replace('.dxf', '.pdf')
                     st.download_button(
                         label=_t("Descargar PDF Imprimible", "Download Printable PDF"),
@@ -3515,10 +3705,10 @@ with tab2:
                         mime="application/pdf",
                         key="col_pdf_dl")
                     st.success(_t(
-                        f"Plano generado | Papel: {PAPEL_LABEL} | Escala: {ESCALA_LABEL} | Lineweights ICONTEC aplicados",
-                        f"Plot generated | Paper: {PAPEL_LABEL} | Scale: {ESCALA_LABEL} | ICONTEC lineweights applied"))
+                        f"Plano PDF generado | Papel: {PAPEL_LABEL} | Escala: {ESCALA_LABEL} | Ploteo Monocromático HD",
+                        f"PDF Plot generated | Paper: {PAPEL_LABEL} | Scale: {ESCALA_LABEL} | HD Monochrome Plot"))
                 except Exception as e_pdf:
-                    st.warning(f"PDF no disponible (instalar ezdxf[draw]): {e_pdf}")
+                    st.warning(f"PDF no disponible (verifique versión de ezdxf): {e_pdf}")
 
             except Exception as e:
                 import traceback
@@ -3594,11 +3784,10 @@ with tab2b:
                               '🟢 Inside  🔴 Outside design surface φ'))
             # Tabla de estado por combinación
             try:
-                from scipy.interpolate import interp1d as _i1d
-                _fi = _i1d(cap_x['phi_Pn'], cap_x['phi_Mn'], kind='linear', fill_value='extrapolate')
+                _sp3=np.argsort(cap_x['phi_Pn']); _pPn3=np.array(cap_x['phi_Pn'])[_sp3]; _pMn3=np.array(cap_x['phi_Mn'])[_sp3]
                 rows_ok = []
                 for (pu, mux, muy, lbl) in puntos_combo:
-                    phi_at = float(_fi(pu))
+                    phi_at = float(np.interp(pu,_pPn3,_pMn3))
                     dentro = abs(mux) <= phi_at
                     rows_ok.append({"Combo": lbl,
                                     f"Pu [{unidad_fuerza}]": f"{pu*factor_fuerza:.1f}",
@@ -3654,20 +3843,103 @@ with tab3:
         long_bar_m = (L_col + 2 * (ld_mm/10) + 2 * (12*rebar_diam/10)) / 100
         long_bar_arranque = long_bar_m + _long_empalme
         peso_long_total = n_barras_total * long_bar_m * (rebar_area * 100) * 7.85e-3
+        _marcas = ["L1"]
+        _cants = [n_barras_total]
+        _diams = [_bar_label(rebar_diam)]
+        _longs = [long_bar_m]
+        _longs_t = [n_barras_total * long_bar_m]
+        _pesos = [peso_long_total]
         
+        if _tiene_empalme:
+            _marcas = ["L1 (cuerpo)", "L1A (arranque)"]
+            _cants = [n_barras_total, n_barras_total]
+            _diams = [_bar_label(rebar_diam), _bar_label(rebar_diam)]
+            _longs = [long_bar_m, long_bar_arranque]
+            _longs_t = [n_barras_total * long_bar_m, n_barras_total * long_bar_arranque]
+            peso_arranque = n_barras_total * long_bar_arranque * (rebar_area * 100) * 7.85e-3
+            _pesos = [peso_long_total, peso_arranque]
+
+        _marcas.append("E1 Perimetral")
+        _cants.append(n_estribos_total)
+        _diams.append(_bar_label(stirrup_diam))
+        _longs.append(perim_estribo/100)
+        _longs_t.append(n_estribos_total * perim_estribo/100)
+        _pesos.append(peso_total_estribos_kg)
+
+        if num_flejes_x > 0:
+            _marcas.append("GX - Grapas X")
+            _cants.append(n_estribos_total * num_flejes_x)
+            _diams.append(_bar_label(stirrup_diam))
+            _longs.append(long_fleje_x / 100)
+            _longs_t.append((n_estribos_total * num_flejes_x) * (long_fleje_x / 100))
+            _pesos.append((n_estribos_total * num_flejes_x) * (long_fleje_x / 100) * (stirrup_area * 100) * 7.85e-3)
+
+        if num_flejes_y > 0:
+            _marcas.append("GY - Grapas Y")
+            _cants.append(n_estribos_total * num_flejes_y)
+            _diams.append(_bar_label(stirrup_diam))
+            _longs.append(long_fleje_y / 100)
+            _longs_t.append((n_estribos_total * num_flejes_y) * (long_fleje_y / 100))
+            _pesos.append((n_estribos_total * num_flejes_y) * (long_fleje_y / 100) * (stirrup_area * 100) * 7.85e-3)
+
         despiece_data = {
-            "Marca": ["L1 (cuerpo)", "L1A (arranque)" , "E1"] if _tiene_empalme else ["L1", "E1"],
-            "Cantidad": [n_barras_total, n_estribos_total],
-            "Diámetro": [_bar_label(rebar_diam), _bar_label(stirrup_diam)],
-            "Longitud (m)": [long_bar_m, perim_estribo/100],
-            "Longitud Total (m)": [n_barras_total * long_bar_m, n_estribos_total * perim_estribo/100],
-            "Peso (kg)": [peso_long_total, peso_total_estribos_kg]
+            "Marca": _marcas,
+            "Cantidad": _cants,
+            "Diámetro": _diams,
+            "Longitud (m)": _longs,
+            "Longitud Total (m)": _longs_t,
+            "Peso (kg)": _pesos
         }
     
     df_despiece = pd.DataFrame(despiece_data)
     st.dataframe(df_despiece.style.format({"Longitud (m)": "{:.2f}", "Longitud Total (m)": "{:.2f}", "Peso (kg)": "{:.1f}"}), 
                  use_container_width=True)
+                 
+    import io
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(50, 750, "PEDIDO DE FERRETERIA - ACERO DE REFUERZO")
+        c.setFont("Helvetica", 12)
+        c.drawString(50, 730, "Proyecto: StructoPro - Modulo de Columnas")
+        y = 680
+        c.setFont("Helvetica-Bold", 10)
+        headers = ["Marca", "Cantidad", "Diam", "Long.(m)", "L.Tot(m)", "Peso(kg)"]
+        x_pos = [50, 180, 250, 320, 400, 480]
+        for i, hdr in enumerate(headers):
+            c.drawString(x_pos[i], y, hdr)
+        y -= 20
+        c.setFont("Helvetica", 10)
+        for idx, row in df_despiece.iterrows():
+            c.drawString(x_pos[0], y, str(row['Marca']))
+            c.drawString(x_pos[1], y, str(row['Cantidad']))
+            c.drawString(x_pos[2], y, str(row['Diámetro']))
+            c.drawString(x_pos[3], y, f"{row['Longitud (m)']:.2f}")
+            c.drawString(x_pos[4], y, f"{row['Longitud Total (m)']:.2f}")
+            c.drawString(x_pos[5], y, f"{row['Peso (kg)']:.2f}")
+            y -= 20
+        c.line(50, y+10, 540, y+10)
+        y -= 20
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(400, y, f"TOTAL: {df_despiece['Peso (kg)'].sum():.2f} kg")
+        c.save()
+        pdf_bytes = buffer.getvalue()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.download_button(
+            label="📄 Descargar Resumen para Ferretería (PDF)",
+            data=pdf_bytes,
+            file_name="pedido_ferreteria_columnas.pdf",
+            mime="application/pdf",
+            type="primary"
+        )
+    except ImportError:
+        pass
     
+
     fig_bars, ax_bars = plt.subplots(figsize=(6, 4))
     fig_bars.patch.set_facecolor('#1e1e2e')
     for _ax in fig_bars.get_axes(): _ax.set_facecolor('#14142a'); _ax.tick_params(colors='#cdd6f4'); _ax.xaxis.label.set_color('#cdd6f4'); _ax.yaxis.label.set_color('#cdd6f4')
@@ -3713,13 +3985,14 @@ with tab3:
             # que usa draw_stirrup_with_ties, sumando el offset (inside_b/2, inside_h/2)
             _bcoords_draw = [(x + inside_b/2, y + inside_h/2) for (x, y) in _bcoords] if _bcoords else None
             fig_e1 = draw_stirrup_with_ties(
-                inside_b, inside_h, hook_len_est,
+                b, h, recub_cm, hook_len_est,
                 bar_diam_mm=stirrup_diam,
                 n_ties_x=num_flejes_x if not es_circular else 0,
                 n_ties_y=num_flejes_y if not es_circular else 0,
                 nivel_sismico_str=nivel_sismico,
                 bar_name=_bar_label(stirrup_diam),
-                bar_coords=_bcoords_draw)
+                bar_coords=_bcoords_draw,
+                long_bar_diam_mm=rebar_diam)
             st.pyplot(fig_e1)
             plt.close(fig_e1)
 
@@ -3939,7 +4212,8 @@ with tab4:
                                   n_estrib, Pu_kN, phiPn_kN, bresler_ratio, bresler_ok,
                                   ash_ok_flag, vol_m3, peso_kg,
                                   empresa, proyecto, norma, nivel_sis,
-                                  n_flejes_x=0, n_flejes_y=0):
+                                  n_flejes_x=0, n_flejes_y=0,
+                                   n_filas_h=2, n_filas_v=2):
                 """Genera un IFC4 con IfcColumn + barras longitudinales + estribos + Pset_NSR10."""
                 O = ifcopenshell.file(schema="IFC4")
                 # ── Cabecera de proyecto ────────────────────────────────────
@@ -4021,8 +4295,9 @@ with tab4:
 
                 rebar_color = _color_by_diam(db_mm)
 
+                offset_real_m = r_m + (dst_mm / 1000.0) + (db_m / 2.0)
                 if es_circ:
-                    R_bar = (D_m / 2) - r_m  # radio del eje de la barra
+                    R_bar = (D_m / 2) - offset_real_m  # radio del eje de la barra
                     bar_positions = [
                         (_m.cos(2*_m.pi*i/n_bars)*R_bar,
                          _m.sin(2*_m.pi*i/n_bars)*R_bar)
@@ -4030,15 +4305,15 @@ with tab4:
                     ]
                 else:
                     # Distribución perimetral rectangular
-                    nx = max(2, int(_m.ceil(b_cm / 15)))   # barras por cara b
-                    ny = max(2, int(_m.ceil(h_cm / 15)))   # barras por cara h
-                    xs = [r_m + (b_m - 2*r_m)*i/(nx-1) - b_m/2 for i in range(nx)] if nx > 1 else [0.0]
-                    ys = [r_m + (h_m - 2*r_m)*i/(ny-1) - h_m/2 for i in range(ny)] if ny > 1 else [0.0]
+                    nx = max(2, int(n_filas_h))   # barras por cara b (sidebar)
+                    ny = max(2, int(n_filas_v))   # barras por cara h (sidebar)
+                    xs = [offset_real_m + (b_m - 2*offset_real_m)*i/(nx-1) - b_m/2 for i in range(nx)] if nx > 1 else [0.0]
+                    ys = [offset_real_m + (h_m - 2*offset_real_m)*i/(ny-1) - h_m/2 for i in range(ny)] if ny > 1 else [0.0]
                     bar_positions = (
-                        [(x, -h_m/2 + r_m) for x in xs] +
-                        [(x,  h_m/2 - r_m) for x in xs] +
-                        [(-b_m/2 + r_m, y) for y in ys[1:-1]] +
-                        [( b_m/2 - r_m, y) for y in ys[1:-1]]
+                        [(x, -h_m/2 + offset_real_m) for x in xs] +
+                        [(x,  h_m/2 - offset_real_m) for x in xs] +
+                        [(-b_m/2 + offset_real_m, y) for y in ys[1:-1]] +
+                        [( b_m/2 - offset_real_m, y) for y in ys[1:-1]]
                     )
 
                 long_bars = []
@@ -4085,15 +4360,47 @@ with tab4:
                 dst_m = dst_mm / 1000.0
                 stirrup_color = _color_by_diam(dst_mm)
                 stirrup_bars = []
+                
+                # Sincronizar alturas IFC EXACTAMENTE con la cantidad del APU
+                import math as _m
+                _n_est_por_Lo = _m.ceil(Lo_cm / s_conf_cm)
+                _long_zona_libre = max(0, L_cm - 2 * Lo_cm)
+                _n_estribos_centro = max(0, _m.ceil(_long_zona_libre / s_bas_cm) - 1) if _long_zona_libre > 0 else 0
 
-                # Generar posiciones verticales de cada estribo
                 y_positions = []
-                y_curr = 5.0  # cm
-                while y_curr <= L_cm - 5.0:
-                    in_conf = (y_curr <= Lo_cm) or (y_curr >= L_cm - Lo_cm)
-                    sep = s_conf_cm if in_conf else s_bas_cm
-                    y_positions.append(y_curr / 100.0)  # a metros
-                    y_curr += sep
+                for i in range(_n_est_por_Lo + 1):
+                    y_positions.append((i * s_conf_cm) / 100.0)
+                if _n_estribos_centro > 0:
+                    _esp_real_centro = _long_zona_libre / (_n_estribos_centro + 1)
+                    for i in range(1, _n_estribos_centro + 1):
+                        y_positions.append((Lo_cm + i * _esp_real_centro) / 100.0)
+                for i in range(1, _n_est_por_Lo + 1):
+                    y_positions.append((L_cm - Lo_cm + i * s_conf_cm) / 100.0)
+                
+                # ── Precomputo de geometría de grapas (se usa dentro del bucle j,y_z) ──
+                import math as _mg
+                if not es_circ:
+                    _r_est_m = dst_m / 2.0
+                    _r_var_m = db_m  / 2.0
+                    _off_m   = r_m + dst_m + _r_var_m
+                    _nx_fl   = max(2, int(n_filas_h))
+                    _ny_fl   = max(2, int(n_filas_v))
+                    _xv_max  = b_m / 2.0 - _off_m
+                    _yv_max  = h_m / 2.0 - _off_m
+                    _xs_fl   = ([_off_m + (b_m-2*_off_m)*_i/(_nx_fl-1) - b_m/2
+                                  for _i in range(_nx_fl)] if _nx_fl > 1 else [0.0])
+                    _ys_fl   = ([_off_m + (h_m-2*_off_m)*_i/(_ny_fl-1) - h_m/2
+                                  for _i in range(_ny_fl)] if _ny_fl > 1 else [0.0])
+                    _R_g     = _r_var_m + _r_est_m
+                    _Lc_g    = max(6.0 * dst_m, 0.075)
+
+                    def _pts_grapa_x(X_v, Y_f, R, L_c):
+                        return generar_puntos_grapa_x(X_v, Y_f, R, L_c)
+
+                    def _pts_grapa_y(X_f, Y_v, R, L_c):
+                        return generar_puntos_grapa_y(X_f, Y_v, R, L_c)
+                else:
+                    _ys_fl = []  # circular: sin grapas
 
                 for j, y_z in enumerate(y_positions):
                     st_bar = ifcopenshell.api.run("root.create_entity", O,
@@ -4102,216 +4409,117 @@ with tab4:
                     st_bar.SteelGrade      = f"fy={fy_mpa:.0f}MPa"
                     st_bar.BarSurface      = "TEXTURED"
                     st_bar.PredefinedType  = "MAIN"
-
+                
                     # Polilínea cerrada del estribo
                     if es_circ:
-                        R_e = (D_m / 2) - r_m
+                        R_e   = (D_m / 2) - r_m
                         n_pts = 16
                         pts_est = [O.createIfcCartesianPoint([
                             _m.cos(2*_m.pi*k/n_pts)*R_e,
                             _m.sin(2*_m.pi*k/n_pts)*R_e, y_z])
                             for k in range(n_pts + 1)]
                     else:
-                        # ── Prompt Maestro v2 — NSR-10 C.21.5.3.3 ─────────────────────
                         bx2  = b_m / 2.0 - r_m
                         hy2  = h_m / 2.0 - r_m
-                        X_c  = -bx2
-                        Y_c  =  hy2
-                        _R   = max(3.0 * dst_m, 0.012)           # radio doblez NSR-10 C.7.2
-                        _hk  = max(6.0 * db_mm / 1000.0, 0.075)  # extensión gancho NSR-10 C.7.1.4
-                        Cx   = X_c + _R
-                        Cy   = Y_c - _R
-                        _z1  = y_z + dst_m   # z_top: cara sup del estribo (+1 diámetro)
-                        _na  = 8             # segmentos por arco → curva suave
-
+                        X_c  = -bx2;  Y_c = hy2
+                        _R   = max(3.0 * dst_m, 0.012)
+                        _hk  = max(6.0 * db_mm/1000.0, 0.075)
+                        Cx   = X_c + _R;  Cy = Y_c - _R
+                        _z1  = y_z + dst_m
+                        _na  = 8
                         def _arc(cx, cy, r, a0, a1, z_c):
                             return [O.createIfcCartesianPoint([
                                 cx + r*_m.cos(_m.radians(a0+(a1-a0)*_ii/_na)),
                                 cy + r*_m.sin(_m.radians(a0+(a1-a0)*_ii/_na)),
                                 z_c]) for _ii in range(_na+1)]
-
-                        def _pt(x, y, z_c):
-                            return O.createIfcCartesianPoint([x, y, z_c])
-
-                        _pie1x = Cx + _R*_m.cos(_m.radians(225))
-                        _pie1y = Cy + _R*_m.sin(_m.radians(225))
-                        _pie2x = Cx + _R*_m.cos(_m.radians(45))
-                        _pie2y = Cy + _R*_m.sin(_m.radians(45))
-                        _dk    = _hk * 0.7071
-
+                        def _pt(x, y, z_c): return O.createIfcCartesianPoint([x, y, z_c])
+                        _pie1x = Cx + _R*_m.cos(_m.radians(225)); _pie1y = Cy + _R*_m.sin(_m.radians(225))
+                        _pie2x = Cx + _R*_m.cos(_m.radians(45));  _pie2y = Cy + _R*_m.sin(_m.radians(45))
+                        _dk = _hk * 0.7071; _nT = _na
                         pts_est = []
-                        # [1] Cola 1 punta → pie G1
                         pts_est.append(_pt(_pie1x + _dk, _pie1y - _dk, _z1))
                         pts_est.append(_pt(_pie1x,       _pie1y,       _z1))
-                        # [2] Arco G1 CCW 225°→90°  Z=z_top
                         pts_est += _arc(Cx, Cy, _R, 225, 90, _z1)
-                        # [3] Tramo SUP (Cx,Y_c)→(bx2-_R,Y_c)  Z baja→z_base
-                        _nT = _na
-                        pts_est += [_pt(Cx+(bx2-_R-Cx)*_ii/_nT,
-                                        Y_c,
-                                        _z1+(y_z-_z1)*_ii/_nT)
+                        pts_est += [_pt(Cx+(bx2-_R-Cx)*_ii/_nT, Y_c, _z1+(y_z-_z1)*_ii/_nT)
                                     for _ii in range(_nT+1)]
-                        # [4] Arco SUP-DER CW 90°→0°  Z=z_base
                         pts_est += _arc(bx2-_R, Y_c-_R, _R, 90, 0, y_z)
-                        # [5] Tramo DER  Z=z_base
                         pts_est += [_pt(bx2, Y_c-_R+(-(Y_c-_R)-(Y_c-_R))*_ii/_nT, y_z)
                                     for _ii in range(_nT+1)]
-                        # [6] Arco INF-DER CW 0°→-90°  Z=z_base
                         pts_est += _arc(bx2-_R, -(Y_c-_R), _R, 0, -90, y_z)
-                        # [7] Tramo INF  Z=z_base
                         pts_est += [_pt(bx2-_R+(-(bx2-_R)-(bx2-_R))*_ii/_nT, -Y_c, y_z)
                                     for _ii in range(_nT+1)]
-                        # [8] Arco INF-IZQ CW -90°→-180°  Z=z_base
                         pts_est += _arc(-(bx2-_R), -(Y_c-_R), _R, -90, -180, y_z)
-                        # [9] Tramo IZQ sube Z
-                        pts_est += [_pt(X_c,
-                                        -(Y_c-_R)+(Cy-(-(Y_c-_R)))*_ii/_nT,
-                                        y_z+(_z1-y_z)*_ii/_nT)
+                        pts_est += [_pt(X_c, -(Y_c-_R)+(Cy-(-(Y_c-_R)))*_ii/_nT, y_z+(_z1-y_z)*_ii/_nT)
                                     for _ii in range(_nT+1)]
-                        # [10] Arco G2 CW 180°→45°  Z=z_top
                         pts_est += _arc(Cx, Cy, _R, 180, 45, _z1)
-                        # [11] Pie G2 → Cola 2 punta
                         pts_est.append(_pt(_pie2x,       _pie2y,       _z1))
                         pts_est.append(_pt(_pie2x + _dk, _pie2y - _dk, _z1))
-                        # Alternancia sísmica NSR-10 C.21.5.3.3
                         if j % 2 != 0:
                             pts_est = [O.createIfcCartesianPoint(
                                 [-p.Coordinates[0], -p.Coordinates[1], p.Coordinates[2]])
                                 for p in pts_est]
-
-
+                
                     polyline_st = O.createIfcPolyline(Points=pts_est)
-
-                    # Volumen físico para que Revit lo reconozca como Armadura
+                    # CRÍTICO: IfcSweptDiskSolid da el VOLUMEN físico del tubo
                     st_swept = O.createIfcSweptDiskSolid(Directrix=polyline_st, Radius=dst_m/2)
-                    
-                    # Color: zona confinada = más saturado, zona central = normal
-                    _in_conf_z = (y_z*100 <= Lo_cm) or (y_z*100 >= L_cm - Lo_cm)
                     _scol = stirrup_color
+                    _in_conf_z = (y_z*100 <= Lo_cm) or (y_z*100 >= L_cm - Lo_cm)
                     if _in_conf_z:
-                        # Ligeramente más brillante para indicar zona confinada
-                        _scol = (min(1.0,stirrup_color[0]*1.2),
-                                 min(1.0,stirrup_color[1]*1.2),
-                                 min(1.0,stirrup_color[2]*1.2))
+                        _scol = stirrup_color
                     st_style_rend = O.createIfcSurfaceStyleRendering(
                         SurfaceColour=O.createIfcColourRgb(Red=_scol[0], Green=_scol[1], Blue=_scol[2]),
                         ReflectanceMethod="FLAT")
                     st_surface_style = O.createIfcSurfaceStyle(
                         Name=f"Estribo_{dst_mm:.0f}mm", Side="BOTH", Styles=[st_style_rend])
                     O.createIfcStyledItem(Item=st_swept, Styles=[st_surface_style])
-
                     st_rep = O.createIfcShapeRepresentation(
                         ContextOfItems=body, RepresentationIdentifier="Body",
                         RepresentationType="AdvancedSweptSolid", Items=[st_swept])
-
                     ifcopenshell.api.run("geometry.assign_representation", O, product=st_bar, representation=st_rep)
                     ifcopenshell.api.run("geometry.edit_object_placement", O, product=st_bar)
-
                     ifcopenshell.api.run("spatial.assign_container", O,
                         relating_structure=storey, products=[st_bar])
                     ifcopenshell.api.run("material.assign_material", O, products=[st_bar], material=mat_acero)
                     stirrup_bars.append(st_bar)
 
-                # ── Flejes en Cruz / Cross-Ties (IfcReinforcingBar) ─────────
-                # n_flejes_x = parámetro pasado a la función (calculado automáticamente)
-                _tie_color = _color_by_diam(dst_mm)
-                for _jt, _yz_t in enumerate(y_positions):
-                    _yz_t_m = _yz_t  # ya está en metros
-                    _bx2 = b_m/2 - r_m          # semiancho eje estribo
-                    _hy2 = h_m/2 - r_m           # semialto  eje estribo
-                    _hk_tie = max(6*dst_m, 0.075) # longitud gancho NSR-10
-                    # Ángulo gancho según nivel sísmico y alternancia
-                    _ang_tie = 135 if nivel_sis in ('DES','DMO') else 90
-                    _flip    = (_jt % 2 == 1)    # alternar NSR-10 C.21.5.3.3
-                    _sign    = -1 if _flip else 1
-                    import math as _mt
-                    # ── Flejes en X: de x=-bx2 a x=+bx2, a alturas equidistantes en Y ─
-                    # ── Flejes en X: tangentes a varillas laterales (R_tie = db/2 + dst/2) ────
-                    _R_tie = (db_mm / 2000.0) + (dst_m / 2.0)
-                    _n_hk  = 8
-                    for _nfx in range(1, n_flejes_x + 1):
-                        _yf = -_hy2 + (2*_hy2)*_nfx/(n_flejes_x+1)
-                        _cx_izq = -_bx2
-                        _cx_der =  _bx2
-                        _a0_izq = 0.0;   _a1_izq = 135.0 * _sign
-                        _hk_pts_izq = [O.createIfcCartesianPoint([
-                            _cx_izq + _R_tie*_mt.cos(_mt.radians(_a0_izq+(_a1_izq-_a0_izq)*_ki/_n_hk)),
-                            _yf     + _R_tie*_mt.sin(_mt.radians(_a0_izq+(_a1_izq-_a0_izq)*_ki/_n_hk)),
-                            _yz_t_m]) for _ki in range(_n_hk+1)]
-                        _a0_der = 180.0; _a1_der = 180.0 - 135.0*_sign
-                        _hk_pts_der = [O.createIfcCartesianPoint([
-                            _cx_der + _R_tie*_mt.cos(_mt.radians(_a0_der+(_a1_der-_a0_der)*_ki/_n_hk)),
-                            _yf     + _R_tie*_mt.sin(_mt.radians(_a0_der+(_a1_der-_a0_der)*_ki/_n_hk)),
-                            _yz_t_m]) for _ki in range(_n_hk+1)]
-                        _pts_fx = (
-                            list(reversed(_hk_pts_izq)) +
-                            [O.createIfcCartesianPoint([_cx_izq + _R_tie, _yf, _yz_t_m]),
-                             O.createIfcCartesianPoint([_cx_der - _R_tie, _yf, _yz_t_m])] +
-                            _hk_pts_der)
-                        _pline_fx = O.createIfcPolyline(Points=_pts_fx)
-                        _swept_fx = O.createIfcSweptDiskSolid(Directrix=_pline_fx, Radius=dst_m/2)
-                        _stl_fx = O.createIfcSurfaceStyleRendering(
-                            SurfaceColour=O.createIfcColourRgb(
-                                Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
-                            ReflectanceMethod='FLAT')
-                        O.createIfcStyledItem(Item=_swept_fx, Styles=[
-                            O.createIfcSurfaceStyle(Name=f'Flete_X_{dst_mm:.0f}mm',
-                                Side='BOTH', Styles=[_stl_fx])])
-                        _bar_fx = ifcopenshell.api.run('root.create_entity', O,
-                            ifc_class='IfcReinforcingBar', name=f'FX{_jt+1}_{_nfx}')
-                        _bar_fx.NominalDiameter = dst_m
-                        _bar_fx.SteelGrade      = f'fy={fy_mpa:.0f}MPa'
-                        _bar_fx.PredefinedType  = 'LIGATURE'
-                        _rep_fx = O.createIfcShapeRepresentation(
-                            ContextOfItems=body, RepresentationIdentifier='Body',
-                            RepresentationType='SolidModel', Items=[_swept_fx])
-                        _bar_fx.Representation = O.createIfcProductDefinitionShape(Representations=[_rep_fx])
-                        ifcopenshell.api.run('spatial.assign_container', O,
-                            relating_structure=storey, products=[_bar_fx])
-                        ifcopenshell.api.run('aggregate.assign_object', O,
-                            relating_object=col_entity, products=[_bar_fx])
-                    # ── Flejes en Y ────────────────────────────────────────────────────────────
-                    for _nfy in range(1, n_flejes_y + 1):
-                        _xf = -_bx2 + (2*_bx2)*_nfy/(n_flejes_y+1)
-                        _cy_bot = -_hy2;  _cy_top = _hy2
-                        _a0_bot = -90.0;  _a1_bot = -90.0 + 135.0*_sign
-                        _hk_pts_bot = [O.createIfcCartesianPoint([
-                            _xf     + _R_tie*_mt.cos(_mt.radians(_a0_bot+(_a1_bot-_a0_bot)*_ki/_n_hk)),
-                            _cy_bot + _R_tie*_mt.sin(_mt.radians(_a0_bot+(_a1_bot-_a0_bot)*_ki/_n_hk)),
-                            _yz_t_m]) for _ki in range(_n_hk+1)]
-                        _a0_top = 90.0;   _a1_top = 90.0 - 135.0*_sign
-                        _hk_pts_top = [O.createIfcCartesianPoint([
-                            _xf     + _R_tie*_mt.cos(_mt.radians(_a0_top+(_a1_top-_a0_top)*_ki/_n_hk)),
-                            _cy_top + _R_tie*_mt.sin(_mt.radians(_a0_top+(_a1_top-_a0_top)*_ki/_n_hk)),
-                            _yz_t_m]) for _ki in range(_n_hk+1)]
-                        _pts_fy = (
-                            list(reversed(_hk_pts_bot)) +
-                            [O.createIfcCartesianPoint([_xf, _cy_bot + _R_tie, _yz_t_m]),
-                             O.createIfcCartesianPoint([_xf, _cy_top - _R_tie, _yz_t_m])] +
-                            _hk_pts_top)
-                        _pline_fy = O.createIfcPolyline(Points=_pts_fy)
-                        _swept_fy = O.createIfcSweptDiskSolid(Directrix=_pline_fy, Radius=dst_m/2)
-                        _stl_fy = O.createIfcSurfaceStyleRendering(
-                            SurfaceColour=O.createIfcColourRgb(
-                                Red=stirrup_color[0], Green=stirrup_color[1], Blue=stirrup_color[2]),
-                            ReflectanceMethod='FLAT')
-                        O.createIfcStyledItem(Item=_swept_fy, Styles=[
-                            O.createIfcSurfaceStyle(Name=f'Flete_Y_{dst_mm:.0f}mm',
-                                Side='BOTH', Styles=[_stl_fy])])
-                        _bar_fy = ifcopenshell.api.run('root.create_entity', O,
-                            ifc_class='IfcReinforcingBar', name=f'FY{_jt+1}_{_nfy}')
-                        _bar_fy.NominalDiameter = dst_m
-                        _bar_fy.SteelGrade      = f'fy={fy_mpa:.0f}MPa'
-                        _bar_fy.PredefinedType  = 'LIGATURE'
-                        _rep_fy = O.createIfcShapeRepresentation(
-                            ContextOfItems=body, RepresentationIdentifier='Body',
-                            RepresentationType='SolidModel', Items=[_swept_fy])
-                        _bar_fy.Representation = O.createIfcProductDefinitionShape(Representations=[_rep_fy])
-                        ifcopenshell.api.run('spatial.assign_container', O,
-                            relating_structure=storey, products=[_bar_fy])
-                        ifcopenshell.api.run('aggregate.assign_object', O,
-                            relating_object=col_entity, products=[_bar_fy])
-                # ── Pset_NSR10 y Pset_ColGeometry ──────────────────────────
+                    # ── Grapas al mismo nivel Z que el estribo ──────────────
+                    if not es_circ and (n_flejes_x > 0 or n_flejes_y > 0):
+                        def _mk_grapa(pts2d, _tag):
+                            if len(pts2d) < 2: return
+                            _ifc_p = [O.createIfcCartesianPoint([x, y, y_z]) for x, y in pts2d]
+                            _pl    = O.createIfcPolyline(Points=_ifc_p)
+                            _sol   = O.createIfcSweptDiskSolid(Directrix=_pl, Radius=dst_m/2.0)
+                            O.createIfcStyledItem(Item=_sol, Styles=[st_surface_style])
+                            _bf    = ifcopenshell.api.run('root.create_entity', O,
+                                ifc_class='IfcReinforcingBar', name=_tag)
+                            _bf.NominalDiameter = dst_m
+                            _bf.SteelGrade      = f'fy={fy_mpa:.0f} MPa'
+                            _bf.PredefinedType  = 'MAIN'
+                            _rf = O.createIfcShapeRepresentation(ContextOfItems=body,
+                                RepresentationIdentifier='Body',
+                                RepresentationType='AdvancedSweptSolid', Items=[_sol])
+                            ifcopenshell.api.run('geometry.assign_representation', O,
+                                product=_bf, representation=_rf)
+                            ifcopenshell.api.run('geometry.edit_object_placement', O, product=_bf)
+                            ifcopenshell.api.run('spatial.assign_container', O,
+                                relating_structure=storey, products=[_bf])
+                            ifcopenshell.api.run('aggregate.assign_object', O,
+                                relating_object=column, products=[_bf])
+                        
+                        # ── Flejes (Cross-Ties) distribuidos equitativamente (Sincronizado con 2D/3D) ──
+                        # Semianchos del estribo perimetral
+                        hw_m = (h_m / 2.0) - r_m
+                        bw_m = (b_m / 2.0) - r_m
+
+                        # GRAPAS IFC ANCLADAS A VARILLAS REALES (_ys_fl / _xs_fl)
+                        if n_flejes_x > 0 and len(_ys_fl) > 2:
+                            for idx, y_coord in enumerate(_ys_fl[1:-1]):
+                                _mk_grapa(_pts_grapa_x(_xv_max, y_coord, _R_g, _Lc_g), f'FX{idx}_E{j+1}')
+                                
+                        if n_flejes_y > 0 and len(_xs_fl) > 2:
+                            for idx, x_coord in enumerate(_xs_fl[1:-1]):
+                                _mk_grapa(_pts_grapa_y(x_coord, _yv_max, _R_g, _Lc_g), f'FY{idx}_E{j+1}')
+
                 psets_data = {
                     "Pset_ConcreteElementGeneral": {
                         "ConstructionMethod":      "CastInPlace",
@@ -4358,6 +4566,10 @@ with tab4:
                     ifcopenshell.api.run("pset.edit_pset", O,
                         pset=pset, properties=props_dict)
 
+                # Añadir un resumen super explícito y visible en el visor IFC
+                column.Name = f"COL-{'CIRC' if es_circ else f'{b_cm:.0f}x{h_cm:.0f}'} | TOTAL: {len(y_positions)} ESTRIBOS (FLEJES)"
+                column.Description = f"Conexión Motor APU: Exactamente {len(y_positions)} estribos calculados y colocados geométricamente."
+
                 # ── Guardar en buffer ───────────────────────────────────────
                 import tempfile, os as _os
                 with tempfile.NamedTemporaryFile(suffix='.ifc', delete=False) as tmp:
@@ -4370,49 +4582,60 @@ with tab4:
 
             # Botón para generar — solo ejecuta la función al hacer clic
             if st.button("⬇️ " + _t("Generar y Exportar IFC4 (BIM completo)", "Generate & Export IFC4 (full BIM)"), key="col_btn_ifc"):
-                phiPn_max = cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0
-                buf_ifc_col = _make_ifc_columna(
-                    b_cm        = b   if not es_circular else 0,
-                    h_cm        = h   if not es_circular else 0,
-                    D_cm        = D   if es_circular     else 0,
-                    L_cm        = L_col,
-                    es_circ     = es_circular,
-                    fc_mpa      = fc, fy_mpa = fy,
-                    n_bars      = n_barras if es_circular else n_barras_total,
-                    db_mm       = rebar_diam, dst_mm = stirrup_diam,
-                    n_long_total= n_barras if es_circular else n_barras_total,
-                    As_cm2      = Ast, rho_pct = cuantia,
-                    recub       = recub_cm,
-                    s_conf_cm   = s_conf  if not es_circular else paso_espiral,
-                    s_bas_cm    = s_basico if not es_circular else paso_espiral,
-                    Lo_cm       = Lo_conf,
-                    n_estrib    = n_estribos_total if not es_circular else 1,
-                    Pu_kN       = Pu_input * factor_fuerza,
-                    phiPn_kN    = phiPn_max * factor_fuerza,
-                    bresler_ratio = bresler['ratio'],
-                    bresler_ok  = bresler['ok'],
-                    ash_ok_flag = ash_ok,
-                    vol_m3      = vol_concreto_m3,
-                    peso_kg     = peso_total_acero_kg,
-                    empresa     = st.session_state.get("cpm_empresa","________________"),
-                    proyecto    = st.session_state.get("cpm_proyecto_nombre","________________"),
-                    norma       = norma_sel,
-                    nivel_sis   = nivel_sismico,
-                    n_flejes_x  = num_flejes_x if not es_circular else 0,
-                    n_flejes_y  = num_flejes_y if not es_circular else 0,
-                )
-                if buf_ifc_col:
-                    _ifc_fname = f"Columna_{'Circ_D'+str(int(D)) if es_circular else str(int(b))+'x'+str(int(h))}_IFC4.ifc"
-                    st.success(_t("IFC4 generado correctamente.", "IFC4 generated successfully."))
-                    st.download_button(
-                        label=_t("⬇️ Descargar IFC4", "⬇️ Download IFC4"),
-                        data=buf_ifc_col,
-                        file_name=_ifc_fname,
-                        mime="application/x-step",
-                        key="col_ifc_dl")
-                    st.caption(_t(
-                        f"IFC4: IfcColumn + barras long. + estribos 3D + Pset_{norma_sel.split('(')[0].strip()}",
-                        f"IFC4: IfcColumn + longitudinal bars + 3D stirrups + Pset_{norma_sel.split('(')[0].strip()}"))
+                _ifc_placeholder = st.empty()
+                _ifc_placeholder.info("⏳ Generando modelo IFC4… puede tomar unos segundos.")
+                try:
+                    phiPn_max = cap_x.get('phi_Pn_max', 0) if 'cap_x' in locals() and cap_x else 0
+                    buf_ifc_col = _make_ifc_columna(
+                        b_cm        = b   if not es_circular else 0,
+                        h_cm        = h   if not es_circular else 0,
+                        D_cm        = D   if es_circular     else 0,
+                        L_cm        = L_col,
+                        es_circ     = es_circular,
+                        fc_mpa      = fc, fy_mpa = fy,
+                        n_bars      = n_barras if es_circular else n_barras_total,
+                        db_mm       = rebar_diam, dst_mm = stirrup_diam,
+                        n_long_total= n_barras if es_circular else n_barras_total,
+                        As_cm2      = Ast, rho_pct = cuantia,
+                        recub       = recub_cm,
+                        s_conf_cm   = s_conf  if not es_circular else paso_espiral,
+                        s_bas_cm    = s_centro if not es_circular else paso_espiral,
+                        Lo_cm       = Lo_conf,
+                        n_estrib    = n_estribos_total if not es_circular else 1,
+                        Pu_kN       = Pu_input * factor_fuerza,
+                        phiPn_kN    = phiPn_max * factor_fuerza,
+                        bresler_ratio = bresler['ratio'],
+                        bresler_ok  = bresler['ok'],
+                        ash_ok_flag = ash_ok,
+                        vol_m3      = vol_concreto_m3,
+                        peso_kg     = peso_total_acero_kg,
+                        empresa     = st.session_state.get("cpm_empresa","________________"),
+                        proyecto    = st.session_state.get("cpm_proyecto_nombre","________________"),
+                        norma       = norma_sel,
+                        nivel_sis   = nivel_sismico,
+                        n_flejes_x  = num_flejes_x if not es_circular else 0,
+                        n_flejes_y  = num_flejes_y if not es_circular else 0,
+                        n_filas_h   = num_filas_h  if not es_circular else 0,
+                        n_filas_v   = num_filas_v  if not es_circular else 0,
+                    )
+                    _ifc_placeholder.empty()
+                    if buf_ifc_col:
+                        _ifc_fname = f"Columna_{'Circ_D'+str(int(D)) if es_circular else str(int(b))+'x'+str(int(h))}_IFC4.ifc"
+                        st.success(_t("✅ IFC4 generado correctamente.", "✅ IFC4 generated successfully."))
+                        st.download_button(
+                            label=_t("⬇️ Descargar IFC4", "⬇️ Download IFC4"),
+                            data=buf_ifc_col,
+                            file_name=_ifc_fname,
+                            mime="application/x-step",
+                            key="col_ifc_dl")
+                        st.caption(_t(
+                            f"IFC4: IfcColumn + barras long. + estribos 3D + Pset_{norma_sel.split('(')[0].strip()}",
+                            f"IFC4: IfcColumn + longitudinal bars + 3D stirrups + Pset_{norma_sel.split('(')[0].strip()}"))
+                except Exception as _e_ifc_btn:
+                    import traceback as _tb_ifc_btn
+                    _ifc_placeholder.empty()
+                    st.error(f"❌ Error IFC: {_e_ifc_btn}")
+                    st.code(_tb_ifc_btn.format_exc(), language='python')
 
 
         except ImportError as e_imp:
@@ -4485,7 +4708,7 @@ with tab4:
         
         # 1. Parámetros de Diseño
         doc.add_heading("1. PARÁMETROS GEOMÉTRICOS Y SOLICITACIONES", level=1)
-        doc.add_paragraph(f"Geometría: {'D' if es_circular else 'b'} = {D if es_circular else b:.0f} cm, {'h = '+str(h)+' cm, ' if not es_circular else ''}L = {L_col:.0f} cm\nRecubrimiento libre: {recub_cm} cm\nCargas de diseño aplicadas:\n  Pu = {Pu_input:.1f} {unidad_fuerza}\n  Mux = {Mux_input:.1f} {unidad_mom}\n  Muy = {Muy_input:.1f} {unidad_mom}")
+        doc.add_paragraph(f"Geometría: {'D' if es_circular else 'b'} = {D if es_circular else b:.0f} cm, {'h = '+str(h)+' cm, ' if not es_circular else ''}L = {L_col:.0f} cm\nRecubrimiento libre: {recub_cm:.2f} cm\nCargas de diseño aplicadas:\n  Pu = {Pu_input:.1f} {unidad_fuerza}\n  Mux = {Mux_input:.1f} {unidad_mom}\n  Muy = {Muy_input:.1f} {unidad_mom}")
         
         # 2. Esbeltez
         doc.add_heading("2. PRE-DIMENSIONAMIENTO Y EFECTOS DE ESBELTEZ (NSR-10 C.10.10)", level=1)
@@ -4604,12 +4827,15 @@ with tab4:
         sconf_saf = locals().get('sconf', locals().get('s_conf', st.session_state.get('col_sconf', 0.0)))
         Lo_conf_saf = locals().get('Lo_conf', st.session_state.get('col_Loconf', 0.0))
         stirrupdiam_saf = locals().get('stirrupdiam', locals().get('stirrup_diam', st.session_state.get('col_stirrupdiam', 0)))
-        s_bas_saf = locals().get('s_bas_cm', locals().get('s_bas', 0.0))
+        s_bas_saf = locals().get('s_bas_cm', locals().get('s_bas', locals().get('s_basico', locals().get('s_centro', 0.0))))
+        if s_bas_saf == 0.0:
+            s_bas_saf = locals().get('s_conf', sconf_saf)  # fallback: usar s_conf si s_bas es 0
         
         doc.add_heading("4.1 Justificación de Espaciamiento", level=2)
         doc.add_paragraph(f"Longitudes límite Lo = {Lo_conf_saf:.1f} cm")
-        doc.add_paragraph(f"s1 (Separación confinada): Estribos {stirrupdiam_saf}mm @ {sconf_saf:.0f} cm")
-        doc.add_paragraph(f"s2 (Separación centro): Estribos {stirrupdiam_saf}mm @ {s_bas_saf:.0f} cm")
+        doc.add_paragraph(f"Número total de estribos: {n_estribos_total} uds.")
+        doc.add_paragraph(f"s1 (Separación confinada): Estribos {stirrupdiam_saf:.1f}mm @ {sconf_saf:.1f} cm")
+        doc.add_paragraph(f"s2 (Separación centro): Estribos {stirrupdiam_saf:.1f}mm @ {s_bas_saf:.1f} cm")
 
         # 5. Verificaciones Normativas
         doc.add_heading(f"5. VERIFICACIONES NORMATIVAS — {norma_sel}", level=1)
@@ -4670,7 +4896,7 @@ with tab4:
             import matplotlib.pyplot as _plt_apu, io as _io_apu
             _cats=["Concreto","Acero Long.","Estribos","Total Acero"]
             _vals_apu=[
-                vol_concreto_m3*st.session_state.get("col_apu_premix_p",350000) if st.session_state.get("col_apu_premix",False) else vol_concreto_m3*250000,
+                vol_concreto_m3*st.session_state.get("col_apu_premix_p", 550000) if st.session_state.get("col_apu_premix", False) else vol_concreto_m3*550000,
                 peso_acero_long_kg*st.session_state.get("col_apu_acero",4200),
                 peso_total_estribos_kg*st.session_state.get("col_apu_acero",4200),
                 peso_total_acero_kg*st.session_state.get("col_apu_acero",4200),
@@ -4692,9 +4918,17 @@ with tab4:
         except Exception as _e_apu:
             doc.add_paragraph(f"(Gráfica APU no disponible: {_e_apu})")
         doc.add_paragraph(f"\n3. TABLA DE FIGURADOS Y EMPALMES:\n").runs[0].bold = True
-        ld_mm = lambda d: (1.3 * 0.02 * 420) / (math.sqrt(21)) * d
-        doc.add_paragraph(f"• Ld/Traslapo Barra Principal (Ø{rebar_diam:.1f}mm): {ld_mm(rebar_diam)/10:.0f} cm (Tracción A)")
-        doc.add_paragraph(f"• Gancho Sísmico Estribo (Ø{stirrupdiam_saf:.1f}mm): A 135°, Extensión libre 6db={max(80.0, 6.0*stirrupdiam_saf)/10:.1f} cm")
+        # Longitud de desarrollo NSR-10: ld_basica con minimo normativo
+        ld_mm = lambda d: max(
+            (1.3 * 0.02 * fy) / (math.sqrt(fc)) * d,  # formula NSR-10
+            300.0,                                       # min 30 cm = 300 mm
+            30.0 * d / 10.0                              # min 30db (d en mm, resultado mm)
+        )
+        _ld_cm = ld_mm(rebar_diam) / 10.0
+        _6db_cm = 6.0 * stirrupdiam_saf / 10.0
+        _ext_gancho = max(_6db_cm, 7.5)  # NSR-10: min 75mm
+        doc.add_paragraph(f"• Ld/Traslapo Barra Principal (Ø{rebar_diam:.1f}mm): {_ld_cm:.0f} cm (Tracción A)")
+        doc.add_paragraph(f"• Gancho Sísmico Estribo (Ø{stirrupdiam_saf:.1f}mm): A 135°, Extensión libre 6db={_6db_cm:.1f} cm (mín {_ext_gancho:.1f} cm)")
 
         
         # 7. Detalles Generales (Imágenes DOCX)
@@ -4740,7 +4974,7 @@ with tab4:
                 inside_h = h - 2 * recub_cm
                 hook_len_est = 12 * stirrupdiam_saf / 10
                 fig_e1_mem = draw_stirrup_with_ties(
-                    inside_b, inside_h, hook_len_est,
+                    b, h, recub_cm, hook_len_est,
                     bar_diam_mm=stirrupdiam_saf,
                     n_ties_x=num_flejes_x if not es_circular else 0,
                     n_ties_y=num_flejes_y if not es_circular else 0,
