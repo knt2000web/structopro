@@ -2203,31 +2203,33 @@ with tab3:
             st.pyplot(fig_e1)
     
     with st.expander(_t("Presupuesto APU", "APU Budget"), expanded=False):
+        # REGLA v12: Si ya existe apu_config global, usarlo directamente.
+        # El formulario local SOLO se muestra si no hay configuracion global.
+        _apu_global = st.session_state.get("apu_config", {})
+        if not _apu_global:
+            st.info(_t(
+                "Configure los precios en 05 APU Mercado segun su pais y moneda. "
+                "Puede ingresar precios locales temporales abajo, pero se recomienda "
+                "usar el modulo APU para evitar inconsistencias.",
+                "Configure prices in module 05 APU Market for your country and currency. "
+                "You may enter temporary local prices below, but using the APU module is recommended."
+            ))
         st.markdown(_t("Ingrese precios unitarios para calcular el costo total.", "Enter unit prices to calculate total cost."))
-        with st.form(key="apu_form"):
-            if "apu_moneda" not in st.session_state: st.session_state["apu_moneda"] = "COP"
-            moneda = st.text_input(_t("Moneda", "Currency"), value=st.session_state["apu_moneda"])
+        with st.form(key="apu_form_circ"):
+            _apu_g = st.session_state.get("apu_config", {})
+            moneda = st.text_input(_t("Moneda", "Currency"), value=_apu_g.get("moneda", ""))
             col_apu1, col_apu2 = st.columns(2)
             with col_apu1:
-                if "apu_cemento" not in st.session_state: st.session_state["apu_cemento"] = 28000.0
-                if "apu_acero" not in st.session_state: st.session_state["apu_acero"] = 7500.0
-                if "apu_arena" not in st.session_state: st.session_state["apu_arena"] = 120000.0
-                if "apu_grava" not in st.session_state: st.session_state["apu_grava"] = 130000.0
-                
-                precio_cemento = st.number_input(_t("Precio por bulto cemento", "Price per cement bag"), value=st.session_state["apu_cemento"], step=1000.0)
-                precio_acero = st.number_input(_t("Precio por kg acero", "Price per kg steel"), value=st.session_state["apu_acero"], step=100.0)
-                precio_arena = st.number_input(_t("Precio por m³ arena", "Price per m³ sand"), value=st.session_state["apu_arena"], step=5000.0)
-                precio_grava = st.number_input(_t("Precio por m³ grava", "Price per m³ gravel"), value=st.session_state["apu_grava"], step=5000.0)
-                if "apu_agua" not in st.session_state: st.session_state["apu_agua"] = 3500.0
-                if "apu_encofrado" not in st.session_state: st.session_state["apu_encofrado"] = 45000.0
-                precio_agua = st.number_input(_t("Precio agua (m³)", "Water price /m³"), value=st.session_state["apu_agua"], step=500.0)
-                precio_encofrado = st.number_input(_t("Precio encofrado (m²)", "Formwork price /m²"), value=st.session_state["apu_encofrado"], step=2000.0)
+                # REGLA v12: defaults = 0. NUNCA hardcodear precios en COP u otra moneda.
+                precio_cemento   = st.number_input(_t("Precio por bulto cemento", "Price per cement bag"),  value=float(_apu_g.get("cemento", 0.0)),   step=1000.0)
+                precio_acero     = st.number_input(_t("Precio por kg acero", "Price per kg steel"),          value=float(_apu_g.get("acero", 0.0)),     step=100.0)
+                precio_arena     = st.number_input(_t("Precio por m³ arena", "Price per m³ sand"),           value=float(_apu_g.get("arena", 0.0)),     step=1000.0)
+                precio_grava     = st.number_input(_t("Precio por m³ grava", "Price per m³ gravel"),         value=float(_apu_g.get("grava", 0.0)),     step=1000.0)
+                precio_agua      = st.number_input(_t("Precio agua (m³)", "Water price /m³"),                value=float(_apu_g.get("agua", 0.0)),      step=100.0)
+                precio_encofrado = st.number_input(_t("Precio encofrado (m²)", "Formwork price /m²"),        value=float(_apu_g.get("encofrado", 0.0)), step=1000.0)
             with col_apu2:
-                if "apu_mo" not in st.session_state: st.session_state["apu_mo"] = 70000.0
-                if "apu_aui" not in st.session_state: st.session_state["apu_aui"] = 30.0
-                
-                precio_mo = st.number_input(_t("Costo mano de obra (día)", "Labor cost per day"), value=st.session_state["apu_mo"], step=5000.0)
-                pct_aui = st.number_input(_t("% A.I.U.", "% A.I.U."), value=st.session_state["apu_aui"], step=5.0) / 100.0
+                precio_mo = st.number_input(_t("Costo mano de obra (dia)", "Labor cost per day"),            value=float(_apu_g.get("costo_dia_mo", 0.0)), step=1000.0)
+                pct_aui   = st.number_input(_t("% A.I.U.", "% A.I.U."),                                      value=float(_apu_g.get("pct_aui", 0.30) * 100), step=5.0) / 100.0
             st.markdown("---")
             usar_premezclado = st.checkbox(
                 _t("Usar concreto premezclado (omite cemento/arena/grava)", "Use ready-mix concrete (skips cement/sand/gravel)"),
@@ -2270,12 +2272,12 @@ with tab3:
             # P-1 Agua
             _mix_apu = get_mix_for_fc(fc)
             _litros_apu = _mix_apu.get("agua", 180) * vol_concreto_m3
-            costo_agua = (_litros_apu / 1000) * apu.get("agua", 3500)
-            # P-3 Encofrado
+            costo_agua = (_litros_apu / 1000) * apu.get("agua", 0)
+            # P-3 Encofrado circular: pi*D*L / rectangular: 2*(b+h)*L
             _dim_enc_b = D if es_circular else b
             _dim_enc_h = D if es_circular else h
             _area_enc_apu = (3.14159 * _dim_enc_b / 100) * (L_col / 100) if es_circular else (2 * (_dim_enc_b + _dim_enc_h) / 100) * (L_col / 100)
-            costo_encofrado = _area_enc_apu * apu.get("encofrado", 45000)
+            costo_encofrado = _area_enc_apu * apu.get("encofrado", 0)
             costo_directo = costo_cemento + costo_acero + costo_arena + costo_grava + costo_conc_premix + costo_mo + costo_agua + costo_encofrado
             aiu = costo_directo * apu["pct_aui"]
             total = costo_directo + aiu

@@ -4,7 +4,7 @@ import streamlit as st
 from normas_referencias import mostrar_referencias_norma
 def _color_acero_dxf(db_mm: float) -> int:
     """Retorna color AutoCAD (1-255) segun diametro nominal en mm (ASTM/NTC)."""
-    if   db_mm <  7.5: return 2   # #2 1/4"   - Amarillo
+    if   db_mm <  7.5: return 6   # #2 1/4"   - Magenta (Prompt v12: no usar color 2 para aceros <16mm)
     elif db_mm < 11.1: return 3   # #3 3/8"   - Verde
     elif db_mm < 14.3: return 4   # #4 1/2"   - Cian
     elif db_mm < 17.5: return 5   # #5 5/8"   - Azul
@@ -47,14 +47,15 @@ _PERSIST_KEYS = [
     # Identidad global
     "empresa", "proyecto", "ingeniero",
     "dxfelaboro", "dxfreviso", "dxfaprobo",
-    "normasel", "idioma", "userrole",
+    "normasel", "idioma",
+    "userrole", "user_role",   # ambas claves para compatibilidad entre modulos
     # Geotecnia / zapata aislada
     "zfc", "zfy", "zphi", "cohval", "cohunit",
     "gamval", "gamunit", "zgsat",
     "zap_b", "zap_l", "zhzcp", "zap_df", "zbcolcp",
     "zQact", "znf", "zfs", "zspt",
     "zbousB", "zbousL", "zbousZ",
-    "zHhoriz", "zdelta",
+    "zH_horiz", "zdelta",
     "zopthmin", "zopthmax",
     "znombreregistro",
     # Diseño estructural
@@ -122,8 +123,20 @@ def _get_identity():
 
 
 def _rol_badge():
-    """Muestra badge de rol en sidebar y devuelve (rol, puede_exportar)."""
-    rol = st.session_state.get("userrole", "free")
+    """Muestra badge de rol en sidebar y devuelve (rol, puede_exportar).
+    Lee 'user_role' (clave de Columnas) o 'userrole' (clave legacy de Zapatas)
+    para que el rol establecido en cualquier modulo sea reconocido globalmente.
+    """
+    # Prioridad: user_role (Columnas/global) → userrole (legacy Zapatas) → free
+    rol = (
+        st.session_state.get("user_role")
+        or st.session_state.get("userrole")
+        or "free"
+    )
+    # Sincronizar ambas claves para que otros modulos vean el mismo rol
+    st.session_state["user_role"] = rol
+    st.session_state["userrole"]  = rol
+
     color = {"admin": "#1b5e20", "pro": "#0d47a1", "free": "#b71c1c"}.get(rol, "#b71c1c")
     st.sidebar.markdown(
         f"<span style='background:{color};color:white;padding:2px 8px;"
@@ -137,6 +150,11 @@ def _rol_badge():
 # ═══════════════════════════════════════════════════════════════════
 #  HELPER: figura matplotlib con fondo blanco para DOCX
 # ═══════════════════════════════════════════════════════════════════
+def _sanitize_dxf_text(txt: str) -> str:
+    """Elimina Em-Dashes y caracteres no válidos para DXF (Prompt Maestro v12)."""
+    return str(txt).replace('\u2014', '-').replace('\u2013', '-').replace('--', '-').replace('\u2019', "'")
+
+
 def _fig_to_docx_white(fig):
     """Devuelve bytes PNG con fondo blanco, apto para embeber en DOCX."""
     orig_fc   = fig.get_facecolor()
@@ -187,9 +205,9 @@ def guardar_proyecto_supabase(nombre, estado_dict, ref):
                 with open(db_path, "r", encoding="utf-8") as f: db = json.load(f)
             db[f"[{ref.upper()}] {nombre}"] = {"nombre_proyecto": f"[{ref.upper()}] {nombre}", "estado_json": json.dumps(estado_dict)}
             with open(db_path, "w", encoding="utf-8") as f: json.dump(db, f)
-            return True, " Proyecto guardado (Local)"
+            return True, "Proyecto guardado (Local)"
         except Exception as e:
-            return False, f" Error local: {e}"
+            return False, f"Error local: {e}"
     
     headers = {
         "apikey": key,
@@ -205,9 +223,9 @@ def guardar_proyecto_supabase(nombre, estado_dict, ref):
     try:
         endpoint = f"{url}/rest/v1/proyectos?on_conflict=nombre_proyecto"
         res = requests.post(endpoint, headers=headers, json=payload, timeout=5)
-        if res.status_code in [200, 201, 204]: return True, " Proyecto en la nube"
-        return False, f" Error API: {res.text}"
-    except Exception as e: return False, f" Error API: {e}"
+        if res.status_code in [200, 201, 204]: return True, "Proyecto en la nube"
+        return False, f"Error API: {res.text}"
+    except Exception as e: return False, f"Error API: {e}"
 
 def cargar_proyecto_supabase(nombre, ref):
     url, key = get_supabase_rest_info()
@@ -222,8 +240,8 @@ def cargar_proyecto_supabase(nombre, ref):
                 if match:
                     estado = json.loads(match["estado_json"])
                     for k, v in estado.items(): st.session_state[k] = v
-                    return True, " Proyecto cargado (Local)"
-            return False, " No encontrado"
+                    return True, "Proyecto cargado (Local)"
+            return False, "No encontrado"
         except Exception as e: return False, str(e)
     headers = {"apikey": key, "Authorization": f"Bearer {key}", "Accept": "application/json"}
     try:
@@ -234,8 +252,8 @@ def cargar_proyecto_supabase(nombre, ref):
             if data:
                 estado = json.loads(data[0]["estado_json"])
                 for k, v in estado.items(): st.session_state[k] = v
-                return True, " Proyecto cargado"
-        return False, " No encontrado"
+                return True, "Proyecto cargado"
+        return False, "No encontrado"
     except Exception as e: return False, str(e)
 
 def listar_proyectos_supabase(ref):
@@ -341,25 +359,98 @@ st.markdown("""<div style="width:100%;overflow:hidden;border-radius:14px;margin-
 # 2. Panel global "Guía Completa de Uso"
 with st.expander(" ¿Cómo usar este módulo? — Guía Completa de Uso", expanded=False):
     st.markdown('''
-    ### Configuración y Flujo de Diseño
-    Konte aborda el cálculo de zapatas (Aisladas, Medianeras y Esquineras) desde la base del suelo hasta la armadura 3D, cubriendo tanto la estabilidad geotécnica como la resistencia del acero.
-    
-    ####  1. Geometría y Cargas (Básico)
-    - Ingresa las dimensiones tentativas ($B, L, H$) de la zapata y el tamaño del pedestal ($c_x, c_y$).
-    - Añade las cargas de servicio y últimas (Axial, Momentos en X/Y y Cortantes).
-    - Selecciona el tipo de cimentación (Aislada, Medianera, etc.) para que Konte aplique las excentricidades y vigas de amarre automáticamente.
-    
-    ####  2. Verificación Geotécnica (Intermedio)
-    - Revisa que las presiones máximas ($q_{max}$) bajo la zapata no superen la capacidad portante admisible ($q_a$). 
-    - Comprueba que la excentricidad esté en el tercio medio ($e < L/6$) para garantizar que toda el área de la zapata esté en compresión contra el suelo.
-    
-    ####  3. Diseño Estructural NSR-10 / ACI 318 (Avanzado)
-    - **Punzonamiento:** Konte traza un perímetro crítico a $d/2$ de la cara de la columna y evalúa el cortante bidireccional. Aquí sabrás si debes aumentar el peralte ($H$).
-    - **Cortante Unidireccional:** El programa verifica como viga ancha la falla por tracción diagonal a una distancia $d$.
-    - **Flexión:** Se cuantifica el acero inferior en ambas direcciones mediante parrillas ortogonales (p.ej. Φ 5/8" @ 15 cm).
-    
-    ####  4. Entregables BIM y Planos
-    - Tras aprobarse el cálculo, el módulo genera Memorias de Cálculo en DOCX, dibuja automáticamente un plano esquemático en **DXF** para usar en AutoCAD, codificado por colores comerciales de barra, y compila un modelo IFC con barras tridimensionales.
+    ### Guia Completa — Zapatas y Geotecnia
+
+    Konte calcula y diseña zapatas **Aisladas**, **Medianeras** y sistemas **Medianera + Viga de Amarre**,
+    cubriendo desde la capacidad portante del suelo hasta el despiece de acero 3D, la memoria DOCX y el plano DXF/IFC.
+    El modulo es **MULTINORMA**: selecciona la norma activa en la barra lateral y todos los parametros
+    (phi, rho_min, rho_max, factores de capacidad, recubrimientos) se ajustan automaticamente.
+
+    ---
+
+    #### Normas soportadas
+    | Norma | Pais | rho_min | phi_flexion | phi_cortante |
+    |---|---|---|---|---|
+    | NSR-10 | Colombia | 0.0018 | 0.90 | 0.75 |
+    | ACI 318-25 / 19 / 14 | EE.UU. / Mexico / Peru | 0.0018 | 0.90 | 0.75 |
+    | E.060 | Peru | 0.0018 | 0.90 | 0.85 |
+    | NEC-SE-HM | Ecuador | 0.0018 | 0.90 | 0.75 |
+    | NTC-EM | Mexico | 0.0020 | 0.90 | 0.75 |
+    | COVENIN 1753 | Venezuela | 0.0018 | 0.90 | 0.75 |
+    | NB 1225001 | Bolivia | 0.0018 | 0.90 | 0.75 |
+    | CIRSOC 201 | Argentina | 0.0018 | 0.90 | 0.75 |
+
+    ---
+
+    #### Paso 1 — Configuracion Global (Barra Lateral)
+    - **Norma activa**: cambia phi, rho_min, rho_max y recubrimientos simultaneamente.
+    - **Materiales**: fc (MPa) y fy (MPa) de la zapata.
+    - **Refuerzo**: sistema pulgadas (US) o mm y diametro de varilla.
+    - **Identidad**: empresa, ingeniero, logotipo se estampan en todos los entregables.
+
+    #### Paso 2 — Tipo de Zapata
+    | Tipo | Cuando usarlo |
+    |---|---|
+    | 1. Aislada Centrica | Columna centrada sin restriccion de lindero |
+    | 2. Medianera (Lindero) | Columna junto a un lindero — excentricidad forzada en dir. B |
+    | 3. Esquina (Dos linderos) | Columna en esquina — excentricidad biaxial |
+    | 4. Con Viga de Amarre | Sistema medianera + zapata interior + viga strap beam |
+
+    #### Paso 3 — Flujo de Calculo (Zapata Aislada)
+    1. Ingresa B, L, H (m), Df, pedestal cx/cy y cargas Pu, Mu_B, Mu_L.
+    2. El modulo verifica capacidad portante (Terzaghi, Meyerhof o Vesic) con correccion por nivel freatico.
+    3. Verifica presiones qmax, excentricidad (e < B/6), cortante unidireccional y punzonamiento.
+    4. Diseña el acero por flexion en ambas direcciones (simple o doble parrilla automaticamente).
+    5. Genera entregables: Resultados | Plano DXF | Cantidades APU.
+
+    #### Paso 4 — Sistema Medianera + Viga de Amarre (Tipo 4)
+    Tabs disponibles: **Geometria** | **Viga de Amarre** | **Vista 3D** | **Plano DXF** | **Memoria DOCX**
+
+    ---
+
+    #### Cuando se activa Doble Parrilla de Acero (automatico)
+
+    La zapata normalmente usa **una sola parrilla inferior** (zona de traccion). El modulo activa
+    **doble parrilla** (inferior + superior comprimida) cuando detecta alguna de estas condiciones:
+
+    **Condicion 1 — Cuantia maxima superada (NSR-10 C.10.3.5 / ACI 318 Table 21.2.2):**
+    La cuantia requerida supera rho_max = 0.75 * rho_bal, donde:
+    rho_bal = (0.85 * beta1 * fc / fy) * 600 / (600 + fy)
+    beta1 = max(0.65, 0.85 - 0.05*(fc-28)/7) — aplica igual para todas las normas soportadas.
+
+    **Condicion 2 — Discriminante negativo:**
+    El espesor H propuesto es insuficiente para resistir Mu como seccion simple
+    (discriminante 1 - 2*Rn/(0.85*fc) < 0).
+
+    **Calculo cuando se activa doble parrilla:**
+    - As_inf (cara inferior, traccion): rho = rho_max → As_inf = rho_max * b * d
+    - As_sup (cara superior, compresion): As_sup = delta_Mu / (phi * fy * (d - d'))
+      donde delta_Mu = Mu - phi*Mn_max_simple y d' = recubrimiento + db/2
+    - Separacion minima entre capas: NSR-10 C.7.6.1 / ACI 318-25.2.1 (min 2.5 cm o 1.33*Dmax_agr)
+
+    **Indicadores visuales de doble parrilla:**
+    - Tabla de resultados: Estado muestra "DOBLE PARRILLA" en lugar de "OK"
+    - Aviso amarillo con detalle de As_inf y As_sup por direccion
+    - Vista 3D: barras superiores en ROSA (dir. B) y MAGENTA (dir. L) con linea discontinua
+    - Plano DXF: capa ACERO_SUP (color magenta), lineas punteadas en planta y solidas en cortes
+    - Memoria DOCX: secciones 5.1 Dir B y 5.2 Dir L con calculo completo de ambas parrillas
+
+    **Recomendacion practica:** Si se activa doble parrilla, aumentar primero H (espesor)
+    o fc — en la mayoria de casos esto elimina la necesidad sin incrementar el acero total.
+
+    ---
+
+    #### Verificaciones Normativas Cubiertas
+    - NSR-10 C.10.2.7 / ACI 318 Table 22.2.2 — beta1 y bloque de compresion
+    - NSR-10 C.10.3.5 / ACI 318 Table 21.2.2 — rho_max = 0.75*rho_bal
+    - NSR-10 C.11.11 / ACI 318-22.5 — Cortante unidireccional (viga ancha)
+    - NSR-10 C.11.12 / ACI 318-22.6 — Punzonamiento bidireccional
+    - NSR-10 C.12.2 / ACI 318-25.5 — Longitud de desarrollo recto
+    - NSR-10 C.12.5 / ACI 318-25.3 — Gancho estandar 90 grados
+    - NSR-10 C.7.6.1 / ACI 318-25.2.1 — Separacion minima entre capas (doble parrilla)
+    - NSR-10 H.3 — Cimentacion superficial vs profunda
+    - Terzaghi 1943 / Meyerhof 1963 / Vesic 1973 — Capacidad portante
+    - Bowles 1996 — Coeficiente de balasto ks (Winkler)
     ''')
 
 
@@ -938,7 +1029,7 @@ def generar_dxf_sistema(zap_ext_d, zap_int_d, viga_d, dis_d, norma, fc, fy, pape
     COL = {'ZAPATA_EXT':3, 'ZAPATA_INT':5, 'VIGA_STRAP':1, 'ACERO_LONG':6, 'ACERO_EST':7, 'COTAS':2, 'TEXTO':7, 'ROTULO':8, 'MARGEN':7}
     for lay, lw in LW.items():
         doc.layers.new(lay, dxfattribs={'color':COL[lay], 'lineweight':lw})
-    doc.styles.new('ROMANS', dxfattribs={'font':'romans.shx'})
+    doc.styles.new('ROMANS', dxfattribs={'font':'Arial.ttf'})
     msp = doc.modelspace()
     
     # Dibujar elementos virtualmente (unidades CM reales)
@@ -1320,10 +1411,15 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
                                   1.0, 5.0, st.session_state.get("z_fs", 3.0), 0.1, key="z_fs")
         N_spt   = st.number_input("N60 campo (SPT)", 0, 100, 14, 1, key="z_spt")
         st.caption("ℹ N60 clasifica perfil (Vesic)")
-        metodo_cap = st.radio("Método de Capacidad", ["Terzaghi", "Meyerhof"], horizontal=True)
+        metodo_cap = st.radio("Método de Capacidad", ["Terzaghi", "Meyerhof", "Vesic"], horizontal=True)
 
     # Parámetros para asentamiento elástico movidos abajo para unificar IO
     pass
+
+    Hzap = Hz_cp * 100.0   # conversión m → cm para cálculos de acero y exportación
+
+
+
 
     #  CÁLCULO GEOTÉCNICO 
     phi_rad = math.radians(phi_ang)
@@ -1346,8 +1442,9 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
         else:
             sc, sq, sgamma = 1.0, 1.0, 1.0
         dc, dq, dgamma = 1.0, 1.0, 1.0
+        ic_v = iq_v = ig_v = 1.0  # Terzaghi: sin factores de inclinacion
             
-    else:
+    elif metodo_cap == "Meyerhof":
         # Factores de Capacidad — Meyerhof (1963)
         if phi_ang == 0:
             Nc, Nq, Ngamma = 5.14, 1.0, 0.0
@@ -1356,18 +1453,87 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
             dc = 1 + 0.2 * (Df_cp/B_cp)
             dq, dgamma = 1.0, 1.0
         else:
-            Nq = math.exp(math.pi * math.tan(phi_rad)) * (math.tan(math.pi/4 + phi_rad/2)**2)
-            Nc = (Nq - 1) / math.tan(phi_rad)
+            Nq     = math.exp(math.pi * math.tan(phi_rad)) * (math.tan(math.pi/4 + phi_rad/2)**2)
+            Nc     = (Nq - 1) / math.tan(phi_rad)
             Ngamma = (Nq - 1) * math.tan(1.4 * phi_rad)
-            # Factores de Forma y Profundidad Meyerhof
-            Kp = math.tan(math.pi/4 + phi_rad/2)**2
-            sc = 1 + 0.2 * Kp * (B_cp / L_cp)
-            sq = 1 + 0.1 * Kp * (B_cp / L_cp) if phi_ang >= 10 else 1.0
+            Kp     = math.tan(math.pi/4 + phi_rad/2)**2
+            sc     = 1 + 0.2 * Kp * (B_cp / L_cp)
+            sq     = 1 + 0.1 * Kp * (B_cp / L_cp) if phi_ang >= 10 else 1.0
             sgamma = sq
-            
-            dc = 1 + 0.2 * math.sqrt(Kp) * (Df_cp / B_cp)
-            dq = 1 + 0.1 * math.sqrt(Kp) * (Df_cp / B_cp) if phi_ang >= 10 else 1.0
+            dc     = 1 + 0.2 * math.sqrt(Kp) * (Df_cp / B_cp)
+            dq     = 1 + 0.1 * math.sqrt(Kp) * (Df_cp / B_cp) if phi_ang >= 10 else 1.0
             dgamma = dq
+        # Vesic: inclinacion neutra
+        ic_v = iq_v = ig_v = 1.0
+
+    else:
+        # ──────────────────────────────────────────────────────────────────────
+        # PASO 5 — MÉTODO VESIC (1973/1975) — NSR-10 H.3 / Bowles (1996) §3-5
+        # Ref: Vesic (1973) "Analysis of Ultimate Loads of Shallow Foundations"
+        #      JSMFD, ASCE 99(1):45-73
+        # q_ult = c·Nc·Fcs·Fcd·Fci + q·Nq·Fqs·Fqd·Fqi + 0.5·γ·B·Nγ·Fγs·Fγd·Fγi
+        # ──────────────────────────────────────────────────────────────────────
+
+        # ── Factores de capacidad de carga (Vesic = Hansen excepto Nγ) ────
+        if phi_ang == 0:
+            Nc, Nq, Ngamma = 5.14, 1.0, 0.0
+        else:
+            Nq     = math.exp(math.pi * math.tan(phi_rad)) * (math.tan(math.pi/4 + phi_rad/2)**2)
+            Nc     = (Nq - 1) / math.tan(phi_rad)
+            Ngamma = 2.0 * (Nq + 1.0) * math.tan(phi_rad)   # Vesic 1973 — difiere de Hansen
+
+        # ── Factores de forma (Fcs, Fqs, Fγs) Vesic 1973 ─────────────────
+        _BL = B_cp / L_cp if L_cp > 0 else 1.0
+        if phi_ang == 0:
+            Fcs    = 1.0 + _BL * (Nq / Nc) if Nc > 0 else 1.0
+            Fqs    = 1.0
+            Fgs    = max(1.0 - 0.4 * _BL, 0.60)
+        else:
+            Fcs    = 1.0 + _BL * (Nq / Nc) if Nc > 0 else 1.0
+            Fqs    = 1.0 + _BL * math.tan(phi_rad)
+            Fgs    = max(1.0 - 0.4 * _BL, 0.60)
+
+        # ── Factores de profundidad (Fcd, Fqd, Fγd) Hansen/Vesic ─────────
+        _rat = Df_cp / B_cp if B_cp > 0 else 0.0
+        _k   = _rat if _rat <= 1.0 else math.atan(_rat)   # atan para Df/B > 1
+        _t2  = math.tan(phi_rad) * (1 - math.sin(phi_rad))**2
+        Fqd  = 1.0 + 2.0 * _t2 * _k
+        Fgd  = 1.0
+        if phi_ang == 0:
+            Fcd = 1.0 + 0.4 * _k
+        else:
+            _dnom = Nq * math.tan(phi_rad)
+            Fcd  = Fqd - (1 - Fqd) / _dnom if _dnom > 0 else Fqd
+
+        # ── Input del ángulo de inclinación de la carga ψ ─────────────────
+        _psi_inp = st.number_input(
+            _t("Angulo inclinacion carga psi [grados] (0 = vertical)",
+               "Load inclination angle psi [deg] (0 = vertical)"),
+            0.0, 45.0,
+            st.session_state.get("z_vesic_psi", 0.0), 1.0,
+            key="z_vesic_psi",
+            help=_t(
+                "Factor de inclinacion Vesic 1973. psi=0 para carga vertical pura (Fci=Fqi=Fgi=1).",
+                "Vesic 1973 inclination factor. psi=0 → Fci=Fqi=Fgi=1."
+            )
+        )
+
+        # ── Factores de inclinación (Fci, Fqi, Fγi) Vesic 1973 ───────────
+        _psi_rad = math.radians(float(st.session_state.get("z_vesic_psi", 0.0)))
+        _n_v = (2.0 + _BL) / (1.0 + _BL)   # factor n de Vesic
+        if _psi_rad == 0.0 or phi_ang == 0:
+            Fci, Fqi, Fgi = 1.0, 1.0, 1.0
+        else:
+            Fqi = max((1.0 - math.tan(_psi_rad))**_n_v, 0.0)
+            Fgi = max((1.0 - math.tan(_psi_rad))**(_n_v + 1), 0.0)
+            _dnom_ci = Nc * math.tan(phi_rad) if (Nc > 0 and phi_ang > 0) else 1.0
+            Fci = Fqi - (1.0 - Fqi) / _dnom_ci if _dnom_ci > 0 else 0.0
+            Fci = max(Fci, 0.0)
+
+        # Alias unificados para bloque de q_ult y tabla de resultados
+        sc, sq, sgamma = Fcs, Fqs, Fgs
+        dc, dq, dgamma = Fcd, Fqd, Fgd
+        ic_v, iq_v, ig_v = Fci, Fqi, Fgi
 
     # Corrección por nivel freático (Casos I / II / III)
     gamma_prime = gamma_sat_t - gamma_w
@@ -1385,8 +1551,131 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
         gamma_eff = gamma_s
         caso_nf  = "III"
 
-    q_ult  = sc*dc*coh_c*Nc + sq*dq*q_sob*Nq + sgamma*dgamma*0.5*gamma_eff*B_cp*Ngamma
+    # q_ult unificado — para Vesic incluye factores de inclinacion Fci/Fqi/Fgi
+    # Para Terzaghi y Meyerhof ic_v=iq_v=ig_v=1 (neutros)
+    q_ult  = (sc*dc*ic_v*coh_c*Nc
+             + sq*dq*iq_v*q_sob*Nq
+             + sgamma*dgamma*ig_v*0.5*gamma_eff*B_cp*Ngamma)
     q_adm  = q_ult / FS_terz
+    # ── Defaults estructurales (sobreescritos en pestaña Diseño Estructural) ──
+    # fc_basico y fy_basico ya definidos en sidebar
+    recub_z    = float(st.session_state.get("z_recub_val", 7.5))
+    c1_col     = float(st.session_state.get("z_c1col_val", 40.0))
+    c2_col     = float(st.session_state.get("z_c2col_val", 40.0))
+    bar_z      = st.session_state.get("z_barz_val", list(REBAR_DICT.keys())[3])
+    if bar_z not in REBAR_DICT: bar_z = list(REBAR_DICT.keys())[3]
+    db_bar_z   = REBAR_DICT[bar_z]["db"]
+    A_bar_z    = REBAR_DICT[bar_z]["area"] * 100  # mm²
+    H_zap      = float(st.session_state.get("z_hzap_val", Hzap))
+    d_z        = max(1.0, H_zap - recub_z - db_bar_z / 10.0)  # cm peralte efectivo
+    d_avg      = d_z   # peralte promedio en cm
+    pos_col_iso = st.session_state.get("pos_col_iso", "Interior")
+    gamma_prom  = float(st.session_state.get("z_gamma_prom", 20.0))
+    Df_z        = float(st.session_state.get("z_df_z", 1.0))
+    s_c_uso     = float(st.session_state.get("z_sc_uso", 3.0))
+    q_adm_z     = float(q_adm)   # valor calculado; sobreescrito por widget ISO
+    qu_max     = float(q_adm);  qu_min = 0.0   # presiones mayoradas (default hasta calcular ISO)
+    q_net       = max(0.1, q_adm - gamma_prom * Df_z)
+    # Defaults de resultados estructurales (sobreescritos en pestaña Diseño)
+    ok_1way_B  = False;  ok_1way_L  = False;  ok_punz    = False
+    nbarras_B  = 0;      nbarras_L  = 0
+    n_barras_B = 0;      n_barras_L = 0
+    sep_B      = 0.0;    sep_L      = 0.0
+    Mu_B       = 0.0;    Mu_L       = 0.0
+    Vu_1B      = 0.0;    Vu_1L      = 0.0;    Vu_punz    = 0.0
+    phi_Vc_1B  = 0.0;    phi_Vc_1L  = 0.0;    phi_Vc_P   = 0.0
+    Vu_1way_B     = 0.0
+    Vu_1way_L     = 0.0
+    phi_Vc_1way_B = 0.0
+    phi_Vc_1way_L = 0.0
+    Vu_punz       = 0.0
+    phi_Vc_P      = 0.0
+    ok_1way_L     = False
+    ok_punz       = False
+    bo_perim   = 0.0;    Mu_flex_B  = 0.0;    Mu_flex_L  = 0.0
+    rho_B         = 0.0
+    rho_L         = 0.0
+    rho_use_B     = 0.0
+    rho_use_L     = 0.0
+    disc_B_val    = 0.0
+    disc_L_val    = 0.0
+    As_req_L      = 0.0
+    n_barras_L    = 0
+    sep_L         = 0.0
+    Mu_flex_B     = 0.0
+    Mu_flex_L     = 0.0
+    disc_L        = 0.0
+    L_use         = L_cp
+    lv_l          = 0.0
+    rho_use_L     = 0.0
+    L_disp_min_cm = 0.0; _ld_req_cm = 0.0
+    ldh_req_cm = 0.0;    ok_ldh     = False
+    _ok_ld     = False;   _ld_disp_min_cm = 0.0
+    _e_apu_z   = ''    # excepción gráfica APU (default vacío)
+    _caso_fav_B = False;  _caso_fav_L = False
+    _factor_ld  = 1.7    # factor desarrollo recto (caso general NSR-10)
+    # Defaults cuantificación APU (calculados en tab_apu, usados en bloque PDF)
+    _vol_conc_def  = B_cp * L_cp * (Hzap / 100.0)
+    bultos_zap     = _vol_conc_def * 350 / 50.0          # bultos 50 kg
+    vol_arena_z    = _vol_conc_def * 0.55                 # m³
+    vol_grava_z    = _vol_conc_def * 0.80                 # m³
+    litros_agua    = _vol_conc_def * 185.0                # litros
+    vol_excavacion = (B_cp + 0.5) * (L_cp + 0.5) * Df_cp # m³
+    peso_total_acero_zap = 0.0                            # kg (actualizado en tab_apu)
+    vol_concreto_zap     = _vol_conc_def
+    # Aliases para bloque PDF/DOCX y diagrama N-M
+    Mu_flex_B  = Mu_B;   Mu_flex_L  = Mu_L
+    momento_dir_B = Mu_B
+    momento_dir_L = Mu_L
+    rho_z_min  = 0.0018   # NSR-10 cuantía mínima zapata
+    As_min     = 0.0
+    vol_c      = 0.0;    peso_L = 0.0;  peso_B = 0.0
+    kg_m3      = 2400.0
+    MsvcB      = 0.0;    MsvcL  = 0.0
+    _it        = 0
+    L_disp_min_cm = 0.0;  L_disp_B_cm = 0.0;  L_disp_L_cm = 0.0
+    _ld_disp_B_cm = 0.0;  _ld_disp_L_cm = 0.0
+    lv_b       = 0.0;    lv_l       = 0.0
+    d_z_m      = d_z / 100.0
+    B_use      = B_cp;   L_use      = L_cp
+    q_sob      = 0.0;    gamma_eff  = gamma_s
+    caso_nf    = 1
+    As_req_B   = 0.0;    As_req_L   = 0.0
+    As_req_B     = 0.0;    As_req_L     = 0.0
+    disc_B     = 0.0;    disc_L     = 0.0
+    # Defaults adicionales para secciones posteriores
+    _best      = None    # resultado optimizador
+    _qu        = 0.0     # presión actuante optimizador
+    file_name  = "zapata.dxf"
+    mime       = "application/dxf"
+    ok_volc    = False;  ok_desl = False
+    _bo        = 0.0;    _bo1_eff = 0.0;  _bo2_eff = 0.0
+    sep_max    = 45.0    # cm separación máxima NSR-10
+    fontSize   = 10;     spaceBefore = 4;  colWidths = None
+    tmp_path   = ""
+    ldh_req_cm = 0.0;  ok_ldh  = False;  _ld_req_cm = 0.0
+    _bz        = bar_z   # alias barra zapata en exportación
+    pedestal   = False   # flag pedestal
+    x1         = 0.0;    y1 = 0.0   # coords diagrama N-M
+    borderwidth= 1       # estilo tabla
+    ks         = 0.0     # módulo de balasto
+    H_horiz    = float(st.session_state.get("z_Hhoriz", 0.0))
+    FS_desl    = 999.0;  FS_volc = 999.0
+    M_volc     = 0.0;    ok_volc = False;  ok_desl = False
+    FR         = 0.0;    M_estab = 0.0;    arm_volc = 0.0
+    delta_ang  = float(st.session_state.get("z_delta", 0.0))
+    Pp_pasivo  = 0.0
+    W_total    = 0.0;    P_svc   = float(Q_act)
+    area_ok    = True    # default hasta que pestaña ISO calcule
+    # Defaults para bloque PDF/DOCX (calculados en pestaña diseño)
+    P_serv     = float(Q_act);  M_serv  = 0.0;  M_ult   = 0.0
+    qa         = q_adm;         e_serv  = 0.0
+    qmax_s     = q_adm;         qmin_s  = 0.0
+    qmax_u     = q_adm * 1.3;   qmin_u  = 0.0
+    P_svc      = float(Q_act);  P_ult   = float(Q_act) * 1.4
+    q_act      = float(Q_act) / max(0.01, B_cp * L_cp)
+    z_mid      = 0.0     # profundidad media capa asentamiento
+    delta_color= "#14b8a6"  # color semáforo
     
     Q_ult  = q_ult * B_cp * L_cp
     q_act  = Q_act / (B_cp * L_cp)
@@ -1410,15 +1699,28 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
 
     col_r1, col_r2 = st.columns(2)
     with col_r1:
-        st.dataframe(pd.DataFrame([
-            {"Parámetro": "Método",              "Valor": metodo_cap},
-            {"Parámetro": "Nc / Nq / Nγ",        "Valor": f"{Nc:.2f} / {Nq:.2f} / {Ngamma:.2f}"},
-            {"Parámetro": "sc / sq / sγ",         "Valor": f"{sc:.2f} / {sq:.2f} / {sgamma:.2f}"},
-            {"Parámetro": "dc / dq / dγ",         "Valor": f"{dc:.2f} / {dq:.2f} / {dgamma:.2f}"},
-            {"Parámetro": f"Caso NF",             "Valor": f"Caso {caso_nf} | NF={NF_prof}m"},
-            {"Parámetro": "q sobrecarga",         "Valor": f"{q_sob:.2f} kPa"},
-            {"Parámetro": "γ' efectivo",          "Valor": f"{gamma_eff:.2f} kN/m³"},
-        ]), use_container_width=True, hide_index=True)
+        _rows_factores = [
+            {"Parámetro": "Método",                    "Valor": metodo_cap},
+            {"Parámetro": "Nc / Nq / Nγ",              "Valor": f"{Nc:.3f} / {Nq:.3f} / {Ngamma:.3f}"},
+            {"Parámetro": "sc / sq / sγ  (forma)",     "Valor": f"{sc:.4f} / {sq:.4f} / {sgamma:.4f}"},
+            {"Parámetro": "dc / dq / dγ  (profundidad)","Valor": f"{dc:.4f} / {dq:.4f} / {dgamma:.4f}"},
+            {"Parámetro": "ic / iq / iγ  (inclinación)","Valor": f"{ic_v:.4f} / {iq_v:.4f} / {ig_v:.4f}"},
+            {"Parámetro": "Caso NF",                   "Valor": f"Caso {caso_nf} | NF={NF_prof} m"},
+            {"Parámetro": "q sobrecarga",              "Valor": f"{q_sob:.2f} kPa"},
+            {"Parámetro": "γ' efectivo",               "Valor": f"{gamma_eff:.2f} kN/m³"},
+            {"Parámetro": "q_ult  [kPa]",              "Valor": f"{q_ult:.2f}"},
+            {"Parámetro": "q_adm  [kPa]",              "Valor": f"{q_adm:.2f}"},
+        ]
+        st.dataframe(pd.DataFrame(_rows_factores), use_container_width=True, hide_index=True)
+        if metodo_cap in ("Vesic", "Meyerhof"):
+            _T1 = sc*dc*ic_v*coh_c*Nc
+            _T2 = sq*dq*iq_v*q_sob*Nq
+            _T3 = sgamma*dgamma*ig_v*0.5*gamma_eff*B_cp*Ngamma
+            st.caption(
+                f"Desglose q_ult = "
+                f"**{_T1:.1f}** (cohesión) + **{_T2:.1f}** (sobrecarga) + "
+                f"**{_T3:.1f}** (peso propio) = **{_T1+_T2+_T3:.1f} kPa**"
+            )
     with col_r2:
         st.markdown("**Conversión Admisible:**")
         m1,m2,m3 = st.columns(3)
@@ -1426,7 +1728,1369 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
         m2.metric("ton/m²", f"{q_adm/9.80665:.2f}")
         m3.metric("kg/cm²", f"{q_adm/98.0665:.3f}")
 
+
+    # ── PASO 5E: Comparativa de métodos Terzaghi / Meyerhof / Vesic ─────────
+    with st.expander(
+        _t("Comparativa de Métodos: Terzaghi vs Meyerhof vs Vesic",
+           "Methods Comparison: Terzaghi vs Meyerhof vs Vesic"),
+        expanded=False
+    ):
+        st.markdown(_t(
+            "Cálculo automático de q_ult con los tres métodos usando los mismos parámetros de entrada.",
+            "Automatic q_ult calculation with all three methods using the same input parameters."
+        ))
+        # Calcular los tres métodos
+        def _qult_metodo(metodo, phi_a, coh, gamms, q_sb, geff, B, L, Df):
+            import math as _m
+            _pr = _m.radians(phi_a)
+            # Factores N
+            if phi_a == 0:
+                Nc, Nq, Ng = 5.14, 1.0, 0.0
+            else:
+                Nq = _m.exp(_m.pi * _m.tan(_pr)) * (_m.tan(_m.pi/4 + _pr/2)**2)
+                Nc = (Nq - 1) / _m.tan(_pr)
+                if metodo == "Terzaghi":
+                    _at = _m.exp((0.75*_m.pi - _pr/2)*_m.tan(_pr))
+                    Nq  = (_at**2) / (2*_m.cos(_m.radians(45) + _pr/2)**2)
+                    Nc  = (Nq - 1) / _m.tan(_pr) if phi_a > 0 else 5.7
+                    Ng  = 2*(Nq+1)*_m.tan(_pr) / (1 + 0.4*_m.sin(4*_pr))
+                elif metodo == "Meyerhof":
+                    Ng = (Nq - 1) * _m.tan(1.4 * _pr)
+                else:  # Vesic
+                    Ng = 2.0 * (Nq + 1.0) * _m.tan(_pr)
+            if phi_a == 0:
+                Nc, Nq, Ng = 5.14, 1.0, 0.0
+
+            # Factores de forma
+            _BL = B/L if L > 0 else 1.0
+            if metodo == "Terzaghi":
+                sc, sq, sg = 1.3, 1.0, 0.8  # cuadrada/continua simplificado
+            elif metodo == "Meyerhof":
+                if phi_a == 0:
+                    sc, sq, sg = 1 + 0.2*_BL, 1.0, 1.0
+                else:
+                    _Kp = _m.tan(_m.pi/4 + _pr/2)**2
+                    sc  = 1 + 0.2*_Kp*_BL
+                    sq  = 1 + 0.1*_Kp*_BL if phi_a >= 10 else 1.0
+                    sg  = sq
+            else:  # Vesic
+                _Nq2 = _m.exp(_m.pi*_m.tan(_pr))*(_m.tan(_m.pi/4+_pr/2)**2) if phi_a>0 else 1.0
+                _Nc2 = (_Nq2-1)/_m.tan(_pr) if phi_a>0 else 5.14
+                sc = 1 + _BL*(_Nq2/_Nc2) if _Nc2 > 0 else 1.0
+                sq = 1 + _BL*_m.tan(_pr) if phi_a > 0 else 1.0
+                sg = max(1 - 0.4*_BL, 0.6)
+
+            # Factores de profundidad
+            _rat = Df/B if B > 0 else 0.0
+            if metodo == "Terzaghi":
+                dc, dq, dg = 1.0, 1.0, 1.0
+            elif metodo == "Meyerhof":
+                if phi_a == 0:
+                    dc, dq, dg = 1+0.2*_rat, 1.0, 1.0
+                else:
+                    _Kp = _m.tan(_m.pi/4+_pr/2)**2
+                    dc  = 1+0.2*_m.sqrt(_Kp)*_rat
+                    dq  = 1+0.1*_m.sqrt(_Kp)*_rat if phi_a>=10 else 1.0
+                    dg  = dq
+            else:  # Vesic
+                _k = _rat if _rat <= 1.0 else _m.atan(_rat)
+                _t2 = _m.tan(_pr)*(1-_m.sin(_pr))**2
+                dq  = 1+2*_t2*_k
+                dg  = 1.0
+                dc  = dq - (1-dq)/(Nq*_m.tan(_pr)) if (phi_a>0 and Nq*_m.tan(_pr)>0) else (1+0.4*_k)
+
+            qu = sc*dc*coh*Nc + sq*dq*q_sb*Nq + sg*dg*0.5*geff*B*Ng
+            return qu, Nc, Nq, Ng, sc, sq, sg, dc, dq, dg
+
+        _filas_cmp = []
+        for _met in ["Terzaghi", "Meyerhof", "Vesic"]:
+            _qu, _Nc, _Nq, _Ng, _sc, _sq, _sg, _dc, _dq, _dg = _qult_metodo(
+                _met, phi_ang, coh_c, gamma_s, q_sob, gamma_eff,
+                B_cp, L_cp, Df_cp
+            )
+            _filas_cmp.append({
+                "Método": _met,
+                "Nq": f"{_Nq:.3f}",
+                "Nγ": f"{_Ng:.3f}",
+                "sc/sq/sγ": f"{_sc:.3f}/{_sq:.3f}/{_sg:.3f}",
+                "dc/dq/dγ": f"{_dc:.3f}/{_dq:.3f}/{_dg:.3f}",
+                "q_ult [kPa]": f"{_qu:.1f}",
+                "q_adm (FS=3) [kPa]": f"{_qu/FS_terz:.1f}",
+                "Activo": "→ EN USO" if _met == metodo_cap else ""
+            })
+        st.dataframe(pd.DataFrame(_filas_cmp), use_container_width=True, hide_index=True)
+        st.caption(_t(
+            "Nγ Vesic = 2(Nq+1)tanφ | Nγ Meyerhof = (Nq-1)tan(1.4φ) | Terzaghi: sin factores d/s",
+            "Nγ Vesic = 2(Nq+1)tanφ | Nγ Meyerhof = (Nq-1)tan(1.4φ) | Terzaghi: no d/s factors"
+        ))
+
     
+    # ── PASO 9A: Optimizador automático B×L (costo mínimo) ──────────────────
+    with st.expander(
+        _t("Optimizador B×L Automático (Costo Mínimo Concreto)",
+           "Auto B×L Optimizer (Min Concrete Cost)"),
+        expanded=False
+    ):
+        st.markdown(_t(
+            "Dado q_adm, la carga de servicio Ps y el rango de dimensiones, "
+            "calcula todas las combinaciones factibles y ordena por volumen mínimo de concreto.",
+            "Given q_adm, service load Ps and dimension range, calculates all feasible "
+            "combinations and sorts by minimum concrete volume."
+        ))
+        _opt_c1, _opt_c2 = st.columns(2)
+        with _opt_c1:
+            _opt_Ps    = st.number_input(_t("Carga de servicio Ps (kN)","Service load Ps (kN)"),
+                10.0, 50000.0, float(Q_act), 50.0, key="opt_Ps")
+            _opt_qadm  = st.number_input(_t("q_adm (kPa)","q_adm (kPa)"),
+                10.0, 2000.0, float(q_adm), 10.0, key="opt_qadm")
+            _opt_H     = st.number_input(_t("Altura zapata H (cm)","Footing height H (cm)"),
+                20.0, 150.0, float(Hzap), 5.0, key="opt_H")
+        with _opt_c2:
+            _opt_Bmin  = st.number_input(_t("B mínimo (m)","B min (m)"),
+                0.5, 5.0, max(0.5, round(B_cp - 0.5, 1)), 0.1, key="opt_Bmin")
+            _opt_Bmax  = st.number_input(_t("B máximo (m)","B max (m)"),
+                1.0, 12.0, min(12.0, round(B_cp + 1.5, 1)), 0.1, key="opt_Bmax")
+            _opt_paso  = st.select_slider(_t("Paso de búsqueda (m)","Search step (m)"),
+                options=[0.05, 0.10, 0.20, 0.25, 0.50], value=0.10, key="opt_paso")
+            _opt_cuad  = st.checkbox(_t("Solo zapatas cuadradas (B=L)","Square only (B=L)"),
+                value=False, key="opt_cuad")
+
+        if st.button(_t("Calcular Optimizador","Run Optimizer"),
+                     key="opt_run", use_container_width=True):
+            import numpy as _np_opt
+            _B_range = _np_opt.arange(_opt_Bmin, _opt_Bmax + _opt_paso/2, _opt_paso)
+            _rows_opt = []
+            for _B in _B_range:
+                _B = round(float(_B), 3)
+                _L_range2 = [_B] if _opt_cuad else _np_opt.arange(
+                    _B, min(_B * 2.5, _opt_Bmax) + _opt_paso/2, _opt_paso)
+                for _L in _L_range2:
+                    _L = round(float(_L), 3)
+                    _q_act_o = _opt_Ps / (_B * _L)
+                    if _q_act_o > _opt_qadm:
+                        continue   # no cumple portante
+                    _vol = _B * _L * (_opt_H / 100.0)
+                    _FS_o= q_ult / _q_act_o if _q_act_o > 0 else 999.0
+                    _rows_opt.append({
+                        "B (m)": _B, "L (m)": _L,
+                        "Área (m²)": round(_B * _L, 3),
+                        "q_act (kPa)": round(_q_act_o, 1),
+                        "Margen q (kPa)": round(_opt_qadm - _q_act_o, 1),
+                        "FS calc.": round(_FS_o, 2) if _FS_o < 999 else "∞",
+                        "Vol. concreto (m³)": round(_vol, 3),
+                        "B/L": round(_B/_L, 2),
+                        "Estado": "OK" if _q_act_o <= _opt_qadm else "FALLA",
+                    })
+
+            if _rows_opt:
+                _df_opt = pd.DataFrame(_rows_opt).sort_values("Vol. concreto (m³)")
+                _df_opt = _df_opt.reset_index(drop=True)
+                _df_opt.index += 1
+
+                # Semáforo estado
+                def _color_opt(val):
+                    if val == "OK":
+                        return "background-color:#d4edda;color:#155724;font-weight:bold"
+                    return "background-color:#f8d7da;color:#721c24;font-weight:bold"
+
+                st.dataframe(
+                    _df_opt.style.map(_color_opt, subset=["Estado"]),
+                    use_container_width=True, hide_index=False
+                )
+                # Métricas del óptimo
+                _best = _df_opt.iloc[0]
+                _c_o1, _c_o2, _c_o3, _c_o4 = st.columns(4)
+                _c_o1.metric(_t("Geometría óptima","Optimal geometry"),
+                             f"{_best['B (m)']:.2f} × {_best['L (m)']:.2f} m")
+                _c_o2.metric(_t("Vol. mínimo","Min volume"),
+                             f"{_best['Vol. concreto (m³)']:.3f} m³")
+                _c_o3.metric(_t("q_act óptima","Optimal q_act"),
+                             f"{_best['q_act (kPa)']:.1f} kPa")
+                _c_o4.metric(_t("Combinaciones válidas","Valid combinations"),
+                             len(_df_opt))
+
+                # CSV del optimizador
+                _csv_opt = _df_opt.to_csv().encode("utf-8-sig")
+                st.download_button(
+                    _t("Descargar CSV Optimizador","Download Optimizer CSV"),
+                    data=_csv_opt,
+                    file_name=f"Optimizador_Zapata_{_opt_Ps:.0f}kN.csv",
+                    mime="text/csv", key="opt_csv", use_container_width=True
+                )
+                st.caption(_t(
+                    f"Ordenado por volumen mínimo. H fijo = {_opt_H:.0f} cm. "
+                    f"q_ult = {q_ult:.1f} kPa (método {metodo_cap}).",
+                    f"Sorted by minimum volume. H fixed = {_opt_H:.0f} cm. "
+                    f"q_ult = {q_ult:.1f} kPa ({metodo_cap} method)."
+                ))
+            else:
+                st.warning(_t(
+                    "No hay combinaciones válidas en el rango definido. "
+                    "Aumenta B_max o revisa q_adm.",
+                    "No valid combinations in the defined range. "
+                    "Increase B_max or check q_adm."
+                ))
+
+    # ── P3-A: Comparador de Alternativas con Semáforo ────────────────────────
+    with st.expander(
+        _t("Comparador de Alternativas (Tabla Semáforo B₁/B₂/B₃)",
+           "Alternatives Comparison (Traffic-Light Table B₁/B₂/B₃)"),
+        expanded=False
+    ):
+        st.markdown(_t(
+            "Define hasta 4 geometrías alternativas de zapata y compara simultáneamente "
+            "todas las verificaciones con semáforo visual. Útil para decisiones rápidas "
+            "en reuniones de diseño o propuestas al cliente.",
+            "Define up to 4 alternative footing geometries and compare all verifications "
+            "simultaneously with a traffic-light table. Useful for quick design decisions."
+        ))
+
+        _alt_n = st.slider(_t("Número de alternativas","Number of alternatives"), 2, 4, 3,
+                           key="alt_n")
+        _alt_cols = st.columns(_alt_n)
+        _alt_geoms = []
+        for _ia in range(_alt_n):
+            with _alt_cols[_ia]:
+                st.markdown(f"**Alt. {_ia+1}**")
+                _aB = st.number_input(f"B{_ia+1} (m)", 0.5, 10.0,
+                    round(B_cp + (_ia - 1) * 0.25, 2), 0.05, key=f"alt_B_{_ia}")
+                _aL = st.number_input(f"L{_ia+1} (m)", 0.5, 12.0,
+                    round(L_cp + (_ia - 1) * 0.25, 2), 0.05, key=f"alt_L_{_ia}")
+                _aH = st.number_input(f"H{_ia+1} (cm)", 20.0, 150.0,
+                    float(Hzap), 5.0, key=f"alt_H_{_ia}")
+                _alt_geoms.append({"B": _aB, "L": _aL, "H": _aH})
+
+        # Calcular todas las alternativas
+        _alt_rows = []
+        for _ia, _g in enumerate(_alt_geoms):
+            _B, _L, _H = _g["B"], _g["L"], _g["H"]
+            _Hm  = _H / 100.0
+            _qAct= Q_act / (_B * _L)
+            _ok_q= _qAct <= q_adm
+            _d_e = _H - recub_z - db_bar_z/10/2   # cm
+            _Vu1B= max(0, _qAct * _B * max(0, (_B/2 - c1_col/200 - _d_e/100)))  # kN
+            _phiVcB = 0.75 * (0.17 * (fc_basico**0.5)) * (_B*100) * _d_e / 1000
+            _ok_1B  = _Vu1B <= _phiVcB
+            _Vu1L= max(0, _qAct * _L * max(0, (_L/2 - c2_col/200 - _d_e/100)))
+            _phiVcL = 0.75 * (0.17 * (fc_basico**0.5)) * (_L*100) * _d_e / 1000
+            _ok_1L  = _Vu1L <= _phiVcL
+            _bo  = 2 * ((c1_col + _d_e) + (c2_col + _d_e))
+            _VuP = max(0, _qAct * (_B*_L - ((c1_col/100+_d_e/100)*(c2_col/100+_d_e/100))))
+            _phiVcP = 0.75 * 0.33 * (fc_basico**0.5) * (_bo/100) * (_d_e/100) * 1000
+            _ok_P   = _VuP <= _phiVcP
+            _vol = _B * _L * _Hm
+            _FS_a= q_ult / _qAct if _qAct > 0 else 999.0
+            _all_ok = all([_ok_q, _ok_1B, _ok_1L, _ok_P])
+            _alt_rows.append({
+                "Alternativa": f"Alt. {_ia+1}  {_B:.2f}×{_L:.2f}×{_H:.0f}cm",
+                "B×L (m)": f"{_B:.2f}×{_L:.2f}",
+                "H (cm)": _H,
+                "Área (m²)": round(_B*_L, 3),
+                "Vol. concreto (m³)": round(_vol, 3),
+                "q_act (kPa)": round(_qAct, 1),
+                "FS": round(_FS_a, 2) if _FS_a < 999 else "∞",
+                "Portante": "OK" if _ok_q else "FALLA",
+                "Cortante B": "OK" if _ok_1B else "FALLA",
+                "Cortante L": "OK" if _ok_1L else "FALLA",
+                "Punzonamiento": "OK" if _ok_P else "FALLA",
+                "Global": "✅ CUMPLE" if _all_ok else "❌ FALLA",
+            })
+
+        _df_alt = pd.DataFrame(_alt_rows)
+
+        def _color_alt(val):
+            if val in ("OK", "✅ CUMPLE"):
+                return "background-color:#d4edda;color:#155724;font-weight:bold"
+            elif val in ("FALLA", "❌ FALLA"):
+                return "background-color:#f8d7da;color:#721c24;font-weight:bold"
+            return ""
+
+        _cols_sem = ["Portante","Cortante B","Cortante L","Punzonamiento","Global"]
+        st.dataframe(
+            _df_alt.style.map(_color_alt, subset=_cols_sem),
+            use_container_width=True, hide_index=True
+        )
+
+        # Recomendación automática
+        _best_alts = [r for r in _alt_rows if r["Global"] == "✅ CUMPLE"]
+        if _best_alts:
+            _best_vol_alt = min(_best_alts, key=lambda x: x["Vol. concreto (m³)"])
+            st.success(_t(
+                f"Alternativa óptima: **{_best_vol_alt['B×L (m)']} m** con "
+                f"{_best_vol_alt['Vol. concreto (m³)']:.3f} m³ — menor costo entre las que CUMPLEN.",
+                f"Optimal alternative: **{_best_vol_alt['B×L (m)']} m** with "
+                f"{_best_vol_alt['Vol. concreto (m³)']:.3f} m³ — lowest cost among compliant."
+            ))
+        else:
+            st.warning(_t(
+                "Ninguna alternativa cumple todas las verificaciones. Aumenta H o B.",
+                "No alternative passes all verifications. Increase H or B."
+            ))
+
+        _csv_alt = _df_alt.to_csv(index=False).encode("utf-8-sig")
+        st.download_button(_t("CSV Comparativa","Comparison CSV"),
+            _csv_alt, f"Comparativa_Zapata_{B_cp:.1f}x{L_cp:.1f}.csv",
+            "text/csv", key="alt_csv", use_container_width=True)
+
+    # ── PASO 9B: Perfil estratigráfico multicapa + Steinbrenner ─────────────
+    with st.expander(
+        _t("Perfil Estratigráfico y Asentamiento (Steinbrenner / Elsticos)",
+           "Soil Profile and Settlement (Steinbrenner / Elastic)"),
+        expanded=False
+    ):
+        st.markdown(_t(
+            "Define hasta 5 capas de suelo. Calcula el asentamiento elástico inmediato "
+            "por el método de Steinbrenner (1934) con factor de forma Iz por profundidad. "
+            "Ref: Bowles (1996) Cap. 5, NSR-10 H.3.",
+            "Define up to 5 soil layers. Calculates immediate elastic settlement using "
+            "Steinbrenner (1934) with depth influence factor Iz. "
+            "Ref: Bowles (1996) Cap. 5, NSR-10 H.3."
+        ))
+
+        _nlayers = st.slider(_t("Número de capas","Number of layers"), 1, 5, 3, key="stb_nlayers")
+        st.markdown(_t("**Parámetros por capa:**","**Layer parameters:**"))
+
+        _layer_data = []
+        _cols_hdr = st.columns([1.5, 1.5, 1.5, 1.5, 1.5])
+        for _ch, _lbl in zip(_cols_hdr,
+            [_t("Capa","Layer"), _t("Espesor H (m)","Thickness H (m)"),
+             _t("Es (MPa)","Es (MPa)"), "ν (Poisson)",
+             _t("Tipo","Type")]):
+            _ch.caption(_lbl)
+
+        for _il in range(_nlayers):
+            _r = st.columns([1.5, 1.5, 1.5, 1.5, 1.5])
+            _lbl_c = _r[0].text_input(f"Capa {_il+1}", value=f"Capa {_il+1}",
+                key=f"stb_nom_{_il}", label_visibility="collapsed")
+            _H_c   = _r[1].number_input(f"H{_il+1}", 0.1, 20.0,
+                [2.0, 3.0, 5.0, 4.0, 6.0][_il] if _il < 5 else 2.0,
+                0.1, key=f"stb_H_{_il}", label_visibility="collapsed")
+            _Es_c  = _r[2].number_input(f"Es{_il+1}", 1.0, 500.0,
+                [15.0, 25.0, 40.0, 60.0, 80.0][_il] if _il < 5 else 20.0,
+                1.0, key=f"stb_Es_{_il}", label_visibility="collapsed")
+            _nu_c  = _r[3].number_input(f"nu{_il+1}", 0.1, 0.499,
+                [0.35, 0.30, 0.28, 0.25, 0.22][_il] if _il < 5 else 0.30,
+                0.01, key=f"stb_nu_{_il}", label_visibility="collapsed")
+            _tipo_c= _r[4].selectbox(f"T{_il+1}",
+                [_t("Arcilla","Clay"), _t("Arena","Sand"),
+                 _t("Limo","Silt"), _t("Roca","Rock")],
+                key=f"stb_tipo_{_il}", label_visibility="collapsed")
+            _layer_data.append({
+                "nombre": _lbl_c, "H": _H_c, "Es": _Es_c * 1000.0,  # kPa
+                "nu": _nu_c, "tipo": _tipo_c
+            })
+
+        # ── Cálculo Steinbrenner ─────────────────────────────────────────
+        # Se_total = sum_capas [ (q * B * (1-ν²) / Es) * Iz_m * F1 ]
+        # Iz: Factor de influencia de Steinbrenner en el centroide de cada capa
+        import math as _math_stb
+        import numpy as _np_stb
+        import plotly.graph_objects as _go_stb
+
+        _q_stb  = q_act         # esfuerzo aplicado kPa
+        _B_stb  = B_cp          # m
+        _L_stb  = L_cp          # m
+        _Df_stb = Df_cp         # m
+
+        def _iz_steinbrenner(z, B, L):
+            """Factor de influencia Steinbrenner (1934) en profundidad z bajo la esquina."""
+            _m = L / B if B > 0 else 1.0
+            _n = z / B if B > 0 else 0.0
+            if _n == 0:
+                return 0.25
+            _A1 = _n / (1 + _n**2)**0.5 * 1 / (1 + _m**2 + _n**2)**0.5
+            _A2 = _m / (1 + _n**2 + _m**2)**0.5
+            _B1 = _math_stb.atan2(
+                _m * _n,
+                _math_stb.sqrt(1 + _m**2 + _n**2) * 1.0
+            )
+            _F1 = (1 / (2 * _math_stb.pi)) * (_math_stb.atan2(_m * _n,
+                    _np_stb.sqrt(1 + _m**2 + _n**2)) +
+                   _m * _n * (1/(1 + _n**2)**0.5 / (1 + _m**2 + _n**2)**0.5 +
+                               1/(1 + _m**2 + _n**2)**0.5))
+            return max(0.0, min(0.5, _F1))
+
+        # Calcular asentamiento por capas
+        _asen_rows = []
+        _z_acum = 0.0
+        _Se_total_mm = 0.0
+        _z_plot = [0.0]
+        _Se_plot = [0.0]
+
+        for _il, _layer in enumerate(_layer_data):
+            _z_mid  = _z_acum + _layer["H"] / 2.0
+            _Iz_mid = _iz_steinbrenner(_z_mid, _B_stb / 2, _L_stb / 2)  # esquina → centro: /2
+            # Fórmula simplificada: Se_i = (q_net * B * Iz * (1-ν²)) / Es_i
+            _Se_i   = (_q_stb * _B_stb * _Iz_mid * (1 - _layer["nu"]**2)) / _layer["Es"]
+            _Se_i_mm= _Se_i * 1000.0  # mm
+            _Se_total_mm += _Se_i_mm
+            _asen_rows.append({
+                "Capa": _layer["nombre"],
+                "Tipo": _layer["tipo"],
+                "H (m)": _layer["H"],
+                "Es (MPa)": round(_layer["Es"]/1000, 1),
+                "ν": _layer["nu"],
+                "z_mid (m)": round(_z_mid, 2),
+                "Iz": round(_Iz_mid, 4),
+                "Se_i (mm)": round(_Se_i_mm, 2),
+                "Se acum. (mm)": round(_Se_total_mm, 2),
+            })
+            _z_acum += _layer["H"]
+            _z_plot.append(_z_acum)
+            _Se_plot.append(_Se_total_mm)
+
+        # Tabla de capas
+        _df_stb = pd.DataFrame(_asen_rows)
+        st.dataframe(_df_stb, use_container_width=True, hide_index=True)
+
+        # Métricas
+        _LIMIT_NSR = 25.0  # mm — NSR-10 H.3 asentamiento máximo
+        _ok_asen   = _Se_total_mm <= _LIMIT_NSR
+        _s1, _s2, _s3 = st.columns(3)
+        _s1.metric(_t("Asentamiento total","Total settlement"),
+                   f"{_Se_total_mm:.1f} mm",
+                   delta=f"Límite NSR-10: {_LIMIT_NSR:.0f} mm",
+                   delta_color="normal" if _ok_asen else "inverse")
+        _s2.metric(_t("q neto aplicado","Applied net q"), f"{_q_stb:.1f} kPa")
+        _s3.metric(_t("Capas analizadas","Layers analyzed"), _nlayers)
+
+        if _ok_asen:
+            st.success(_t(
+                f"CUMPLE — Asentamiento {_Se_total_mm:.1f} mm ≤ {_LIMIT_NSR:.0f} mm (NSR-10 H.3).",
+                f"OK — Settlement {_Se_total_mm:.1f} mm ≤ {_LIMIT_NSR:.0f} mm (NSR-10 H.3)."
+            ))
+        else:
+            st.error(_t(
+                f"NO CUMPLE — Asentamiento {_Se_total_mm:.1f} mm > {_LIMIT_NSR:.0f} mm. "
+                "Considerar pilotaje o mejoramiento de suelo.",
+                f"FAIL — Settlement {_Se_total_mm:.1f} mm > {_LIMIT_NSR:.0f} mm. "
+                "Consider piling or soil improvement."
+            ))
+
+        # Perfil estratigráfico + curva asentamiento
+        _fig_stb = _go_stb.Figure()
+        # Bandas de capas
+        _z_c = 0.0
+        _colores_stb = ["#c7a98a","#d4b896","#e8d5b7","#b8cce4","#8db3d4"]
+        for _il, _layer in enumerate(_layer_data):
+            _fig_stb.add_shape(type="rect",
+                x0=0, x1=_Se_plot[-1]*1.2 + 5,
+                y0=-(_z_c + _layer["H"]), y1=-_z_c,
+                fillcolor=_colores_stb[_il % len(_colores_stb)],
+                opacity=0.35, line=dict(color="#888",width=0.5))
+            _fig_stb.add_annotation(
+                x=(_Se_plot[-1]*1.2 + 5)*0.85,
+                y=-(_z_c + _layer["H"]/2),
+                text=f"{_layer['nombre']}<br>Es={_layer['Es']/1000:.0f}MPa",
+                showarrow=False, font=dict(size=9, color="white"))
+            _z_c += _layer["H"]
+
+        # Curva de asentamiento acumulado
+        _fig_stb.add_trace(_go_stb.Scatter(
+            x=_Se_plot, y=[-z for z in _z_plot],
+            mode="lines+markers",
+            line=dict(color="#f59e0b", width=2.5),
+            marker=dict(color="#f59e0b", size=7),
+            name=_t("Se acum. (mm)","Cumulative Se (mm)")
+        ))
+        # Línea límite NSR-10
+        _fig_stb.add_vline(x=_LIMIT_NSR, line=dict(
+            color="#ef4444", width=1.5, dash="dash"),
+            annotation_text="NSR-10 25mm",
+            annotation_font=dict(color="#ef4444", size=9))
+
+        _fig_stb.update_layout(
+            xaxis=dict(title=_t("Asentamiento acumulado (mm)","Cumulative settlement (mm)"),
+                       gridcolor="#334155", color="white", rangemode="nonnegative"),
+            yaxis=dict(title=_t("Profundidad (m)","Depth (m)"),
+                       gridcolor="#334155", color="white"),
+            paper_bgcolor="#0f1117", plot_bgcolor="#161b22",
+            font=dict(color="white", size=11),
+            legend=dict(bgcolor="#1e293b", bordercolor="#334155",
+                        font=dict(color="white", size=10)),
+            margin=dict(l=50, r=20, t=40, b=40),
+            title=dict(
+                text=_t(
+                    f"Perfil Estratigráfico — Se_total = {_Se_total_mm:.1f} mm",
+                    f"Soil Profile — Se_total = {_Se_total_mm:.1f} mm"
+                ),
+                font=dict(color="white", size=12), x=0.5
+            )
+        )
+        st.plotly_chart(_fig_stb, use_container_width=True)
+        st.caption(_t(
+            "Método Steinbrenner (1934) — Factor Iz por capa centroidal. "
+            "Ref: Bowles (1996) Cap. 5 | NSR-10 H.3 | Límite: 25 mm total.",
+            "Steinbrenner (1934) method — Iz factor at layer centroid. "
+            "Ref: Bowles (1996) Ch.5 | NSR-10 H.3 | Limit: 25 mm total."
+        ))
+
+    # ── PASO 7A: Historial de iteraciones por proyecto ───────────────────────
+    with st.expander(
+        _t("Historial de Iteraciones (B×L×H)", "Iteration History (B×L×H)"),
+        expanded=False
+    ):
+        st.markdown(_t(
+            "Cada vez que calculas, la iteración se guarda automáticamente. "
+            "Compara geometrías y costos sin perder el diseño previo.",
+            "Each calculation is saved automatically. "
+            "Compare geometries and costs without losing previous designs."
+        ))
+
+        # ── Guardar iteración actual ─────────────────────────────────────
+        import datetime as _dt_hist
+        if "zap_historial" not in st.session_state:
+            st.session_state["zap_historial"] = []
+
+        _iter_actual = {
+            "Iter": len(st.session_state["zap_historial"]) + 1,
+            "Timestamp": _dt_hist.datetime.now().strftime("%H:%M:%S"),
+            "B (m)": round(B_cp, 2),
+            "L (m)": round(L_cp, 2),
+            "H (cm)": round(Hzap, 1),
+            "q_ult (kPa)": round(q_ult, 1),
+            "q_adm (kPa)": round(q_adm, 1),
+            "q_act (kPa)": round(q_act, 1),
+            "FS calc.": round(FS_calc, 2) if FS_calc < 999 else "∞",
+            "Cap. portante": "OK" if cumplio else "FALLA",
+            "Cortante B": "OK" if ok_1way_B else "FALLA",
+            "Cortante L": "OK" if ok_1way_L else "FALLA",
+            "Punzonamiento": "OK" if ok_punz else "FALLA",
+            "Barras B": f"{nbarras_B}×{bar_z}@{sep_B:.0f}cm",
+            "Barras L": f"{nbarras_L}×{bar_z}@{sep_L:.0f}cm",
+            "Vol. concreto (m³)": round(B_cp * L_cp * (Hzap/100), 3),
+            "Método": metodo_cap,
+        }
+
+        # Botón guardar iteración
+        _col_h1, _col_h2, _col_h3 = st.columns([2, 2, 1])
+        with _col_h1:
+            if st.button(
+                _t("Guardar iteración actual", "Save current iteration"),
+                key="zap_hist_save", use_container_width=True
+            ):
+                # Evitar duplicados exactos consecutivos
+                if (not st.session_state["zap_historial"] or
+                    st.session_state["zap_historial"][-1]["B (m)"] != _iter_actual["B (m)"] or
+                    st.session_state["zap_historial"][-1]["L (m)"] != _iter_actual["L (m)"] or
+                    st.session_state["zap_historial"][-1]["H (cm)"] != _iter_actual["H (cm)"]):
+                    st.session_state["zap_historial"].append(_iter_actual)
+                    st.success(_t(
+                        f"Iteración {_iter_actual['Iter']} guardada.",
+                        f"Iteration {_iter_actual['Iter']} saved."
+                    ))
+                else:
+                    st.info(_t(
+                        "Geometría idéntica a la iteración previa. Cambia B, L o H primero.",
+                        "Identical geometry to previous iteration. Change B, L or H first."
+                    ))
+        with _col_h2:
+            if st.button(
+                _t("Limpiar historial", "Clear history"),
+                key="zap_hist_clear", use_container_width=True
+            ):
+                st.session_state["zap_historial"] = []
+                st.rerun()
+        with _col_h3:
+            st.caption(_t(
+                f"{len(st.session_state['zap_historial'])} iter. guardadas",
+                f"{len(st.session_state['zap_historial'])} saved iters."
+            ))
+
+        # ── Tabla comparativa ────────────────────────────────────────────
+        if st.session_state["zap_historial"]:
+            _df_hist = pd.DataFrame(st.session_state["zap_historial"])
+            # Semáforo por columna de estado
+            def _color_estado(val):
+                if val == "OK":
+                    return "background-color:#d4edda;color:#155724;font-weight:bold"
+                elif val == "FALLA":
+                    return "background-color:#f8d7da;color:#721c24;font-weight:bold"
+                return ""
+            _cols_estado = ["Cap. portante","Cortante B","Cortante L","Punzonamiento"]
+            _styled = _df_hist.style.map(_color_estado, subset=_cols_estado)
+            st.dataframe(_styled, use_container_width=True, hide_index=True)
+
+            # Resumen mínimo/máximo
+            _best_fs = _df_hist["FS calc."].replace("∞", 9999).astype(float).max()
+            _best_vol = _df_hist["Vol. concreto (m³)"].min()
+            _c_s1, _c_s2, _c_s3 = st.columns(3)
+            _c_s1.metric(_t("Mejor FS calculado","Best FS"), f"{_best_fs:.2f}")
+            _c_s2.metric(_t("Menor vol. concreto","Min concrete vol."), f"{_best_vol:.3f} m³")
+            _c_s3.metric(_t("Iteraciones guardadas","Saved iterations"),
+                         len(st.session_state["zap_historial"]))
+
+            # ── PASO 7B: Exportar CSV ────────────────────────────────────
+            st.markdown("---")
+            st.markdown(_t("#### Exportar Resultados CSV","#### Export Results CSV"))
+            _csv_buf = _df_hist.to_csv(index=False).encode("utf-8-sig")
+            _col_csv1, _col_csv2 = st.columns(2)
+            with _col_csv1:
+                st.download_button(
+                    _t("Descargar CSV Historial","Download History CSV"),
+                    data=_csv_buf,
+                    file_name=f"Historial_Zapata_{B_cp:.1f}x{L_cp:.1f}.csv",
+                    mime="text/csv",
+                    key="zap_hist_csv",
+                    use_container_width=True
+                )
+            with _col_csv2:
+                # CSV iteración actual (snapshot instantáneo)
+                _csv_snap = pd.DataFrame([_iter_actual]).to_csv(index=False).encode("utf-8-sig")
+                st.download_button(
+                    _t("CSV Iteración Actual","Current Iteration CSV"),
+                    data=_csv_snap,
+                    file_name=f"Zapata_{B_cp:.1f}x{L_cp:.1f}_snap.csv",
+                    mime="text/csv",
+                    key="zap_snap_csv",
+                    use_container_width=True
+                )
+        else:
+            st.info(_t(
+                "No hay iteraciones guardadas. Presiona 'Guardar iteración actual' para comenzar.",
+                "No saved iterations. Press 'Save current iteration' to start."
+            ))
+
+    # ── Defaults doble parrilla (se sobreescriben al calcular) ──────────────────
+    if 'dp_B' not in dir():
+        dp_B = False; dp_L = False; _doble_parrilla = False
+        As_req_B_sup = 0.0; As_req_L_sup = 0.0
+        n_barras_B_sup = 0; n_barras_L_sup = 0
+        sep_B_sup = 0.0; sep_L_sup = 0.0
+        Mn_max_B = 0.0; Mn_max_L = 0.0
+        aviso_dp_B = ""; aviso_dp_L = ""
+        _rho_max_z = 0.0; _rho_bal_z = 0.0; _rho_min_zap = 0.0018
+
+    # ── PASO 7C: Visualización 3D armadura real (parrilla Plotly) ────────────
+    with st.expander(
+        _t("Visualización 3D Armadura (Parrilla Real)", "3D Reinforcement View (Real Grid)"),
+        expanded=False
+    ):
+        import plotly.graph_objects as _go3d
+        import numpy as _np3d
+
+        _B3  = B_cp
+        _L3  = L_cp
+        _H3  = Hzap / 100.0      # m
+        _rec = recub_z / 100.0   # m
+        _db  = db_bar_z / 1000.0 # m
+        _d3  = d_avg / 100.0     # m
+        _nB  = int(nbarras_B)
+        _nL  = int(nbarras_L)
+        _sep_B3 = _sep_B = _B3 / (_nB + 1) if _nB > 0 else _B3
+        _sep_L3 = _sep_L = _L3 / (_nL + 1) if _nL > 0 else _L3
+
+        _traces = []
+
+        # ── Contorno zapata (bloque concreto transparente) ───────────────
+        _verts = [
+            [0,0,0],[_B3,0,0],[_B3,_L3,0],[0,_L3,0],  # base
+            [0,0,_H3],[_B3,0,_H3],[_B3,_L3,_H3],[0,_L3,_H3]  # tapa
+        ]
+        _i_box = [0,0,1,1,4,4,5,5,0,0,3,3]
+        _j_box = [1,3,2,5,5,7,6,6,4,1,7,2]
+        _k_box = [3,2,6,6,7,6,7,7,5,5,4,6]  # simplificado — usar surface edges
+        _xs_b = [v[0] for v in _verts]
+        _ys_b = [v[1] for v in _verts]
+        _zs_b = [v[2] for v in _verts]
+        # Aristas de la caja
+        _edges_box = [
+            (0,1),(1,2),(2,3),(3,0),   # base
+            (4,5),(5,6),(6,7),(7,4),   # tapa
+            (0,4),(1,5),(2,6),(3,7)    # laterales
+        ]
+        for _e in _edges_box:
+            _x0,_y0,_z0 = _verts[_e[0]]
+            _x1,_y1,_z1 = _verts[_e[1]]
+            _traces.append(_go3d.Scatter3d(
+                x=[_x0,_x1], y=[_y0,_y1], z=[_z0,_z1],
+                mode="lines",
+                line=dict(color="#64748b", width=2),
+                showlegend=False, hoverinfo="skip"
+            ))
+
+        # ── Barras dir. B (paralelas al eje X, z = rec + db/2) ───────────
+        _z_barB = _rec + _db / 2
+        for _j in range(_nB):
+            _y_j = (_j + 1) * _sep_B3
+            _x_arr = _np3d.linspace(_rec, _B3 - _rec, 50)
+            _traces.append(_go3d.Scatter3d(
+                x=_x_arr,
+                y=_np3d.full(50, _y_j),
+                z=_np3d.full(50, _z_barB),
+                mode="lines",
+                line=dict(color="#f59e0b", width=4),
+                name=_t(f"Barra B dir. {bar_z}", f"Bar B dir. {bar_z}") if _j == 0 else None,
+                showlegend=_j == 0,
+                hovertemplate=f"Dir. B — {bar_z}<br>y={_y_j:.2f}m<extra></extra>"
+            ))
+
+        # ── Barras dir. L (paralelas al eje Y, z = rec + 1.5*db) ────────
+        _z_barL = _rec + 1.5 * _db
+        for _i in range(_nL):
+            _x_i = (_i + 1) * _sep_L3
+            _y_arr = _np3d.linspace(_rec, _L3 - _rec, 50)
+            _traces.append(_go3d.Scatter3d(
+                x=_np3d.full(50, _x_i),
+                y=_y_arr,
+                z=_np3d.full(50, _z_barL),
+                mode="lines",
+                line=dict(color="#38bdf8", width=4),
+                name=_t(f"Barra L dir. {bar_z}", f"Bar L dir. {bar_z}") if _i == 0 else None,
+                showlegend=_i == 0,
+                hovertemplate=f"Dir. L — {bar_z}<br>x={_x_i:.2f}m<extra></extra>"
+            ))
+
+        # ── Pedestal (columna) ───────────────────────────────────────────
+        _cx1 = (_B3 - c1_col/100) / 2
+        _cx2 = (_B3 + c1_col/100) / 2
+        _cy1 = (_L3 - c2_col/100) / 2
+        _cy2 = (_L3 + c2_col/100) / 2
+        _H_ped = _H3 + 0.40   # 40 cm de pedestal visible
+        _edges_ped = [
+            (_cx1,_cy1,_H3),(_cx2,_cy1,_H3),
+            (_cx2,_cy2,_H3),(_cx1,_cy2,_H3),(_cx1,_cy1,_H3),  # base
+            (_cx1,_cy1,_H_ped),(_cx2,_cy1,_H_ped),
+            (_cx2,_cy2,_H_ped),(_cx1,_cy2,_H_ped),(_cx1,_cy1,_H_ped),  # tapa
+        ]
+        _traces.append(_go3d.Scatter3d(
+            x=[p[0] for p in _edges_ped],
+            y=[p[1] for p in _edges_ped],
+            z=[p[2] for p in _edges_ped],
+            mode="lines",
+            line=dict(color="#94a3b8", width=3),
+            name=_t("Pedestal","Column"), showlegend=True,
+            hoverinfo="skip"
+        ))
+        for _xp, _yp in [(_cx1,_cy1),(_cx2,_cy1),(_cx2,_cy2),(_cx1,_cy2)]:
+            _traces.append(_go3d.Scatter3d(
+                x=[_xp,_xp], y=[_yp,_yp], z=[_H3,_H_ped],
+                mode="lines", line=dict(color="#94a3b8", width=3),
+                showlegend=False, hoverinfo="skip"
+            ))
+
+        # ── Barras SUPERIORES dir. B (doble parrilla) — cara comprimida ─────
+        if dp_B and n_barras_B_sup > 0:
+            _z_barB_sup = _H3 - _rec - _db / 2
+            _sep_B_sup3 = (_L3 - 2*_rec) / max(n_barras_B_sup - 1, 1)
+            for _j in range(n_barras_B_sup):
+                _y_j_s = _rec + _j * _sep_B_sup3
+                _x_arr_s = _np3d.linspace(_rec, _B3 - _rec, 50)
+                _traces.append(_go3d.Scatter3d(
+                    x=_x_arr_s,
+                    y=_np3d.full(50, _y_j_s),
+                    z=_np3d.full(50, _z_barB_sup),
+                    mode="lines",
+                    line=dict(color="#f43f5e", width=4, dash="dash"),
+                    name=_t(f"As_SUP dir.B ({bar_z})", f"As_TOP dir.B ({bar_z})") if _j == 0 else None,
+                    showlegend=_j == 0,
+                    hovertemplate=f"SUPERIOR B — {bar_z}<br>As_sup={As_req_B_sup:.2f}cm²<extra></extra>"
+                ))
+
+        # ── Barras SUPERIORES dir. L (doble parrilla) — cara comprimida ─────
+        if dp_L and n_barras_L_sup > 0:
+            _z_barL_sup = _H3 - _rec - 1.5 * _db
+            _sep_L_sup3 = (_B3 - 2*_rec) / max(n_barras_L_sup - 1, 1)
+            for _i in range(n_barras_L_sup):
+                _x_i_s = _rec + _i * _sep_L_sup3
+                _y_arr_s = _np3d.linspace(_rec, _L3 - _rec, 50)
+                _traces.append(_go3d.Scatter3d(
+                    x=_np3d.full(50, _x_i_s),
+                    y=_y_arr_s,
+                    z=_np3d.full(50, _z_barL_sup),
+                    mode="lines",
+                    line=dict(color="#e879f9", width=4, dash="dash"),
+                    name=_t(f"As_SUP dir.L ({bar_z})", f"As_TOP dir.L ({bar_z})") if _i == 0 else None,
+                    showlegend=_i == 0,
+                    hovertemplate=f"SUPERIOR L — {bar_z}<br>As_sup={As_req_L_sup:.2f}cm²<extra></extra>"
+                ))
+
+
+        _fig3d = _go3d.Figure(data=_traces)
+        _fig3d.update_layout(
+            scene=dict(
+                xaxis=dict(title=f"B = {_B3:.2f} m", backgroundcolor="#161b22",
+                           gridcolor="#334155", zerolinecolor="#475569"),
+                yaxis=dict(title=f"L = {_L3:.2f} m", backgroundcolor="#161b22",
+                           gridcolor="#334155", zerolinecolor="#475569"),
+                zaxis=dict(title=f"H = {Hzap:.0f} cm", backgroundcolor="#161b22",
+                           gridcolor="#334155", zerolinecolor="#475569"),
+                bgcolor="#161b22",
+                aspectmode="data",
+                camera=dict(eye=dict(x=1.6, y=1.2, z=1.0))
+            ),
+            paper_bgcolor="#0f1117",
+            plot_bgcolor="#0f1117",
+            font=dict(color="white", size=11),
+            legend=dict(
+                bgcolor="#1e293b", bordercolor="#334155", borderwidth=1,
+                font=dict(color="white", size=10)
+            ),
+            margin=dict(l=0, r=0, t=40, b=0),
+            title=dict(
+                text=_t(
+                    f"Parrilla de Armado 3D — {_nB} barras dir.B + {_nL} barras dir.L ({bar_z})"
+                    + (f" | DOBLE PARRILLA: As_SUP_B={As_req_B_sup:.1f}cm² As_SUP_L={As_req_L_sup:.1f}cm²" if _doble_parrilla else ""),
+                    f"3D Reinforcement Grid — {_nB} bars dir.B + {_nL} bars dir.L ({bar_z})"
+                    + (f" | DOUBLE REBAR: As_TOP_B={As_req_B_sup:.1f}cm² As_TOP_L={As_req_L_sup:.1f}cm²" if _doble_parrilla else "")
+                ),
+                font=dict(color="white", size=13), x=0.5
+            )
+        )
+        st.plotly_chart(_fig3d, use_container_width=True)
+        st.caption(_t(
+            f"Amarillo = dir. B inf ({_nB}×{bar_z} @ {sep_B:.1f}cm)  |  "
+            f"Celeste = dir. L inf ({_nL}×{bar_z} @ {sep_L:.1f}cm)  |  "
+            f"Recubrimiento = {recub_z:.1f} cm  |  d_prom = {d_avg:.1f} cm"
+            + (f"  |  ROSA = As_SUP B ({n_barras_B_sup}×{bar_z})  MAGENTA = As_SUP L ({n_barras_L_sup}×{bar_z})" if _doble_parrilla else ""),
+            f"Yellow = dir. B inf ({_nB}×{bar_z} @ {sep_B:.1f}cm)  |  "
+            f"Cyan = dir. L inf ({_nL}×{bar_z} @ {sep_L:.1f}cm)  |  "
+            f"Cover = {recub_z:.1f} cm  |  d_avg = {d_avg:.1f} cm"
+            + (f"  |  PINK = As_TOP B ({n_barras_B_sup}×{bar_z})  MAGENTA = As_TOP L ({n_barras_L_sup}×{bar_z})" if _doble_parrilla else "")
+        ))
+
+    # ── P3-C: Chequeo de Grupo de Zapatas (Traslape Zonas Influencia) ────────
+    with st.expander(
+        _t("Chequeo Grupo de Zapatas (NSR-10 H.3 — Traslape Bulbos)",
+           "Footing Group Check (NSR-10 H.3 — Pressure Bulb Overlap)"),
+        expanded=False
+    ):
+        st.markdown(_t(
+            "Verifica que las zonas de influencia de presiones (bulbos) entre zapatas "
+            "adyacentes no se traslapen. Criterio NSR-10 H.3: separación libre s ≥ B "
+            "(zapata cuadrada) o s ≥ B/2 (continua). Visualización 2D del grupo.",
+            "Checks that pressure bulb zones between adjacent footings do not overlap. "
+            "NSR-10 H.3 criterion: clear spacing s ≥ B (isolated) or s ≥ B/2 (strip). "
+            "2D plan view of the group."
+        ))
+
+        _grp_n = st.slider(_t("Número de zapatas en grupo","Number of footings in group"),
+                           2, 8, 4, key="grp_n")
+
+        st.markdown(_t("**Posición y dimensión de cada zapata (centros en planta):**",
+                       "**Position and dimension of each footing (centers in plan):**"))
+
+        _grp_cols = st.columns(4)
+        for _gh, _lbl in zip(_grp_cols, ["Zapata", "X centro (m)", "Y centro (m)", "B (m)"]):
+            _gh.caption(_lbl)
+
+        _grp_data = []
+        _defaults_x = [0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0]
+        _defaults_y = [0.0, 0.0, 0.0,  0.0,  5.0, 5.0, 5.0,  5.0]
+        for _ig in range(_grp_n):
+            _gc = st.columns(4)
+            _gc[0].caption(f"Z{_ig+1}")
+            _gx = _gc[1].number_input(f"X{_ig+1}", -50.0, 200.0,
+                _defaults_x[_ig] if _ig < 8 else float(_ig*4),
+                0.5, key=f"grp_x_{_ig}", label_visibility="collapsed")
+            _gy = _gc[2].number_input(f"Y{_ig+1}", -50.0, 200.0,
+                _defaults_y[_ig] if _ig < 8 else 0.0,
+                0.5, key=f"grp_y_{_ig}", label_visibility="collapsed")
+            _gb = _gc[3].number_input(f"B{_ig+1} (m)", 0.5, 10.0,
+                float(B_cp), 0.1, key=f"grp_b_{_ig}", label_visibility="collapsed")
+            _grp_data.append({"id": f"Z{_ig+1}", "x": _gx, "y": _gy, "B": _gb})
+
+        _sep_crit = st.radio(
+            _t("Criterio separación mínima","Min spacing criterion"),
+            [_t("s ≥ B (aisladas NSR-10 H.3)","s ≥ B (isolated NSR-10 H.3)"),
+             _t("s ≥ B/2 (continua/medianera)","s ≥ B/2 (strip/edge)")],
+            key="grp_crit", horizontal=True
+        )
+        _factor_sep = 1.0 if "B/2" not in _sep_crit else 0.5
+
+        # ── Calcular pares y traslapes ────────────────────────────────────
+        import plotly.graph_objects as _go_grp
+        import math as _math_grp
+        _ncr_grp = []
+        _fig_grp  = _go_grp.Figure()
+
+        # Dibujar cada zapata (rectángulo + zona de influencia)
+        for _ig, _z in enumerate(_grp_data):
+            _cx, _cy, _bz = _z["x"], _z["y"], _z["B"]
+            # Zapata
+            _x_z = [_cx-_bz/2, _cx+_bz/2, _cx+_bz/2, _cx-_bz/2, _cx-_bz/2]
+            _y_z = [_cy-_bz/2, _cy-_bz/2, _cy+_bz/2, _cy+_bz/2, _cy-_bz/2]
+            _fig_grp.add_trace(_go_grp.Scatter(
+                x=_x_z, y=_y_z, fill="toself",
+                fillcolor="rgba(56,189,248,0.3)",
+                line=dict(color="#38bdf8", width=2),
+                name=_z["id"], showlegend=True,
+                hovertemplate=f"{_z['id']}: B={_bz:.2f}m @ ({_cx:.1f},{_cy:.1f})<extra></extra>"
+            ))
+            # Etiqueta
+            _fig_grp.add_annotation(
+                x=_cx, y=_cy, text=_z["id"],
+                showarrow=False, font=dict(color="white", size=11, family="Arial Black"))
+            # Zona de influencia (círculo = B de influencia)
+            _theta_arr = [i * 3.14159 / 18 for i in range(37)]
+            _r_inf = _bz * _factor_sep + _bz / 2
+            _fig_grp.add_trace(_go_grp.Scatter(
+                x=[_cx + _r_inf * _math_grp.cos(t) for t in _theta_arr],
+                y=[_cy + _r_inf * _math_grp.sin(t) for t in _theta_arr],
+                mode="lines",
+                line=dict(color="#f59e0b", width=1, dash="dot"),
+                showlegend=False, hoverinfo="skip"
+            ))
+
+        # Verificar cada par
+        _pares_rows = []
+        for _i in range(len(_grp_data)):
+            for _j in range(_i+1, len(_grp_data)):
+                _zi, _zj = _grp_data[_i], _grp_data[_j]
+                _dist = _math_grp.sqrt((_zi["x"]-_zj["x"])**2 + (_zi["y"]-_zj["y"])**2)
+                _s_libre = _dist - (_zi["B"] + _zj["B"]) / 2
+                _s_min   = max(_zi["B"], _zj["B"]) * _factor_sep
+                _ok_par  = _s_libre >= _s_min
+                _pares_rows.append({
+                    "Par": f"{_zi['id']} — {_zj['id']}",
+                    "Dist. entre centros (m)": round(_dist, 3),
+                    "s libre (m)": round(_s_libre, 3),
+                    "s mínima (m)": round(_s_min, 3),
+                    "Margen (m)": round(_s_libre - _s_min, 3),
+                    "Estado": "OK" if _ok_par else "TRASLAPE",
+                })
+                if not _ok_par:
+                    # Línea roja de traslape
+                    _fig_grp.add_trace(_go_grp.Scatter(
+                        x=[_zi["x"], _zj["x"]], y=[_zi["y"], _zj["y"]],
+                        mode="lines",
+                        line=dict(color="#ef4444", width=3),
+                        showlegend=False,
+                        hovertemplate=(
+                            f"{_zi['id']}↔{_zj['id']}: "
+                            f"s_libre={_s_libre:.2f}m < s_min={_s_min:.2f}m<extra></extra>"
+                        )
+                    ))
+                else:
+                    _fig_grp.add_trace(_go_grp.Scatter(
+                        x=[_zi["x"], _zj["x"]], y=[_zi["y"], _zj["y"]],
+                        mode="lines",
+                        line=dict(color="#22c55e", width=1.5, dash="dot"),
+                        showlegend=False, hoverinfo="skip"
+                    ))
+
+        _fig_grp.update_layout(
+            xaxis=dict(title="X (m)", gridcolor="#334155", color="white",
+                       scaleanchor="y", scaleratio=1),
+            yaxis=dict(title="Y (m)", gridcolor="#334155", color="white"),
+            paper_bgcolor="#0f1117", plot_bgcolor="#161b22",
+            font=dict(color="white", size=11),
+            legend=dict(bgcolor="#1e293b", bordercolor="#334155",
+                        font=dict(color="white", size=10)),
+            margin=dict(l=40, r=20, t=50, b=40),
+            title=dict(
+                text=_t("Planta Grupo de Zapatas — Bulbos de Presión",
+                        "Footing Group Plan — Pressure Bulbs"),
+                font=dict(color="white", size=12), x=0.5
+            )
+        )
+        st.plotly_chart(_fig_grp, use_container_width=True)
+
+        # Tabla de pares
+        _df_pares = pd.DataFrame(_pares_rows)
+        def _color_par(val):
+            if val == "OK":
+                return "background-color:#d4edda;color:#155724;font-weight:bold"
+            elif val == "TRASLAPE":
+                return "background-color:#f8d7da;color:#721c24;font-weight:bold"
+            return ""
+        st.dataframe(_df_pares.style.map(_color_par, subset=["Estado"]),
+                     use_container_width=True, hide_index=True)
+
+        _n_traslapes = sum(1 for r in _pares_rows if r["Estado"] == "TRASLAPE")
+        _gp1, _gp2, _gp3 = st.columns(3)
+        _gp1.metric(_t("Pares verificados","Pairs checked"), len(_pares_rows))
+        _gp2.metric(_t("Traslapes detectados","Overlaps detected"), _n_traslapes,
+                    delta_color="inverse" if _n_traslapes > 0 else "off")
+        _gp3.metric(_t("Pares OK","Pairs OK"), len(_pares_rows) - _n_traslapes)
+
+        if _n_traslapes > 0:
+            st.error(_t(
+                f"{_n_traslapes} par(es) presentan traslape de zonas de influencia. "
+                "Aumentar separación entre zapatas o revisar ubicación (NSR-10 H.3).",
+                f"{_n_traslapes} pair(s) show pressure bulb overlap. "
+                "Increase spacing or revise footing locations (NSR-10 H.3)."
+            ))
+        else:
+            st.success(_t(
+                "Sin traslapes. Todas las zapatas cumplen separación mínima (NSR-10 H.3).",
+                "No overlaps. All footings meet minimum spacing (NSR-10 H.3)."
+            ))
+
+        st.caption(_t(
+            f"Criterio: s_libre ≥ {_factor_sep:.1f}·B_max  |  "
+            "Líneas rojas = traslape | Líneas verdes = OK | Círculos punteados = zona influencia",
+            f"Criterion: s_free ≥ {_factor_sep:.1f}·B_max  |  "
+            "Red = overlap | Green = OK | Dotted circles = influence zone"
+        ))
+
+    # ── PASO 9C: Alertas NCR (No Conformidades) exportables ────────────────
+    with st.expander(
+        _t("Alertas de No Conformidad (NCR) — Auditoría",
+           "Non-Conformance Alerts (NCR) — Audit"),
+        expanded=False
+    ):
+        st.markdown(_t(
+            "Tabla automática de todas las verificaciones con estado FALLA. "
+            "Exportable en CSV para actas de interventoría, auditoría o revisión interna.",
+            "Automatic table of all FAIL verifications. "
+            "Exportable as CSV for site inspection records, audits or internal review."
+        ))
+        import datetime as _dt_ncr
+
+        _ncr_rows = []
+        def _ncr(codigo, desc, demanda, capacidad, unidad, cumple, norma):
+            if not cumple:
+                _ncr_rows.append({
+                    "Código NCR": f"NCR-{len(_ncr_rows)+1:03d}",
+                    "Fecha": _dt_ncr.date.today().strftime("%Y-%m-%d"),
+                    "Norma": norma,
+                    "Verificación": desc,
+                    "Demanda": f"{demanda:.2f} {unidad}",
+                    "Capacidad": f"{capacidad:.2f} {unidad}",
+                    "Déficit": f"{demanda - capacidad:.2f} {unidad}",
+                    "Severidad": "ALTA" if (demanda - capacidad)/max(capacidad,0.001) > 0.20
+                                 else "MEDIA",
+                    "Acción sugerida": (
+                        "Aumentar B o L" if "Portante" in desc else
+                        "Aumentar peralte H" if "Cortante" in desc else
+                        "Aumentar armado" if "Flexión" in desc else
+                        "Aumentar H o usar gancho" if "Anclaje" in desc else
+                        "Revisar geometría"
+                    ),
+                    "Estado": "ABIERTA"
+                })
+
+        # Geotécnica
+        _ncr("GEO-01", "Capacidad portante",
+             q_act, q_adm, "kPa", cumplio, f"NSR-10 H.3 / {metodo_cap}")
+        _ncr("GEO-02", "Factor de seguridad FS",
+             FS_terz, FS_calc if FS_calc < 999 else FS_terz + 1, "", FS_calc >= FS_terz,
+             "NSR-10 H.3")
+
+        # Estabilidad
+        if H_horiz > 0:
+            _ncr("EST-01", "Estabilidad volcamiento", FS_terz, FS_volc, "",
+                 ok_volc, "NSR-10 H.4.1")
+            _ncr("EST-02", "Estabilidad deslizamiento", FS_terz, FS_desl, "",
+                 ok_desl, "NSR-10 H.4.2")
+
+        # Estructural
+        _ncr("EST-03", "Cortante 1D dir. B (C.11.3)",
+             Vu_1way_B, phi_Vc_1way_B, "kN", ok_1way_B, "NSR-10 C.11.3 / ACI 318")
+        _ncr("EST-04", "Cortante 1D dir. L (C.11.3)",
+             Vu_1way_L, phi_Vc_1way_L, "kN", ok_1way_L, "NSR-10 C.11.3 / ACI 318")
+        _ncr("EST-05", "Punzonamiento bo (C.11.12)",
+             Vu_punz, phi_Vc_P, "kN", ok_punz, "NSR-10 C.11.12 / ACI 318")
+        _ncr("EST-06", "Flexión dir. B (C.10.2)",
+             As_req_B, disc_B * A_bar_z if disc_B > 0 else 0.0, "cm²",
+             disc_B > 0, "NSR-10 C.10.2 / ACI 318")
+        _ncr("EST-07", "Flexión dir. L (C.10.2)",
+             As_req_L, disc_L * A_bar_z if disc_L > 0 else 0.0, "cm²",
+             disc_L > 0, "NSR-10 C.10.2 / ACI 318")
+        _ncr("ANC-01", "Anclaje gancho 90° (C.12.5)",
+             ldh_req_cm, L_disp_min_cm, "cm", ok_ldh, "NSR-10 C.12.5")
+        _ncr("ANC-02", "Desarrollo recto ld (C.12.2)",
+             _ld_req_cm, L_disp_min_cm, "cm", _ok_ld, "NSR-10 C.12.2")
+
+        # Cuantía
+        _rho_min_zap = max(0.0018, 0.25 * (fc_basico**0.5) / fy_basico)
+        _rho_B = As_req_B / (B_cp * 100 * d_avg) if (B_cp * d_avg) > 0 else 0
+        _rho_L = As_req_L / (L_cp * 100 * d_avg) if (L_cp * d_avg) > 0 else 0
+        _ncr("CUA-01", "Cuantía mínima dir. B (C.7.12)",
+             _rho_min_zap * 1000, _rho_B * 1000, "‰",
+             _rho_B >= _rho_min_zap, "NSR-10 C.7.12")
+        _ncr("CUA-02", "Cuantía mínima dir. L (C.7.12)",
+             _rho_min_zap * 1000, _rho_L * 1000, "‰",
+             _rho_L >= _rho_min_zap, "NSR-10 C.7.12")
+
+        # Separación máxima barras
+        _sep_max_zap = min(45.0, 3 * Hzap)  # cm NSR-10 C.7.12.2
+        _ncr("SEP-01", "Separación máxima barras dir. B (C.7.12.2)",
+             sep_B, _sep_max_zap, "cm", sep_B <= _sep_max_zap, "NSR-10 C.7.12.2")
+        _ncr("SEP-02", "Separación máxima barras dir. L (C.7.12.2)",
+             sep_L, _sep_max_zap, "cm", sep_L <= _sep_max_zap, "NSR-10 C.7.12.2")
+
+        # Asentamiento (si se calculó Steinbrenner)
+        _Se_val = float(st.session_state.get("_se_total_session", 0.0))
+        if _Se_val > 0:
+            _ncr("GEO-03", "Asentamiento elástico (Steinbrenner)",
+                 _Se_val, 25.0, "mm", _Se_val <= 25.0, "NSR-10 H.3")
+
+        # Mostrar resultado
+        if _ncr_rows:
+            _df_ncr = pd.DataFrame(_ncr_rows)
+            # Color por severidad
+            def _color_ncr_sev(val):
+                if val == "ALTA":
+                    return "background-color:#f8d7da;color:#721c24;font-weight:bold"
+                elif val == "MEDIA":
+                    return "background-color:#fff3cd;color:#856404;font-weight:bold"
+                return ""
+            st.dataframe(
+                _df_ncr.style.map(_color_ncr_sev, subset=["Severidad"]),
+                use_container_width=True, hide_index=True
+            )
+            _n_alta  = (_df_ncr["Severidad"] == "ALTA").sum()
+            _n_media = (_df_ncr["Severidad"] == "MEDIA").sum()
+            _na1, _na2, _na3 = st.columns(3)
+            _na1.metric(_t("NCR Alta severidad","High severity NCR"),
+                        _n_alta, delta=_t("Acción inmediata","Immediate action"),
+                        delta_color="inverse" if _n_alta > 0 else "off")
+            _na2.metric(_t("NCR Media severidad","Medium severity NCR"), _n_media)
+            _na3.metric(_t("Total NCR abiertas","Total open NCR"), len(_ncr_rows))
+
+            _csv_ncr = _df_ncr.to_csv(index=False).encode("utf-8-sig")
+            st.download_button(
+                _t("Descargar NCR CSV (Auditoría)","Download NCR CSV (Audit)"),
+                data=_csv_ncr,
+                file_name=f"NCR_Zapata_{B_cp:.1f}x{L_cp:.1f}.csv",
+                mime="text/csv", key="ncr_csv", use_container_width=True
+            )
+        else:
+            st.success(_t(
+                "Sin No Conformidades. Todas las verificaciones CUMPLEN.",
+                "No Non-Conformances. All verifications PASS."
+            ))
+
+    # ── PASO 8: Diagrama N-M biaxial columna-zapata ──────────────────────────
+    with st.expander(
+        _t("Diagrama N-M Biaxial Columna-Zapata (NSR-10 C.10)",
+           "N-M Biaxial Interaction Diagram Column-Footing (NSR-10 C.10)"),
+        expanded=False
+    ):
+        st.markdown(_t(
+            "Verifica que el par (Pu, Mu) de diseño queda DENTRO del diagrama de interacción "
+            "de la columna que transmite cargas a la zapata. Método simplificado rectangular "
+            "NSR-10 C.10.2 / ACI 318.",
+            "Checks that the design pair (Pu, Mu) lies INSIDE the column interaction diagram "
+            "that transmits loads to the footing. Simplified rectangular NSR-10 C.10.2 / ACI 318."
+        ))
+
+        _nm_c1, _nm_c2, _nm_c3 = st.columns(3)
+        with _nm_c1:
+            st.markdown("**Sección columna**")
+            _nm_b  = st.number_input(_t("b columna (cm)","Column b (cm)"),
+                10.0, 150.0, float(c1_col), 5.0, key="nm_b_col")
+            _nm_h  = st.number_input(_t("h columna (cm)","Column h (cm)"),
+                10.0, 150.0, float(c2_col), 5.0, key="nm_h_col")
+            _nm_rec= st.number_input(_t("Recubrimiento (cm)","Cover (cm)"),
+                2.0, 8.0, 4.0, 0.5, key="nm_rec_col")
+        with _nm_c2:
+            st.markdown("**Acero longitudinal columna**")
+            _nm_bar_opts = {
+                "#3 (9.5mm)":0.71,"#4 (12.7mm)":1.27,"#5 (15.9mm)":1.98,
+                "#6 (19.1mm)":2.84,"#7 (22.2mm)":3.87,"#8 (25.4mm)":5.07,
+                "#9 (28.6mm)":6.45,"#10 (32mm)":8.19,"#11 (35.8mm)":10.06,
+            }
+            _nm_bar = st.selectbox(_t("Varilla columna","Column bar"),
+                list(_nm_bar_opts.keys()), index=4, key="nm_bar_col")
+            _nm_Ab  = _nm_bar_opts[_nm_bar]
+            _nm_nb  = st.number_input(_t("N° barras total","Total bars"),
+                4, 32, 8, 2, key="nm_nb_col")
+            _nm_As_col = _nm_nb * _nm_Ab   # cm²
+            _nm_rho    = _nm_As_col / (_nm_b * _nm_h)
+        with _nm_c3:
+            st.markdown("**Cargas de diseño**")
+            _nm_Pu = st.number_input(_t("Pu (kN)","Pu (kN)"),
+                0.0, 50000.0, float(P_ult), 10.0, key="nm_Pu")
+            _nm_Mu = st.number_input(_t("Mu (kN·m)","Mu (kN·m)"),
+                0.0, 10000.0, float(max(Mu_flex_B, Mu_flex_L)), 5.0, key="nm_Mu")
+            _nm_fc = st.number_input("f'c columna (MPa)",
+                17.0, 60.0, float(fc_basico), 1.0, key="nm_fc_col")
+            _nm_fy = st.number_input("fy columna (MPa)",
+                240.0, 560.0, float(fy_basico), 10.0, key="nm_fy_col")
+
+        st.divider()
+
+        # ── Cálculo diagrama de interacción simplificado ─────────────────
+        import numpy as _np_nm
+        import plotly.graph_objects as _go_nm
+
+        _b_cm   = _nm_b
+        _h_cm   = _nm_h
+        _d_pr   = _h_cm - _nm_rec - 1.6   # d' capa compresión (cm)
+        _d_efn  = _h_cm - _nm_rec - 1.6   # d efectivo (cm)
+        _A_s    = _nm_As_col / 2           # mitad en cada cara
+        _beta1  = max(0.65, 0.85 - 0.05 * max(0.0, (_nm_fc - 28) / 7))
+        _e_cu   = 0.003
+        _Es     = 200000.0  # MPa
+        _phi_c  = 0.65      # NSR-10 C.9.3.2 columnas con estribos
+        _phi_b  = 0.90      # flexión pura
+
+        # Puntos característicos del diagrama
+        _pts_N = []  # kN
+        _pts_M = []  # kN·m
+
+        # 1. Compresión pura (Punto A) — NSR-10 ec. C.10-1
+        _P0 = 0.85 * _nm_fc * (_b_cm * _h_cm - _nm_As_col) + _nm_fy * _nm_As_col  # kN (cm²→kN: /10)
+        _P0_kN = _P0 / 10.0
+        _Pmax  = 0.80 * _phi_c * _P0_kN   # Pmax NSR-10 C.10.3.6
+        _pts_N.append(_Pmax);  _pts_M.append(0.0)
+
+        # 2. Barrido c desde h (compresión) a 0 (tensión)
+        _c_vals = _np_nm.linspace(_h_cm * 0.95, 0.01, 120)
+        for _cv in _c_vals:
+            _a  = _beta1 * _cv
+            _a  = min(_a, _h_cm)
+            # Deformación acero compresión (cara superior)
+            _eps_s2 = _e_cu * (_cv - _d_pr) / _cv
+            _fs2    = max(-_nm_fy, min(_nm_fy, _eps_s2 * _Es))
+            # Deformación acero tensión (cara inferior)
+            _eps_s1 = _e_cu * (_d_efn - _cv) / _cv
+            _fs1    = max(-_nm_fy, min(_nm_fy, _eps_s1 * _Es))
+            # Fuerzas
+            _Cc = 0.85 * _nm_fc * _a * _b_cm / 10.0   # kN
+            _Cs = _A_s * _fs2 / 10.0                   # kN
+            _Ts = _A_s * _fs1 / 10.0                   # kN
+            _P  = _phi_c * (_Cc + _Cs - _Ts)           # kN
+            _M  = _phi_c * (
+                _Cc * (_h_cm/2 - _a/2) +
+                _Cs * (_h_cm/2 - _d_pr) +
+                _Ts * (_d_efn - _h_cm/2)
+            ) / 100.0  # kN·m
+            _pts_N.append(_P)
+            _pts_M.append(abs(_M))
+
+        # 3. Tensión pura (Punto D)
+        _Pt = -_phi_b * _nm_fy * _nm_As_col / 10.0  # kN (negativo)
+        _pts_N.append(_Pt); _pts_M.append(0.0)
+
+        # Cerrar diagrama (simetría lado tensión → M negativo espejado)
+        _pts_N_full = _pts_N + list(reversed(_pts_N))
+        _pts_M_full = _pts_M + [-m for m in reversed(_pts_M)]
+
+        # ── Punto de balanceo (deform. simultánea εcu + εy) ──────────────
+        _c_bal   = _e_cu / (_e_cu + _nm_fy / _Es) * _d_efn
+        _a_bal   = _beta1 * _c_bal
+        _Cc_bal  = 0.85 * _nm_fc * _a_bal * _b_cm / 10.0
+        _Ts_bal  = _A_s * _nm_fy / 10.0
+        _Cs_bal  = _A_s * max(-_nm_fy, min(_nm_fy,
+                    _e_cu * (_c_bal - _d_pr) / _c_bal * _Es)) / 10.0
+        _Pb      = _phi_c * (_Cc_bal + _Cs_bal - _Ts_bal)
+        _Mb      = _phi_c * (
+            _Cc_bal * (_h_cm/2 - _a_bal/2) +
+            _Cs_bal * (_h_cm/2 - _d_pr) +
+            _Ts_bal * (_d_efn - _h_cm/2)
+        ) / 100.0
+
+        # ── Plotly ───────────────────────────────────────────────────────
+        _inside = False
+        # Verificar si (Pu, Mu) está dentro del diagrama
+        # Simplificado: buscar N en la curva y verificar M_cap > Mu
+        try:
+            _Pu_kN = _nm_Pu
+            _Mu_kNm= _nm_Mu
+            _idx_close = int(_np_nm.argmin(_np_nm.abs(_np_nm.array(_pts_N) - _Pu_kN)))
+            _M_cap_pu  = _pts_M[_idx_close]
+            _inside    = _Mu_kNm <= _M_cap_pu and _Pu_kN >= _Pt
+        except Exception:
+            _inside = False
+
+        _fig_nm = _go_nm.Figure()
+
+        # Envolvente de interacción
+        _fig_nm.add_trace(_go_nm.Scatter(
+            x=_pts_M_full, y=_pts_N_full,
+            mode="lines", fill="toself",
+            fillcolor="rgba(30,80,120,0.25)",
+            line=dict(color="#38bdf8", width=2),
+            name=_t("Diagrama N-M","N-M Diagram")
+        ))
+
+        # Punto de balanceo
+        _fig_nm.add_trace(_go_nm.Scatter(
+            x=[_Mb, -_Mb], y=[_Pb, _Pb],
+            mode="markers+text",
+            marker=dict(color="#f59e0b", size=10, symbol="diamond"),
+            text=["Pb","Pb"],
+            textposition="top center",
+            textfont=dict(color="#f59e0b", size=10),
+            name=_t("Punto balanceo","Balance point")
+        ))
+
+        # Pmax
+        _fig_nm.add_trace(_go_nm.Scatter(
+            x=[0], y=[_Pmax],
+            mode="markers+text",
+            marker=dict(color="#a78bfa", size=10, symbol="square"),
+            text=["Pmax"],
+            textposition="top right",
+            textfont=dict(color="#a78bfa", size=10),
+            name=_t("Pmax (0.80φPo)","Pmax")
+        ))
+
+        # Punto de diseño (Pu, Mu)
+        _color_pt = "#22c55e" if _inside else "#ef4444"
+        _label_pt = _t("CUMPLE","OK") if _inside else _t("NO CUMPLE","FAIL")
+        _fig_nm.add_trace(_go_nm.Scatter(
+            x=[_nm_Mu, -_nm_Mu], y=[_nm_Pu, _nm_Pu],
+            mode="markers+text",
+            marker=dict(color=_color_pt, size=14, symbol="circle",
+                        line=dict(color="white", width=2)),
+            text=[f"({_nm_Mu:.0f},{_nm_Pu:.0f})", ""],
+            textposition="top right",
+            textfont=dict(color=_color_pt, size=11, family="Arial Black"),
+            name=f"(Pu,Mu) — {_label_pt}"
+        ))
+
+        _fig_nm.update_layout(
+            xaxis=dict(title=_t("M (kN·m)","M (kN·m)"),
+                       gridcolor="#334155", zerolinecolor="#64748b", color="white"),
+            yaxis=dict(title=_t("N (kN)","N (kN)"),
+                       gridcolor="#334155", zerolinecolor="#64748b", color="white"),
+            paper_bgcolor="#0f1117", plot_bgcolor="#161b22",
+            font=dict(color="white", size=11),
+            legend=dict(bgcolor="#1e293b", bordercolor="#334155",
+                        borderwidth=1, font=dict(color="white", size=10)),
+            margin=dict(l=50, r=20, t=50, b=40),
+            title=dict(
+                text=_t(
+                    f"Diagrama N-M — Col {_nm_b:.0f}×{_nm_h:.0f}cm | "
+                    f"{_nm_nb}×{_nm_bar} | f'c={_nm_fc:.0f} MPa | fy={_nm_fy:.0f} MPa",
+                    f"N-M Diagram — Col {_nm_b:.0f}×{_nm_h:.0f}cm | "
+                    f"{_nm_nb}×{_nm_bar} | f'c={_nm_fc:.0f} MPa | fy={_nm_fy:.0f} MPa"
+                ),
+                font=dict(color="white", size=12), x=0.5
+            ),
+            shapes=[dict(
+                type="line", x0=0, x1=0,
+                y0=min(_pts_N_full)*1.05, y1=max(_pts_N_full)*1.05,
+                line=dict(color="#475569", width=1, dash="dot")
+            )]
+        )
+        st.plotly_chart(_fig_nm, use_container_width=True)
+
+        # Métricas
+        _mc1, _mc2, _mc3, _mc4 = st.columns(4)
+        _mc1.metric("Pmax (kN)", f"{_Pmax:.1f}")
+        _mc2.metric(_t("Pb balanceo (kN)","Pb balance (kN)"), f"{_Pb:.1f}")
+        _mc3.metric(_t("M_cap @ Pu (kN·m)","M_cap @ Pu"), f"{_M_cap_pu:.1f}")
+        _mc4.metric(_t("Estado (Pu,Mu)","State (Pu,Mu)"), _label_pt,
+                    delta=f"M_dem={_nm_Mu:.1f} vs cap={_M_cap_pu:.1f}",
+                    delta_color="normal" if _inside else "inverse")
+
+        # Info ρ
+        st.caption(
+            f"ρ = As/(b·h) = {_nm_As_col:.2f}/({_nm_b:.0f}×{_nm_h:.0f}) = "
+            f"{_nm_rho*100:.2f}%  "
+            f"[NSR-10 C.10.9.1: 1% ≤ ρ ≤ 8%]  →  "
+            f"{'OK' if 0.01 <= _nm_rho <= 0.08 else 'FUERA DE RANGO'}"
+        )
+
+        if not _inside:
+            st.error(_t(
+                f"El par (Pu={_nm_Pu:.0f} kN, Mu={_nm_Mu:.0f} kN·m) queda FUERA del diagrama. "
+                "Aumentar sección o cuantía de la columna.",
+                f"The pair (Pu={_nm_Pu:.0f} kN, Mu={_nm_Mu:.0f} kN·m) is OUTSIDE the diagram. "
+                "Increase column section or reinforcement ratio."
+            ))
+        else:
+            st.success(_t(
+                f"CUMPLE — (Pu={_nm_Pu:.0f} kN, Mu={_nm_Mu:.0f} kN·m) dentro del diagrama N-M.",
+                f"OK — (Pu={_nm_Pu:.0f} kN, Mu={_nm_Mu:.0f} kN·m) inside N-M diagram."
+            ))
+
     # (Detector de pilotes removido de aquí, mantenemos la versión completa más abajo)
     # ITEMS 2 & 3: Calculadora ks (coeficiente de balasto) y Rigidez Lambda
     with st.expander("Coeficiente de Balasto ks (Winkler) y Rigidez Relativa"):
@@ -1442,7 +3106,7 @@ with st.expander(_t("2. Capacidad Portante de Suelo (Terzaghi) y Asentamientos",
         
         # Rigidez rel. (Lambda)
         import math
-        Ec_zap = 4700 * math.sqrt(fcbasico) * 1000 if 'fcbasico' in globals() else 21000000  # kPa
+        Ec_zap = 4700 * math.sqrt(fc_basico) * 1000 if 'fc_basico' in globals() else 21000000  # kPa
         Iz_zap = (B_cp * L_cp**3) / 12.0
         
         if Iz_zap > 0 and Ec_zap > 0:
@@ -1839,17 +3503,17 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             
             cc1, cc2 = st.columns(2)
             with cc1:
-                c1_col = st.number_input(_t("Columna c1 (dir. B) [cm]", "Col c1 (B dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
+                c1_col = st.number_input(_t("Columna c1 (dir. B) [cm]", "Col c1 (B dir.) [cm]"), min_value=5.0, value=40.0, step=5.0, key="z_c1col_val")
                 pos_col_iso = st.selectbox("Posición", ["Interior", "Borde (eje X)", "Borde (eje Y)", "Esquina"], key="pos_col_iso")
                 gamma_prom = st.number_input(_t("γ_promedio [kN/m³]", "γ_avg [kN/m³]"), value=20.0)
             with cc2:
-                c2_col = st.number_input(_t("Columna c2 (dir. L) [cm]", "Col c2 (L dir.) [cm]"), min_value=5.0, value=40.0, step=5.0)
+                c2_col = st.number_input(_t("Columna c2 (dir. L) [cm]", "Col c2 (L dir.) [cm]"), min_value=5.0, value=40.0, step=5.0, key="z_c2col_val")
                 Df_z = st.number_input(_t("Desplante Df [m]", "Depth Df [m]"), value=1.0, step=0.1)
                 s_c_uso = st.number_input("Sobrecarga s/c [kPa]", value=3.0, step=0.5, help="Sobrecarga externa s/c (equivale aprox a 300 kg/m²)")
 
         with colE:
             st.write("#### Diseño Estructural")
-            H_zap = st.number_input("Espesor H propuesto [cm]", value=50.0, step=5.0)
+            H_zap = st.number_input("Espesor H propuesto [cm]", value=50.0, step=5.0, key="z_hzap_val")
             # ── Recubrimiento mínimo por norma ─────────────────────────────────────────
             _COVER_MIN_ZAP = {
                 'NSR-10 Colombia': 7.5, 'ACI 318-25 EE.UU.': 7.5,
@@ -1859,8 +3523,8 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                 'NB 1225001-2020 Bolivia': 7.5, 'CIRSOC 201-2025 Argentina': 7.5,
             }
             _recub_default = _COVER_MIN_ZAP.get(norma_sel, 7.5)
-            recub_z = st.number_input("Recubrimiento al suelo [cm]", value=float(_recub_default), step=0.5, help=f"Min. normativo: {_recub_default} cm — {norma_sel}")
-            bar_z = st.selectbox("Varilla a utilizar:", list(REBAR_DICT.keys()), index=def_idx)
+            recub_z = st.number_input("Recubrimiento al suelo [cm]", value=float(_recub_default), step=0.5, help=f"Min. normativo: {_recub_default} cm — {norma_sel}", key="z_recub_val")
+            bar_z = st.selectbox("Varilla a utilizar:", list(REBAR_DICT.keys()), index=def_idx, key="z_barz_val")
             A_bar_z = REBAR_DICT[bar_z]["area"] * 100 # mm2
             db_bar_z = REBAR_DICT[bar_z]["db"] # mm
         
@@ -1944,6 +3608,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
 
     # Peralte efectivo
     d_z = H_zap - recub_z - (db_bar_z/10.0)
+    d_avg = d_z   # actualizar con valor real calculado
     if d_z <= 0:
         st.error(f"EC-3: Peralte efectivo d_z = {d_z:.2f} cm ≤ 0. Aumente H o reduzca recub. / diámetro.")
         st.stop()
@@ -2092,14 +3757,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
 
     Mu_flex_L = momento_dir_L()
 
-    # Diseño a flexión para dirección B
-    try:
-        Rn_B = (Mu_flex_B * 1e6) / (phi_f * (L_use*1000) * (d_z*10)**2)
-        disc_B = 1 - 2*Rn_B/(0.85*fc_basico)
-        rho_B = (0.85*fc_basico/fy_basico)*(1 - math.sqrt(max(disc_B, 0)))
-    except (ZeroDivisionError, ValueError):
-        rho_B = 0.02
-        disc_B = 0
+    # Diseño a flexión — Simple o Doble Parrilla (NSR-10 C.10.3.5 / ACI 318-22 Table 21.2.2)
     # ── Cuantía mínima por norma ────────────────────────────────────────────────
     _RHO_MIN_ZAP = {
         'NSR-10 Colombia': 0.0018, 'ACI 318-25 EE.UU.': 0.0018,
@@ -2109,29 +3767,75 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         'NB 1225001-2020 Bolivia': 0.0018, 'CIRSOC 201-2025 Argentina': 0.0018,
     }
     _rho_min_zap = _RHO_MIN_ZAP.get(norma_sel, 0.0018)
-    rho_use_B = max(rho_B, _rho_min_zap)
-    As_req_B = rho_use_B * (L_use*100) * d_z  # cm2 para ancho L
-    n_barras_B = math.ceil(As_req_B / REBAR_DICT[bar_z]["area"])
-    sep_B = (L_use*100 - 2*recub_z) / max(1, n_barras_B - 1)  # Acero Dir.B se distribuye a lo largo de L
+    # ── ρ_bal, ρ_max (0.75·ρ_bal) y Mn_max de sección simple ────────────────────
+    _beta1_z   = max(0.65, 0.85 - 0.05 * (fc_basico - 28) / 7.0)
+    _rho_bal_z = (0.85 * _beta1_z * fc_basico / fy_basico) * (600.0 / (600.0 + fy_basico))
+    _rho_max_z = 0.75 * _rho_bal_z   # NSR-10 C.10.3.5 / ACI 318 Table 21.2.2
 
-    # Diseño a flexión para dirección L
-    try:
-        Rn_L = (Mu_flex_L * 1e6) / (phi_f * (B_use*1000) * (d_z*10)**2)
-        disc_L = 1 - 2*Rn_L/(0.85*fc_basico)
-        rho_L = (0.85*fc_basico/fy_basico)*(1 - math.sqrt(max(disc_L, 0)))
-    except (ZeroDivisionError, ValueError):
-        rho_L = 0.02
-        disc_L = 0
-    rho_use_L = max(rho_L, _rho_min_zap)
-    As_req_L = rho_use_L * (B_use*100) * d_z  # cm2 para ancho B
-    n_barras_L = math.ceil(As_req_L / REBAR_DICT[bar_z]["area"])
-    sep_L = (B_use*100 - 2*recub_z) / max(1, n_barras_L - 1)  # Acero Dir.L se distribuye a lo largo de B
+    def _flex_zapata(Mu_kNm, ancho_m, d_cm):
+        """Diseño flexional. Retorna (rho_inf, As_inf, As_sup, disc, dp, Mn_max, aviso)."""
+        b_mm = ancho_m * 1000.0;  d_mm = d_cm * 10.0
+        d_prime_cm = recub_z + db_bar_z / 20.0        # recub sup + r de barra (cm)
+        arm_dp_m   = max((d_cm - d_prime_cm) / 100.0, 0.01)  # brazo As_inf–As_sup (m)
+        Mn_max_kNm = (phi_f * _rho_max_z * fy_basico * (d_cm / 100.0) *
+                      (1.0 - _rho_max_z * fy_basico / (1.7 * fc_basico))) * ancho_m * 1000.0
+        dp = False;  As_sup = 0.0;  aviso = ""
+        try:
+            Rn   = (Mu_kNm * 1e6) / (phi_f * b_mm * d_mm**2)
+            disc = 1.0 - 2.0 * Rn / (0.85 * fc_basico)
+            if disc < 0.0:
+                dp = True;  disc = 0.0
+            rho_req = (0.85 * fc_basico / fy_basico) * (1.0 - math.sqrt(disc))
+            if rho_req > _rho_max_z:
+                dp = True
+        except (ZeroDivisionError, ValueError):
+            rho_req = _rho_max_z;  disc = 0.0;  dp = True
+        if dp:
+            delta_Mu = max(Mu_kNm - Mn_max_kNm, 0.0)
+            As_sup   = (delta_Mu * 1e3) / (phi_f * fy_basico * arm_dp_m * 1e4)  # cm²
+            rho_inf  = _rho_max_z
+            aviso    = (f"DOBLE PARRILLA: Mu={Mu_kNm:.1f} > Mn_max={Mn_max_kNm:.1f} kN·m. "
+                        f"As_sup={As_sup:.2f} cm² (cara superior comprimida, d'={d_prime_cm:.1f} cm).")
+        else:
+            rho_inf = max(rho_req, _rho_min_zap)
+        As_inf = rho_inf * (ancho_m * 100.0) * d_cm
+        return rho_inf, As_inf, As_sup, disc, dp, Mn_max_kNm, aviso
+
+    rho_use_B, As_req_B_inf, As_req_B_sup, disc_B, dp_B, Mn_max_B, aviso_dp_B = _flex_zapata(Mu_flex_B, L_use, d_z)
+    As_req_B      = As_req_B_inf
+    n_barras_B    = math.ceil(As_req_B / REBAR_DICT[bar_z]["area"])
+    sep_B         = (L_use*100 - 2*recub_z) / max(1, n_barras_B - 1)
+    n_barras_B_sup = math.ceil(As_req_B_sup / REBAR_DICT[bar_z]["area"]) if dp_B else 0
+    sep_B_sup     = (L_use*100 - 2*recub_z) / max(1, n_barras_B_sup - 1) if n_barras_B_sup > 1 else 0.0
+
+    rho_use_L, As_req_L_inf, As_req_L_sup, disc_L, dp_L, Mn_max_L, aviso_dp_L = _flex_zapata(Mu_flex_L, B_use, d_z)
+    As_req_L      = As_req_L_inf
+    n_barras_L    = math.ceil(As_req_L / REBAR_DICT[bar_z]["area"])
+    sep_L         = (B_use*100 - 2*recub_z) / max(1, n_barras_L - 1)
+    n_barras_L_sup = math.ceil(As_req_L_sup / REBAR_DICT[bar_z]["area"]) if dp_L else 0
+    sep_L_sup     = (B_use*100 - 2*recub_z) / max(1, n_barras_L_sup - 1) if n_barras_L_sup > 1 else 0.0
+
+    _doble_parrilla = dp_B or dp_L
 
     # Para compatibilidad con el resto del código
     Mu_flex = Mu_flex_B
     disc_z = disc_B
     As_req_total = As_req_B
     n_barras_Z = n_barras_B
+    separacion_S = sep_B
+    # Alias para historial, PDF y exportación
+    nbarras_B  = n_barras_B
+    As_req_B     = As_req_B
+    As_req_L     = As_req_L
+    disc_B     = disc_B if 'disc_B' in dir() else 0.0
+    disc_L     = disc_L if 'disc_L' in dir() else 0.0
+    nbarras_L  = n_barras_L
+    Mu_B       = Mu_flex_B
+    Mu_L       = Mu_flex_L
+    Vu_1B      = Vu_1way_B if 'Vu_1way_B' in dir() else 0.0
+    Vu_1L      = Vu_1way_L if 'Vu_1way_L' in dir() else 0.0
+    phi_Vc_1B  = phi_Vc_1way_B if 'phi_Vc_1way_B' in dir() else 0.0
+    phi_Vc_1L  = phi_Vc_1way_L if 'phi_Vc_1way_L' in dir() else 0.0
     separacion_S = sep_B
 
     # --- CÁLCULO DE GANCHOS Y DOBLECES (NSR-10 / ACI 318) ---
@@ -2212,14 +3916,126 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         L_disp_min_cm = min(L_disp_B_cm, L_disp_L_cm)
         ok_ldh = L_disp_min_cm >= ldh_req_cm
 
+        # ── Longitud de desarrollo recta ld (NSR-10 C.12.2.2 / ACI 318-19 Table 25.5.2.1)
+        # Condición: barra inferior (tensión), espaciamiento >= 2db y recubrimiento >= db
+        # Caso favorable (s >= 2db y recub >= db):
+        #   ld = (fy / (3.5 * sqrt(fc))) * db   [mm]  NSR-10 C.12.2.3 caso 1
+        # Caso general (sin condición de espacio):
+        #   ld = (fy / (1.7 * sqrt(fc))) * db   [mm]  NSR-10 C.12.2.3 caso 2
+        # Factor de reducción por recubrimiento y espaciamiento (lambda_ld)
+        _cond_esp_B = (sep_B >= 2 * (db_bar_z / 10.0))   # espaciamiento >= 2db (cm)
+        _cond_esp_L = (sep_L >= 2 * (db_bar_z / 10.0))
+        _cond_rec   = (recub_z >= (db_bar_z / 10.0))     # recubrimiento >= db
+        _caso_fav_B = _cond_esp_B and _cond_rec
+        _caso_fav_L = _cond_esp_L and _cond_rec
+        # Usar el caso más crítico (desfavorable de ambas direcciones)
+        _factor_ld = 3.5 if (_caso_fav_B and _caso_fav_L) else 1.7
+        # ld mínima normativa: max(300 mm, fórmula)
+        _ld_req_mm_B = (fy_basico / (_factor_ld * math.sqrt(fc_basico))) * db_bar_z
+        _ld_req_mm_L = _ld_req_mm_B   # misma varilla, misma fórmula
+        _ld_req_cm   = max(30.0, _ld_req_mm_B / 10.0)   # min 300 mm = 30 cm (NSR-10 C.12.1)
+        # Longitud disponible en la zapata para desarrollo recto
+        # (desde cara de columna hasta borde menos recubrimiento)
+        _ld_disp_B_cm = L_disp_B_cm   # ya calculada = (B-c1)/2 * 100 - recub
+        _ld_disp_L_cm = L_disp_L_cm
+        _ld_disp_min_cm = min(_ld_disp_B_cm, _ld_disp_L_cm)
+        _ok_ld = _ld_disp_min_cm >= _ld_req_cm
+        _ld_caso_txt = _t(
+            f"Caso {'favorable' if (_caso_fav_B and _caso_fav_L) else 'general'} (s{'≥' if (_caso_fav_B and _caso_fav_L) else '<'}2db)",
+            f"{'Favorable' if (_caso_fav_B and _caso_fav_L) else 'General'} case (s{'≥' if (_caso_fav_B and _caso_fav_L) else '<'}2db)"
+        )
+
         data_res = [
             {"Revisión": "Geometría Propuesta", "Solicitado": f"Area Req = {Area_req:.2f} m²", "Capacidad/Provisto": f"Area Prov. = {A_use:.2f} m²", "Estado": " OK" if A_use>=Area_req else " Subdimensionado"},
             {"Revisión": "Pres. Contacto qu", "Solicitado": f"Max: {qu_max:.2f} kPa", "Capacidad/Provisto": f"Min: {qu_min:.2f} kPa", "Estado": estado_tension},
-            {"Revisión": "Flexión Dir. B", "Solicitado": f"Mu_B = {Mu_flex_B:.1f} kN-m", "Capacidad/Provisto": f"As_B = {As_req_B:.1f} cm² → {n_barras_B} {bar_z} c/{sep_B:.1f}cm", "Estado": " OK" if disc_B>0 else " Rompe en compresión"},
-            {"Revisión": "Flexión Dir. L", "Solicitado": f"Mu_L = {Mu_flex_L:.1f} kN-m", "Capacidad/Provisto": f"As_L = {As_req_L:.1f} cm² → {n_barras_L} {bar_z} c/{sep_L:.1f}cm", "Estado": " OK" if disc_L>0 else " Rompe en compresión"},
-            {"Revisión": "Anclaje Gancho 90° (C.12)", "Solicitado": f"ldh req: {ldh_req_cm:.1f} cm", "Capacidad/Provisto": f"L_disp zapata: {L_disp_min_cm:.1f} cm", "Estado": " OK" if ok_ldh else " Aumentar B o L"},
+            {"Revisión": "Flexión Dir. B", "Solicitado": f"Mu_B = {Mu_flex_B:.1f} kN·m | Mn_max_simple = {Mn_max_B:.1f} kN·m", "Capacidad/Provisto": f"As_inf = {As_req_B:.1f} cm² ({n_barras_B} {bar_z} c/{sep_B:.1f}cm)" + (f" | As_SUP = {As_req_B_sup:.2f} cm² ({n_barras_B_sup} {bar_z} c/{sep_B_sup:.1f}cm)" if dp_B else ""), "Estado": "DOBLE PARRILLA" if dp_B else (" OK" if disc_B > 0 else "Rompe en compresion")},
+            {"Revisión": "Flexión Dir. L", "Solicitado": f"Mu_L = {Mu_flex_L:.1f} kN·m | Mn_max_simple = {Mn_max_L:.1f} kN·m", "Capacidad/Provisto": f"As_inf = {As_req_L:.1f} cm² ({n_barras_L} {bar_z} c/{sep_L:.1f}cm)" + (f" | As_SUP = {As_req_L_sup:.2f} cm² ({n_barras_L_sup} {bar_z} c/{sep_L_sup:.1f}cm)" if dp_L else ""), "Estado": "DOBLE PARRILLA" if dp_L else (" OK" if disc_L > 0 else "Rompe en compresion")},
+            {
+                "Revisión": _t("Anclaje Gancho 90° (NSR-10 C.12.5)", "Hook Anchorage 90° (C.12.5)"),
+                "Solicitado": f"ldh req: {ldh_req_cm:.1f} cm",
+                "Capacidad/Provisto": f"L_disp: {L_disp_min_cm:.1f} cm",
+                "Estado": "OK - CUMPLE" if ok_ldh else "NO CUMPLE - Aumentar B o L"
+            },
+            {
+                "Revisión": _t(
+                    f"Desarrollo Recto ld (NSR-10 C.12.2) — {_ld_caso_txt}",
+                    f"Straight Development ld (ACI 318 25.5.2) — {_ld_caso_txt}"
+                ),
+                "Solicitado": f"ld req: {_ld_req_cm:.1f} cm  (min 30 cm)",
+                "Capacidad/Provisto": f"L_disp: {_ld_disp_min_cm:.1f} cm  (B: {_ld_disp_B_cm:.1f} | L: {_ld_disp_L_cm:.1f})",
+                "Estado": "OK - CUMPLE" if _ok_ld else "NO CUMPLE - Aumentar B o L"
+            },
         ]
         st.table(pd.DataFrame(data_res))
+        # ── Aviso Doble Parrilla ─────────────────────────────────────────────────────
+        if _doble_parrilla:
+            st.warning(
+                _t(
+                    "DOBLE PARRILLA requerida: el momento de diseno supera la capacidad ",
+                    "de la seccion simplemente reforzada (rho > 0.75*rho_bal). ",
+                    "Se agrego acero de compresion As_sup en la cara SUPERIOR de la zapata. ",
+                    "Verifique separacion entre capas: NSR-10 C.7.6.1 min max(2.5cm, 1.33*Dmax_agr).",
+                    "DOUBLE REINFORCEMENT required: Mu > Mn_max singly-reinforced. ",
+                    "Compression steel As_sup added to TOP face. ",
+                    "Check layer spacing: ACI 318-22 25.2.1 min max(1in, 1.33*Dmax_agr).",
+                )
+            )
+            if aviso_dp_B: st.info(f"Dir. B: {aviso_dp_B}")
+            if aviso_dp_L: st.info(f"Dir. L: {aviso_dp_L}")
+
+        # ── Sección visual detalle de anclaje (Paso 2 — NSR-10 C.12.2 / C.12.5)
+        with st.expander(_t(
+            "Detalle de Anclaje — Gancho 90° vs Desarrollo Recto (NSR-10 C.12)",
+            "Anchorage Detail — 90° Hook vs Straight Development (ACI 318 Ch.25)"
+        ), expanded=False):
+            _col_anc1, _col_anc2 = st.columns(2)
+            with _col_anc1:
+                st.markdown(_t("**Gancho Estándar 90° (NSR-10 C.12.5)**", "**Standard 90° Hook (ACI 318 25.4.3)**"))
+                st.markdown(f"""
+| Parámetro | Valor |
+|---|---|
+| Diámetro barra | {db_bar_z:.1f} mm ({bar_z}) |
+| Diámetro doblez mín. | {D_doblez_cm*10:.1f} mm |
+| Extensión recta 12db | {L_ext_gancho_cm:.1f} cm |
+| **ldh requerida** | **{ldh_req_cm:.1f} cm** |
+| L_disp dir. B | {L_disp_B_cm:.1f} cm |
+| L_disp dir. L | {L_disp_L_cm:.1f} cm |
+| **Verificación** | **{"OK - CUMPLE" if ok_ldh else "NO CUMPLE"}** |
+""")
+            with _col_anc2:
+                st.markdown(_t("**Desarrollo Recto ld (NSR-10 C.12.2)**", "**Straight Development ld (ACI 318 25.5.2)**"))
+                st.markdown(f"""
+| Parámetro | Valor |
+|---|---|
+| Diámetro barra | {db_bar_z:.1f} mm ({bar_z}) |
+| fc / fy | {fc_basico:.0f} / {fy_basico:.0f} MPa |
+| {_ld_caso_txt} | factor = {_factor_ld:.1f} |
+| **ld requerida** | **{_ld_req_cm:.1f} cm** (mín 30 cm) |
+| L_disp dir. B | {_ld_disp_B_cm:.1f} cm |
+| L_disp dir. L | {_ld_disp_L_cm:.1f} cm |
+| **Verificación** | **{"OK - CUMPLE" if _ok_ld else "NO CUMPLE - Aumentar B o L"}** |
+""")
+            # Recomendación automática
+            if not ok_ldh and not _ok_ld:
+                st.error(_t(
+                    f"AVISO: Ni el gancho 90° ni el desarrollo recto cumplen con la longitud disponible. "
+                    f"Aumente B o L en al menos {max(ldh_req_cm, _ld_req_cm) - _ld_disp_min_cm:.1f} cm.",
+                    f"WARNING: Neither hook nor straight development meet available length. "
+                    f"Increase B or L by at least {max(ldh_req_cm, _ld_req_cm) - _ld_disp_min_cm:.1f} cm."
+                ))
+            elif not _ok_ld and ok_ldh:
+                st.warning(_t(
+                    f"AVISO: El desarrollo recto NO cumple ({_ld_req_cm:.1f} cm > {_ld_disp_min_cm:.1f} cm). "
+                    f"El gancho 90° SI cumple. Se recomienda usar gancho.",
+                    f"WARNING: Straight development does NOT meet ({_ld_req_cm:.1f} cm > {_ld_disp_min_cm:.1f} cm). "
+                    f"90° hook PASSES. Recommend using hook."
+                ))
+            elif _ok_ld and ok_ldh:
+                st.success(_t(
+                    "CUMPLE: Tanto el gancho 90° como el desarrollo recto son viables para esta geometría.",
+                    "PASS: Both 90° hook and straight development are feasible for this geometry."
+                ))
+
 
         area_ok = A_use >= Area_req
         if not area_ok:
@@ -2240,7 +4056,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         with st.expander("Parámetros de estabilidad", expanded=True):
             _c_fs1, _c_fs2, _c_fs3 = st.columns(3)
             H_horiz = _c_fs1.number_input("Carga horizontal H [kN]", 0.0, 5000.0,
-                                          st.session_state.get("z_Hhoriz", 0.0), 10.0, key="z_Hhoriz")
+                                          st.session_state.get("z_H_horiz", 0.0), 10.0, key="z_H_horiz")
             delta_ang = _c_fs2.number_input("Ángulo fricción cimentación δ [°] (≈ ²⁄₃φ)",
                                             0.0, 45.0, st.session_state.get("z_delta", phi_ang*2/3), 1.0, key="z_delta")
             # [fix_z_delta] eliminado: st.session_state["z_delta"] = delta_ang  (el widget key='z_delta' ya gestiona session_state)
@@ -2520,7 +4336,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             f"Nivel Sísmico: {_ns}\n"
             f"Elaboró: {_elab_z}   Revisó: {_rev_z}   Aprobó: {_apb_z}\n"
             f"Materiales: Concreto f'c = {fc_basico:.1f} MPa, Acero fy = {fy_basico:.1f} MPa\n"
-            f"Fecha: {datetime.datetime.now().strftime('%d/%m/%Y')}"
+            f"Fecha: {__import__('datetime').datetime.now().strftime('%d/%m/%Y')}"
         ).bold = True
         if _logo_z:
             try:
@@ -2530,49 +4346,150 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
 
         # 1. Parámetros de Diseño
         doc_zap.add_heading("1. PARÁMETROS DE DISEÑO", level=1)
-        doc_zap.add_paragraph(f"Geometría: B = {B_use:.2f} m, L = {L_use:.2f} m, H = {H_zap:.0f} cm\nRecubrimiento: {recub_z} cm\nPedestal: c1 = {cx} cm, c2 = {cy} cm")
+        doc_zap.add_paragraph(f"Geometría: B = {B_use:.2f} m, L = {L_use:.2f} m, H = {H_zap:.0f} cm\nRecubrimiento: {recub_z} cm\nPedestal: c1 = {c1_col} cm, c2 = {c2_col} cm")
         doc_zap.add_paragraph(f"Cargas de servicio aplicadas:\n  P_serv = {P_serv:.1f} kN\n  M_serv = {M_serv:.1f} kN·m")
-        doc_zap.add_paragraph(f"Cargas últimas de diseño:\n  Pu = {P_ult:.1f} kN\n  Mu = {M_ult:.1f} kN·m\n  Vu = {V_ult:.1f} kN")
+        doc_zap.add_paragraph(f"Cargas últimas de diseño:\n  Pu = {P_ult:.1f} kN\n  Mu = {M_ult:.1f} kN·m\n  Vu = {Vu_punz:.1f} kN")
 
         # 2. Esfuerzos y Presiones
         doc_zap.add_heading("2. DISTRIBUCIÓN DE PRESIONES Y ESTABILIDAD", level=1)
         doc_zap.add_paragraph(f"Capacidad del suelo (qa): {qa:.1f} kPa\nExcentricidad (e): {e_serv:.3f} m (L/6 = {L_use/6:.3f} m)")
         doc_zap.add_paragraph(f"Presiones Máximas (Servicio): q_max = {qmax_s:.1f} kPa, q_min = {qmin_s:.1f} kPa")
         doc_zap.add_paragraph(f"Presiones de Diseño (Mayoradas): q_max_u = {qmax_u:.1f} kPa, q_min_u = {qmin_u:.1f} kPa")
-        if area_ok and vol_y_ok:
+        if area_ok and (ok_1way_B and ok_1way_L):
             doc_zap.add_paragraph("✔ Geometría en planta CUMPLE admitiendo las presiones bajo qa.").bold = True
         else:
-            doc_zap.add_paragraph("❌ ÁREA INSUFICIENTE para la capacidad del suelo q_a ó Volcamiento.").bold = True
+            doc_zap.add_paragraph("NO CUMPLE ÁREA INSUFICIENTE para la capacidad del suelo q_a ó Volcamiento.").bold = True
 
         # 3. Diseño a Cortante (Unidireccional)
+        # 2.5 Capacidad portante — método activo con todos los factores
+        doc_zap.add_heading("2.5 CAPACIDAD PORTANTE — MÉTODO " + metodo_cap.upper(), level=2)
+        _ic_doc  = ic_v if 'ic_v' in dir() else 1.0
+        _iq_doc  = iq_v if 'iq_v' in dir() else 1.0
+        _ig_doc  = ig_v if 'ig_v' in dir() else 1.0
+        _psi_doc = float(st.session_state.get("z_vesic_psi", 0.0))
+        doc_zap.add_paragraph(
+            f"Referencia: NSR-10 Titulo H.3  |  "
+            f"Vesic (1973) JSMFD ASCE 99(1):45-73  |  Bowles (1996) Sec.3-5\n"
+            f"Parametros geotecnicos:\n"
+            f"  phi = {phi_ang:.1f} deg  |  c = {coh_c:.2f} kPa  |  "
+            f"gamma = {gamma_s:.1f} kN/m3  |  gamma_sat = {gamma_sat_t:.1f} kN/m3\n"
+            f"  Df = {Df_cp:.2f} m  |  B = {B_cp:.2f} m  |  L = {L_cp:.2f} m  |  "
+            f"NF = {NF_prof:.2f} m  |  Caso NF = {caso_nf}\n"
+            f"Factores de capacidad ({metodo_cap}):\n"
+            f"  Nc = {Nc:.4f}  |  Nq = {Nq:.4f}  |  Ngamma = {Ngamma:.4f}\n"
+            f"Factores de forma:\n"
+            f"  sc = {sc:.4f}  |  sq = {sq:.4f}  |  sgamma = {sgamma:.4f}\n"
+            f"Factores de profundidad:\n"
+            f"  dc = {dc:.4f}  |  dq = {dq:.4f}  |  dgamma = {dgamma:.4f}\n"
+            f"Factores de inclinacion (psi = {_psi_doc:.1f} deg):\n"
+            f"  ic = {_ic_doc:.4f}  |  iq = {_iq_doc:.4f}  |  igamma = {_ig_doc:.4f}\n"
+            f"Correccion nivel freatico:\n"
+            f"  q_sob = {q_sob:.2f} kPa  |  gamma_eff = {gamma_eff:.2f} kN/m3\n"
+            f"Resultado:\n"
+            f"  q_ult = sc*dc*ic*c*Nc + sq*dq*iq*q*Nq + sgamma*dgamma*igamma*0.5*gamma*B*Ngamma\n"
+            f"  q_ult = {sc*dc*_ic_doc*coh_c*Nc:.2f} + "
+            f"{sq*dq*_iq_doc*q_sob*Nq:.2f} + "
+            f"{sgamma*dgamma*_ig_doc*0.5*gamma_eff*B_cp*Ngamma:.2f} "
+            f"= {q_ult:.2f} kPa\n"
+            f"  q_adm = q_ult / FS = {q_ult:.2f} / {FS_terz:.1f} = {q_adm:.2f} kPa\n"
+            f"  q_act = Q / (B*L) = {Q_act:.1f} / ({B_cp:.2f}*{L_cp:.2f}) = {q_act:.2f} kPa\n"
+            f"  FS calculado = q_ult / q_act = {FS_calc:.2f}  "
+            f"{'CUMPLE' if cumplio else 'NO CUMPLE -- Ajustar B o L'}"
+        )
+
+
         doc_zap.add_heading("3. DISEÑO A CORTANTE UNIDIRECCIONAL", level=1)
         doc_zap.add_paragraph(f"Peralte efectivo promedio (d): {d_avg:.1f} cm")
-        doc_zap.add_paragraph(f"Cortante Actuante Mayorado (Vu): {Vu:.1f} kN")
-        doc_zap.add_paragraph(f"Resistencia del Concreto (φVc): {phiVc:.1f} kN")
-        if cort_ok:
+        doc_zap.add_paragraph(f"Cortante Actuante Mayorado (Vu): {Vu_1way_B:.1f} kN")
+        doc_zap.add_paragraph(f"Resistencia del Concreto (φVc): {phi_Vc_1way_B:.1f} kN")
+        if (ok_1way_B and ok_1way_L):
             doc_zap.add_paragraph("✔ CUMPLE diseño por Cortante.").bold = True
         else:
-            doc_zap.add_paragraph("❌ NO CUMPLE Cortante — Aumentar el espesor H de la zapata.").bold = True
+            doc_zap.add_paragraph("NO CUMPLE NO CUMPLE Cortante — Aumentar el espesor H de la zapata.").bold = True
 
         # 4. Diseño a Punzonamiento (Bidireccional)
         doc_zap.add_heading("4. DISEÑO A PUNZONAMIENTO", level=1)
-        doc_zap.add_paragraph(f"Perímetro crítico (bo): {bo:.1f} cm")
-        doc_zap.add_paragraph(f"Cortante Punzonante Actuante (Vu_p): {Vu_p:.1f} kN")
-        doc_zap.add_paragraph(f"Resistencia del Concreto (φvc_p_total): {phi_vc_p * bo * d_avg / 10:.1f} kN")
-        if punz_ok:
+        doc_zap.add_paragraph(f"Perímetro crítico (bo): {bo_perim:.1f} cm")
+        doc_zap.add_paragraph(f"Cortante Punzonante Actuante (Vu_p): {Vu_punz:.1f} kN")
+        doc_zap.add_paragraph(f"Resistencia del Concreto (φvc_p_total): {phi_Vc_P:.1f} kN")
+        if ok_punz:
             doc_zap.add_paragraph("✔ CUMPLE diseño por Punzonamiento.").bold = True
         else:
-            doc_zap.add_paragraph("❌ NO CUMPLE Punzonamiento — Aumentar H o la dimensión de la columna.").bold = True
+            doc_zap.add_paragraph("NO CUMPLE NO CUMPLE Punzonamiento — Aumentar H o la dimensión de la columna.").bold = True
 
         # 5. Diseño a Flexión y Cuantías
         doc_zap.add_heading("5. DISEÑO A FLEXIÓN Y REFUERZO", level=1)
-        doc_zap.add_paragraph(f"Momento Flector de Diseño (Mu): {Mu:.1f} kN·m")
-        doc_zap.add_paragraph(f"Cuantía requerida (ρ_req): {rho_req:.4f}")
-        doc_zap.add_paragraph(f"Cuantía mínima normativa (ρ_min): {rho_z_min:.4f}")
-        doc_zap.add_paragraph(f"Área de Acero (As) Dir L y B: {max(As_req, As_min):.2f} cm²")
+        doc_zap.add_paragraph(
+            f"beta1={_beta1_z:.3f} | rho_bal={_rho_bal_z:.5f} | rho_max=0.75*rho_bal={_rho_max_z:.5f}"
+        )
+        doc_zap.add_heading("5.1 Dirección B (barras paralelas a L)", level=2)
+        doc_zap.add_paragraph(
+            f"Mu_B={Mu_flex_B:.2f} kN·m  |  Mn_max(simple)={Mn_max_B:.2f} kN·m"
+        )
+        _d_prime_z_cm = recub_z + db_bar_z / 20.0
+        if dp_B:
+            doc_zap.add_paragraph(
+                f"DOBLE PARRILLA DIR B: Mu_B={Mu_flex_B:.1f} kN·m > Mn_max={Mn_max_B:.1f} kN·m\n"
+                f"  As_inf (tension, inferior) = {As_req_B:.2f} cm2  ->  {n_barras_B} {bar_z}  @  {sep_B:.1f} cm\n"
+                f"  As_sup (compresion, superior) = {As_req_B_sup:.2f} cm2  ->  {n_barras_B_sup} {bar_z}  @  {sep_B_sup:.1f} cm\n"
+                f"  d-prima (recub sup+r) = {_d_prime_z_cm:.1f} cm\n"
+                f"  NSR-10 C.10.3.5 / ACI 318-22 Table 21.2.2 / NSR-10 C.7.6.1 sep min capas"
+            )
+        else:
+            doc_zap.add_paragraph(
+                f"Parrilla SIMPLE Dir B: As_inf={As_req_B:.2f} cm2  ->  {n_barras_B} {bar_z}  @  {sep_B:.1f} cm"
+            )
+        doc_zap.add_heading("5.2 Dirección L (barras paralelas a B)", level=2)
+        doc_zap.add_paragraph(
+            f"Mu_L={Mu_flex_L:.2f} kN·m  |  Mn_max(simple)={Mn_max_L:.2f} kN·m"
+        )
+        if dp_L:
+            doc_zap.add_paragraph(
+                f"DOBLE PARRILLA DIR L: Mu_L={Mu_flex_L:.1f} kN·m > Mn_max={Mn_max_L:.1f} kN·m\n"
+                f"  As_inf (tension, inferior) = {As_req_L:.2f} cm2  ->  {n_barras_L} {bar_z}  @  {sep_L:.1f} cm\n"
+                f"  As_sup (compresion, superior) = {As_req_L_sup:.2f} cm2  ->  {n_barras_L_sup} {bar_z}  @  {sep_L_sup:.1f} cm\n"
+                f"  d-prima (recub sup+r) = {_d_prime_z_cm:.1f} cm\n"
+                f"  NSR-10 C.10.3.5 / ACI 318-22 Table 21.2.2"
+            )
+        else:
+            doc_zap.add_paragraph(
+                f"Parrilla SIMPLE Dir L: As_inf={As_req_L:.2f} cm2  ->  {n_barras_L} {bar_z}  @  {sep_L:.1f} cm"
+            )
         doc_zap.add_paragraph(f"Armado propuesto: {bar_z} @ {sep_L:.1f} cm (Dir L), {bar_z} @ {sep_B:.1f} cm (Dir B)")
 
         # 6. Cuantificación de Materiales
+        # ── Sección 5.5: Anclaje (Paso 2) ──────────────────────────────────
+        doc_zap.add_heading("5.5. LONGITUD DE ANCLAJE — NSR-10 C.12", level=2)
+        doc_zap.add_paragraph(
+            f"Barras de refuerzo: {bar_z}  |  db = {db_bar_z:.1f} mm  |  "
+            f"fc = {fc_basico:.0f} MPa  |  fy = {fy_basico:.0f} MPa"
+        )
+        doc_zap.add_paragraph(
+            f"GANCHO 90 grados (NSR-10 C.12.5):\n"
+            f"  ldh requerida = max(15 cm, 8db, 0.24*fy/sqrt(fc)*db) = {ldh_req_cm:.1f} cm\n"
+            f"  L_disponible zapata (dir. critica) = {L_disp_min_cm:.1f} cm\n"
+            f"  Verificacion: {'OK - CUMPLE' if ok_ldh else 'NO CUMPLE — Aumentar B o L'}"
+        )
+        doc_zap.add_paragraph(
+            f"DESARROLLO RECTO ld (NSR-10 C.12.2.2 / ACI 318-19 Table 25.5.2.1):\n"
+            f"  Condicion de espaciamiento: {'favorable (s>=2db)' if (_caso_fav_B and _caso_fav_L) else 'general (s<2db)'}\n"
+            f"  Factor: {_factor_ld:.1f}  |  ld = fy/(factor*sqrt(fc))*db\n"
+            f"  ld requerida = max(30 cm, formula) = {_ld_req_cm:.1f} cm\n"
+            f"  L_disponible dir. B = {_ld_disp_B_cm:.1f} cm  |  dir. L = {_ld_disp_L_cm:.1f} cm\n"
+            f"  Verificacion: {'OK - CUMPLE' if _ok_ld else 'NO CUMPLE — Aumentar B o L'}"
+        )
+        _anclaje_recom = (
+            "Se recomienda gancho estandar 90 grados (NSR-10 C.12.5) para acomodar las barras "
+            "dentro de la zapata con la geometria propuesta."
+            if ok_ldh and not _ok_ld else (
+            "Tanto el gancho 90 grados como el desarrollo recto son viables."
+            if ok_ldh and _ok_ld else
+            "AVISO: Verificar la longitud de anclaje. Considere aumentar B, L o usar gancho 135 grados."
+            )
+        )
+        doc_zap.add_paragraph(f"Recomendacion: {_anclaje_recom}")
+        # ─────────────────────────────────────────────────────────────────────
+
         doc_zap.add_heading("6. CUANTIFICACIÓN DE MATERIALES", level=1)
         doc_zap.add_paragraph(f"Volumen de concreto: {vol_c:.3f} m³")
         doc_zap.add_paragraph(f"Peso del acero (Dir L): {peso_L:.1f} kg")
@@ -2590,9 +4507,587 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         doc_zap.add_paragraph("\n\n_________________________________________\nFirma Ing. Responsable")
         doc_zap.add_paragraph("Matrícula Profesional: _______________")
 
+        # 7.1 Desglose de Costos APU
+        doc_zap.add_heading("7.1 Desglose de Costos APU", level=2)
+        try:
+            import matplotlib.pyplot as _plt_apu_z, io as _io_apu_z
+            _apu_z = st.session_state.get("apu_config", {})
+            if _apu_z:
+                _usar_premix_z = _apu_z.get("premix", False)
+                _cost_acero_z = (peso_L + peso_B) * _apu_z.get("acero", 0)
+                _cost_mo_z = ((peso_L + peso_B) * 0.04 + vol_c * 0.4) * _apu_z.get("costo_dia_mo", 0)
+                _area_enc_z = 2 * (B_use + L_use) * (H_zap / 100.0)  # m2 encofrado lateral
+                _cost_enc_z = _area_enc_z * _apu_z.get("encofrado", 0)
+                if _usar_premix_z:
+                    _cost_conc_z = vol_c * _apu_z.get("precio_premix_m3", 0)
+                    _vals_apu_z = [_cost_conc_z, _cost_acero_z, _cost_mo_z, _cost_enc_z]
+                    _cats_z = ["Concreto", "Acero", "M.O.", "Encofrado"]
+                else:
+                    _cost_cem_z = bultos_zap * _apu_z.get("cemento", 0)
+                    _cost_agr_z = vol_arena_z * _apu_z.get("arena", 0) + vol_grava_z * _apu_z.get("grava", 0)
+                    _vals_apu_z = [_cost_cem_z, _cost_agr_z, _cost_acero_z, _cost_mo_z, _cost_enc_z]
+                    _cats_z = ["Cemento", "Agregados", "Acero", "M.O.", "Encofrado"]
+                _colores_z = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+                _mon_z = _apu_z.get("moneda", "COP $")
+                _fig_az, _ax_az = _plt_apu_z.subplots(figsize=(6, 3))
+                _fig_az.patch.set_facecolor('white'); _ax_az.set_facecolor('#f8f9fa')
+                _bars_z = _ax_az.bar(_cats_z, _vals_apu_z, color=_colores_z[:len(_cats_z)], edgecolor='white', width=0.55)
+                _ax_az.set_title(f"Desglose de Costos APU — Zapata ({_mon_z})", color='#1a1a1a', fontsize=10, fontweight='bold')
+                _ax_az.tick_params(colors='#1a1a1a', labelsize=8)
+                for sp in _ax_az.spines.values(): sp.set_edgecolor('#cccccc')
+                for _b in _bars_z:
+                    _ax_az.text(_b.get_x() + _b.get_width()/2., _b.get_height()*1.01,
+                                f"{_b.get_height():,.0f}", ha='center', va='bottom', fontsize=7, color='#333333')
+                _buf_az = _io_apu_z.BytesIO()
+                _fig_az.savefig(_buf_az, format='png', dpi=180, facecolor='white', transparent=False)
+                _buf_az.seek(0); _plt_apu_z.close(_fig_az)
+                doc_zap.add_picture(_buf_az, width=Inches(5.5))
+        except Exception as _e_apu_z:
+            doc_zap.add_paragraph(f"(Gráfica APU no disponible: {_e_apu_z})")
+
         f_zap_io = io.BytesIO()
         doc_zap.save(f_zap_io)
         f_zap_io.seek(0)
+
+        # ── DESCARGA DOCX + PDF NATIVO (ReportLab) ──────────────────────────
+        st.markdown("---")
+        st.markdown("#### Exportar Memoria de Cálculo")
+        _col_exp1, _col_exp2 = st.columns(2)
+
+        with _col_exp1:
+            st.download_button(
+                _t("Descargar Memoria DOCX", "Download DOCX Report"),
+                data=f_zap_io,
+                file_name=f"Memoria_Zapata_{tipo_zap[:1]}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key="za_dl_docx",
+                use_container_width=True,
+                disabled=not _puede_exportar,
+                help=_t("Requiere licencia Pro o Admin.","Requires Pro or Admin license.") if not _puede_exportar else None
+            )
+
+        with _col_exp2:
+            if st.button(
+                _t("Generar PDF Memoria", "Generate PDF Report"),
+                key="za_btn_pdf",
+                use_container_width=True,
+                disabled=not _puede_exportar,
+                help=_t("Requiere licencia Pro o Admin.","Requires Pro or Admin license.") if not _puede_exportar else None
+            ):
+                try:
+                    from reportlab.lib.pagesizes import letter, A4
+                    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+                    from reportlab.lib.units import cm, mm
+                    from reportlab.lib import colors
+                    from reportlab.platypus import (
+                        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+                        HRFlowable, KeepTogether
+                    )
+                    from reportlab.platypus import Image as RLImage
+                    import io as _io_pdf
+                    import datetime as _dt_pdf
+
+                    _empresa, _proyecto, _ingeniero, _elab, _rev, _apb, _logo = _get_identity()
+                    _pdf_buf = _io_pdf.BytesIO()
+                    _doc_pdf = SimpleDocTemplate(
+                        _pdf_buf, pagesize=A4,
+                        leftMargin=2*cm, rightMargin=2*cm,
+                        topMargin=2.5*cm, bottomMargin=2*cm
+                    )
+
+                    _styles  = getSampleStyleSheet()
+                    _title_s = ParagraphStyle("TitleKonte",
+                        parent=_styles["Title"], fontSize=14, leading=18,
+                        textColor=colors.HexColor("#1b3a5c"), spaceAfter=4)
+                    _h1_s    = ParagraphStyle("H1Konte",
+                        parent=_styles["Heading1"], fontSize=11, leading=14,
+                        textColor=colors.HexColor("#1b3a5c"),
+                        borderPad=2, spaceBefore=10, spaceAfter=4)
+                    _h2_s    = ParagraphStyle("H2Konte",
+                        parent=_styles["Heading2"], fontSize=10, leading=13,
+                        textColor=colors.HexColor("#2d6a4f"), spaceBefore=6, spaceAfter=3)
+                    _body_s  = ParagraphStyle("BodyKonte",
+                        parent=_styles["Normal"], fontSize=9, leading=13, spaceAfter=3)
+                    _caption = ParagraphStyle("Caption",
+                        parent=_styles["Normal"], fontSize=8, leading=10,
+                        textColor=colors.grey, spaceAfter=2)
+                    _ok_s    = ParagraphStyle("OK",
+                        parent=_styles["Normal"], fontSize=9,
+                        textColor=colors.HexColor("#2d6a4f"))
+                    _fail_s  = ParagraphStyle("FAIL",
+                        parent=_styles["Normal"], fontSize=9,
+                        textColor=colors.HexColor("#c0392b"))
+
+                    _story = []
+
+                    # ── Portada ─────────────────────────────────────────────
+                    # Logo si existe
+                    if _logo:
+                        try:
+                            _logo_buf = _io_pdf.BytesIO(_logo)
+                            _logo_img = RLImage(_logo_buf, width=3*cm, height=1.5*cm)
+                            _story.append(_logo_img)
+                            _story.append(Spacer(1, 4*mm))
+                        except Exception:
+                            pass
+
+                    _story.append(Paragraph(
+                        f"MEMORIA ESTRUCTURAL — ZAPATA {tipo_zap.upper()}", _title_s))
+                    _story.append(Paragraph(f"Norma: {norma_sel}", _body_s))
+                    _story.append(HRFlowable(width="100%", thickness=1,
+                                             color=colors.HexColor("#1b3a5c"), spaceAfter=4))
+                    _tbl_portada = Table([
+                        ["Empresa:",   _empresa,  "Proyecto:", _proyecto],
+                        ["Ingeniero:", _ingeniero,"Fecha:",    _dt_pdf.date.today().strftime("%Y-%m-%d")],
+                        ["Elaboró:",   _elab,     "Revisó:",   _rev],
+                        ["Aprobó:",    _apb,      "Norma:",    norma_sel],
+                    ], colWidths=[2.5*cm, 5.5*cm, 2.5*cm, 5.5*cm])
+                    _tbl_portada.setStyle(TableStyle([
+                        ("FONTNAME",  (0,0),(-1,-1), "Helvetica"),
+                        ("FONTSIZE",  (0,0),(-1,-1), 8),
+                        ("FONTNAME",  (0,0),(0,-1),  "Helvetica-Bold"),
+                        ("FONTNAME",  (2,0),(2,-1),  "Helvetica-Bold"),
+                        ("BACKGROUND",(0,0),(-1,-1), colors.HexColor("#f0f4f8")),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),[colors.HexColor("#f0f4f8"),colors.white]),
+                        ("GRID",      (0,0),(-1,-1), 0.3, colors.HexColor("#bbcdd8")),
+                        ("TOPPADDING",(0,0),(-1,-1), 3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+                    ]))
+                    _story.append(_tbl_portada)
+                    _story.append(Spacer(1, 6*mm))
+
+                    # ── 1. Parámetros geotécnicos ───────────────────────────
+                    _story.append(Paragraph("1. PARÁMETROS GEOTÉCNICOS", _h1_s))
+                    _story.append(HRFlowable(width="100%", thickness=0.5,
+                                             color=colors.HexColor("#bbcdd8"), spaceAfter=3))
+                    _geo_data = [
+                        ["Parámetro", "Valor", "Parámetro", "Valor"],
+                        ["φ (ángulo fricción)", f"{phi_ang:.1f}°",
+                         "c (cohesión)", f"{coh_c:.2f} kPa"],
+                        ["γ húmedo", f"{gamma_s:.1f} kN/m³",
+                         "γ_sat", f"{gamma_sat_t:.1f} kN/m³"],
+                        ["Df (desplante)", f"{Df_cp:.2f} m",
+                         "NF (nivel freático)", f"{NF_prof:.2f} m"],
+                        ["B × L", f"{B_cp:.2f} × {L_cp:.2f} m",
+                         "Caso NF", f"Caso {caso_nf}"],
+                        ["Método capacidad", metodo_cap,
+                         "FS requerido", f"{FS_terz:.1f}"],
+                        ["Nc / Nq / Nγ", f"{Nc:.3f} / {Nq:.3f} / {Ngamma:.3f}",
+                         "sc/sq/sγ", f"{sc:.3f}/{sq:.3f}/{sgamma:.3f}"],
+                        ["dc/dq/dγ", f"{dc:.3f}/{dq:.3f}/{dgamma:.3f}",
+                         "ic/iq/iγ", f"{ic_v:.3f}/{iq_v:.3f}/{ig_v:.3f}"],
+                        ["q_sob (sobrecarga)", f"{q_sob:.2f} kPa",
+                         "γ_eff", f"{gamma_eff:.2f} kN/m³"],
+                        ["q_ult", f"{q_ult:.2f} kPa",
+                         "q_adm", f"{q_adm:.2f} kPa"],
+                        ["q_act", f"{q_act:.2f} kPa",
+                         "FS calculado", f"{FS_calc:.2f}"],
+                    ]
+                    _tbl_geo = Table(_geo_data,
+                        colWidths=[4*cm, 3.8*cm, 4*cm, 3.8*cm])
+                    _tbl_geo.setStyle(TableStyle([
+                        ("FONTNAME",  (0,0),(-1,0),  "Helvetica-Bold"),
+                        ("FONTSIZE",  (0,0),(-1,-1), 8),
+                        ("BACKGROUND",(0,0),(-1,0),  colors.HexColor("#1b3a5c")),
+                        ("TEXTCOLOR", (0,0),(-1,0),  colors.white),
+                        ("ROWBACKGROUNDS",(0,1),(-1,-1),
+                         [colors.white, colors.HexColor("#f0f4f8")]),
+                        ("GRID",      (0,0),(-1,-1), 0.3, colors.HexColor("#bbcdd8")),
+                        ("FONTNAME",  (0,1),(0,-1),  "Helvetica-Bold"),
+                        ("FONTNAME",  (2,1),(2,-1),  "Helvetica-Bold"),
+                        ("TOPPADDING",(0,0),(-1,-1), 3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+                    ]))
+                    _story.append(_tbl_geo)
+
+                    # Estado capacidad portante
+                    _story.append(Spacer(1, 3*mm))
+                    if cumplio:
+                        _story.append(Paragraph(
+                            f"CUMPLE — q_act = {q_act:.2f} kPa ≤ q_adm = {q_adm:.2f} kPa  (FS = {FS_calc:.2f})",
+                            _ok_s))
+                    else:
+                        _story.append(Paragraph(
+                            f"NO CUMPLE — q_act = {q_act:.2f} kPa > q_adm = {q_adm:.2f} kPa. "
+                            "Aumentar B o L.", _fail_s))
+                    _story.append(Spacer(1, 4*mm))
+
+                    # ── 2. Geometría y cargas ───────────────────────────────
+                    _story.append(Paragraph("2. GEOMETRÍA Y CARGAS", _h1_s))
+                    _story.append(HRFlowable(width="100%", thickness=0.5,
+                                             color=colors.HexColor("#bbcdd8"), spaceAfter=3))
+                    _b_use = float(st.session_state.get("zBuse", B_cp))
+                    _l_use = float(st.session_state.get("zLuse", L_cp))
+                    _h_zap = float(st.session_state.get("zhzcp", 0.5))
+                    _geo2 = [
+                        ["Dimensión", "Valor", "Carga", "Valor"],
+                        ["B (ancho)", f"{_b_use:.2f} m",
+                         "P servicio (Ps)", f"{P_svc:.1f} kN"],
+                        ["L (largo)", f"{_l_use:.2f} m",
+                         "M dir. B (Svc)", f"{0.0:.1f} kN·m"],
+                        ["H (espesor)", f"{_h_zap*100:.0f} cm",
+                         "M dir. L (Svc)", f"{0.0:.1f} kN·m"],
+                        ["Columna b×c", f"{c1_col:.0f}×{c2_col:.0f} cm",
+                         "Pu (mayorado)", f"{P_ult:.1f} kN"],
+                    ]
+                    _tbl_geo2 = Table(_geo2, colWidths=[4*cm, 3.8*cm, 4*cm, 3.8*cm])
+                    _tbl_geo2.setStyle(TableStyle([
+                        ("FONTNAME", (0,0),(-1,0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0,0),(-1,-1), 8),
+                        ("BACKGROUND",(0,0),(-1,0), colors.HexColor("#2d6a4f")),
+                        ("TEXTCOLOR",(0,0),(-1,0), colors.white),
+                        ("ROWBACKGROUNDS",(0,1),(-1,-1),
+                         [colors.white, colors.HexColor("#f0f4f8")]),
+                        ("GRID",(0,0),(-1,-1), 0.3, colors.HexColor("#bbcdd8")),
+                        ("FONTNAME",(0,1),(0,-1), "Helvetica-Bold"),
+                        ("FONTNAME",(2,1),(2,-1), "Helvetica-Bold"),
+                        ("TOPPADDING",(0,0),(-1,-1), 3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+                    ]))
+                    _story.append(_tbl_geo2)
+                    _story.append(Spacer(1, 4*mm))
+
+                    # ── 3. Diseño estructural ───────────────────────────────
+                    _story.append(Paragraph("3. DISEÑO ESTRUCTURAL (NSR-10 C.15 / ACI 318)", _h1_s))
+                    _story.append(HRFlowable(width="100%", thickness=0.5,
+                                             color=colors.HexColor("#bbcdd8"), spaceAfter=3))
+                    _dis_data = [
+                        ["Verificación", "Capacidad", "Demanda", "Estado"],
+                        ["Cortante 1D dir. B (C.11.3)",
+                         f"φVc = {phi_Vc_1way_B:.1f} kN",
+                         f"Vu = {Vu_1way_B:.1f} kN",
+                         "CUMPLE" if ok_1way_B else "NO CUMPLE"],
+                        ["Cortante 1D dir. L (C.11.3)",
+                         f"φVc = {phi_Vc_1way_L:.1f} kN",
+                         f"Vu = {Vu_1way_L:.1f} kN",
+                         "CUMPLE" if ok_1way_L else "NO CUMPLE"],
+                        ["Punzonamiento bo (C.11.12)",
+                         f"φVc_p = {phi_Vc_P:.1f} kN",
+                         f"Vu_p = {Vu_punz:.1f} kN",
+                         "CUMPLE" if ok_punz else "NO CUMPLE"],
+                        ["Flexión dir. B (C.10.2)",
+                         f"As = {As_req_B:.2f} cm²",
+                         f"Mu = {Mu_flex_B:.1f} kN·m",
+                         "CUMPLE" if disc_B > 0 else "NO CUMPLE"],
+                        ["Flexión dir. L (C.10.2)",
+                         f"As = {As_req_L:.2f} cm²",
+                         f"Mu = {Mu_flex_L:.1f} kN·m",
+                         "CUMPLE" if disc_L > 0 else "NO CUMPLE"],
+                        ["Anclaje gancho 90° (C.12.5)",
+                         f"L_disp = {L_disp_min_cm:.1f} cm",
+                         f"ldh = {ldh_req_cm:.1f} cm",
+                         "CUMPLE" if ok_ldh else "NO CUMPLE"],
+                        ["Desarrollo recto ld (C.12.2)",
+                         f"L_disp = {L_disp_min_cm:.1f} cm",
+                         f"ld = {_ld_req_cm:.1f} cm",
+                         "CUMPLE" if _ok_ld else "NO CUMPLE"],
+                    ]
+                    _dis_tbl = Table(_dis_data,
+                        colWidths=[5.2*cm, 3.8*cm, 3.2*cm, 2.8*cm])
+                    _dis_tbl.setStyle(TableStyle([
+                        ("FONTNAME",  (0,0),(-1,0),  "Helvetica-Bold"),
+                        ("FONTSIZE",  (0,0),(-1,-1), 8),
+                        ("BACKGROUND",(0,0),(-1,0),  colors.HexColor("#1b3a5c")),
+                        ("TEXTCOLOR", (0,0),(-1,0),  colors.white),
+                        ("ROWBACKGROUNDS",(0,1),(-1,-1),
+                         [colors.white, colors.HexColor("#f0f4f8")]),
+                        ("GRID",(0,0),(-1,-1), 0.3, colors.HexColor("#bbcdd8")),
+                        ("TOPPADDING",(0,0),(-1,-1), 3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+                        # Color estado: verde CUMPLE, rojo NO CUMPLE
+                        *[("TEXTCOLOR", (3,i+1),(3,i+1),
+                           colors.HexColor("#2d6a4f") if _dis_data[i+1][3]=="CUMPLE"
+                           else colors.HexColor("#c0392b"))
+                          for i in range(len(_dis_data)-1)],
+                        *[("FONTNAME", (3,i+1),(3,i+1), "Helvetica-Bold")
+                          for i in range(len(_dis_data)-1)],
+                    ]))
+                    _story.append(_dis_tbl)
+                    _story.append(Spacer(1, 4*mm))
+
+                    # ── 4. Armado (cantidades) ──────────────────────────────
+                    _story.append(Paragraph("4. ARMADO PROPUESTO", _h1_s))
+                    _story.append(HRFlowable(width="100%", thickness=0.5,
+                                             color=colors.HexColor("#bbcdd8"), spaceAfter=3))
+                    _arm_data = [
+                        ["Elemento", "Resultado"],
+                        ["Varilla utilizada", f"{bar_z} — db = {db_bar_z:.1f} mm  Ab = {A_bar_z:.2f} cm²"],
+                        ["Barras dir. B (inf)", f"{nbarras_B} × {bar_z}  @  {sep_B:.1f} cm  (As_inf = {As_req_B:.2f} cm²)" + (f"  |  As_SUP: {n_barras_B_sup}×{bar_z} @{sep_B_sup:.0f}cm ({As_req_B_sup:.2f}cm²)" if dp_B else "")],
+                        ["Barras dir. L (inf)", f"{nbarras_L} × {bar_z}  @  {sep_L:.1f} cm  (As_inf = {As_req_L:.2f} cm²)" + (f"  |  As_SUP: {n_barras_L_sup}×{bar_z} @{sep_L_sup:.0f}cm ({As_req_L_sup:.2f}cm²)" if dp_L else "")],
+                        ["DOBLE PARRILLA", ("Dir B + Dir L" if (dp_B and dp_L) else ("Dir B" if dp_B else ("Dir L" if dp_L else "NO"))) + (f" — rho_max={_rho_max_z:.5f}" if _doble_parrilla else "")] if _doble_parrilla else ["Tipo Armado", "Parrilla Simple (una capa)"],
+                        ["Recubrimiento", f"{recub_z:.1f} cm  (d efectivo ≈ {d_avg:.1f} cm)"],
+                        ["Peralte H", f"{Hzap:.0f} cm"],
+                        ["Anclaje gancho 90°", f"ldh = {ldh_req_cm:.1f} cm  |  L_disp = {L_disp_min_cm:.1f} cm  "
+                         f"{'CUMPLE' if ok_ldh else 'NO CUMPLE'}"],
+                        ["Desarrollo recto ld", f"ld = {_ld_req_cm:.1f} cm  |  L_disp = {L_disp_min_cm:.1f} cm  "
+                         f"{'CUMPLE' if _ok_ld else 'NO CUMPLE'}"],
+                        ["Concreto fc", f"{fc_basico:.0f} MPa"],
+                        ["Acero fy", f"{fy_basico:.0f} MPa"],
+                        ["Volumen concreto (est.)",
+                         f"{_b_use * _l_use * _h_zap:.3f} m³"],
+                    ]
+                    _arm_tbl = Table(_arm_data, colWidths=[5*cm, 11*cm])
+                    _arm_tbl.setStyle(TableStyle([
+                        ("FONTNAME",  (0,0),(-1,0),  "Helvetica-Bold"),
+                        ("FONTSIZE",  (0,0),(-1,-1), 8),
+                        ("BACKGROUND",(0,0),(-1,0),  colors.HexColor("#2d6a4f")),
+                        ("TEXTCOLOR", (0,0),(-1,0),  colors.white),
+                        ("ROWBACKGROUNDS",(0,1),(-1,-1),
+                         [colors.white, colors.HexColor("#f0f4f8")]),
+                        ("GRID",(0,0),(-1,-1), 0.3, colors.HexColor("#bbcdd8")),
+                        ("FONTNAME",  (0,1),(0,-1),  "Helvetica-Bold"),
+                        ("TOPPADDING",(0,0),(-1,-1), 3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+                    ]))
+                    _story.append(_arm_tbl)
+                    _story.append(Spacer(1, 4*mm))
+
+                    # ── 5. Estabilidad ──────────────────────────────────────
+                    _story.append(Paragraph("5. ESTABILIDAD GLOBAL (NSR-10 H.4)", _h1_s))
+                    _story.append(HRFlowable(width="100%", thickness=0.5,
+                                             color=colors.HexColor("#bbcdd8"), spaceAfter=3))
+                    _est_data = [
+                        ["Verificación", "FS Calculado", "FS Requerido", "Estado"],
+                        ["Volcamiento",
+                         f"{FS_volc:.2f}" if M_volc > 0 else "N/A",
+                         "1.50",
+                         ("CUMPLE" if ok_volc else "NO CUMPLE") if M_volc > 0 else "Sin carga H"],
+                        ["Deslizamiento",
+                         f"{FS_desl:.2f}" if H_horiz > 0 else "N/A",
+                         "1.50",
+                         ("CUMPLE" if ok_desl else "NO CUMPLE") if H_horiz > 0 else "Sin carga H"],
+                    ]
+                    _est_tbl = Table(_est_data, colWidths=[5.5*cm, 3.5*cm, 3.5*cm, 3.5*cm])
+                    _est_tbl.setStyle(TableStyle([
+                        ("FONTNAME",  (0,0),(-1,0),  "Helvetica-Bold"),
+                        ("FONTSIZE",  (0,0),(-1,-1), 8),
+                        ("BACKGROUND",(0,0),(-1,0),  colors.HexColor("#1b3a5c")),
+                        ("TEXTCOLOR", (0,0),(-1,0),  colors.white),
+                        ("ROWBACKGROUNDS",(0,1),(-1,-1),
+                         [colors.white, colors.HexColor("#f0f4f8")]),
+                        ("GRID",(0,0),(-1,-1), 0.3, colors.HexColor("#bbcdd8")),
+                        ("TOPPADDING",(0,0),(-1,-1), 3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+                    ]))
+                    _story.append(_est_tbl)
+                    _story.append(Spacer(1, 6*mm))
+
+                    # ── 6. Firma ────────────────────────────────────────────
+                    _story.append(Paragraph("6. FIRMA RESPONSABLE", _h1_s))
+                    _story.append(HRFlowable(width="100%", thickness=0.5,
+                                             color=colors.HexColor("#bbcdd8"), spaceAfter=6))
+                    _story.append(Spacer(1, 8*mm))
+                    _firma_tbl = Table([
+                        [f"{'_'*30}", "", f"{'_'*30}"],
+                        [_ingeniero, "", _apb],
+                        ["Diseñó / Calculó", "", "Aprobó"],
+                        ["Matrícula Prof.: _______________", "",
+                         "Matrícula Prof.: _______________"],
+                    ], colWidths=[7*cm, 2*cm, 7*cm])
+                    _firma_tbl.setStyle(TableStyle([
+                        ("FONTNAME",  (0,0),(-1,-1), "Helvetica"),
+                        ("FONTSIZE",  (0,0),(-1,-1), 8),
+                        ("FONTNAME",  (0,1),(0,1),   "Helvetica-Bold"),
+                        ("FONTNAME",  (2,1),(2,1),   "Helvetica-Bold"),
+                        ("ALIGN",     (0,0),(-1,-1), "CENTER"),
+                        ("TOPPADDING",(0,0),(-1,-1), 2),
+                    ]))
+                    _story.append(_firma_tbl)
+
+                    # ── Pie de página (nota al pie del story) ───────────────
+                    _story.append(Spacer(1, 4*mm))
+                    _story.append(HRFlowable(width="100%", thickness=0.5,
+                                             color=colors.HexColor("#bbcdd8")))
+                    _story.append(Paragraph(
+                        f"Generado por Konte / StructoPro  |  "
+                        f"Norma: {norma_sel}  |  "
+                        f"Método: {metodo_cap}  |  "
+                        f"Fecha: {__import__('datetime').date.today().strftime('%Y-%m-%d')}  |  "
+                        "Documento de uso exclusivo del proyecto indicado.",
+                        _caption
+                    ))
+
+                    # ── Construir PDF ────────────────────────────────────────
+                    _doc_pdf.build(_story)
+                    _pdf_buf.seek(0)
+                    st.success(_t("PDF generado correctamente.", "PDF generated successfully."))
+                    st.download_button(
+                        _t("Descargar PDF Memoria", "Download PDF Report"),
+                        data=_pdf_buf,
+                        file_name=f"Memoria_Zapata_{tipo_zap[:1]}_{norma_sel[:3]}.pdf",
+                        mime="application/pdf",
+                        key="za_dl_pdf",
+                        use_container_width=True
+                    )
+
+                except ImportError:
+                    st.error(_t(
+                        "ReportLab no está instalado. Agrega 'reportlab' a requirements.txt.",
+                        "ReportLab is not installed. Add 'reportlab' to requirements.txt."
+                    ))
+                except Exception as _e_pdf:
+                    st.error(f"Error generando PDF: {_e_pdf}")
+
+        # ── P3-B: Ficha Técnica Unificada PDF+DXF+IFC en un clic ─────────────
+        st.markdown("---")
+        st.markdown(
+            _t("#### 📋 Ficha Técnica Unificada (PDF + DXF + IFC)",
+               "#### 📋 Unified Technical Sheet (PDF + DXF + IFC)")
+        )
+        st.info(_t(
+            "Genera y descarga en un solo flujo: **Memoria PDF** (ReportLab) + "
+            "**Plano DXF** (ezdxf) + **Modelo IFC** (si ifcopenshell disponible). "
+            "Formato de entrega completo para interventoría.",
+            "Generates and downloads in one flow: **PDF Report** (ReportLab) + "
+            "**DXF Drawing** (ezdxf) + **IFC Model** (if ifcopenshell available). "
+            "Complete delivery package for site inspection."
+        ))
+        _ficha_c1, _ficha_c2, _ficha_c3 = st.columns(3)
+        _ficha_incl_pdf = _ficha_c1.checkbox(
+            _t("Incluir PDF Memoria","Include PDF Report"), True, key="ficha_pdf")
+        _ficha_incl_dxf = _ficha_c2.checkbox(
+            _t("Incluir DXF Plano","Include DXF Drawing"), True, key="ficha_dxf")
+        _ficha_incl_ifc = _ficha_c3.checkbox(
+            _t("Incluir IFC Modelo","Include IFC Model"),
+            _IFC_AVAILABLE, key="ficha_ifc")
+
+        if st.button(
+            _t("Generar Ficha Técnica Unificada","Generate Unified Technical Sheet"),
+            key="ficha_btn", use_container_width=True,
+            disabled=not _puede_exportar,
+            help=_t("Requiere licencia Pro o Admin.",
+                    "Requires Pro or Admin license.") if not _puede_exportar else None
+        ):
+            _ficha_ok = []
+            _ficha_err = []
+
+            # ── PDF ──────────────────────────────────────────────────────
+            if _ficha_incl_pdf:
+                try:
+                    from reportlab.lib.pagesizes import A4
+                    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+                    from reportlab.lib.units import cm
+                    from reportlab.lib import colors
+                    from reportlab.platypus import (
+                        SimpleDocTemplate, Paragraph, Spacer, Table,
+                        TableStyle as _TblSt, HRFlowable
+                    )
+                    import io as _io_f
+                    import datetime as _dt_f
+                    _empresa_f, _proy_f, _ing_f, _el_f, _rv_f, _ap_f, _lg_f = _get_identity()
+                    _pdf_f = _io_f.BytesIO()
+                    _doc_f = SimpleDocTemplate(_pdf_f, pagesize=A4,
+                        leftMargin=2*cm, rightMargin=2*cm,
+                        topMargin=2.5*cm, bottomMargin=2*cm)
+                    _st_f  = getSampleStyleSheet()
+                    _h1_f  = ParagraphStyle("H1F", parent=_st_f["Heading1"],
+                        fontSize=11, textColor=colors.HexColor("#1b3a5c"),
+                        spaceBefore=8, spaceAfter=4)
+                    _bd_f  = ParagraphStyle("BF", parent=_st_f["Normal"], fontSize=9)
+                    _stry  = []
+                    _stry.append(Paragraph(
+                        f"FICHA TÉCNICA — ZAPATA {tipo_zap.upper()} ({norma_sel})",
+                        ParagraphStyle("TF", parent=_st_f["Title"], fontSize=14,
+                                       textColor=colors.HexColor("#1b3a5c"))))
+                    _stry.append(Spacer(1, 3*cm))
+                    _stry.append(HRFlowable(width="100%", thickness=1,
+                                            color=colors.HexColor("#1b3a5c")))
+                    _stry.append(Spacer(1, 0.3*cm))
+                    _tbl_f = Table([
+                        ["Empresa:", _empresa_f, "Proyecto:", _proy_f],
+                        ["Ingeniero:", _ing_f, "Fecha:", _dt_f.date.today().strftime("%Y-%m-%d")],
+                        ["Dimensiones:", f"B={B_cp:.2f}m × L={L_cp:.2f}m × H={Hzap:.0f}cm",
+                         "Método:", metodo_cap],
+                        ["q_adm:", f"{q_adm:.1f} kPa", "q_act:", f"{q_act:.1f} kPa"],
+                        ["q_ult:", f"{q_ult:.1f} kPa", "FS calc.:",
+                         f"{FS_calc:.2f}" if FS_calc < 999 else "∞"],
+                        ["Armado B:", f"{nbarras_B}×{bar_z}@{sep_B:.0f}cm",
+                         "Armado L:", f"{nbarras_L}×{bar_z}@{sep_L:.0f}cm"],
+                        ["Estado global:", "CUMPLE" if (cumplio and ok_1way_B and
+                            ok_1way_L and ok_punz) else "NO CUMPLE", "", ""],
+                    ], colWidths=[3*cm, 5.5*cm, 3*cm, 5.5*cm])
+                    _tbl_f.setStyle(_TblSt([
+                        ("FONTSIZE",(0,0),(-1,-1),9),
+                        ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"),
+                        ("FONTNAME",(2,0),(2,-1),"Helvetica-Bold"),
+                        ("GRID",(0,0),(-1,-1),0.3,colors.HexColor("#bbcdd8")),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),
+                         [colors.HexColor("#f0f4f8"),colors.white]),
+                        ("TOPPADDING",(0,0),(-1,-1),3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                    ]))
+                    _stry.append(_tbl_f)
+                    _stry.append(Spacer(1, 0.5*cm))
+                    _stry.append(Paragraph(
+                        f"Norma: {norma_sel}  |  Generado por Konte/StructoPro  |  "
+                        f"{_dt_f.date.today().strftime('%Y-%m-%d')}",
+                        ParagraphStyle("Cap", parent=_st_f["Normal"],
+                                       fontSize=8, textColor=colors.grey)))
+                    _doc_f.build(_stry)
+                    _pdf_f.seek(0)
+                    st.download_button(
+                        _t("Descargar Ficha PDF","Download PDF Sheet"),
+                        data=_pdf_f,
+                        file_name=f"FichaTecnica_Zapata_{B_cp:.1f}x{L_cp:.1f}.pdf",
+                        mime="application/pdf",
+                        key="ficha_dl_pdf",
+                        use_container_width=True
+                    )
+                    _ficha_ok.append("PDF")
+                except Exception as _e_fp:
+                    _ficha_err.append(f"PDF: {_e_fp}")
+
+            # ── DXF (reutilizar bytes ya generados si existen) ────────────
+            if _ficha_incl_dxf:
+                _dxf_prev = st.session_state.get("_last_dxf_bytes")
+                if _dxf_prev:
+                    st.download_button(
+                        _t("Descargar Ficha DXF","Download DXF Drawing"),
+                        data=_dxf_prev,
+                        file_name=f"FichaTecnica_Zapata_{B_cp:.1f}x{L_cp:.1f}.dxf",
+                        mime="application/octet-stream",
+                        key="ficha_dl_dxf", use_container_width=True
+                    )
+                    _ficha_ok.append("DXF")
+                else:
+                    st.caption(_t(
+                        "DXF: Genera primero el plano DXF en la sección 'Planos DXF ICONTEC' "
+                        "para incluirlo en la ficha.",
+                        "DXF: First generate the DXF drawing in 'ICONTEC DXF Plans' section "
+                        "to include it in the sheet."
+                    ))
+
+            # ── IFC ───────────────────────────────────────────────────────
+            if _ficha_incl_ifc and _IFC_AVAILABLE:
+                _ifc_prev = st.session_state.get("_last_ifc_bytes")
+                if _ifc_prev:
+                    st.download_button(
+                        _t("Descargar Ficha IFC","Download IFC Model"),
+                        data=_ifc_prev,
+                        file_name=f"FichaTecnica_Zapata_{B_cp:.1f}x{L_cp:.1f}.ifc",
+                        mime="application/octet-stream",
+                        key="ficha_dl_ifc", use_container_width=True
+                    )
+                    _ficha_ok.append("IFC")
+                elif not _IFC_AVAILABLE:
+                    st.caption(_t("IFC no disponible (ifcopenshell no instalado).",
+                                  "IFC not available (ifcopenshell not installed)."))
+                else:
+                    st.caption(_t(
+                        "IFC: Genera primero el modelo IFC en la sección BIM.",
+                        "IFC: First generate the IFC model in the BIM section."
+                    ))
+
+            # Resumen
+            if _ficha_ok:
+                st.success(_t(
+                    f"Ficha unificada generada: {' + '.join(_ficha_ok)}",
+                    f"Unified sheet generated: {' + '.join(_ficha_ok)}"
+                ))
+            if _ficha_err:
+                for _fe in _ficha_err:
+                    st.error(f"Error: {_fe}")
+
         #  EXPORTACIÓN DXF (Protocolo Diamante N4)
         import datetime as _dt_dxf
         st.write("#### Planos DXF ICONTEC")
@@ -2604,11 +5099,11 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         if st.button("Generar Plano DXF ICONTEC - Zapata Aislada"):
             doc_dxf = ezdxf.new('R2010', setup=True)
             doc_dxf.units = ezdxf.units.CM
-            LW = {'CONCRETO':70, 'ACERO_L':40, 'ACERO_B':40, 'COTAS':25, 'TEXTO':25, 'ROTULO':35, 'MARGEN':70}
-            COL = {'CONCRETO':7, 'ACERO_L':3, 'ACERO_B':1, 'COTAS':2, 'TEXTO':7, 'ROTULO':8, 'MARGEN':7}
+            LW = {'CONCRETO':70, 'ACERO_L':40, 'ACERO_B':40, 'ACERO_SUP':40, 'COTAS':25, 'TEXTO':25, 'ROTULO':35, 'MARGEN':70}
+            COL = {'CONCRETO':7, 'ACERO_L':3, 'ACERO_B':1, 'ACERO_SUP':6, 'COTAS':2, 'TEXTO':7, 'ROTULO':8, 'MARGEN':7}
             for lay, lw in LW.items():
                 doc_dxf.layers.new(lay, dxfattribs={'color':COL[lay], 'lineweight':lw})
-            doc_dxf.styles.new('ROMANS', dxfattribs={'font':'romans.shx'})
+            doc_dxf.styles.new('ROMANS', dxfattribs={'font':'Arial.ttf'})
             
             msp = doc_dxf.modelspace()
             
@@ -2641,6 +5136,18 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             msp.add_line((ex_A + rec + radio_dob, y_bar_A), (ex_A + B_cm - rec - radio_dob, y_bar_A), dxfattribs={'layer':'ACERO_B'})
             _hook_arc(ex_A + rec, y_bar_A, 'left', 'ACERO_B'); _hook_arc(ex_A + B_cm - rec, y_bar_A, 'right', 'ACERO_B')
             _text(ex_A + B_cm/2, ey_A - 15, "CORTE A-A (Dir. B)", 'TEXTO', h=3.0, ha='center')
+            # ── Acero SUPERIOR Dir. B (Corte A-A) — solo si doble parrilla ──────────
+            if dp_B and n_barras_B_sup > 0:
+                _y_sup_AA = ey_A + Hc - rec - db_cm/2
+                for _j in range(int(n_barras_B_sup)):
+                    _xs = ex_A + rec + _j * sep_B_sup if n_barras_B_sup > 1 else ex_A + B_cm/2
+                    msp.add_circle((_xs, _y_sup_AA), db_cm/2, dxfattribs={'layer':'ACERO_SUP'})
+                msp.add_line((ex_A + rec + radio_dob, _y_sup_AA), (ex_A + B_cm - rec - radio_dob, _y_sup_AA),
+                             dxfattribs={'layer':'ACERO_SUP'})
+                _text(ex_A + B_cm/2, _y_sup_AA + db_cm + 2,
+                      f"As_SUP={As_req_B_sup:.1f}cm2 ({n_barras_B_sup}{bar_z}@{sep_B_sup:.0f}cm)",
+                      'TEXTO', h=2.0, ha='center')
+
 
             ex_B = B_cm + 60; ey_B = 0
             _rect(ex_B, ey_B, L_cm, Hc, 'CONCRETO')
@@ -2663,6 +5170,18 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                 msp.add_line((xj, py + rec), (xj, py + L_cm - rec), dxfattribs={'layer':'ACERO_L'})
             _text(px + B_cm/2, py - 15, "PLANTA ZAPATA", 'TEXTO', h=3.0, ha='center')
             
+            # ── Acero SUPERIOR Dir. L (Corte B-B) — solo si doble parrilla ──────────
+            if dp_L and n_barras_L_sup > 0:
+                _y_sup_BB = ey_B + Hc - rec - db_cm/2
+                for _i in range(int(n_barras_L_sup)):
+                    _xs = ex_B + rec + _i * sep_L_sup if n_barras_L_sup > 1 else ex_B + L_cm/2
+                    msp.add_circle((_xs, _y_sup_BB), db_cm/2, dxfattribs={'layer':'ACERO_SUP'})
+                msp.add_line((ex_B + rec + radio_dob, _y_sup_BB), (ex_B + L_cm - rec - radio_dob, _y_sup_BB),
+                             dxfattribs={'layer':'ACERO_SUP'})
+                _text(ex_B + L_cm/2, _y_sup_BB + db_cm + 2,
+                      f"As_SUP={As_req_L_sup:.1f}cm2 ({n_barras_L_sup}{bar_z}@{sep_L_sup:.0f}cm)",
+                      'TEXTO', h=2.0, ha='center')
+
             # Mover dibujos a un bloque (virtual) y escalarlo para encajar en el papel
             escala_den = 50
             dim_w = max(B_cm+60+L_cm, B_cm)
@@ -2672,8 +5191,8 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                     escala_den = den; break
             
             # Margen y Rotulo Protocolo N4
-            msp.add_lwpolyline([(1,1), (W_P-1,1), (W_P-1,H_P-1), (1,H_P-1), (1,1)], dxfattribs={'layer':'MARGEN'})
-            msp.add_lwpolyline([(1,1), (W_P-1,1), (W_P-1,4), (1,4), (1,1)], dxfattribs={'layer':'ROTULO'})
+            msp.add_lwpolyline([(0.5,0.5), (W_P-0.5,0.5), (W_P-0.5,H_P-0.5), (0.5,H_P-0.5), (0.5,0.5)], dxfattribs={'layer':'MARGEN'})
+            msp.add_lwpolyline([(0.5,0.5), (W_P-0.5,0.5), (W_P-0.5,4.5), (0.5,4.5), (0.5,0.5)], dxfattribs={'layer':'ROTULO'})
             _text(W_P/2, 2.5, f"ZAPATA AISLADA {B_use:.2f}x{L_use:.2f}m - H={H_zap:.0f}cm | {norma_sel}", 'TEXTO', h=0.4, ha='center')
             _text(W_P/2, 1.5, f"Papel: {LBL_P} | Escala Vista: 1:{escala_den}", 'TEXTO', h=0.3, ha='center')
             
@@ -2682,6 +5201,20 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             doc_dxf.blocks.new(name='VISTAS_ZAP')
             blk = doc_dxf.blocks.get('VISTAS_ZAP')
             
+            # ── Acero SUPERIOR en planta (líneas punteadas) — solo si doble parrilla ─
+            if _doble_parrilla:
+                if dp_B and n_barras_B_sup > 0:
+                    for _i in range(int(n_barras_B_sup)):
+                        _yi_s = py + rec + _i * sep_B_sup if n_barras_B_sup > 1 else py + L_cm/2
+                        _line = msp.add_line((px + rec, _yi_s), (px + B_cm - rec, _yi_s),
+                                             dxfattribs={'layer':'ACERO_SUP'})
+                        _line.dxf.linetype = 'DASHED'
+                if dp_L and n_barras_L_sup > 0:
+                    for _j in range(int(n_barras_L_sup)):
+                        _xj_s = px + rec + _j * sep_L_sup if n_barras_L_sup > 1 else px + B_cm/2
+                        _line = msp.add_line((_xj_s, py + rec), (_xj_s, py + L_cm - rec),
+                                             dxfattribs={'layer':'ACERO_SUP'})
+                        _line.dxf.linetype = 'DASHED'
             # Transferimos desde msp a blk y borramos de msp
             for e in list(msp):
                 if e.dxf.layer not in ['MARGEN', 'ROTULO', 'TEXTO']:
@@ -2714,59 +5247,122 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         
         def _make_ifc_zapata_aislada(B_m, L_m, H_m, c1_m, c2_m, fc_mpa, fy_mpa,
                                      bar_B, n_B, bar_L, n_L, recub_cm,
-                                     Pu_kN, norma, proyecto):
+                                     Pu_kN, norma, proyecto,
+                                     dp_B=False, dp_L=False,
+                                     n_B_sup=0, n_L_sup=0):
+            """IFC4 completo: hormigón (zapata + pedestal) + refuerzo inferior y superior."""
             try:
                 import ifcopenshell
                 import ifcopenshell.api
-                import uuid
-                import time
             except ImportError:
                 return None
-            
-            O = ifcopenshell.file(schema="IFC4")
 
-            
-            def p4(x,y,z): return O.createIfcCartesianPoint((float(x),float(y),float(z)))
-            def ax2(pt, z_dir=(0.,0.,1.), x_dir=(1.,0.,0.)):
-                return O.createIfcAxis2Placement3D(pt, O.createIfcDirection(z_dir), O.createIfcDirection(x_dir))
-            
-            project = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject", name=proyecto)
-            context = ifcopenshell.api.run("context.add_context", O, context_type="Model")
-            body    = ifcopenshell.api.run("context.add_context", O, context_type="Model", context_identifier="Body", target_view="MODEL_VIEW", parent=context)
-            site    = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite", name="Sitio")
-            building= ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", name="Edificio")
-            _u = ifcopenshell.api.run("unit.add_si_unit", O, unit_type="LENGTHUNIT"); ifcopenshell.api.run("unit.assign_unit", O, units=[_u])
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project, products=[site])
-            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site, products=[building])
-            
-            # Zapata Geom
-            zapata = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting", name="Zapata Aislada")
+            O = ifcopenshell.file(schema="IFC4")
+            db_m = REBAR_DICT[bar_B]["db"] / 1000.0   # diámetro varilla en m
+
+            def p4(x, y, z): return O.createIfcCartesianPoint((float(x), float(y), float(z)))
+            def ax2(pt, z_dir=(0., 0., 1.), x_dir=(1., 0., 0.)):
+                return O.createIfcAxis2Placement3D(
+                    pt, O.createIfcDirection(z_dir), O.createIfcDirection(x_dir))
+            def make_rect_solid(w, d, h, orig=(0., 0., 0.)):
+                prof = O.createIfcRectangleProfileDef("AREA", None, ax2(p4(*orig)), w, d)
+                return O.createIfcExtrudedAreaSolid(prof, ax2(p4(*orig)), O.createIfcDirection((0., 0., 1.)), h)
+
+            # ── Jerarquía del proyecto ──────────────────────────────────────────
+            project  = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcProject",  name=proyecto)
+            context  = ifcopenshell.api.run("context.add_context", O, context_type="Model")
+            body     = ifcopenshell.api.run("context.add_context", O, context_type="Model",
+                            context_identifier="Body", target_view="MODEL_VIEW", parent_context=context)
+            site     = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcSite",     name="Sitio")
+            building = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcBuilding", name="Edificio")
+            _u = ifcopenshell.api.run("unit.add_si_unit", O, unit_type="LENGTHUNIT")
+            ifcopenshell.api.run("unit.assign_unit", O, units=[_u])
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=project,  products=[site])
+            ifcopenshell.api.run("aggregate.assign_object", O, relating_object=site,     products=[building])
+
+            # ── Zapata ──────────────────────────────────────────────────────────
+            zapata = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcFooting",
+                                         name="Zapata Aislada")
             zapata.PredefinedType = "PAD_FOOTING"
             ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, products=[zapata])
-            
-            rect_prof = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), B_m, L_m)
-            extr_zap  = O.createIfcExtrudedAreaSolid(rect_prof, ax2(p4(0,0,0)), O.createIfcDirection((0.,0.,1.)), H_m)
-            shape_zap = O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [extr_zap])
+            shape_zap = O.createIfcShapeRepresentation(body, "Body", "SweptSolid",
+                                                       [make_rect_solid(B_m, L_m, H_m)])
             ifcopenshell.api.run("geometry.assign_representation", O, product=zapata, representation=shape_zap)
             ifcopenshell.api.run("geometry.edit_object_placement", O, product=zapata)
-            
-            # Pedestal Geom
-            pedestal = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcColumn", name="Pedestal Corto")
+
+            # ── Pedestal ────────────────────────────────────────────────────────
+            pedestal = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcColumn",
+                                            name="Pedestal / Columna")
             ifcopenshell.api.run("aggregate.assign_object", O, relating_object=building, products=[pedestal])
-            rect_ped = O.createIfcRectangleProfileDef('AREA', None, ax2(p4(0,0,0)), c1_m, c2_m)
-            extr_ped = O.createIfcExtrudedAreaSolid(rect_ped, ax2(p4(0,0,H_m)), O.createIfcDirection((0.,0.,1.)), 0.5)
-            shape_ped= O.createIfcShapeRepresentation(body, 'Body', 'SweptSolid', [extr_ped])
+            shape_ped = O.createIfcShapeRepresentation(body, "Body", "SweptSolid",
+                                                       [make_rect_solid(c1_m, c2_m, H_m * 0.5,
+                                                                        orig=(B_m/2 - c1_m/2,
+                                                                              L_m/2 - c2_m/2, H_m))])
             ifcopenshell.api.run("geometry.assign_representation", O, product=pedestal, representation=shape_ped)
             ifcopenshell.api.run("geometry.edit_object_placement", O, product=pedestal)
-            
-            # Propiedades NSR-10
-            pset = ifcopenshell.api.run("pset.add_pset", O, product=zapata, name="Pset_NSR10_Zapata")
-            ifcopenshell.api.run("pset.edit_pset", O, pset=pset, properties={
-                "f_c_MPa": float(fc_mpa), "fy_MPa": float(fy_mpa),
-                "Acero_Dir_B": f"{n_B} {bar_B}", "Acero_Dir_L": f"{n_L} {bar_L}",
-                "Carga_Pu_kN": float(Pu_kN), "Norma": norma
-            })
-            
+
+            # ── Función auxiliar: crear barra cilíndrica IfcReinforcingBar ──────
+            def add_rebar(name, x0, y0, z0, x1, y1, z1, diameter_m, predefined="BOTTOM"):
+                seg = O.createIfcPolyline([p4(x0, y0, z0), p4(x1, y1, z1)])
+                rep = O.createIfcShapeRepresentation(body, "Body", "Curve3D", [seg])
+                rb  = ifcopenshell.api.run("root.create_entity", O, ifc_class="IfcReinforcingBar",
+                                           name=name)
+                rb.NominalDiameter  = float(diameter_m)
+                rb.BarLength        = float(((x1-x0)**2+(y1-y0)**2+(z1-z0)**2)**0.5)
+                rb.PredefinedType   = "LIGATURE" if "EST" in name.upper() else "LONGITUDINAL"
+                ifcopenshell.api.run("aggregate.assign_object", O, relating_object=zapata, products=[rb])
+                ifcopenshell.api.run("geometry.assign_representation", O, product=rb, representation=rep)
+                ifcopenshell.api.run("geometry.edit_object_placement", O, product=rb)
+                return rb
+
+            # ── Barras inferiores Dir B (paralelas a L) ─────────────────────────
+            rec_m  = recub_cm / 100.0
+            z_inf  = rec_m + db_m / 2.0
+            z_sup  = H_m - rec_m - db_m / 2.0
+            y_step = (L_m - 2 * rec_m) / max(n_B - 1, 1)
+            for i in range(n_B):
+                y_pos = rec_m + i * y_step
+                add_rebar(f"B_INF_{i+1}", 0, y_pos, z_inf, B_m, y_pos, z_inf, db_m)
+
+            # ── Barras inferiores Dir L (paralelas a B) ─────────────────────────
+            x_step = (B_m - 2 * rec_m) / max(n_L - 1, 1)
+            for i in range(n_L):
+                x_pos = rec_m + i * x_step
+                add_rebar(f"L_INF_{i+1}", x_pos, 0, z_inf, x_pos, L_m, z_inf, db_m)
+
+            # ── Barras superiores Dir B — solo si doble parrilla ───────────────
+            if dp_B and n_B_sup > 0:
+                y_step_s = (L_m - 2 * rec_m) / max(n_B_sup - 1, 1)
+                for i in range(n_B_sup):
+                    y_pos = rec_m + i * y_step_s
+                    add_rebar(f"B_SUP_{i+1}", 0, y_pos, z_sup, B_m, y_pos, z_sup, db_m)
+
+            # ── Barras superiores Dir L — solo si doble parrilla ───────────────
+            if dp_L and n_L_sup > 0:
+                x_step_s = (B_m - 2 * rec_m) / max(n_L_sup - 1, 1)
+                for i in range(n_L_sup):
+                    x_pos = rec_m + i * x_step_s
+                    add_rebar(f"L_SUP_{i+1}", x_pos, 0, z_sup, x_pos, L_m, z_sup, db_m)
+
+            # ── Propiedades Pset normativa ───────────────────────────────────────
+            pset = ifcopenshell.api.run("pset.add_pset", O, product=zapata,
+                                        name="Pset_StructoPro_Zapata")
+            props = {
+                "Norma":          norma,
+                "f_c_MPa":        float(fc_mpa),
+                "fy_MPa":         float(fy_mpa),
+                "Acero_Dir_B_inf": f"{n_B} {bar_B}",
+                "Acero_Dir_L_inf": f"{n_L} {bar_L}",
+                "Carga_Pu_kN":    float(Pu_kN),
+                "Recubrimiento_cm": float(recub_cm),
+                "Doble_Parrilla": "SÍ" if (dp_B or dp_L) else "NO",
+            }
+            if dp_B and n_B_sup > 0:
+                props["Acero_Dir_B_sup"] = f"{n_B_sup} {bar_B}"
+            if dp_L and n_L_sup > 0:
+                props["Acero_Dir_L_sup"] = f"{n_L_sup} {bar_L}"
+            ifcopenshell.api.run("pset.edit_pset", O, pset=pset, properties=props)
+
             import tempfile, os
             with tempfile.NamedTemporaryFile(suffix='.ifc', delete=False) as tmp:
                 tmp_path = tmp.name
@@ -2781,8 +5377,12 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             with st.spinner("Generando IFC4 nativo..."):
                 buf_ifc = _make_ifc_zapata_aislada(
                     B_use, L_use, H_zap/100, c1_col/100, c2_col/100, fc_basico, fy_basico,
-                    bar_z, int(n_barras_B), bar_z, int(n_barras_L), recub_z, P_ult, norma_sel, st.session_state.get("proyecto", "") or "Proyecto"
+                    bar_z, int(n_barras_B), bar_z, int(n_barras_L), recub_z, P_ult, norma_sel,
+                    st.session_state.get("proyecto", "") or "Proyecto",
+                    dp_B=dp_B, dp_L=dp_L,
+                    n_B_sup=int(n_barras_B_sup), n_L_sup=int(n_barras_L_sup)
                 )
+
                 if buf_ifc:
                     st.success("IFC4 generado con éxito.")
                 else:
@@ -3013,13 +5613,18 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         ])
         # Integrar precios guardados en base global o usar defaults directos si no se ha visitado el APU Mercado
         _apu = st.session_state.get("apu_config", {})
+        if not _apu:
+            st.info(_t(
+                'AVISO: Configure los precios en el modulo APU Mercado para obtener costos reales.',
+                'NOTICE: Configure prices in the APU Market module to obtain real costs.'
+            ))
         _mon = _apu.get("moneda", "COP")
-        _p_cem = _apu.get("cemento", 32000.0)
-        _p_ace = _apu.get("acero",   4500.0)
-        _p_are = _apu.get("arena",   85000.0)
-        _p_gra = _apu.get("grava",   95000.0)
-        c_excav_u = _apu.get("costo_excav_m3", 25000.0)
-        _has_prices = True  # Siempre mostrar precios con los valores por defecto si no hay base
+        _p_cem = _apu.get('cemento', 0)
+        _p_ace = _apu.get('acero', 0)
+        _p_are = _apu.get('arena', 0)
+        _p_gra = _apu.get('grava', 0)
+        c_excav_u = _apu.get('costo_excav_m3', 0)
+        _has_prices = bool(_apu)  # Solo calcular desglose si hay precios configurados en APU Mercado
 
         _c_cem  = bultos_zap * _p_cem
         _c_ace  = peso_total_acero_zap * _p_ace
@@ -3033,7 +5638,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         _gran_total = 0.0
         if _has_prices:
             total_dias_mo = (peso_total_acero_zap * 0.04) + (vol_concreto_zap * 0.4) + (vol_excavacion * 0.3)
-            costo_mo = total_dias_mo * _apu.get("costo_dia_mo", 69333.33)
+            costo_mo = total_dias_mo * _apu.get('costo_dia_mo', 0)
             costo_directo = _total_mat + costo_mo
             herramienta = costo_mo * _apu.get("pct_herramienta", 0.05)
             aiu = costo_directo * _apu.get("pct_aui", 0.30)
@@ -3053,7 +5658,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             _pct_iva = _apu.get('iva', 0.19)*100
             _desglose = [
                 {"Concepto": "① Materiales Directos",  "Base de cálculo": "Excavación + Concreto + Acero", "Importe": f"{_total_mat:,.0f} {_mon}"},
-                {"Concepto": "② Mano de Obra",         "Base de cálculo": f"{total_dias_mo:.2f} días × {_apu.get('costo_dia_mo',69333.33):,.0f}/día", "Importe": f"{costo_mo:,.0f} {_mon}"},
+                {"Concepto": "② Mano de Obra",         "Base de cálculo": f"{total_dias_mo:.2f} días × {_apu.get('costo_dia_mo', 0):,.0f}/día", "Importe": f"{costo_mo:,.0f} {_mon}"},
                 {"Concepto": " COSTO DIRECTO (CD)",   "Base de cálculo": "① + ②",                         "Importe": f"{costo_directo:,.0f} {_mon}"},
                 {"Concepto": f"③ Herramienta Menor",   "Base de cálculo": f"{_pct_he:.1f}% × MO",          "Importe": f"{herramienta:,.0f} {_mon}"},
                 {"Concepto": f"④ A.I.U. ({_pct_aiu:.0f}%)", "Base de cálculo": f"{_pct_aiu:.1f}% × CD",   "Importe": f"{aiu:,.0f} {_mon}"},
@@ -3174,8 +5779,14 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
         if "apu_config" in st.session_state:
             st.markdown("---")
             st.markdown("###  Presupuesto Estimado (Promedio de Fuentes Regionales)")
-            apu = st.session_state.apu_config
-            mon = apu["moneda"]
+            apu = st.session_state.get("apu_config", {})
+            if not apu:
+                st.info(_t(
+                    'AVISO: Configure los precios en el modulo APU Mercado.',
+                    'NOTICE: Configure prices in APU Market module.'
+                ))
+                apu = {}
+            mon = apu.get("moneda", "")
             c_excav = vol_excavacion * 25000
             
             bultos_zap  = vol_concreto_zap * 350 / 50.0
@@ -3191,7 +5802,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
             total_mat = c_cem + c_ace + c_are + c_gra + c_excav
             
             total_dias_mo = (peso_total_acero_zap * 0.04) + (vol_concreto_zap * 0.4) + (vol_excavacion * 0.3)
-            costo_mo = total_dias_mo * apu.get("costo_dia_mo", 69333.33)
+            costo_mo = total_dias_mo * apu.get('costo_dia_mo', 0)
             
             costo_directo = total_mat + costo_mo
             herramienta = costo_mo * apu.get("pct_herramienta", 0.05)
@@ -3218,7 +5829,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                     f"{vol_arena_z:.2f} m³ × {apu['arena']:,.0f}/m³",
                     f"{vol_grava_z:.2f} m³ × {apu['grava']:,.0f}/m³",
                     "① + ② + ③ + ④ + ⑤",
-                    f"{total_dias_mo:.2f} días × {apu.get('costo_dia_mo', 69333.33):,.0f}/día",
+                    f"{total_dias_mo:.2f} días × {apu.get('costo_dia_mo', 0):,.0f}/día",
                     "Mat. + MO",
                     f"{apu.get('pct_herramienta', 0.05)*100:.1f}% × Mano de Obra",
                     f"{apu.get('pct_aui', 0.30)*100:.0f}% × Costo Directo",
@@ -3246,7 +5857,7 @@ with st.expander(_t("3. Diseño Estructural de Zapata Prismática y Dibujador 30
                 df_export = pd.DataFrame({
                     "Item": ["Excavación", "Cemento", "Acero", "Arena", "Grava", "Mano de Obra"],
                     "Cantidad": [vol_excavacion, bultos_zap, peso_total_acero_zap, vol_arena_z, vol_grava_z, total_dias_mo],
-                    "Unidad": [25000, apu['cemento'], apu['acero'], apu['arena'], apu['grava'], apu.get('costo_dia_mo', 69333.33)]
+                    "Unidad": [25000, apu['cemento'], apu['acero'], apu['arena'], apu['grava'], apu.get('costo_dia_mo', 0)]
                 })
                 df_export["Subtotal"] = df_export["Cantidad"] * df_export["Unidad"]
                 df_export.to_excel(writer, index=False, sheet_name='APU')
@@ -3561,23 +6172,23 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                                                        qu_max, qu_min, c1_cm, c2_cm,
                                                        titulo=f"qu(x,y) — {label}", q_adm=q_adm)
             st.plotly_chart(fig_hm, use_container_width=True)
-        if abs(qu_max_z - qu_min_z) < 1.0:
+        if abs(qu_max - qu_min) < 1.0:
             st.info(
                 " **Distribución uniforme** — qu = "
-                f"{qu_max_z:.1f} kPa constante en toda la huella. "
+                f"{qu_max:.1f} kPa constante en toda la huella. "
                 "El gráfico 3D cobra valor cuando ingresas momentos Mu ≠ 0 "
                 "para ver la variación de presiones."
             )
         else:
-            if qu_min_z >= 0:
+            if qu_min >= 0:
                 st.warning(
                     f" **Distribución trapezoidal** — "
-                    f"qu_max = {qu_max_z:.1f} kPa | qu_min = {qu_min_z:.1f} kPa. "
+                    f"qu_max = {qu_max:.1f} kPa | qu_min = {qu_min:.1f} kPa. "
                     f"Excentricidad activa en la zapata."
                 )
             else:
                 st.error(
-                    f" **Levantamiento parcial** — qu_min = {qu_min_z:.1f} kPa < 0. "
+                    f" **Levantamiento parcial** — qu_min = {qu_min:.1f} kPa < 0. "
                     "Parte de la zapata no está en contacto con el suelo."
                 )
             return {"qu_max": qu_max, "qu_min": qu_min, "tipo": tipo_dist,
@@ -3597,14 +6208,40 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         # R_strap = M_exc / L_centro_a_centro (equilibrio de momentos)
         # Para medianera: la excentricidad es e_B respecto al centroide de la zapata
         e_exc = dist_e["e_B"] + (Be/2 - c1e/200)  # excentricidad total desde col al centroide
-        R_strap_kN = Pe * e_exc / L_libre if L_libre > 0 else 0.0
-        st.info(f"**Reacción en viga de amarre:** R_strap = Pe × e / L_libre = "
-                f"{Pe:.1f} × {e_exc:.3f} / {L_libre:.1f} = **{R_strap_kN:.2f} kN**")
+        # ── Excentricidad y reacción de viga(s) de amarre ──────────────────
+        # Para medianera (tipo 2): excentricidad solo en dir. B → 1 viga
+        # Para esquinera (tipo 3): excentricidades en dir. B y L → 2 vigas perp.
+        R_strap_kN   = Pe * e_exc / L_libre if L_libre > 0 else 0.0
+
+        if _es_esquina:
+            # Segunda excentricidad: desde centroide columna ext al centroide zapata en dir. L
+            e_exc_L     = dist_e["e_L"] + (Le/2 - c2e/200)
+            L_libre_L   = st.number_input(
+                _t("Distancia libre entre zapatas dir. L [m]", "Free span between footings dir. L [m]"),
+                1.0, 20.0, st.session_state.get("zm_Llibre_L", L_libre), 0.5, key="zm_Llibre_L"
+            )
+            R_strap_L_kN = Pe * e_exc_L / L_libre_L if L_libre_L > 0 else 0.0
+            st.info(
+                f"**Esquinera — Dos vigas de amarre:**"
+                f"- Viga dir. B: R_strap_B = {Pe:.1f} × {e_exc:.3f} / {L_libre:.1f} "
+                f"= **{R_strap_kN:.2f} kN**"
+                f"- Viga dir. L: R_strap_L = {Pe:.1f} × {e_exc_L:.3f} / {L_libre_L:.1f} "
+                f"= **{R_strap_L_kN:.2f} kN**"
+            )
+        else:
+            R_strap_L_kN = 0.0
+            L_libre_L    = L_libre
+            st.info(
+                f"**Reaccion en viga de amarre:** R_strap = Pe x e / L_libre = "
+                f"{Pe:.1f} x {e_exc:.3f} / {L_libre:.1f} = **{R_strap_kN:.2f} kN**"
+            )
 
         # Guardar datos de estado para otras tabs
-        st.session_state["zm_dist_e"] = dist_e
-        st.session_state["zm_dist_i"] = dist_i
-        st.session_state["zm_R_strap"] = R_strap_kN
+        st.session_state["zm_dist_e"]       = dist_e
+        st.session_state["zm_dist_i"]       = dist_i
+        st.session_state["zm_R_strap"]      = R_strap_kN
+        st.session_state["zm_R_strap_L"]    = R_strap_L_kN
+        st.session_state["zm_Llibre_L"]     = L_libre_L
 
     # 
     # TAB 2: DISEÑO DE LA VIGA DE AMARRE
@@ -3719,6 +6356,93 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
             "recub_cm": recub_v, "recub": recub_v, "fc": fc, "fy": fy,
         }
 
+
+        # ── Segunda viga de amarre (solo si esquinera tipo 3) ─────────
+        if _es_esquina:
+            st.divider()
+            st.subheader(_t(
+                f"Segunda Viga de Amarre — dir. L ({sn['nombre']})",
+                f"Second Strap Beam — dir. L ({sn['nombre']})"
+            ))
+            _R_strap_L = float(st.session_state.get("zm_R_strap_L", 0.0))
+            _L_libre_L = float(st.session_state.get("zm_Llibre_L", L_libre))
+            st.metric("R_strap dir. L [kN]", f"{_R_strap_L:.2f}",
+                      help=_t("Calculado automaticamente en 'Geometria y Presiones'.",
+                               "Auto-calculated in 'Geometry & Pressures' tab."))
+
+            _cVL1, _cVL2 = st.columns(2)
+            with _cVL1:
+                bv_L = st.number_input(
+                    _t("Ancho viga L b [cm]","Strap beam dir. L width [cm]"),
+                    20.0, 60.0, bv, 5.0, key="zm_bvL")
+                hv_L = st.number_input(
+                    _t("Alto viga L h [cm]","Strap beam dir. L height [cm]"),
+                    30.0, 120.0, hv, 5.0, key="zm_hvL")
+            with _cVL2:
+                bar_long_vL = st.selectbox(
+                    _t("Varilla longitudinal dir. L","Long. rebar dir. L"),
+                    list(rebar_dict.keys()),
+                    index=min(def_idx+1, len(rebar_dict)-1), key="zm_bar_long_vL")
+                bar_est_vL = st.selectbox(
+                    _t("Varilla estribo dir. L","Stirrup rebar dir. L"),
+                    list(rebar_dict.keys()), index=0, key="zm_bar_est_vL")
+
+            _xL, _VL, _ML, _MmaxL, _VmaxL, _ppL, _RintL, _advL = calcular_viga_amarre(
+                _R_strap_L, _L_libre_L, bv_L, hv_L, gamma_c_m)
+
+            if _advL:
+                st.error(
+                    f"Levantamiento en zapata interior dir. L: "
+                    f"R_int = {_RintL:.2f} kN < 0. Aumentar R_strap_L o reducir L_libre_L."
+                )
+
+            _P_total_L = float(st.session_state.get("zm_Ptotal", Pe + Pi))
+            _F_ax_L    = sn["F_ax_pct"] * _P_total_L
+
+            dis_L = disenar_viga_amarre(
+                _MmaxL, _VmaxL, _F_ax_L, bv_L, hv_L, fc, fy,
+                _L_libre_L, _P_total_L, norma,
+                recub_v=recub_v, bar_long=bar_long_vL,
+                bar_est=bar_est_vL, rebar_dict=rebar_dict)
+
+            if dis_L.get("_error"):
+                st.error(dis_L["_msg"])
+            else:
+                st.markdown(f"""
+| Elemento | Resultado |
+|---|---|
+| **Barras superiores** | **{dis_L['n_sup']} x {dis_L['bar_long']}** = {dis_L['As_sup']:.2f} cm² |
+| **Barras inferiores** | **{dis_L['n_inf']} x {dis_L['bar_long']}** = {dis_L['As_inf']:.2f} cm² |
+| **d efectivo** | {dis_L['d_v']:.1f} cm |
+| **Estribos zona critica** | {dis_L['bar_est']} @ {dis_L['s_crit_cm']:.0f} cm (L_crit = {dis_L['L_crit_cm']:.0f} cm) |
+| **Estribos resto** | {dis_L['bar_est']} @ {dis_L['s_est_cm']:.0f} cm |
+""")
+                _ok_rows_L = [
+                    (dis_L["ok_hmin"], f"h_min = {dis_L['h_min_cm']:.1f} cm"),
+                    (dis_L["ok_flex"], f"phi_Mn = {dis_L['phi_Mn_sup']:.1f} kNm >= M_max = {_MmaxL:.1f} kNm"),
+                    (dis_L["ok_cort"], f"phi_Vc = {dis_L['phi_Vc']:.1f} kN >= V_max = {_VmaxL:.1f} kN"),
+                    (dis_L["ok_Fax"], f"F_ax = {_F_ax_L:.1f} kN"),
+                ]
+                for _ok, _txt in _ok_rows_L:
+                    if _ok:
+                        st.success(f"CUMPLE — {_txt}")
+                    else:
+                        st.error(f"NO CUMPLE — {_txt}. Aumente b, h o varilla.")
+
+                # Diagrama V/M viga L
+                _fig_vmL = render_diagrama_VM(
+                    _xL, _VL, _ML, _R_strap_L, _RintL, _ppL, _L_libre_L)
+                st.plotly_chart(_fig_vmL, use_container_width=True)
+
+                # Persistir
+                st.session_state["zm_dis_L"]   = dis_L
+                st.session_state["zm_viga_dL"] = {
+                    "b_cm": bv_L, "h_cm": hv_L, "b": bv_L, "h": hv_L,
+                    "L_libre_m": _L_libre_L, "recub_cm": recub_v,
+                    "recub": recub_v, "fc": fc, "fy": fy,
+                }
+
+
     # 
     # TAB 3: VISTA 3D PLOTLY
     # 
@@ -3728,10 +6452,27 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
         viga_3d = st.session_state.get("zm_viga_d")
         if dis_3d and viga_3d:
             zap_ext_3d = {"x0": 0.0, "y0": 0.0, "B": Be, "L": Le, "H": He, "c1": c1e, "c2": c2e}
-            zap_int_3d = {"x0": Be + L_libre, "y0": 0.0, "B": Bi, "L": Li, "H": Hi, "c1": c1i, "c2": c2i}
+            if _es_esquina:
+                # Zapata interior en diagonal (esquina) — dos vigas perpendiculares
+                _L_libre_L3d = float(st.session_state.get("zm_Llibre_L", L_libre))
+                zap_int_3d = {
+                    "x0": Be + L_libre, "y0": Le + _L_libre_L3d,
+                    "B": Bi, "L": Li, "H": Hi, "c1": c1i, "c2": c2i
+                }
+                st.info(_t(
+                    "Vista 3D — Esquinera: zapata exterior en origen, interior en diagonal. "
+                    "Las dos vigas de amarre se muestran en el modelo.",
+                    "3D View — Corner footing: exterior at origin, interior at diagonal. "
+                    "Both strap beams are shown."
+                ))
+            else:
+                zap_int_3d = {"x0": Be + L_libre, "y0": 0.0, "B": Bi, "L": Li, "H": Hi, "c1": c1i, "c2": c2i}
             fig_3d = render_3d_sistema(zap_ext_3d, zap_int_3d, viga_3d, dis_3d)
             st.plotly_chart(fig_3d, use_container_width=True)
-            st.caption("Arrastra para rotar • Doble clic para resetear vista • Rueda para zoom")
+            st.caption(_t(
+                "Arrastra para rotar | Doble clic para resetear vista | Rueda para zoom",
+                "Drag to rotate | Double-click to reset | Scroll to zoom"
+            ))
         else:
             st.info("ℹ Completa primero la pestaña **'Geometría y Presiones'** y el **'Diseño de Viga'** para generar la vista 3D.")
 
@@ -3864,6 +6605,520 @@ def render_medianera(norma, fc, fy, rebar_dict, def_idx, phi_v, phi_f, tipo_zap)
                 else:
                     st.button("Descargar Modelo BIM (IFC)", disabled=True,
                               help="Requiere licencia Pro o Admin.")
+
+    # ═══════════════════════════════════════════════════════════════════
+    # PASO 3 — DISEÑO ESTRUCTURAL ZAPATAS DEL SISTEMA (NSR-10 C.15 / ACI 318 Ch.13)
+    # ═══════════════════════════════════════════════════════════════════
+    with st.expander(
+        _t("Diseño Estructural de Zapatas del Sistema (NSR-10 C.15 / ACI 318 Ch.13)",
+           "Footing Structural Design (NSR-10 C.15 / ACI 318 Ch.13)"),
+        expanded=True
+    ):
+        _col_dis1, _col_dis2 = st.columns(2)
+        with _col_dis1:
+            _recub_zap = st.number_input(
+                _t("Recubrimiento al suelo [cm]", "Cover to soil [cm]"),
+                3.0, 10.0, 7.5, 0.5, key="zm_recub_zap"
+            )
+            _bar_zap = st.selectbox(
+                _t("Varilla zapata", "Footing rebar"),
+                list(rebar_dict.keys()), index=def_idx, key="zm_bar_zap"
+            )
+        with _col_dis2:
+            _db_zap  = rebar_dict[_bar_zap]["db"]    # mm
+            _Ab_zap  = rebar_dict[_bar_zap]["area"]  # cm²
+            st.markdown(
+                f"db = **{_db_zap:.1f} mm** | Ab = **{_Ab_zap:.2f} cm²**"
+            )
+
+        # ─── Función de diseño estructural de una zapata ──────────────
+        def _diseno_zapata_sistema(B, L, H, c1, c2, P_svc, M_B_svc, M_L_svc,
+                                   recub, db_mm, Ab_cm2, fc_mpa, fy_mpa,
+                                   phi_v_loc, phi_f_loc, q_adm_loc, etiqueta):
+            import math as _m
+            d_cm = H - recub - db_mm / 20.0
+            if d_cm <= 0:
+                return {"error": True,
+                        "msg": f"Peralte efectivo d = {d_cm:.1f} cm <= 0 en {etiqueta}. "
+                               "Aumente H o reduzca recubrimiento."}
+            A_use = B * L
+            P_ult = 1.4 * P_svc
+            qu_u  = P_ult / A_use
+
+            # Cortante 1D
+            av_B = max((B - c1/100.0)/2.0 - d_cm/100.0, 0.001)
+            av_L = max((L - c2/100.0)/2.0 - d_cm/100.0, 0.001)
+            Vu_1B      = qu_u * av_B * L
+            Vu_1L      = qu_u * av_L * B
+            phi_Vc_B   = phi_v_loc * 0.17 * _m.sqrt(fc_mpa) * (L*100) * d_cm / 1000
+            phi_Vc_L   = phi_v_loc * 0.17 * _m.sqrt(fc_mpa) * (B*100) * d_cm / 1000
+            ok_1B = phi_Vc_B >= Vu_1B
+            ok_1L = phi_Vc_L >= Vu_1L
+
+            # Punzonamiento 2D
+            b_pun = c1/100.0 + d_cm/100.0
+            l_pun = c2/100.0 + d_cm/100.0
+            bo_cm = 2*(b_pun + l_pun)*100
+            Vu_p  = P_ult - qu_u * b_pun * l_pun
+            beta_c = max(c1,c2)/min(c1,c2) if min(c1,c2)>0 else 1.0
+            vc1 = 0.17*(1+2/beta_c)*_m.sqrt(fc_mpa)
+            vc2 = 0.083*(2+40*d_cm/bo_cm)*_m.sqrt(fc_mpa)
+            vc3 = 0.33*_m.sqrt(fc_mpa)
+            vc_p      = min(vc1, vc2, vc3)
+            phi_Vc_p  = phi_v_loc * vc_p * bo_cm * d_cm / 1000
+            ok_pun    = phi_Vc_p >= Vu_p
+
+            # Flexión biaxial
+            vB  = max((B - c1/100.0)/2.0, 0.001)
+            vL  = max((L - c2/100.0)/2.0, 0.001)
+            Mu_B = qu_u * vB**2 / 2.0 * L
+            Mu_L = qu_u * vL**2 / 2.0 * B
+
+            def _as_flex(Mu_kNm, b_cm_ancho, d_cm_ef):
+                if Mu_kNm <= 0:
+                    return max(0.0018*b_cm_ancho*10*d_cm_ef*10/100, 0.0), True
+                Rn   = Mu_kNm*1e6 / (phi_f_loc * b_cm_ancho*10 * (d_cm_ef*10)**2)
+                disc = max(1 - 2*Rn/(0.85*fc_mpa), 0.0)
+                rho  = max(0.85*fc_mpa/fy_mpa*(1-_m.sqrt(disc)), 0.0018)
+                return rho * b_cm_ancho*10 * d_cm_ef*10 / 100, disc > 0
+
+            As_B, ok_dB = _as_flex(Mu_B, L*100, d_cm)
+            As_L, ok_dL = _as_flex(Mu_L, B*100, d_cm)
+            n_B  = max(2, math.ceil(As_B / Ab_cm2))
+            n_L  = max(2, math.ceil(As_L / Ab_cm2))
+            sep_B = (L*100 - 2*recub)/(n_B-1) if n_B>1 else (L*100-2*recub)
+            sep_L = (B*100 - 2*recub)/(n_L-1) if n_L>1 else (B*100-2*recub)
+
+            # Anclaje
+            ldh_mm  = 0.24*fy_mpa/_m.sqrt(fc_mpa)*db_mm
+            ldh_cm  = max(15.0, 8*db_mm/10.0, ldh_mm/10.0)
+            Ldisp_B = (B-c1/100.0)/2.0*100.0 - recub
+            Ldisp_L = (L-c2/100.0)/2.0*100.0 - recub
+            Ldisp   = min(Ldisp_B, Ldisp_L)
+            ok_ldh  = Ldisp >= ldh_cm
+            _fac_ld = 3.5 if (recub>=db_mm/10.0 and sep_B>=2*db_mm/10.0 and sep_L>=2*db_mm/10.0) else 1.7
+            ld_cm   = max(30.0, fy_mpa/(_fac_ld*_m.sqrt(fc_mpa))*db_mm/10.0)
+            ok_ld   = Ldisp >= ld_cm
+
+            return dict(
+                error=False, etiqueta=etiqueta,
+                d_cm=d_cm, A_use=A_use, qu_u=qu_u, P_ult=P_ult,
+                Vu_1B=Vu_1B, phi_Vc_B=phi_Vc_B, ok_1B=ok_1B,
+                Vu_1L=Vu_1L, phi_Vc_L=phi_Vc_L, ok_1L=ok_1L,
+                Vu_p=Vu_p, phi_Vc_p=phi_Vc_p, ok_pun=ok_pun,
+                bo_cm=bo_cm, vc_p=vc_p,
+                Mu_B=Mu_B, As_B=As_B, n_B=n_B, sep_B=sep_B, ok_dB=ok_dB,
+                Mu_L=Mu_L, As_L=As_L, n_L=n_L, sep_L=sep_L, ok_dL=ok_dL,
+                ldh_cm=ldh_cm, ld_cm=ld_cm,
+                Ldisp_B=Ldisp_B, Ldisp_L=Ldisp_L, Ldisp=Ldisp,
+                ok_ldh=ok_ldh, ok_ld=ok_ld, _fac_ld=_fac_ld,
+            )
+
+        _dis_e = _diseno_zapata_sistema(
+            Be, Le, He, c1e, c2e, Pe, Me_B, Me_L,
+            _recub_zap, _db_zap, _Ab_zap, fc, fy, phi_v, phi_f,
+            q_adm_m, _t("Exterior (Lindero)", "Exterior (Property Line)")
+        )
+        _dis_i = _diseno_zapata_sistema(
+            Bi, Li, Hi, c1i, c2i, Pi, Mi_B, Mi_L,
+            _recub_zap, _db_zap, _Ab_zap, fc, fy, phi_v, phi_f,
+            q_adm_m, _t("Interior (Campo Libre)", "Interior (Free Field)")
+        )
+
+        # ─── Tabla de verificaciones por zapata ──────────────────────
+        def _tabla_zap(d):
+            if d.get("error"):
+                st.error(d["msg"]); return
+            st.markdown(
+                f"### {d['etiqueta']}  |  "
+                f"d = {d['d_cm']:.1f} cm  |  Pu = {d['P_ult']:.1f} kN  |  "
+                f"qu_u = {d['qu_u']:.1f} kPa"
+            )
+            rows = [
+                (_t("Cortante 1D dir. B (C.11.3)","1-Way Shear dir. B"),
+                 f"phi_Vc={d['phi_Vc_B']:.1f} kN", f"Vu={d['Vu_1B']:.1f} kN",  d["ok_1B"]),
+                (_t("Cortante 1D dir. L (C.11.3)","1-Way Shear dir. L"),
+                 f"phi_Vc={d['phi_Vc_L']:.1f} kN", f"Vu={d['Vu_1L']:.1f} kN",  d["ok_1L"]),
+                (_t("Punzonamiento (C.11.12)","Punching Shear (C.11.12)"),
+                 f"phi_Vc_p={d['phi_Vc_p']:.1f} kN  bo={d['bo_cm']:.0f} cm",
+                 f"Vu_p={d['Vu_p']:.1f} kN", d["ok_pun"]),
+                (_t("Flexion dir. B (C.10.2)","Flexure dir. B (C.10.2)"),
+                 f"As={d['As_B']:.2f} cm2 -> {d['n_B']} {_bar_zap} @ {d['sep_B']:.1f} cm",
+                 f"Mu={d['Mu_B']:.1f} kNm", d["ok_dB"]),
+                (_t("Flexion dir. L (C.10.2)","Flexure dir. L (C.10.2)"),
+                 f"As={d['As_L']:.2f} cm2 -> {d['n_L']} {_bar_zap} @ {d['sep_L']:.1f} cm",
+                 f"Mu={d['Mu_L']:.1f} kNm", d["ok_dL"]),
+                (_t("Anclaje Gancho 90 (C.12.5)","Hook 90 deg (C.12.5)"),
+                 f"L_disp={d['Ldisp']:.1f} cm", f"ldh req={d['ldh_cm']:.1f} cm", d["ok_ldh"]),
+                (_t("Desarrollo Recto ld (C.12.2)","Straight Dev. ld (C.12.2)"),
+                 f"L_disp={d['Ldisp']:.1f} cm",
+                 f"ld req={d['ld_cm']:.1f} cm (fac={d['_fac_ld']:.1f})", d["ok_ld"]),
+            ]
+            hdr = st.columns([3.2, 3, 2.5, 1])
+            hdr[0].markdown("**Verificacion**"); hdr[1].markdown("**Capacidad**")
+            hdr[2].markdown("**Demanda**");      hdr[3].markdown("**OK**")
+            for vr, vc, vl, vo in rows:
+                c = st.columns([3.2, 3, 2.5, 1])
+                c[0].markdown(vr); c[1].markdown(f"`{vc}`"); c[2].markdown(f"`{vl}`")
+                c[3].markdown("**:green[SI]**" if vo else "**:red[NO]**")
+            fallos = [r[0] for r in rows if not r[3]]
+            if fallos:
+                st.error(_t(f"NO CUMPLE — {len(fallos)} verificacion(es): {', '.join(fallos)}. Aumente H o B/L.",
+                            f"FAIL — {len(fallos)} check(s): {', '.join(fallos)}. Increase H or B/L."))
+            else:
+                st.success(_t(f"CUMPLE — {d['etiqueta']}: todas las verificaciones satisfechas.",
+                              f"PASS — {d['etiqueta']}: all checks passed."))
+            st.divider()
+
+        _tabla_zap(_dis_e)
+        _tabla_zap(_dis_i)
+
+        # Persistir para Memoria
+        st.session_state["zm_dis_e"]    = _dis_e
+        st.session_state["zm_dis_i"]    = _dis_i
+        st.session_state["zm_bar_zap"]  = _bar_zap
+        st.session_state["zm_recub_zap"]= _recub_zap
+
+    # ═══════════════════════════════════════════════════════════════════
+    # TAB 5 — MEMORIA DE CÁLCULO DOCX (SISTEMA MEDIANERO / ESQUINERO)
+    # ═══════════════════════════════════════════════════════════════════
+    with tab_docx:
+        st.subheader(_t("Memoria de Calculo — Sistema Medianero/Esquinero",
+                        "Calculation Report — Strap/Corner Footing System"))
+        empresa, proyecto, ingeniero, elab, rev, apb, logo = _get_identity()
+
+        if st.button(_t("Generar Memoria DOCX del Sistema", "Generate System DOCX Report"),
+                     type="primary", key="zm_btn_docx"):
+            _d_e  = st.session_state.get("zm_dis_e", {})
+            _d_i  = st.session_state.get("zm_dis_i", {})
+            _d_v  = st.session_state.get("zm_dis",   {})
+            _bz   = st.session_state.get("zm_bar_zap",   _bar_zap)
+            _rz   = st.session_state.get("zm_recub_zap", _recub_zap)
+
+            if not _d_v:
+                st.warning(_t(
+                    "AVISO: Completa el Diseno de Viga de Amarre antes de generar la memoria.",
+                    "WARNING: Complete Strap Beam Design before generating the report."
+                ))
+            else:
+                from docx import Document as _DocZM
+                import datetime as _dtZM
+
+                doc_m = _DocZM()
+                doc_m.add_heading(
+                    f"MEMORIA ESTRUCTURAL — SISTEMA {tipo_zap.upper()} ({norma})", 0)
+                doc_m.add_paragraph(
+                    f"Empresa: {empresa}  |  Proyecto: {proyecto}  |  "
+                    f"Ingeniero: {ingeniero}  |  "
+                    f"Fecha: {_dtZM.date.today().strftime('%Y-%m-%d')}")
+                doc_m.add_paragraph(f"Elaboro: {elab}  |  Reviso: {rev}  |  Aprobo: {apb}")
+
+                # 1. Parametros generales
+                doc_m.add_heading("1. PARAMETROS GENERALES", level=1)
+                doc_m.add_paragraph(
+                    f"Norma: {norma}  |  fc = {fc:.0f} MPa  |  fy = {fy:.0f} MPa"
+                    f"q_adm = {q_adm_m:.1f} kPa  |  L_libre = {L_libre:.2f} m"
+                    f"Recubrimiento = {_rz:.1f} cm  |  Varilla = {_bz}")
+
+                # 2. Geometria y cargas
+                doc_m.add_heading("2. GEOMETRIA Y CARGAS", level=1)
+                doc_m.add_paragraph(
+                    f"ZAPATA EXTERIOR:"
+                    f"  B={Be:.2f}m  L={Le:.2f}m  H={He:.0f}cm  "
+                    f"Col={c1e:.0f}x{c2e:.0f}cm  P={Pe:.1f}kN"
+                    f"ZAPATA INTERIOR:"
+                    f"  B={Bi:.2f}m  L={Li:.2f}m  H={Hi:.0f}cm  "
+                    f"Col={c1i:.0f}x{c2i:.0f}cm  P={Pi:.1f}kN")
+
+                # 3. Viga de amarre
+                doc_m.add_heading(f"3. {sn['nombre'].upper()} ({sn['art']})", level=1)
+                if not _d_v.get("_error"):
+                    _Mmax_doc = float(st.session_state.get("zm_Mmax", 0))
+                    _Vmax_doc = float(st.session_state.get("zm_Vmax", 0))
+                    doc_m.add_paragraph(
+                        f"Seccion: {bv:.0f} x {hv:.0f} cm  |  "
+                        f"R_strap = {R_strap_kN:.2f} kN"
+                        f"Barras sup: {_d_v.get('n_sup','?')} x {_d_v.get('bar_long','?')}  |  "
+                        f"Barras inf: {_d_v.get('n_inf','?')} x {_d_v.get('bar_long','?')}"
+                        f"Estribos: {_d_v.get('bar_est','?')} @ {_d_v.get('s_est_cm',0):.0f} cm  "
+                        f"(zona critica: @ {_d_v.get('s_crit_cm',0):.0f} cm)")
+
+                # Segunda viga (solo esquinera tipo 3)
+                if _es_esquina:
+                    _d_vL  = st.session_state.get("zm_dis_L", {})
+                    _vigdL = st.session_state.get("zm_viga_dL", {})
+                    doc_m.add_heading(f"3b. SEGUNDA VIGA DE AMARRE — DIR. L ({sn['art']})", level=1)
+                    if _d_vL and not _d_vL.get("_error"):
+                        _bvL_d = _vigdL.get("b_cm", "?")
+                        _hvL_d = _vigdL.get("h_cm", "?")
+                        _LlibL = _vigdL.get("L_libre_m", "?")
+                        doc_m.add_paragraph(
+                            f"Seccion: {_bvL_d} x {_hvL_d} cm  |  "
+                            f"R_strap_L = {st.session_state.get('zm_R_strap_L', 0):.2f} kN  |  "
+                            f"L_libre_L = {_LlibL} m"
+                            f"Barras sup: {_d_vL.get('n_sup','?')} x {_d_vL.get('bar_long','?')}  |  "
+                            f"Barras inf: {_d_vL.get('n_inf','?')} x {_d_vL.get('bar_long','?')}"
+                            f"Estribos: {_d_vL.get('bar_est','?')} @ {_d_vL.get('s_est_cm',0):.0f} cm  "
+                            f"(zona critica: @ {_d_vL.get('s_crit_cm',0):.0f} cm)")
+                    else:
+                        doc_m.add_paragraph(
+                            "AVISO: Ejecuta el diseno de la segunda viga (dir. L) "
+                            "en la UI para obtener resultados.")
+
+                # 4. Diseno estructural por zapata
+                for _etq, _dd in [("ZAPATA EXTERIOR", _d_e), ("ZAPATA INTERIOR", _d_i)]:
+                    doc_m.add_heading(f"4. DISENO ESTRUCTURAL — {_etq}", level=1)
+                    if not _dd or _dd.get("error"):
+                        doc_m.add_paragraph(
+                            "AVISO: Ejecuta el Diseno Estructural en la UI para obtener resultados.")
+                        continue
+                    doc_m.add_paragraph(
+                        f"d efectivo = {_dd['d_cm']:.1f} cm  |  "
+                        f"Pu = {_dd['P_ult']:.1f} kN  |  qu_u = {_dd['qu_u']:.1f} kPa"
+                        f"CORTANTE UNIDIRECCIONAL (NSR-10 C.11.3):"
+                        f"  Dir B: phi_Vc_1way_B={_dd['phi_Vc_B']:.1f}kN  Vu={_dd['Vu_1B']:.1f}kN  "
+                        f"{'OK - CUMPLE' if _dd['ok_1B'] else 'NO CUMPLE'}"
+                        f"  Dir L: phi_Vc_1way_B={_dd['phi_Vc_L']:.1f}kN  Vu={_dd['Vu_1L']:.1f}kN  "
+                        f"{'OK - CUMPLE' if _dd['ok_1L'] else 'NO CUMPLE'}"
+                        f"PUNZONAMIENTO (NSR-10 C.11.12):"
+                        f"  bo={_dd['bo_cm']:.0f}cm  phiVc_p={_dd['phi_Vc_p']:.1f}kN  "
+                        f"Vu_p={_dd['Vu_p']:.1f}kN  "
+                        f"{'OK - CUMPLE' if _dd['ok_pun'] else 'NO CUMPLE'}"
+                        f"FLEXION (NSR-10 C.10.2):"
+                        f"  Dir B: As={_dd['As_B']:.2f}cm2 -> "
+                        f"{_dd['n_B']} {_bz} @ {_dd['sep_B']:.1f}cm  Mu={_dd['Mu_B']:.1f}kNm"
+                        f"  Dir L: As={_dd['As_L']:.2f}cm2 -> "
+                        f"{_dd['n_L']} {_bz} @ {_dd['sep_L']:.1f}cm  Mu={_dd['Mu_L']:.1f}kNm"
+                        f"ANCLAJE (NSR-10 C.12):"
+                        f"  Gancho 90: ldh={_dd['ldh_cm']:.1f}cm  L_disp={_dd['Ldisp']:.1f}cm  "
+                        f"{'OK - CUMPLE' if _dd['ok_ldh'] else 'NO CUMPLE'}"
+                        f"  Recto ld:  ld={_dd['ld_cm']:.1f}cm (fac={_dd['_fac_ld']:.1f})  "
+                        f"L_disp={_dd['Ldisp']:.1f}cm  "
+                        f"{'OK - CUMPLE' if _dd['ok_ld'] else 'NO CUMPLE'}")
+
+                # 5. APU simplificado
+                doc_m.add_heading("5. CANTIDADES BASICAS DE MATERIALES", level=1)
+                _vol_e = Be * Le * He/100
+                _vol_i = Bi * Li * Hi/100
+                _vol_v = bv/100 * hv/100 * L_libre
+                _vol_tot = _vol_e + _vol_i + _vol_v
+                doc_m.add_paragraph(
+                    f"Vol. concreto zapata exterior: {_vol_e:.3f} m3"
+                    f"Vol. concreto zapata interior: {_vol_i:.3f} m3"
+                    f"Vol. concreto viga de amarre:  {_vol_v:.3f} m3"
+                    f"TOTAL concreto sistema:        {_vol_tot:.3f} m3")
+
+                # Firma
+                doc_m.add_heading("6. FIRMA RESPONSABLE", level=1)
+                doc_m.add_paragraph(
+                    '_' * 45 + '\n' + ingeniero + '\nMatricula Profesional: _______________'
+                )
+
+                _zm_io = io.BytesIO()
+                doc_m.save(_zm_io)
+                _zm_io.seek(0)
+                st.success(_t("Memoria generada correctamente.", "Report generated successfully."))
+                st.download_button(
+                    _t("Descargar Memoria DOCX Sistema", "Download System DOCX Report"),
+                    data=_zm_io,
+                    file_name=f"Memoria_{tipo_zap[:2].strip().replace('.','')}_Sistema.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key="zm_dl_docx",
+                    disabled=False
+                )
+
+                # ── PDF nativo sistema medianero/esquinero ────────────────
+                if st.button(
+                    _t("Generar PDF Sistema", "Generate System PDF"),
+                    key="zm_btn_pdf", use_container_width=True,
+                    disabled=not _puede_exportar
+                ):
+                    try:
+                        from reportlab.lib.pagesizes import A4
+                        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+                        from reportlab.lib.units import cm, mm
+                        from reportlab.lib import colors
+                        from reportlab.platypus import (
+                            SimpleDocTemplate, Paragraph, Spacer, Table,
+                            TableStyle, HRFlowable
+                        )
+                        import io as _io_pdf_zm
+                        import datetime as _dt_pdf_zm
+
+                        _d_e_pdf  = st.session_state.get("zm_dis_e", {})
+                        _d_i_pdf  = st.session_state.get("zm_dis_i", {})
+                        _d_v_pdf  = st.session_state.get("zm_dis",   {})
+                        _bz_pdf   = st.session_state.get("zm_bar_zap", "?")
+                        _empresa_z, _proy_z, _ing_z, _elab_z, _rev_z, _apb_z, _logo_z = _get_identity()
+
+                        _pdf_zm   = _io_pdf_zm.BytesIO()
+                        _doc_zm   = SimpleDocTemplate(_pdf_zm, pagesize=A4,
+                            leftMargin=2*cm, rightMargin=2*cm,
+                            topMargin=2.5*cm, bottomMargin=2*cm)
+                        _st       = getSampleStyleSheet()
+                        _h1z      = ParagraphStyle("H1Z", parent=_st["Heading1"],
+                            fontSize=11, textColor=colors.HexColor("#1b3a5c"),
+                            spaceBefore=8, spaceAfter=4)
+                        _boz      = ParagraphStyle("BodyZ", parent=_st["Normal"],
+                            fontSize=9, leading=13)
+                        _capz     = ParagraphStyle("CapZ", parent=_st["Normal"],
+                            fontSize=8, textColor=colors.grey)
+
+                        _story_z = []
+
+                        # Portada
+                        _story_z.append(Paragraph(
+                            f"MEMORIA ESTRUCTURAL — SISTEMA {tipo_zap.upper()} ({norma})",
+                            ParagraphStyle("TZ", parent=_st["Title"], fontSize=13,
+                                           textColor=colors.HexColor("#1b3a5c"))))
+                        _story_z.append(Spacer(1, 3*mm))
+                        _tpz = Table([
+                            ["Empresa:", _empresa_z, "Proyecto:", _proy_z],
+                            ["Ingeniero:", _ing_z, "Fecha:", _dt_pdf_zm.date.today().strftime("%Y-%m-%d")],
+                        ], colWidths=[2.5*cm, 5.5*cm, 2.5*cm, 5.5*cm])
+                        _tpz.setStyle(TableStyle([
+                            ("FONTSIZE",(0,0),(-1,-1),8),
+                            ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"),
+                            ("FONTNAME",(2,0),(2,-1),"Helvetica-Bold"),
+                            ("GRID",(0,0),(-1,-1),0.3,colors.HexColor("#bbcdd8")),
+                            ("ROWBACKGROUNDS",(0,0),(-1,-1),[colors.HexColor("#f0f4f8"),colors.white]),
+                            ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+                        ]))
+                        _story_z.append(_tpz)
+                        _story_z.append(Spacer(1, 4*mm))
+
+                        # Parámetros generales
+                        _story_z.append(Paragraph("1. PARÁMETROS GENERALES", _h1z))
+                        _story_z.append(HRFlowable(width="100%",thickness=0.5,
+                            color=colors.HexColor("#bbcdd8"),spaceAfter=3))
+                        _story_z.append(Paragraph(
+                            f"Norma: {norma}  |  fc = {fc:.0f} MPa  |  fy = {fy:.0f} MPa  |  "
+                            f"q_adm = {q_adm_m:.1f} kPa  |  L_libre = {L_libre:.2f} m  |  "
+                            f"Varilla = {_bz_pdf}", _boz))
+                        _story_z.append(Spacer(1, 3*mm))
+
+                        # Zapatas
+                        for _lbl_z, _B_z, _L_z, _H_z, _c1_z, _c2_z, _P_z in [
+                            ("EXTERIOR", Be, Le, He, c1e, c2e, Pe),
+                            ("INTERIOR", Bi, Li, Hi, c1i, c2i, Pi),
+                        ]:
+                            _story_z.append(Paragraph(
+                                f"2. ZAPATA {_lbl_z}  (B={_B_z:.2f}m × L={_L_z:.2f}m × H={_H_z:.0f}cm  "
+                                f"Col={_c1_z:.0f}×{_c2_z:.0f}cm  P={_P_z:.1f}kN)", _h1z))
+                            _story_z.append(HRFlowable(width="100%",thickness=0.5,
+                                color=colors.HexColor("#bbcdd8"),spaceAfter=3))
+                            _dd_pdf = _d_e_pdf if _lbl_z=="EXTERIOR" else _d_i_pdf
+                            if _dd_pdf and not _dd_pdf.get("error"):
+                                _rows_pdf = [
+                                    ["Verificación","Capacidad","Demanda","Estado"],
+                                    ["Cortante 1D dir. B",
+                                     f"φVc={_dd_pdf['phi_Vc_B']:.1f}kN",
+                                     f"Vu={_dd_pdf['Vu_1B']:.1f}kN",
+                                     "CUMPLE" if _dd_pdf["ok_1B"] else "NO CUMPLE"],
+                                    ["Cortante 1D dir. L",
+                                     f"φVc={_dd_pdf['phi_Vc_L']:.1f}kN",
+                                     f"Vu={_dd_pdf['Vu_1L']:.1f}kN",
+                                     "CUMPLE" if _dd_pdf["ok_1L"] else "NO CUMPLE"],
+                                    ["Punzonamiento bo",
+                                     f"φVc_p={_dd_pdf['phi_Vc_p']:.1f}kN",
+                                     f"Vu_p={_dd_pdf['Vu_p']:.1f}kN",
+                                     "CUMPLE" if _dd_pdf["ok_pun"] else "NO CUMPLE"],
+                                    ["Flexión dir. B",
+                                     f"As={_dd_pdf['As_B']:.2f}cm²",
+                                     f"Mu={_dd_pdf['Mu_B']:.1f}kNm",
+                                     "CUMPLE" if _dd_pdf["ok_dB"] else "NO CUMPLE"],
+                                    ["Flexión dir. L",
+                                     f"As={_dd_pdf['As_L']:.2f}cm²",
+                                     f"Mu={_dd_pdf['Mu_L']:.1f}kNm",
+                                     "CUMPLE" if _dd_pdf["ok_dL"] else "NO CUMPLE"],
+                                    ["Anclaje gancho 90°",
+                                     f"L_disp={_dd_pdf['Ldisp']:.1f}cm",
+                                     f"ldh={_dd_pdf['ldh_cm']:.1f}cm",
+                                     "CUMPLE" if _dd_pdf["ok_ldh"] else "NO CUMPLE"],
+                                    ["Desarrollo recto ld",
+                                     f"L_disp={_dd_pdf['Ldisp']:.1f}cm",
+                                     f"ld={_dd_pdf['ld_cm']:.1f}cm",
+                                     "CUMPLE" if _dd_pdf["ok_ld"] else "NO CUMPLE"],
+                                ]
+                                _tbl_dp = Table(_rows_pdf,
+                                    colWidths=[4.5*cm,3.5*cm,3*cm,2.5*cm])
+                                _tbl_dp.setStyle(TableStyle([
+                                    ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+                                    ("FONTSIZE",(0,0),(-1,-1),8),
+                                    ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1b3a5c")),
+                                    ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+                                    ("ROWBACKGROUNDS",(0,1),(-1,-1),
+                                     [colors.white,colors.HexColor("#f0f4f8")]),
+                                    ("GRID",(0,0),(-1,-1),0.3,colors.HexColor("#bbcdd8")),
+                                    ("TOPPADDING",(0,0),(-1,-1),2),
+                                    ("BOTTOMPADDING",(0,0),(-1,-1),2),
+                                    *[("TEXTCOLOR",(3,i+1),(3,i+1),
+                                       colors.HexColor("#2d6a4f") if _rows_pdf[i+1][3]=="CUMPLE"
+                                       else colors.HexColor("#c0392b"))
+                                      for i in range(len(_rows_pdf)-1)],
+                                    *[("FONTNAME",(3,i+1),(3,i+1),"Helvetica-Bold")
+                                      for i in range(len(_rows_pdf)-1)],
+                                ]))
+                                _story_z.append(_tbl_dp)
+                            else:
+                                _story_z.append(Paragraph(
+                                    "AVISO: Ejecutar diseño estructural en la UI.", _boz))
+                            _story_z.append(Spacer(1, 3*mm))
+
+                        # Viga de amarre
+                        _story_z.append(Paragraph(
+                            f"3. {sn['nombre'].upper()} ({sn['art']})", _h1z))
+                        _story_z.append(HRFlowable(width="100%",thickness=0.5,
+                            color=colors.HexColor("#bbcdd8"),spaceAfter=3))
+                        if _d_v_pdf and not _d_v_pdf.get("_error"):
+                            _story_z.append(Paragraph(
+                                f"Sección: {bv:.0f}×{hv:.0f}cm  |  R_strap={R_strap_kN:.2f}kN  |  "
+                                f"Barras sup: {_d_v_pdf.get('n_sup','?')}×{_d_v_pdf.get('bar_long','?')}  |  "
+                                f"Estribos: {_d_v_pdf.get('bar_est','?')} @ "
+                                f"{_d_v_pdf.get('s_est_cm',0):.0f}cm", _boz))
+
+                        # Firma
+                        _story_z.append(Spacer(1, 8*mm))
+                        _story_z.append(Paragraph("FIRMA RESPONSABLE", _h1z))
+                        _story_z.append(HRFlowable(width="100%",thickness=0.5,
+                            color=colors.HexColor("#bbcdd8"),spaceAfter=6))
+                        _story_z.append(Spacer(1, 8*mm))
+                        _fz = Table([
+                            [f"{'_'*28}", "", f"{'_'*28}"],
+                            [_ing_z, "", _apb_z],
+                            ["Diseñó / Calculó", "", "Aprobó"],
+                        ], colWidths=[7*cm,2*cm,7*cm])
+                        _fz.setStyle(TableStyle([
+                            ("FONTSIZE",(0,0),(-1,-1),8),
+                            ("ALIGN",(0,0),(-1,-1),"CENTER"),
+                            ("FONTNAME",(0,1),(0,1),"Helvetica-Bold"),
+                            ("FONTNAME",(2,1),(2,1),"Helvetica-Bold"),
+                        ]))
+                        _story_z.append(_fz)
+                        _story_z.append(Spacer(1,3*mm))
+                        _story_z.append(Paragraph(
+                            f"Konte/StructoPro  |  {norma}  |  "
+                            f"{_dt_pdf_zm.date.today().strftime('%Y-%m-%d')}", _capz))
+
+                        _doc_zm.build(_story_z)
+                        _pdf_zm.seek(0)
+                        st.success(_t("PDF sistema generado.", "System PDF generated."))
+                        st.download_button(
+                            _t("Descargar PDF Sistema", "Download System PDF"),
+                            data=_pdf_zm,
+                            file_name=f"Memoria_{tipo_zap[:2].strip()}_Sistema.pdf",
+                            mime="application/pdf",
+                            key="zm_dl_pdf"
+                        )
+                    except ImportError:
+                        st.error(_t(
+                            "ReportLab no instalado. Agrega 'reportlab' a requirements.txt.",
+                            "ReportLab not installed. Add 'reportlab' to requirements.txt."
+                        ))
+                    except Exception as _e_pdf_zm:
+                        st.error(f"Error generando PDF sistema: {_e_pdf_zm}")
+
+
 # ── Separación máxima por norma ─────────────────────────────────────────────
 _SEP_MAX_LIMITS = {
     'NSR-10 Colombia': 45.0, 'ACI 318-25 EE.UU.': 45.0,
@@ -3874,3 +7129,4 @@ _SEP_MAX_LIMITS = {
 }
 _sep_max_abs = _SEP_MAX_LIMITS.get(norma_sel, 45.0)
 sep_max = min(3 * H_zap, _sep_max_abs)
+

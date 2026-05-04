@@ -584,23 +584,57 @@ with c4:
     import datetime
     current_year = datetime.datetime.now().year
     
-    # Calcular SMMLV base según el país y el año actual
-    def get_smmlv(pais, year):
-        if pais == "Colombia":
-            if year <= 2024: return 1300000.0
-            elif year == 2025: return 1423500.0
-            else: return 1423500.0 * (1.09 ** (year - 2025)) # Proyección inflacionaria
-        elif pais == "México":
-            if year <= 2024: return 7468.0
-            else: return 7468.0 * (1.10 ** (year - 2024))
-        elif pais == "Perú":
-            return 1025.0 * (1.05 ** max(0, year - 2024))
-        elif pais == "Chile":
-            return 500000.0 * (1.05 ** max(0, year - 2024))
-        else:
-            return 400.0
+    # Función para obtener SMMLV Oficial en tiempo real (DatosMacro)
+    def fetch_smmlv_oficial(pais, year):
+        # Primero revisar caché
+        cache_key = f"smmlv_cache_{pais}"
+        if cache_key in st.session_state:
+            return st.session_state[cache_key]
             
-    default_sal = get_smmlv(pais_manual, current_year)
+        def fallback():
+            if pais == "Colombia": return 1423500.0 * (1.09 ** max(0, year - 2025))
+            elif pais == "México": return 7468.0 * (1.10 ** max(0, year - 2024))
+            elif pais == "Perú": return 1130.0 * (1.05 ** max(0, year - 2025))
+            elif pais == "Chile": return 519333.0 * (1.05 ** max(0, year - 2025))
+            elif pais == "Bolivia": return 2500.0 * (1.05 ** max(0, year - 2024))
+            elif pais == "Ecuador": return 460.0
+            elif pais == "Argentina": return 271571.0
+            else: return 400.0
+
+        # Mapeo de URL
+        url_map = {
+            "Colombia": "colombia", "México": "mexico", "Perú": "peru",
+            "Chile": "chile", "Bolivia": "bolivia", "Argentina": "argentina",
+            "Ecuador": "ecuador"
+        }
+        
+        if pais not in url_map:
+            return fallback()
+            
+        url = f"https://datosmacro.expansion.com/smi/{url_map[pais]}"
+        html = fetch_with_retry(url)
+        if html:
+            soup = BeautifulSoup(html, 'html.parser')
+            table = soup.select_one('.table')
+            if table:
+                first_row = table.select('tbody tr')[0]
+                cells = first_row.find_all('td')
+                if len(cells) >= 2:
+                    val_str = cells[1].text.strip()
+                    val_str = val_str.split('€')[0].split('$')[0].strip() # Limpiar
+                    val_str = val_str.replace('.', '').replace(',', '.') # Formato europeo a float
+                    try:
+                        val = float(val_str)
+                        # Ajuste para México si el valor reportado es diario/mensual
+                        if pais == "México" and val < 1000:
+                            val = val * 30.4 # Convertir a mensual si viene diario
+                        st.session_state[cache_key] = val
+                        return val
+                    except:
+                        pass
+        return fallback()
+        
+    default_sal = fetch_smmlv_oficial(pais_manual, current_year)
     
     salario_base = st.number_input(_t(f"Salario Mensual Base (SMMLV {current_year}) [{moneda}]", f"Base Monthly Salary (Min Wage {current_year}) [{moneda}]"), value=st.session_state.get("apu_sal", default_sal), key="apu_sal")
     dias_mes = st.number_input(_t("Días laborables al mes", "Working days per month"), 1, 31, st.session_state.get("apu_dias", 26), 1, key="apu_dias")
