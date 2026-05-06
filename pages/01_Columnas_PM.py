@@ -530,7 +530,7 @@ with st.expander(" ¿Cómo usar este módulo? — Guía Profesional", expanded=F
 
     #### 4. Demanda de Cargas y Esbeltez
     - Ingrese los esfuerzos ultimos factorados: **Pu** (axial), **Mux** (momento eje X), **Muy** (momento eje Y).
-    - El modulo aplica automaticamente la **excentricidad minima** NSR-10 C.10.3.6: emin = max(0.10 h, 1.5 cm).
+    - El modulo aplica automaticamente la **excentricidad minima** NSR-10 C.10.3.6: emin = max(0.6 + 0.03·h, L/600) cm  NSR-10 C.10.3.6.
     - **Esbeltez:** Calcule kL/r con el factor k y la luz libre Lc. El modulo clasifica la columna (corta / esbelta) y aplica el factor delta_ns de magnificacion de momentos para marcos no desplazables (NSR-10 C.10.10). Para marcos desplazables, ingrese los momentos ya amplificados por analisis P-Delta.
     - **Beta_dns** ajustable para considerar efectos de fluencia diferida.
 
@@ -1582,12 +1582,32 @@ with _col_rev1:
         "<span style='font-size:0.85em;color:#aaa'>Modo Revisión</span>",
         unsafe_allow_html=True)
 modo_revision = st.sidebar.toggle(
-    "🔍 Modo Revisión",
+    "Modo Revision",
     value=st.session_state.get("c_pm_modo_revision", False),
     key="c_pm_modo_revision",
     help="Oculta todos los paneles de entrada. Solo muestra resultados y verificaciones. "
          "Ideal para revisores externos."
 )
+if "c_pm_modo_guiado" not in st.session_state:
+    st.session_state["c_pm_modo_guiado"] = False
+
+modo_guiado = st.sidebar.toggle(
+    _t("Modo Guiado (paso a paso)", "Guided Mode (step by step)"),
+    key="c_pm_modo_guiado",
+    help=_t(
+        "Activa un asistente paso a paso para usuarios nuevos. Muestra un formulario a la vez "
+        "con explicaciones contextuales. Desactiva para ver todos los parametros juntos (Modo Experto).",
+        "Step-by-step wizard for new users. Shows one form at a time with contextual help. "
+        "Disable to see all parameters at once (Expert Mode)."
+    )
+)
+if modo_guiado:
+    st.sidebar.info(_t(
+        "**Modo Guiado activo** — Complete cada paso y avance con el boton. "
+        "Cambie a Modo Experto para ver todos los campos a la vez.",
+        "**Guided Mode active** — Complete each step and advance. "
+        "Switch to Expert Mode to see all fields at once."
+    ))
 if modo_revision:
     st.sidebar.info(
         "**Modo Revisión activo** — Paneles de entrada ocultos.  \n"
@@ -1734,6 +1754,38 @@ else:
     st.sidebar.info("No hay proyectos guardados.")
 
 st.sidebar.markdown("---")
+
+# SEMAFORO FIJO — Siempre visible sin importar el tab activo
+try:
+    _sb_ratio_ok = bresler["ok"]
+    _sb_cur_ok   = (rho_min <= cuantia <= rho_max)
+    _sb_slend_ok = slenderness["kl_r"] <= 100
+    _sb_all_ok   = _sb_ratio_ok and _sb_cur_ok and _sb_slend_ok
+    _sb_color    = "#1b5e20" if _sb_all_ok else "#b71c1c"
+    _sb_icon     = "[OK]" if _sb_all_ok else "[X]"
+    _sb_txt      = "CUMPLE" if _sb_all_ok else "NO CUMPLE"
+    _sb_detail   = []
+    if not _sb_ratio_ok:
+        _sb_detail.append(f"Bresler {bresler['ratio']:.3f} > 1.0")
+    if not _sb_cur_ok:
+        _sb_detail.append(f"Cuantia {cuantia:.2f}% fuera limites")
+    if not _sb_slend_ok:
+        _sb_detail.append(f"kL/r={slenderness['kl_r']:.1f} > 100")
+    _sb_sub = "  |  ".join(_sb_detail) if _sb_detail else (
+        f"Ratio {bresler['ratio']:.3f}  |  rho {cuantia:.2f}%  |  kL/r {slenderness['kl_r']:.1f}"
+    )
+    st.sidebar.markdown(
+        f'<div style="background:{_sb_color};color:white;padding:10px 12px;'
+        f'border-radius:8px;margin:6px 0;font-weight:bold;text-align:center">'
+        f'<div style="font-size:16px">{_sb_icon} {_sb_txt}</div>'
+        f'<div style="font-size:10px;font-weight:normal;margin-top:4px;opacity:0.9">{_sb_sub}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+except Exception:
+    st.sidebar.caption("Ejecute el calculo para ver el semaforo.")
+
+st.sidebar.markdown("---")
 _emp_foot = st.session_state.get("cpm_empresa","") or "StructoPro"
 st.sidebar.markdown(
     f'<div style="text-align:center;color:gray;font-size:10px">'
@@ -1762,7 +1814,7 @@ Es          = 200000.0
 # ── Advertencia HSC — ACI 318-19 §22.2.2.4.3 / NSR-10 C.22.2.2 ──────────
 if fc >= 55.0:
     st.warning(
-        f"⚠️ **Concreto de Alta Resistencia (f'c = {fc:.1f} MPa ≥ 55 MPa)**  \n"
+        f"AVISO: Concreto de Alta Resistencia (f'c = {fc:.1f} MPa >= 55 MPa)  \n"
         "ACI 318-19 §22.2.2.4.3 y NSR-10 C.22.2.2 requieren consideraciones adicionales:  \n"
         "• β₁ mínimo = 0.65 (ya aplicado automáticamente).  \n"
         "• Para f'c ≥ 70 MPa se recomienda modelo no-lineal confinado (Mander et al. 1988) "
@@ -1906,8 +1958,8 @@ else:
 
 _dim_x_emin = h if not es_circular else D
 _dim_y_emin = b if not es_circular else D
-e_min_x_cm  = max(0.10 * _dim_x_emin, 1.5)
-e_min_y_cm  = max(0.10 * _dim_y_emin, 1.5)
+e_min_x_cm  = max(0.6 + 0.03 * _dim_x_emin, L_col / 600.0)  # NSR-10 C.10.3.6
+e_min_y_cm  = max(0.6 + 0.03 * _dim_y_emin, L_col / 600.0)  # NSR-10 C.10.3.6
 _Mux_emin   = Pu_input * e_min_x_cm / 100.0
 _Muy_emin   = Pu_input * e_min_y_cm / 100.0
 _Mux_safe   = Mux_input if abs(Mux_input) >= _Mux_emin else (math.copysign(_Mux_emin, Mux_input) if Mux_input != 0 else _Mux_emin)
@@ -1935,28 +1987,29 @@ es_desplazable = "Desplazable" in _portico_tipo  # True → Mu ya amplificado po
 # =============================================================================
 # CÁLCULOS DE CAPACIDAD UNIAXIAL (X y Y)
 # =============================================================================
-layers_y = []
-if es_circular:
-    cap_x = compute_uniaxial_capacity_circular(D, d_prime, layers, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza)
-    cap_y = cap_x
-else:
-    # Eje X: flexión sobre eje X, peralte = h, ancho = b
-    cap_x = compute_uniaxial_capacity(b, h, d_prime, layers, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza)
-    # Eje Y: flexión sobre eje Y, peralte = b, ancho = h
-    # Extremos (caras paralelas a h, separadas en dirección b): num_filas_v barras
-    layers_y.append({'d': d_prime, 'As': num_filas_v * rebar_area})
-    # Laterales (caras a lo largo de h): num_filas_h barras totales menos las 2 esquinas
-    num_capas_intermedias_y = num_filas_h - 2
-    if num_capas_intermedias_y > 0:
-        espacio_y = (b - 2 * d_prime) / (num_capas_intermedias_y + 1)
-        for i in range(1, num_capas_intermedias_y + 1):
-            layers_y.append({'d': d_prime + i * espacio_y, 'As': 2 * rebar_area})
-    layers_y.append({'d': b - d_prime, 'As': num_filas_v * rebar_area})
-    cap_y = compute_uniaxial_capacity(h, b, d_prime, layers_y, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza)
+with st.spinner(_t("Calculando diagrama P-M...", "Computing P-M diagram...")):
+    layers_y = []
+    if es_circular:
+        cap_x = compute_uniaxial_capacity_circular(D, d_prime, layers, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza)
+        cap_y = cap_x
+    else:
+        # Eje X: flexión sobre eje X, peralte = h, ancho = b
+        cap_x = compute_uniaxial_capacity(b, h, d_prime, layers, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza)
+        # Eje Y: flexión sobre eje Y, peralte = b, ancho = h
+        # Extremos (caras paralelas a h, separadas en dirección b): num_filas_v barras
+        layers_y.append({'d': d_prime, 'As': num_filas_v * rebar_area})
+        # Laterales (caras a lo largo de h): num_filas_h barras totales menos las 2 esquinas
+        num_capas_intermedias_y = num_filas_h - 2
+        if num_capas_intermedias_y > 0:
+            espacio_y = (b - 2 * d_prime) / (num_capas_intermedias_y + 1)
+            for i in range(1, num_capas_intermedias_y + 1):
+                layers_y.append({'d': d_prime + i * espacio_y, 'As': 2 * rebar_area})
+        layers_y.append({'d': b - d_prime, 'As': num_filas_v * rebar_area})
+        cap_y = compute_uniaxial_capacity(h, b, d_prime, layers_y, fc, fy, Es, phi_c_max, phi_tension, eps_full, p_max_factor, factor_fuerza)
 
-# 2) Siempre conservador en Bresler Biaxial, usando phi_c_max
-phi_factor = phi_c_max
-bresler = biaxial_bresler(Pu_input, Mux_input, Muy_input, cap_x, cap_y, cap_x['Po'], phi_factor)
+    # 2) Siempre conservador en Bresler Biaxial, usando phi_c_max
+    phi_factor = phi_c_max
+    bresler = biaxial_bresler(Pu_input, Mux_input, Muy_input, cap_x, cap_y, cap_x['Po'], phi_factor)
 
 # 
 # BLOQUE: COMPRESIÓN AXIAL PURA — Verificación paso a paso
@@ -2447,7 +2500,285 @@ except Exception:
 #           Todos los widgets de calculo van aqui. Se llama SOLO desde tab0.
 # =============================================================================
 def render_config_tab():
+    # ─────────────────────────────────────────────────────────────────────────
+    # MODO GUIADO (WIZARD) — paso a paso para usuarios nuevos
+    # ─────────────────────────────────────────────────────────────────────────
+    if st.session_state.get("c_pm_modo_guiado", False):
+        _PASOS = [
+            _t("Materiales",           "Materials"),
+            _t("Geometria",            "Geometry"),
+            _t("Refuerzo Long.",       "Long. Reinf."),
+            _t("Refuerzo Trans.",      "Trans. Reinf."),
+            _t("Solicitaciones",       "Loads"),
+            _t("Esbeltez",             "Slenderness"),
+        ]
+        _N_PASOS = len(_PASOS)
+        _paso = int(st.session_state.get("c_pm_wizard_step", 0))
+        _paso = max(0, min(_paso, _N_PASOS - 1))
+
+        # ── Barra de progreso nativa ───────────────────────────────────────
+        st.markdown(f"### {_t('Paso', 'Step')} {_paso + 1} de {_N_PASOS}: {_PASOS[_paso]}")
+        st.progress((_paso + 1) / _N_PASOS)
+        st.markdown("---")
+
+        # ── Contenido de cada paso ─────────────────────────────────────────
+        if _paso == 0:   # ── PASO 1: Materiales ──────────────────────────
+            st.markdown(_t(
+                "Define la resistencia del concreto y la fluencia del acero. "
+                "Para estructuras sismicas DES/DMO en Colombia, NSR-10 C.21.6.3 exige f'c >= 21 MPa.",
+                "Define concrete strength and steel yield. "
+                "For DES/DMO seismic structures per NSR-10 C.21.6.3, f'c >= 21 MPa is required."
+            ))
+            _fc_u = st.radio(_t("Unidad de f'c", "f'c Unit"),
+                             ["MPa", "PSI", "kg/cm²"], horizontal=True, key="c_pm_fc_unit_wiz")
+            if _fc_u == "PSI":
+                _psi_opts = {"2500 PSI (17.2 MPa)": 17.2, "3000 PSI (20.7 MPa)": 20.7,
+                             "3500 PSI (24.1 MPa)": 24.1, "4000 PSI (27.6 MPa)": 27.6,
+                             "4500 PSI (31.0 MPa)": 31.0, "5000 PSI (34.5 MPa)": 34.5}
+                _psi_ch = st.selectbox("f'c PSI", list(_psi_opts.keys()), key="c_pm_wiz_psi")
+                st.session_state["c_pm_fc_mpa"] = _psi_opts[_psi_ch]
+            elif _fc_u == "kg/cm²":
+                _kg_opts = {"175 kg/cm² (17.2 MPa)": 17.2, "210 kg/cm² (20.6 MPa)": 20.6,
+                            "250 kg/cm² (24.5 MPa)": 24.5, "280 kg/cm² (27.5 MPa)": 27.5,
+                            "350 kg/cm² (34.3 MPa)": 34.3, "420 kg/cm² (41.2 MPa)": 41.2}
+                _kg_ch = st.selectbox("f'c kg/cm²", list(_kg_opts.keys()), key="c_pm_wiz_kg")
+                st.session_state["c_pm_fc_mpa"] = _kg_opts[_kg_ch]
+            else:
+                st.number_input("f'c MPa", 15.0, 80.0, 28.0, 1.0, key="c_pm_fc_mpa")
+            st.number_input("fy MPa", 240.0, 500.0, 420.0, 10.0, key="c_pm_fy",
+                            help=_t("Fluencia del acero de refuerzo. Valor tipico 420 MPa (60 ksi). "
+                                    "NSR-10 A.2.4 limita a 550 MPa en zonas sismicas.",
+                                    "Steel yield strength. Typical 420 MPa (60 ksi). "
+                                    "NSR-10 A.2.4 limits to 550 MPa in seismic zones."))
+            _fcv = float(st.session_state.get("c_pm_fc_mpa", 28.0))
+            _fyv = float(st.session_state.get("c_pm_fy", 420.0))
+            _niv = st.session_state.get("nivel_sismico", "")
+            if _fcv < 21.0 and ("DES" in _niv or "DMO" in _niv):
+                st.warning(_t(f"AVISO: f'c = {_fcv:.1f} MPa < 21 MPa. NSR-10 C.21.6.3 exige f'c >= 21 MPa en columnas DES/DMO.",
+                              f"WARNING: f'c = {_fcv:.1f} MPa < 21 MPa. NSR-10 C.21.6.3 requires f'c >= 21 MPa for DES/DMO."))
+            if _fyv > 500.0:
+                st.warning(_t(f"AVISO: fy = {_fyv:.0f} MPa > 500 MPa. Verifique compatibilidad NSR-10 A.2.4.",
+                              f"WARNING: fy = {_fyv:.0f} MPa > 500 MPa. Check NSR-10 A.2.4."))
+
+        elif _paso == 1:   # ── PASO 2: Geometría ─────────────────────────
+            st.markdown(_t(
+                "Define las dimensiones de la sección. Para columnas sismicas DES/DMO, "
+                "NSR-10 C.21.6.1.1 exige dimension minima >= 30 cm.",
+                "Define section dimensions. For DES/DMO seismic columns, "
+                "NSR-10 C.21.6.1.1 requires minimum dimension >= 30 cm."
+            ))
+            _sec_tipo = st.selectbox(
+                _t("Tipo de seccion", "Section type"),
+                ["Rectangular / Cuadrada", "Circular con espiral"],
+                key="c_pm_seccion_type")
+            _es_circ_wiz = "Circular" in _sec_tipo
+            if _es_circ_wiz:
+                st.number_input("Diametro D (cm)", 15.0, 150.0, 40.0, 5.0, key="c_pm_D")
+            else:
+                _wc1, _wc2 = st.columns(2)
+                _wc1.number_input(
+                    _t("Base b (cm)", "Width b (cm)"), 15.0, 150.0, 30.0, 5.0, key="c_pm_b",
+                    help=_t("Dimension transversal. Rango tipico 25-80 cm. Minimo sismica 25 cm NSR-10 C.21.6.1.1",
+                            "Transverse dimension. Typical 25-80 cm. Seismic min 25 cm NSR-10 C.21.6.1.1"))
+                _wc2.number_input(
+                    _t("Altura h (cm)", "Depth h (cm)"), 15.0, 150.0, 40.0, 5.0, key="c_pm_h",
+                    help=_t("Dimension paralela al eje de flexion principal. Rango tipico 30-100 cm.",
+                            "Dimension parallel to main bending axis. Typical 30-100 cm."))
+                _bv = float(st.session_state.get("c_pm_b", 30.0))
+                _hv = float(st.session_state.get("c_pm_h", 40.0))
+                if _hv / _bv > 3.0:
+                    st.warning(_t(f"AVISO: Relacion h/b = {_hv/_bv:.1f} > 3.0 — seccion muy esbelta. Verifique pandeo lateral.",
+                                  f"WARNING: h/b = {_hv/_bv:.1f} > 3.0 — slender section. Check lateral buckling."))
+            st.number_input(
+                _t("Recubrimiento al centroide d' (cm)", "Cover to bar centroid d' (cm)"),
+                2.0, 15.0, 5.0, 0.5, key="c_pm_d_prime",
+                help=_t("Distancia del borde exterior al centroide de la barra. Tipico: recub.libre(4cm) + estribo(1cm) + db/2.",
+                        "Distance from outer face to bar centroid. Typical: clear cover(4cm) + stirrup(1cm) + db/2."))
+            st.number_input(
+                _t("Altura libre L (cm)", "Clear height L (cm)"),
+                50.0, 1000.0, 300.0, 25.0, key="c_pm_L",
+                help=_t("Longitud libre entre nudos. Influye en esbeltez kL/r. Entrepisos tipico 280-420 cm.",
+                        "Clear length between joints. Affects slenderness kL/r. Typical story 280-420 cm."))
+
+        elif _paso == 2:   # ── PASO 3: Refuerzo Longitudinal ────────────
+            st.markdown(_t(
+                "Define el diametro y cantidad de varillas longitudinales. "
+                "La cuantia (ρ) debe estar entre 1% y 4% segun NSR-10 C.10.9.1.",
+                "Define longitudinal bar size and count. "
+                "Steel ratio (ρ) must be between 1% and 4% per NSR-10 C.10.9.1."
+            ))
+            _unit_sys_wiz = st.radio(
+                _t("Sistema de unidades", "Unit system"),
+                ["Milimetros SI", "Pulgadas EE. UU."], horizontal=True, key="c_pm_unit_system")
+            _rbd_wiz = REBAR_US if "Pulgadas" in _unit_sys_wiz or "Inches" in _unit_sys_wiz else REBAR_MM
+            _rbkeys_wiz = list(_rbd_wiz.keys())
+            _rbdef_wiz = st.session_state.get("c_pm_rebar_type", _rbkeys_wiz[2] if len(_rbkeys_wiz) > 2 else _rbkeys_wiz[0])
+            if _rbdef_wiz not in _rbkeys_wiz:
+                _rbdef_wiz = _rbkeys_wiz[0]
+            st.selectbox(_t("Diametro de las varillas", "Bar diameter"), _rbkeys_wiz,
+                         index=_rbkeys_wiz.index(_rbdef_wiz), key="c_pm_rebar_type")
+            _es_circ_wiz3 = "Circular" in st.session_state.get("c_pm_seccion_type", "Rectangular")
+            if _es_circ_wiz3:
+                st.number_input(_t("Numero de varillas", "Number of bars"),
+                                4, 20, 8, 2, key="c_pm_n_barras_circ")
+            else:
+                _wr1, _wr2 = st.columns(2)
+                _wr1.number_input(_t("Filas horizontales (sup e inf)", "Horizontal rows (top & bot)"),
+                                  2, 15, 2, 1, key="c_pm_num_h")
+                _wr2.number_input(_t("Filas verticales (laterales)", "Vertical rows (sides)"),
+                                  2, 15, 2, 1, key="c_pm_num_v")
+            # Preview cuantía estimada
+            _Ag_prev = (math.pi * float(st.session_state.get("c_pm_D", 40.0))**2 / 4
+                        if _es_circ_wiz3
+                        else float(st.session_state.get("c_pm_b", 30.0)) *
+                             float(st.session_state.get("c_pm_h", 40.0)))
+            _rbd_sel = _rbd_wiz.get(st.session_state.get("c_pm_rebar_type", _rbkeys_wiz[0]), {})
+            _db_mm   = _rbd_sel.get("diameter_mm", 16.0)
+            _ab_cm2  = math.pi * (_db_mm / 20.0)**2
+            _nb_est  = int(st.session_state.get("c_pm_n_barras_circ", 8)) if _es_circ_wiz3 else (
+                2 * int(st.session_state.get("c_pm_num_h", 2)) +
+                2 * max(0, int(st.session_state.get("c_pm_num_v", 2)) - 2))
+            _rho_est = (_nb_est * _ab_cm2 / _Ag_prev * 100) if _Ag_prev > 0 else 0
+            _rho_col = "normal" if 1.0 <= _rho_est <= 4.0 else "inverse"
+            st.metric(_t("Cuantia estimada ρ", "Estimated ratio ρ"),
+                      f"{_rho_est:.2f}%",
+                      delta="OK NSR-10 (1%–4%)" if 1.0 <= _rho_est <= 4.0 else "FUERA (1%–4%)",
+                      delta_color=_rho_col)
+
+        elif _paso == 3:   # ── PASO 4: Refuerzo Transversal ────────────
+            st.markdown(_t(
+                "Define el estribo o espiral de confinamiento. "
+                "El modulo calcula automaticamente Ash NSR-10 C.21.6.4 y la separacion de zona confinada Lo.",
+                "Define transverse reinforcement. "
+                "Module auto-calculates Ash NSR-10 C.21.6.4 and confined zone length Lo."
+            ))
+            _strd_wiz = STIRRUP_US if "Pulgadas" in st.session_state.get("c_pm_unit_system", "") else STIRRUP_MM
+            _es_circ_wiz4 = "Circular" in st.session_state.get("c_pm_seccion_type", "Rectangular")
+            _stkeys_wiz = list(_strd_wiz.keys())
+            if _es_circ_wiz4:
+                _spdef = st.session_state.get("c_pm_spiral_type", _stkeys_wiz[0])
+                if _spdef not in _stkeys_wiz: _spdef = _stkeys_wiz[0]
+                st.selectbox(_t("Diametro de la espiral", "Spiral diameter"),
+                             _stkeys_wiz, index=_stkeys_wiz.index(_spdef), key="c_pm_spiral_type")
+                st.number_input(_t("Paso de la espiral s (cm)", "Spiral pitch s (cm)"),
+                                2.0, 20.0, 7.5, 0.5, key="c_pm_paso_circ")
+            else:
+                st.selectbox(_t("Tipo de columna", "Column type"),
+                             ["Estribos (Tied)", "Espiral (Spiral)"], key="c_pm_col_type")
+                _stdef = st.session_state.get("c_pm_stirrup_type", _stkeys_wiz[0])
+                if _stdef not in _stkeys_wiz: _stdef = _stkeys_wiz[0]
+                st.selectbox(_t("Diametro del estribo", "Stirrup diameter"),
+                             _stkeys_wiz, index=_stkeys_wiz.index(_stdef), key="c_pm_stirrup_type")
+                st.number_input(_t("Numero de flejes en X", "Ties in X-dir"),
+                                0, 8, 0, 1, key="c_pm_num_flejes_x")
+                st.number_input(_t("Numero de flejes en Y", "Ties in Y-dir"),
+                                0, 8, 0, 1, key="c_pm_num_flejes_y")
+            st.info(_t(
+                "El modulo verificara automaticamente Ash requerido vs provisto al calcular.",
+                "The module will automatically verify required vs provided Ash on calculation."
+            ))
+
+        elif _paso == 4:   # ── PASO 5: Solicitaciones ───────────────────
+            st.markdown(_t(
+                "Ingrese las cargas ultimas de diseño (LRFD ya amplificadas). "
+                "La excentricidad minima NSR-10 C.10.3.6 se aplica automaticamente.",
+                "Enter factored design loads (already amplified LRFD). "
+                "Minimum eccentricity NSR-10 C.10.3.6 is applied automatically."
+            ))
+            _unit_wiz = st.radio(
+                _t("Unidades", "Units"),
+                ["KiloNewtons (kN, kN-m)", "Toneladas Fuerza (tonf, tonf-m)"],
+                horizontal=True, key="c_pm_output_units_wiz")
+            st.session_state["c_pm_output_units"] = (
+                "Toneladas Fuerza tonf, tonf-m" if "Toneladas" in _unit_wiz
+                else "KiloNewtons kN, kN-m")
+            _ffw5 = 0.1019716 if "Toneladas" in _unit_wiz else 1.0
+            _ufw5 = "tonf" if "Toneladas" in _unit_wiz else "kN"
+            _umw5 = "tonf-m" if "Toneladas" in _unit_wiz else "kN-m"
+            _ws1, _ws2, _ws3 = st.columns(3)
+            _ws1.number_input(f"Pu ({_ufw5})",
+                              value=round(2700.0 * _ffw5, 2), step=round(50.0 * _ffw5, 2),
+                              key="c_pm_pu")
+            _ws2.number_input(f"Mux ({_umw5})",
+                              value=round(45.0 * _ffw5, 2), step=round(10.0 * _ffw5, 2),
+                              key="c_pm_mux")
+            _ws3.number_input(f"Muy ({_umw5})",
+                              value=round(25.0 * _ffw5, 2), step=round(10.0 * _ffw5, 2),
+                              key="c_pm_muy")
+            st.caption(_t(
+                "Pu: carga axial ultima. Mux: momento ultimo eje X (flexion en plano h). "
+                "Muy: momento ultimo eje Y (flexion en plano b).",
+                "Pu: factored axial load. Mux: factored moment X-axis (bending in h-plane). "
+                "Muy: factored moment Y-axis (bending in b-plane)."
+            ))
+
+        elif _paso == 5:   # ── PASO 6: Esbeltez ─────────────────────────
+            st.markdown(_t(
+                "Clasifica el portico y define el factor de longitud efectiva k. "
+                "Para porticos no desplazables el modulo calcula delta_ns y amplifica Mu automaticamente.",
+                "Classify the frame and define effective length factor k. "
+                "For non-sway frames the module computes delta_ns and amplifies Mu automatically."
+            ))
+            st.radio(
+                _t("Tipo de Portico", "Frame Type"),
+                options=["No desplazable (Portico arriostrado)",
+                         "Desplazable (Portico sin arriostre)"],
+                help=_t(
+                    "No desplazable: el modulo calcula ns y amplifica Mu. "
+                    "Desplazable: Mu ya viene amplificado por P-delta desde ETABS/SAP2000.",
+                    "Non-sway: module computes ns and amplifies Mu. "
+                    "Sway: Mu already includes P-delta from global analysis."),
+                horizontal=False, key="c_pm_portico_tipo")
+            st.number_input(
+                _t("Factor de carga sostenida (beta_dns)", "Sustained load ratio (beta_dns)"),
+                0.0, 1.0, 0.6, 0.1, key="c_pm_beta_dns",
+                help=_t("Relacion M_sostenido/M_total. Default 0.6. Solo aplica a porticos No Desplazables.",
+                        "Ratio M_sustained/M_total. Default 0.6. Applies to Non-Sway frames only."))
+            st.selectbox(
+                _t("Factor de longitud efectiva k", "Effective length factor k"),
+                ["Ambos extremos articulados", "Un extremo articulado, otro empotrado",
+                 "Ambos extremos empotrados", "Voladizo (base empotrada, libre arriba)"],
+                key="c_pm_k_sel")
+
+        st.markdown("---")
+        # ── Navegacion entre pasos ────────────────────────────────────────
+        _nav1, _nav2, _nav3 = st.columns([1, 2, 1])
+        with _nav1:
+            if _paso > 0:
+                if st.button(f"⬅️ {_t('Anterior', 'Previous')}", key=f"c_pm_wiz_prev_{_paso}", use_container_width=True):
+                    st.session_state["c_pm_wizard_step"] = _paso - 1
+                    st.rerun()
+        with _nav2:
+            st.markdown(f"<div style='text-align:center; color:gray; font-size:12px; margin-top:10px'>"
+                        f"{_t('Paso', 'Step')} {_paso+1}/{_N_PASOS}</div>", unsafe_allow_html=True)
+        with _nav3:
+            if _paso < _N_PASOS - 1:
+                if st.button(f"{_t('Siguiente', 'Next')} ➡️", key=f"c_pm_wiz_next_{_paso}", type="primary", use_container_width=True):
+                    st.session_state["c_pm_wizard_step"] = _paso + 1
+                    st.rerun()
+            else:
+                if st.button(_t("✅ Ver Resultados", "✅ View Results"), key=f"c_pm_wiz_finish_{_paso}", type="primary", use_container_width=True):
+                    st.session_state["c_pm_wizard_step"] = 0
+                    st.session_state["c_pm_modo_guiado"] = False
+                    st.rerun()
+        return  # En modo guiado NO mostrar el formulario completo debajo
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # MODO EXPERTO (normal) — todos los campos a la vez
+    # ─────────────────────────────────────────────────────────────────────────
     st.markdown("### Parametros de Diseno")
+    st.caption(
+        _t(
+            "Flujo recomendado: 1. Materiales -> 2. Geometria de la seccion -> "
+            "3. Refuerzo Longitudinal -> 4. Refuerzo Transversal -> "
+            "5. Solicitaciones Biaxiales -> 6. Esbeltez. "
+            "Todos los campos son obligatorios. Los resultados se actualizan en los tabs superiores.",
+            "Recommended flow: 1. Materials -> 2. Section geometry -> "
+            "3. Longitudinal Reinforcement -> 4. Transverse Reinforcement -> "
+            "5. Biaxial Loads -> 6. Slenderness. "
+            "All fields are required. Results update in the tabs above."
+        )
+    )
     col_izq, col_der = st.columns(2)
 
     with col_izq:
@@ -2483,8 +2814,28 @@ def render_config_tab():
                 _kv = st.number_input("f'c personalizado [kg/cm2]", 100.0, 1200.0, 210.0, 10.0, key="c_pm_fc_kgcm2_custom")
                 st.session_state["c_pm_fc_kgcm2_val"] = _kv
         else:
-            st.number_input("Resistencia del Concreto f'c [MPa]", 15.0, 80.0, 21.0, 1.0, key="c_pm_fc_mpa")
-        st.number_input("Fluencia del Acero fy [MPa]", 240.0, 500.0, 420.0, 10.0, key="c_pm_fy")
+            st.number_input(
+                "Resistencia del Concreto f'c [MPa]", 15.0, 80.0, 21.0, 1.0,
+                help=_t(
+                    "Resistencia a compresion del concreto a los 28 dias. "
+                    "Rango tipico: 21-35 MPa. NSR-10 C.21.6.3: minimo 21 MPa en columnas sismicas DES/DMO. "
+                    "Para f'c > 55 MPa verificar beta1 segun NSR-10 C.10.2.7.3.",
+                    "28-day compressive strength. Typical range: 21-35 MPa. "
+                    "NSR-10 C.21.6.3: min 21 MPa for seismic DES/DMO columns."
+                ),
+                key="c_pm_fc_mpa"
+            )
+        st.number_input(
+            "Fluencia del Acero fy [MPa]", 240.0, 500.0, 420.0, 10.0,
+            help=_t(
+                "Limite de fluencia del acero de refuerzo. Valores tipicos: "
+                "240 MPa (Gr35 / NTC2289), 420 MPa (Gr60 / ASTM A615). "
+                "NSR-10 A.2.4: maximo 550 MPa en zonas sismicas.",
+                "Steel yield strength. Typical: 240 MPa (Gr35), 420 MPa (Gr60 ASTM A615). "
+                "NSR-10 A.2.4: max 550 MPa in seismic zones."
+            ),
+            key="c_pm_fy"
+        )
 
         st.markdown("---")
         st.subheader("2. Geometria de la Seccion")
@@ -2497,13 +2848,228 @@ def render_config_tab():
             st.caption("Para pilares circulares de gran diametro (puentes, silos) use el modulo Pilares Circulares.")
         else:
             _ca, _cb = st.columns(2)
-            _ca.number_input("Base b [cm]",   15.0, 150.0, 30.0, 5.0, key="c_pm_b")
-            _cb.number_input("Altura h [cm]", 15.0, 150.0, 40.0, 5.0, key="c_pm_h")
-        st.number_input("Recubrimiento al centroide d' [cm]", 2.0, 15.0, 5.0, 0.5, key="c_pm_dprime")
-        st.number_input("Altura libre de la columna L [cm]", 50.0, 1000.0, 300.0, 25.0, key="c_pm_L")
+            _ca.number_input(
+            _t("Base b [cm]", "Width b [cm]"), 15.0, 150.0, 30.0, 5.0,
+            help=_t(
+                "Dimension transversal de la seccion. Rango tipico: 25-80 cm. "
+                "Minimo estructural NSR-10: 25 cm para columnas sismicas DES/DMO (C.21.6.1.1).",
+                "Cross-section width. Typical range: 25-80 cm. "
+                "NSR-10 seismic minimum: 25 cm for DES/DMO columns (C.21.6.1.1)."
+            ),
+            key="c_pm_b"
+        )
+            _cb.number_input(
+            _t("Altura h [cm]", "Depth h [cm]"), 15.0, 150.0, 40.0, 5.0,
+            help=_t(
+                "Dimension paralela al eje de flexion principal. Rango tipico: 30-100 cm. "
+                "Para columnas sismicas se recomienda h >= L/20 (NSR-10 C.21.6.1.1).",
+                "Dimension parallel to the main bending axis. Typical range: 30-100 cm. "
+                "For seismic columns: h >= L/20 recommended (NSR-10 C.21.6.1.1)."
+            ),
+            key="c_pm_h"
+        )
+        st.number_input(
+        _t("Recubrimiento al centroide d' [cm]", "Cover to bar centroid d' [cm]"),
+        2.0, 15.0, 5.0, 0.5,
+        help=_t(
+            "Distancia del borde exterior al centroide de la barra longitudinal. "
+            "Tipico: recub.libre(4cm) + estribo(1cm) + db/2. Rango usual: 4.5-7.0 cm. "
+            "NSR-10 C.7.7.1: recubrimiento minimo = 4 cm para elementos a intemperie.",
+            "Distance from outer face to centroid of longitudinal bar. "
+            "Typical: clear cover(4cm) + stirrup(1cm) + db/2. Usual range: 4.5-7.0 cm. "
+            "NSR-10 C.7.7.1: min cover = 4 cm for exposed elements."
+        ),
+        key="c_pm_dprime"
+    )
+        st.number_input(
+        _t("Altura libre de la columna L [cm]", "Clear column height L [cm]"),
+        50.0, 1000.0, 300.0, 25.0,
+        help=_t(
+            "Longitud libre entre nudos (entre caras de viga o losa). "
+            "Influye directamente en la esbeltez kL/r. Rango tipico entrepisos: 280-420 cm. "
+            "Para kL/r > 100 se requiere analisis no lineal (NSR-10 C.10.10.7).",
+            "Clear length between joints (between beam/slab faces). "
+            "Directly affects slenderness kL/r. Typical story height: 280-420 cm. "
+            "For kL/r > 100 non-linear analysis required (NSR-10 C.10.10.7)."
+        ),
+        key="c_pm_L"
+    )
+
+        # --- Validaciones en tiempo real (sin emojis — Prompt Maestro v12.3) ---
+        _bv = float(st.session_state.get("c_pm_b", 30.0))
+        _hv = float(st.session_state.get("c_pm_h", 40.0))
+        _fcv = float(st.session_state.get("c_pm_fc_mpa", 28.0))
+        _fyv = float(st.session_state.get("c_pm_fy", 420.0))
+        if _bv > 0 and _hv > 0:
+            if _hv / _bv > 3.0:
+                st.warning(_t(
+                    f"AVISO: Relacion h/b = {_hv/_bv:.1f} > 3.0 — seccion muy esbelta. "
+                    "Verifique pandeo lateral. NSR-10 C.21.6.1.1.",
+                    f"WARNING: h/b = {_hv/_bv:.1f} > 3.0 — slender section. "
+                    "Check lateral buckling. NSR-10 C.21.6.1.1."
+                ))
+            if _hv < _bv * 0.5:
+                st.info(_t(
+                    f"INFO: h ({_hv:.0f} cm) < b/2 ({_bv/2:.0f} cm) — orientacion inusual. "
+                    "Verifique que b es la dimension menor.",
+                    f"INFO: h ({_hv:.0f} cm) < b/2 ({_bv/2:.0f} cm) — unusual orientation. "
+                    "Verify that b is the smaller dimension."
+                ))
+        if _fcv > 0:
+            nivelsis_v = st.session_state.get("nivel_sismico", "")
+            if _fcv < 21.0 and ("DES" in nivelsis_v or "DMO" in nivelsis_v):
+                st.warning(_t(
+                    f"AVISO: f'c = {_fcv:.1f} MPa < 21 MPa. NSR-10 C.21.6.3 exige "
+                    "f'c >= 21 MPa en columnas con DES/DMO.",
+                    f"WARNING: f'c = {_fcv:.1f} MPa < 21 MPa. NSR-10 C.21.6.3 requires "
+                    "f'c >= 21 MPa for DES/DMO columns."
+                ))
+            elif _fcv > 55.0:
+                st.info(_t(
+                    f"INFO: f'c = {_fcv:.1f} MPa > 55 MPa — concreto de alta resistencia. "
+                    "Verifique beta1 segun NSR-10 C.10.2.7.3.",
+                    f"INFO: f'c = {_fcv:.1f} MPa > 55 MPa — high strength concrete. "
+                    "Verify beta1 per NSR-10 C.10.2.7.3."
+                ))
+        if _fyv > 500.0:
+            st.warning(_t(
+                f"AVISO: fy = {_fyv:.0f} MPa > 500 MPa. "
+                "Verifique compatibilidad con NSR-10 A.2.4 (limite 550 MPa en zona sismica).",
+                f"WARNING: fy = {_fyv:.0f} MPa > 500 MPa. "
+                "Check NSR-10 A.2.4 compliance (550 MPa limit in seismic zones)."
+            ))
+    with col_der:
+        st.subheader("3. Refuerzo Longitudinal")
+        st.radio("Sistema de unidades de varillas:",
+                 ["Milimetros (SI)", "Pulgadas (EE. UU.)"],
+                 horizontal=True, key="c_pm_unit_system")
+        _rbd_cfg  = REBAR_US if ("Pulgadas" in st.session_state.get("c_pm_unit_system","") or
+                                  "Inches"  in st.session_state.get("c_pm_unit_system","")) else REBAR_MM
+        _rb_keys  = list(_rbd_cfg.keys())
+        _rb_def   = st.session_state.get("c_pm_rebar_type", _rb_keys[2] if len(_rb_keys) > 2 else _rb_keys[0])
+        if _rb_def not in _rb_keys: _rb_def = _rb_keys[0]
+        st.selectbox("Diametro de las varillas", _rb_keys,
+                     index=_rb_keys.index(_rb_def), key="c_pm_rebar_type")
+
+        _es_circ_rb = "Circular" in st.session_state.get("c_pm_seccion_type","")
+        if _es_circ_rb:
+            st.number_input(
+                "Numero de varillas longitudinales", 4, 20, 8, 2,
+                help=_t(
+                    "Numero de barras longitudinales en columna circular. "
+                    "Minimo: 6 barras (NSR-10 C.21.6.3.1 para DES). "
+                    "Distribucion uniforme en corona circular a radio r = D/2 - rec - destribo - db/2.",
+                    "Number of longitudinal bars in circular column. "
+                    "Min 6 bars (NSR-10 C.21.6.3.1 for DES). Uniformly distributed."
+                ),
+                key="c_pm_n_barras_circ"
+            )
+        else:
+            _cr1, _cr2 = st.columns(2)
+            _cr1.number_input(
+                "Filas horizontales (sup e inf)", 2, 15, 2, 1,
+                help=_t(
+                    "Numero de varillas por fila horizontal (cara superior e inferior). "
+                    "Minimo 2 por cara. El total de barras = 2*filas_h + 2*(filas_v-2).",
+                    "Number of bars per horizontal face (top and bottom). Min 2. "
+                    "Total bars = 2*rows_h + 2*(rows_v-2)."
+                ),
+                key="c_pm_num_h"
+            )
+            _cr2.number_input(
+                "Filas verticales (laterales)", 2, 15, 2, 1,
+                help=_t(
+                    "Numero de varillas por cara lateral (incluyendo las de esquina). "
+                    "Minimo 2. Cada varilla intermedia requiere una grapa adicional (Ash).",
+                    "Number of bars per side face (including corners). Min 2. "
+                    "Each intermediate bar requires an additional tie (Ash)."
+                ),
+                key="c_pm_num_v"
+            )
 
         st.markdown("---")
-        st.subheader("6. Esbeltez")
+        st.subheader("4. Refuerzo Transversal")
+        _strd_cfg = STIRRUP_US if ("Pulgadas" in st.session_state.get("c_pm_unit_system","") or
+                                    "Inches"  in st.session_state.get("c_pm_unit_system","")) else STIRRUP_MM
+        if _es_circ_rb:
+            _sp_keys = list(_strd_cfg.keys())
+            _sp_def  = st.session_state.get("c_pm_spiral_type", _sp_keys[0])
+            if _sp_def not in _sp_keys: _sp_def = _sp_keys[0]
+            st.selectbox("Diametro de la espiral", _sp_keys,
+                         index=_sp_keys.index(_sp_def), key="c_pm_spiral_type")
+            st.number_input(
+                "Paso de la espiral s [cm]", 2.0, 20.0, 7.5, 0.5,
+                help=_t(
+                    "Separacion entre vueltas de la espiral de confinamiento. "
+                    "Limites NSR-10 C.21.6.4.2: s <= menor(D_nucleo/4, 6*db_long, 10 cm en zona de confinamiento). "
+                    "Fuera de zona de confinamiento: s <= 15 cm.",
+                    "Spiral pitch between turns. NSR-10 C.21.6.4.2 limits: "
+                    "s <= min(D_core/4, 6*db, 10 cm) in confinement zone. Outside: s <= 15 cm."
+                ),
+                key="c_pm_paso_circ"
+            )
+        else:
+            st.selectbox("Tipo de columna",
+                         ["Estribos (Tied)", "Espiral (Spiral)"], key="c_pm_col_type")
+            _st_keys = list(_strd_cfg.keys())
+            _st_def  = st.session_state.get("c_pm_stirrup_type", _st_keys[0])
+            if _st_def not in _st_keys: _st_def = _st_keys[0]
+            st.selectbox("Diametro del estribo", _st_keys,
+                         index=_st_keys.index(_st_def), key="c_pm_stirrup_type")
+
+        st.markdown("---")
+        st.subheader("5. Solicitaciones Biaxiales")
+        st.radio("Unidades del diagrama:",
+                 ["KiloNewtons (kN, kN-m)", "Toneladas Fuerza (tonf, tonf-m)"],
+                 horizontal=True, key="c_pm_output_units")
+        _ff_w = 0.1019716 if "Toneladas" in st.session_state.get("c_pm_output_units","") else 1.0
+        _uf_w = "tonf"   if "Toneladas" in st.session_state.get("c_pm_output_units","") else "kN"
+        _um_w = "tonf-m" if "Toneladas" in st.session_state.get("c_pm_output_units","") else "kN-m"
+        _cs1, _cs2, _cs3 = st.columns(3)
+        _cs1.number_input(
+            f"Pu [{_uf_w}]", value=round(2700.0*_ff_w,2), step=round(50.0*_ff_w,2),
+            help=_t(
+                "Carga axial ultima de diseno mayorada (factorizada). "
+                "Obtenida del analisis estructural (ETABS/SAP2000) usando combinaciones NSR-10 B.2.4. "
+                "El modulo aplica automaticamente la excentricidad minima NSR-10 C.10.3.6: "
+                "emin = max(0.6 + 0.03h, L/600) cm.",
+                "Factored axial design load from structural analysis (ETABS/SAP2000). "
+                "NSR-10 B.2.4 load combinations. Module auto-applies NSR-10 C.10.3.6 min. eccentricity."
+            ),
+            key="c_pm_pu"
+        )
+        _cs2.number_input(
+            f"Mux [{_um_w}]", value=round(45.0*_ff_w,2), step=round(10.0*_ff_w,2),
+            help=_t(
+                "Momento flector ultimo sobre el eje X (flexion en el plano XZ). "
+                "Para marcos no desplazables el modulo amplifica por delta_ns (NSR-10 C.10.10.6). "
+                "Para marcos desplazables ingresar Mu ya amplificado por P-Delta del modelo global.",
+                "Factored bending moment about X-axis. For non-sway frames the module "
+                "amplifies by delta_ns (NSR-10 C.10.10.6). For sway: enter P-Delta amplified Mu."
+            ),
+            key="c_pm_mux"
+        )
+        _cs3.number_input(
+            f"Muy [{_um_w}]", value=round(25.0*_ff_w,2), step=round(10.0*_ff_w,2),
+            help=_t(
+                "Momento flector ultimo sobre el eje Y (flexion en el plano YZ). "
+                "Verificacion biaxial usando el metodo de Bresler (NSR-10 C.10.2 / ACI 318-19 R22.4.2.1). "
+                "Si Muy = 0 el modulo verifica unicamente el eje X.",
+                "Factored bending moment about Y-axis. Biaxial check using Bresler method "
+                "(NSR-10 C.10.2 / ACI 318-19 R22.4.2.1). If Muy=0, only X-axis is checked."
+            ),
+            key="c_pm_muy"
+        )
+        st.checkbox("Especificar Curvatura Simple M1/M2", value=False,
+                    help="Permite calcular Cm diferente a 1.0", key="c_pm_cm_chk")
+        if st.session_state.get("c_pm_cm_chk"):
+            _cm1, _cm2 = st.columns(2)
+            _cm1.number_input(f"Momento menor M1x [{_um_w}]", value=0.0, step=round(10.0*_ff_w,2), key="c_pm_m1x")
+            _cm2.number_input(f"Momento menor M1y [{_um_w}]", value=0.0, step=round(10.0*_ff_w,2), key="c_pm_m1y")
+
+        st.markdown("---")
+        st.markdown("---")
+        st.subheader("6. Esbeltez — Tipo de Portico")
         st.radio(
             _t("Tipo de Pórtico", "Frame Type"),
             options=["No desplazable (Pórtico arriostrado)", "Desplazable (Pórtico sin arriostre)"],
@@ -2534,67 +3100,6 @@ def render_config_tab():
             key="c_pm_k_sel"
         )
 
-    with col_der:
-        st.subheader("3. Refuerzo Longitudinal")
-        st.radio("Sistema de unidades de varillas:",
-                 ["Milimetros (SI)", "Pulgadas (EE. UU.)"],
-                 horizontal=True, key="c_pm_unit_system")
-        _rbd_cfg  = REBAR_US if ("Pulgadas" in st.session_state.get("c_pm_unit_system","") or
-                                  "Inches"  in st.session_state.get("c_pm_unit_system","")) else REBAR_MM
-        _rb_keys  = list(_rbd_cfg.keys())
-        _rb_def   = st.session_state.get("c_pm_rebar_type", _rb_keys[2] if len(_rb_keys) > 2 else _rb_keys[0])
-        if _rb_def not in _rb_keys: _rb_def = _rb_keys[0]
-        st.selectbox("Diametro de las varillas", _rb_keys,
-                     index=_rb_keys.index(_rb_def), key="c_pm_rebar_type")
-
-        _es_circ_rb = "Circular" in st.session_state.get("c_pm_seccion_type","")
-        if _es_circ_rb:
-            st.number_input("Numero de varillas longitudinales", 4, 20, 8, 2, key="c_pm_n_barras_circ")
-        else:
-            _cr1, _cr2 = st.columns(2)
-            _cr1.number_input("Filas horizontales (sup e inf)", 2, 15, 2, 1, key="c_pm_num_h")
-            _cr2.number_input("Filas verticales (laterales)",   2, 15, 2, 1, key="c_pm_num_v")
-
-        st.markdown("---")
-        st.subheader("4. Refuerzo Transversal")
-        _strd_cfg = STIRRUP_US if ("Pulgadas" in st.session_state.get("c_pm_unit_system","") or
-                                    "Inches"  in st.session_state.get("c_pm_unit_system","")) else STIRRUP_MM
-        if _es_circ_rb:
-            _sp_keys = list(_strd_cfg.keys())
-            _sp_def  = st.session_state.get("c_pm_spiral_type", _sp_keys[0])
-            if _sp_def not in _sp_keys: _sp_def = _sp_keys[0]
-            st.selectbox("Diametro de la espiral", _sp_keys,
-                         index=_sp_keys.index(_sp_def), key="c_pm_spiral_type")
-            st.number_input("Paso de la espiral s [cm]", 2.0, 20.0, 7.5, 0.5, key="c_pm_paso_circ")
-        else:
-            st.selectbox("Tipo de columna",
-                         ["Estribos (Tied)", "Espiral (Spiral)"], key="c_pm_col_type")
-            _st_keys = list(_strd_cfg.keys())
-            _st_def  = st.session_state.get("c_pm_stirrup_type", _st_keys[0])
-            if _st_def not in _st_keys: _st_def = _st_keys[0]
-            st.selectbox("Diametro del estribo", _st_keys,
-                         index=_st_keys.index(_st_def), key="c_pm_stirrup_type")
-
-        st.markdown("---")
-        st.subheader("5. Solicitaciones Biaxiales")
-        st.radio("Unidades del diagrama:",
-                 ["KiloNewtons (kN, kN-m)", "Toneladas Fuerza (tonf, tonf-m)"],
-                 horizontal=True, key="c_pm_output_units")
-        _ff_w = 0.1019716 if "Toneladas" in st.session_state.get("c_pm_output_units","") else 1.0
-        _uf_w = "tonf"   if "Toneladas" in st.session_state.get("c_pm_output_units","") else "kN"
-        _um_w = "tonf-m" if "Toneladas" in st.session_state.get("c_pm_output_units","") else "kN-m"
-        _cs1, _cs2, _cs3 = st.columns(3)
-        _cs1.number_input(f"Pu [{_uf_w}]",  value=round(2700.0*_ff_w,2), step=round(50.0*_ff_w,2),  key="c_pm_pu")
-        _cs2.number_input(f"Mux [{_um_w}]", value=round(45.0*_ff_w,2),   step=round(10.0*_ff_w,2),  key="c_pm_mux")
-        _cs3.number_input(f"Muy [{_um_w}]", value=round(25.0*_ff_w,2),   step=round(10.0*_ff_w,2),  key="c_pm_muy")
-        st.checkbox("Especificar Curvatura Simple M1/M2", value=False,
-                    help="Permite calcular Cm diferente a 1.0", key="c_pm_cm_chk")
-        if st.session_state.get("c_pm_cm_chk"):
-            _cm1, _cm2 = st.columns(2)
-            _cm1.number_input(f"Momento menor M1x [{_um_w}]", value=0.0, step=round(10.0*_ff_w,2), key="c_pm_m1x")
-            _cm2.number_input(f"Momento menor M1y [{_um_w}]", value=0.0, step=round(10.0*_ff_w,2), key="c_pm_m1y")
-
-        st.markdown("---")
         st.subheader("Resumen de la Seccion")
         st.info(
             f"f'c = {st.session_state.get('c_pm_fc_mpa', 21.0)} MPa  |  "
@@ -2707,81 +3212,118 @@ def verificar_nodo_viga_columna(b_col_cm, h_col_cm, fc_mpa, fy_mpa,
 def auto_size_column(Pu_kN, Mux_kNm, Muy_kNm, fc_mpa, fy_mpa,
                      nivel_sismico="DES", rho_objetivo=0.02):
     """
-    Sugiere la sección mínima de columna rectangular que satisface Pu, Mux, Muy.
+    Sugiere la seccion minima de columna rectangular que satisface Pu, Mux, Muy.
 
     Algoritmo:
-      1. Para cada b×h en la grilla de secciones típicas colombianas
-      2. Estima Ag mínimo por carga axial: Ag ≥ Pu/(0.40·f'c) (regla Nilson)
-      3. Calcula cuantía necesaria con ρ_objetivo
-      4. Verifica diagrama P-M uniaxial simplificado
-      5. Retorna lista de secciones factibles ordenadas por área
+      1. Para cada bxh en la grilla de secciones tipicas colombianas
+      2. Verifica capacidad axial phi_Pn_max >= Pu
+      3. Verifica capacidad de momento phi_Mn_x >= Mux, phi_Mn_y >= Muy
+      4. Auto-escala cuantia si no hay resultado (hasta rho=4%)
+      5. Retorna (lista_5_secciones, rho_usada, fue_escalada)
+
+    Unidades internas: MPa, cm, kN, kN-m
+    Conversion: 1 MPa * 1 cm2 = 0.1 kN  (dividir por 10)
     """
     import math
-    factor_phi = 0.65  # φ compresión controlada
+    factor_phi = 0.65  # phi compresion controlada (NSR-10 C.9.3.2.1)
 
-    # Grilla de secciones típicas (cm) — múltiplos de 5cm
-    secciones = []
-    for b_cm in range(25, 85, 5):
-        for h_cm in range(b_cm, 105, 5):  # h ≥ b siempre
-            Ag_cm2 = b_cm * h_cm
+    def _buscar_con_rho(rho):
+        secciones = []
+        for b_cm in range(25, 110, 5):
+            for h_cm in range(b_cm, 130, 5):  # h >= b siempre
+                Ag_cm2 = float(b_cm * h_cm)
 
-            # Filtro rápido: capacidad axial mínima
-            Po_est = 0.85 * fc_mpa * Ag_cm2 / 100.0  # kN (sin acero, aprox)
-            phi_Pmax = factor_phi * 0.80 * Po_est
-            if phi_Pmax < Pu_kN * 0.5:
-                continue  # Sección demasiado pequeña — saltar
+                # CORREGIDO: 1 MPa*cm2 = 0.1 kN => dividir por 10, no 100
+                # Filtro rapido por carga axial (solo concreto, sin acero)
+                Po_est_kN = 0.85 * fc_mpa * Ag_cm2 / 10.0
+                phi_Pmax  = factor_phi * 0.80 * Po_est_kN
+                if phi_Pmax < Pu_kN * 0.5:
+                    continue  # seccion demasiado pequena
 
-            # Cuantía con ρ_objetivo
-            Ast_cm2 = rho_objetivo * Ag_cm2
-            Po = (0.85 * fc_mpa * (Ag_cm2 - Ast_cm2) / 100.0 
-                  + fy_mpa * Ast_cm2 / 100.0)  # kN
-            phi_Pn_max = factor_phi * 0.80 * Po
+                # Capacidad axial con acero segun rho
+                Ast_cm2 = rho * Ag_cm2
+                Po_kN   = (0.85 * fc_mpa * (Ag_cm2 - Ast_cm2) / 10.0
+                           + fy_mpa * Ast_cm2 / 10.0)
+                phi_Pn_max = factor_phi * 0.80 * Po_kN
 
-            if phi_Pn_max < Pu_kN:
-                continue
+                if phi_Pn_max < Pu_kN:
+                    continue  # no soporta la carga axial
 
-            # Verificación momento simplificada (línea recta approx)
-            # φMn ≈ φ·As·fy·(h - 2·d')·0.5/1000 + φ·Cc·jd
-            d_prime = max(5.0, b_cm * 0.10)
-            jd = 0.85 * (h_cm - 2 * d_prime)  # brazo de palanca aprox
-            phi_Mn_x = factor_phi * (Ast_cm2/2 * fy_mpa / 100.0) * jd / 100.0  # kN·m
-            jd_y = 0.85 * (b_cm - 2 * d_prime)
-            phi_Mn_y = factor_phi * (Ast_cm2/2 * fy_mpa / 100.0) * jd_y / 100.0  # kN·m
+                # Capacidad de momento a flexión pura (aproximada)
+                d_prime = max(5.0, min(b_cm, h_cm) * 0.10)
+                jd_x_cm = 0.85 * (h_cm - 2.0 * d_prime)
+                jd_y_cm = 0.85 * (b_cm - 2.0 * d_prime)
+                if jd_x_cm <= 0 or jd_y_cm <= 0:
+                    continue
 
-            # Bresler simplificado
-            if phi_Mn_x <= 0 or phi_Mn_y <= 0:
-                continue
-            ratio_x = Mux_kNm / phi_Mn_x if phi_Mn_x > 0 else 999
-            ratio_y = Muy_kNm / phi_Mn_y if phi_Mn_y > 0 else 999
+                phi_Mn_x_pure = factor_phi * (Ast_cm2 / 2.0 * fy_mpa / 10.0) * (jd_x_cm / 100.0)
+                phi_Mn_y_pure = factor_phi * (Ast_cm2 / 2.0 * fy_mpa / 10.0) * (jd_y_cm / 100.0)
 
-            # Criterio de aceptación conservador
-            if ratio_x <= 1.0 and ratio_y <= 1.0 and phi_Pn_max >= Pu_kN:
-                esbeltez_ok = True  # filtro básico
-                secciones.append({
-                    "b": b_cm, "h": h_cm,
-                    "Ag": Ag_cm2,
-                    "rho": rho_objetivo,
-                    "phi_Pn_max": phi_Pn_max,
-                    "phi_Mn_x": phi_Mn_x,
-                    "phi_Mn_y": phi_Mn_y,
-                    "ratio_x": ratio_x,
-                    "ratio_y": ratio_y,
-                    "Ast_cm2": Ast_cm2,
-                })
+                if phi_Mn_x_pure <= 0 or phi_Mn_y_pure <= 0:
+                    continue
 
-    # Ordenar por área (mínima primero)
-    secciones.sort(key=lambda s: s["Ag"])
-    return secciones[:5]  # top 5 más compactas
+                # HEURÍSTICA DE DIAGRAMA P-M: 
+                # Si la carga axial es alta, la capacidad de momento disminuye drásticamente.
+                # Asumimos que para Pu > 0.4 phi_Pn_max, la capacidad de momento cae linealmente hasta 0.
+                axial_ratio = Pu_kN / phi_Pn_max
+                if axial_ratio > 0.4:
+                    mom_reduction = max(0.05, (1.0 - axial_ratio) / 0.6)
+                else:
+                    mom_reduction = 1.0  # Asumimos que la flexion pura es buena estimacion cerca del balance
+
+                # Castigo adicional fijo (~15%) para prever posibles efectos de esbeltez
+                mom_reduction *= 0.85
+
+                phi_Mn_x_disp = phi_Mn_x_pure * mom_reduction
+                phi_Mn_y_disp = phi_Mn_y_pure * mom_reduction
+
+                ratio_x = Mux_kNm / phi_Mn_x_disp if phi_Mn_x_disp > 0 else 999.0
+                ratio_y = Muy_kNm / phi_Mn_y_disp if phi_Mn_y_disp > 0 else 999.0
+
+                # Interacción Biaxial (Contorno PCA simplificado alfa=1.15)
+                biaxial_ratio = (ratio_x**1.15 + ratio_y**1.15)
+
+                if biaxial_ratio <= 1.0:
+                    secciones.append({
+                        "b": b_cm, "h": h_cm,
+                        "Ag": Ag_cm2,
+                        "rho": rho,
+                        "phi_Pn_max": phi_Pn_max,
+                        "phi_Mn_x": phi_Mn_x_pure, # Para mostrar la nominal teorica en tabla
+                        "phi_Mn_y": phi_Mn_y_pure,
+                        "ratio_x": ratio_x,
+                        "ratio_y": ratio_y,
+                        "Ast_cm2": Ast_cm2,
+                    })
+
+        secciones.sort(key=lambda s: s["Ag"])
+        return secciones[:5]
+
+    # Intento 1 — cuantia solicitada por el usuario
+    res = _buscar_con_rho(rho_objetivo)
+    if res:
+        return res, rho_objetivo, False
+
+    # Auto-escalado — prueba cuantias mayores automaticamente
+    for rho_esc in [0.020, 0.025, 0.030, 0.035, 0.040]:
+        if rho_esc <= rho_objetivo:
+            continue
+        res = _buscar_con_rho(rho_esc)
+        if res:
+            return res, rho_esc, True  # fue_escalada = True
+
+    return [], rho_objetivo, False
 # =============================================================================
 # PASO 6 — TABS PRINCIPALES
 # =============================================================================
-tab0, tab1, tab2, tab2b, tab3, tab4 = st.tabs([
+tab0, tab1, tab2, tab2b, tab3, tab4, tab_resumen = st.tabs([
     "Configuracion",
     "Diagrama P-M Biaxial",
     "Seccion y Estribos 3D",
     "Alzado y Combos de Carga",
     "Cantidades y APU",
     "Memoria de Calculo",
+    _t("Resumen Ejecutivo", "Executive Summary"),
 ])
 
 with tab0:
@@ -2795,19 +3337,19 @@ with tab0:
         with _rev_cols[0]:
             st.metric("f'c", f"{fc:.1f} MPa")
             st.metric("fy", f"{fy:.0f} MPa")
-            st.metric("Sección", f"{'Ø'+str(D) if es_circular else str(b)+'×'+str(h)} cm")
+            st.metric("Sección", f"{'D='+str(D) if es_circular else str(b)+'x'+str(h)} cm")
         with _rev_cols[1]:
             st.metric("d'", f"{d_prime:.1f} cm")
             st.metric("Barras", f"{n_barras if es_circular else n_barras_total} Ø{rebar_diam:.1f} mm")
             st.metric("Estribo", f"Ø{stirrup_diam:.1f} mm @ {sconf:.1f} cm")
         with _rev_cols[2]:
             st.metric("Pu", f"{Pu_input/factor_fuerza:.1f} {unidad_fuerza}")
-            st.metric("Mux", f"{Mux_input/factor_mom:.1f} {unidad_mom}")
-            st.metric("Muy", f"{Muy_input/factor_mom:.1f} {unidad_mom}")
+            st.metric("Mux", f"{Mux_input/factor_fuerza:.1f} {unidad_mom}")
+            st.metric("Muy", f"{Muy_input/factor_fuerza:.1f} {unidad_mom}")
         st.markdown("---")
     # ── AUTO-SIZING ───────────────────────────────────────────────────────────
     st.markdown("---")
-    with st.expander(_t("🔍 Auto-Sizing — Sección Mínima Sugerida",
+    with st.expander(_t("Auto-Sizing — Seccion Minima Sugerida",
                          "🔍 Auto-Sizing — Minimum Section Suggestion"), expanded=False):
         st.caption(_t(
             "Dado Pu, Mux, Muy actuales, calcula las 5 secciones más compactas que cumplen "
@@ -2817,15 +3359,18 @@ with tab0:
         ))
         _rho_obj = st.slider(_t("Cuantía objetivo ρ [%]","Target ratio ρ [%]"),
                               1.0, 4.0, 2.0, 0.5, key="c_pm_rho_autosize") / 100.0
-        if st.button(_t("▶ Calcular Secciones","▶ Calculate Sections"), key="c_pm_run_autosize"):
-            _as_results = auto_size_column(
+        if st.button(_t("Calcular Secciones","Calculate Sections"), key="c_pm_run_autosize"):
+            _as_results, _as_rho, _as_esc = auto_size_column(
                 Pu_input / factor_fuerza,
-                Mux_input / factor_mom,
-                Muy_input / factor_mom,
+                Mux_input / factor_fuerza,
+                Muy_input / factor_fuerza,
                 fc, fy,
                 nivel_sismico=nivel_sismico,
                 rho_objetivo=_rho_obj
             )
+            if _as_esc:
+                st.info(_t(f"Cuantía escalada automáticamente a {_as_rho*100:.1f}% para hallar secciones viables.",
+                           f"Ratio auto-scaled to {_as_rho*100:.1f}% to find viable sections."))
             if _as_results:
                 _as_header = [_t("b [cm]","b [cm]"), _t("h [cm]","h [cm]"),
                                _t("Ag [cm²]","Ag [cm²]"), _t("Ast [cm²]","Ast [cm²]"),
@@ -2849,15 +3394,15 @@ with tab0:
                 st.dataframe(_df_as, use_container_width=True)
                 _best = _as_results[0]
                 st.success(
-                    _t(f"✅ Sección mínima sugerida: **{_best['b']:.0f}×{_best['h']:.0f} cm** "
+                    _t(f"Sección mínima sugerida: {_best['b']:.0f}x{_best['h']:.0f} cm "
                        f"(Ag={_best['Ag']:.0f} cm²) con ρ={_rho_obj*100:.1f}%",
-                       f"✅ Minimum suggested section: **{_best['b']:.0f}×{_best['h']:.0f} cm** "
+                       f"Minimum suggested section: **{_best['b']:.0f}×{_best['h']:.0f} cm** "
                        f"(Ag={_best['Ag']:.0f} cm²) with ρ={_rho_obj*100:.1f}%"))
                 st.caption(_t(
-                    "⚠️ Verificación preliminar por carga axial y momento uniaxial simplificado. "
+                    "Verificacion preliminar por carga axial y momento uniaxial simplificado. "
                     "Configure la sección seleccionada en el panel Configuración y valide con el "
                     "Diagrama P-M completo.",
-                    "⚠️ Preliminary check based on axial load and simplified uniaxial moment. "
+                    "Preliminary check based on axial load and simplified uniaxial moment. "
                     "Set the selected section in Configuration and validate with the full P-M diagram."))
             else:
                 st.warning(_t(
@@ -2865,6 +3410,42 @@ with tab0:
                     "Aumente la cuantía o revise las cargas de diseño.",
                     "No sections found in 25–80 cm × 25–100 cm grid at target ρ. "
                     "Increase ratio or check design loads."))
+    # --- SEMAFORO GLOBAL (Prompt Maestro v12.3 — sin emojis) ---
+    try:
+        _all_ok = bresler['ok'] and (rho_min <= cuantia <= rho_max)
+        _fallos = []
+        if not bresler['ok']:
+            _fallos.append(_t(
+                f"Biaxial: Ratio {bresler['ratio']:.3f} > 1.0",
+                f"Biaxial: Ratio {bresler['ratio']:.3f} > 1.0"
+            ))
+        if not (rho_min <= cuantia <= rho_max):
+            _fallos.append(_t(
+                f"Cuantia {cuantia:.2f}% fuera de [{rho_min:.1f}% - {rho_max:.1f}%]",
+                f"Ratio {cuantia:.2f}% outside [{rho_min:.1f}% - {rho_max:.1f}%]"
+            ))
+        if _all_ok:
+            st.markdown(
+                '<div style="background:#1b5e20;color:#e8f5e9;padding:12px 18px;'
+                'border-radius:8px;font-weight:bold;font-size:15px;margin-bottom:8px;">'
+                + _t(
+                    f"CUMPLE — Biaxial OK | Cuantia {cuantia:.2f}% OK | kL/r = {slenderness['kl_r']:.1f}",
+                    f"PASS — Biaxial OK | Ratio {cuantia:.2f}% OK | kL/r = {slenderness['kl_r']:.1f}"
+                ) + '</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                '<div style="background:#b71c1c;color:#ffebee;padding:12px 18px;'
+                'border-radius:8px;font-weight:bold;font-size:15px;margin-bottom:8px;">'
+                + _t(
+                    f"NO CUMPLE — {chr(32).join(_fallos)}",
+                    f"FAIL — {chr(32).join(_fallos)}"
+                ) + '</div>',
+                unsafe_allow_html=True
+            )
+    except Exception:
+        pass
     # ── VISTA EN VIVO ─────────────────────────────────────────────────────────
     st.markdown("---")
     st.subheader(_t(" Vista en Vivo — Superficie Biaxial 3D + Verificación",
@@ -2884,7 +3465,7 @@ with tab0:
         st.markdown("---")
         if not es_circular:
             if ash_ok:
-                st.success(f"OK Ash\n{Ash_prov:.2f} ≥ {Ash_req:.2f} cm²")
+                st.success(f"OK Ash\n{Ash_prov:.2f} >= {Ash_req:.2f} cm2")
             else:
                 st.error(f" Ash DÉFICIT\n{Ash_prov:.2f} < {Ash_req:.2f} cm²")
                 st.info(_t(
@@ -2897,6 +3478,136 @@ with tab0:
                   delta_color="normal" if slenderness['kl_r'] <= 22 else "inverse")
     with _cb_live:
         st.plotly_chart(fig_3d, use_container_width=True, key="fig_3d_live_tab0")
+
+# ── OPTIMIZADOR DE SECCIÓN ─────────────────────────────────────────────────
+with st.expander(_t(
+    "Optimizador de Seccion — Sugerencia automatica NSR-10",
+    "Section Optimizer — Automatic NSR-10 suggestion"
+), expanded=False):
+    st.markdown(_t(
+        "Ingrese las cargas de diseno y el modulo buscara las 5 secciones rectangulares "
+        "mas compactas que cumplen Pu, Mux, Muy con la cuantia objetivo. "
+        "Use los resultados como punto de partida, luego verifique con el diagrama P-M completo.",
+        "Enter design loads and the module will find the 5 most compact rectangular sections "
+        "satisfying Pu, Mux, Muy with the target ratio. "
+        "Use as a starting point, then verify with the full P-M diagram."
+    ))
+    _op1, _op2, _op3, _op4 = st.columns(4)
+    _oPu  = _op1.number_input(_t("Pu (kN)", "Pu (kN)"),   0.0, 50000.0,
+                               float(Pu_input * factor_fuerza) if factor_fuerza > 0 else 2700.0,
+                               50.0, key="c_pm_opt_pu")
+    _oMux = _op2.number_input(_t("Mux (kN-m)", "Mux (kN-m)"), 0.0, 5000.0,
+                               float(abs(Mux_input * factor_fuerza)) if factor_fuerza > 0 else 45.0,
+                               5.0, key="c_pm_opt_mux")
+    _oMuy = _op3.number_input(_t("Muy (kN-m)", "Muy (kN-m)"), 0.0, 5000.0,
+                               float(abs(Muy_input * factor_fuerza)) if factor_fuerza > 0 else 25.0,
+                               5.0, key="c_pm_opt_muy")
+    _oRho = _op4.number_input(_t("Cuantia objetivo ρ (%)", "Target ratio ρ (%)"),
+                               1.0, 4.0, 2.0, 0.5, key="c_pm_opt_rho") / 100.0
+
+    if st.button(_t("Buscar secciones optimas", "Find optimal sections"),
+                 type="primary", key="c_pm_btn_opt"):
+        with st.spinner(_t("Buscando secciones...", "Searching sections...")):
+            _opt_results, _opt_rho, _opt_esc = auto_size_column(
+                Pu_kN=_oPu, Mux_kNm=_oMux, Muy_kNm=_oMuy,
+                fc_mpa=fc, fy_mpa=fy,
+                nivel_sismico=nivel_sismico,
+                rho_objetivo=_oRho
+            )
+        if _opt_esc:
+            st.info(_t(f"Cuantía escalada automáticamente a {_opt_rho*100:.1f}% para hallar secciones viables.",
+                       f"Ratio auto-scaled to {_opt_rho*100:.1f}% to find viable sections."))
+        if not _opt_results:
+            st.error(_t(
+                "No se encontraron secciones validas para estas cargas con la cuantia indicada. "
+                "Pruebe aumentar la cuantia objetivo o reducir las cargas.",
+                "No valid sections found for these loads with the indicated ratio. "
+                "Try increasing the target ratio or reducing loads."
+            ))
+        else:
+            st.success(_t(
+                f"Se encontraron {len(_opt_results)} secciones candidatas (ordenadas de menor a mayor area):",
+                f"{len(_opt_results)} candidate sections found (sorted smallest to largest area):"
+            ))
+            import pandas as _pd_opt
+            _opt_rows = []
+            for _r in _opt_results:
+                _cuantia_disp = "OK" if 1.0 <= _r['rho'] * 100 <= 4.0 else "Revisar"
+                _opt_rows.append({
+                    _t("Sección", "Section"): f"{_r['b']}×{_r['h']} cm",
+                    _t("Ag (cm²)", "Ag (cm²)"): f"{_r['Ag']:.0f}",
+                    _t("Ast (cm²)", "Ast (cm²)"): f"{_r['Ast_cm2']:.2f}",
+                    _t("ρ (%)", "ρ (%)"): f"{_r['rho']*100:.2f}",
+                    _t("φPn max (kN)", "φPn max (kN)"): f"{_r['phi_Pn_max']:.1f}",
+                    _t("φMnx (kN-m)", "φMnx (kN-m)"): f"{_r['phi_Mn_x']:.1f}",
+                    _t("φMny (kN-m)", "φMny (kN-m)"): f"{_r['phi_Mn_y']:.1f}",
+                    _t("Ratio x", "Ratio x"): f"{_r['ratio_x']:.3f}",
+                    _t("Ratio y", "Ratio y"): f"{_r['ratio_y']:.3f}",
+                    _t("Estado", "Status"): _cuantia_disp,
+                })
+            _df_opt = _pd_opt.DataFrame(_opt_rows)
+            st.dataframe(_df_opt, use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+            st.markdown(_t(
+                "**Como usar:** Seleccione una seccion de la tabla, ingresela en el "
+                "panel de Configuracion (Sección 2. Geometria) y verifique con el diagrama P-M completo. "
+                "Los valores de φMn aqui son aproximados (metodo lineal simplificado). "
+                "El diagrama P-M completo usa el analisis riguroso fibra a fibra.",
+                "**How to use:** Select a section from the table, enter it in the "
+                "Configuration panel (Section 2. Geometry) and verify with the full P-M diagram. "
+                "The φMn values here are approximate (simplified linear method). "
+                "The full P-M diagram uses rigorous fiber-by-fiber analysis."
+            ))
+
+            # Boton de autocompletar con la mejor sección (primera de la lista)
+            _mejor = _opt_results[0]
+            if st.button(
+                _t(f"Usar seccion optima: {_mejor['b']}×{_mejor['h']} cm",
+                   f"Use optimal section: {_mejor['b']}×{_mejor['h']} cm"),
+                key="c_pm_btn_opt_apply",
+                help=_t(
+                    "Aplica automaticamente b, h y estima el refuerzo longitudinal necesario al formulario.",
+                    "Automatically applies b, h and estimates required longitudinal reinforcement to the form."
+                )
+            ):
+                st.session_state["c_pm_b"] = float(_mejor["b"])
+                st.session_state["c_pm_h"] = float(_mejor["h"])
+                
+                # Auto-ajustar varillas longitudinales
+                _es_circ = "Circular" in st.session_state.get("c_pm_seccion_type", "Rectangular")
+                _sys = st.session_state.get("c_pm_unit_system", "Milimetros SI")
+                _rbd = REBAR_US if "Pulgadas" in _sys or "Inches" in _sys else REBAR_MM
+                _rb_key = st.session_state.get("c_pm_rebar_type", list(_rbd.keys())[0] if _rbd else None)
+                _db_mm = _rbd.get(_rb_key, {}).get("diameter_mm", 16.0) if _rb_key else 16.0
+                _ab_cm2 = math.pi * (_db_mm / 20.0)**2
+                
+                _n_req = int(math.ceil(_mejor["Ast_cm2"] / _ab_cm2))
+                _n_req = max(4, _n_req)
+                if _n_req % 2 != 0: _n_req += 1
+                
+                if _es_circ:
+                    st.session_state["c_pm_n_barras_circ"] = _n_req
+                else:
+                    _b = _mejor["b"]
+                    _h = _mejor["h"]
+                    _sum_hv = (_n_req + 4) / 2.0
+                    _nh = int(round(_sum_hv * (_b / (_b + _h))))
+                    _nh = max(2, _nh)
+                    _nv = int(round(_sum_hv - _nh))
+                    _nv = max(2, _nv)
+                    
+                    st.session_state["c_pm_num_h"] = _nh
+                    st.session_state["c_pm_num_v"] = _nv
+
+                st.success(_t(
+                    f"Seccion {_mejor['b']}×{_mejor['h']} cm aplicada y refuerzo estimado (~{_n_req} varillas). "
+                    "Verifique en el tab Configuracion y recalcule el diagrama P-M.",
+                    f"Section {_mejor['b']}×{_mejor['h']} cm and reinforcement (~{_n_req} bars) applied. "
+                    "Check in the Configuration tab and recalculate the P-M diagram."
+                ))
+                st.rerun()
+
 
 with tab1:
     col1, col2 = st.columns([2, 1])
@@ -2961,7 +3672,7 @@ with tab1:
         | **Relación Pu/φPni** | {bresler['ratio']:.3f} |
         """)
         if bresler['ok']:
-            st.success(f"**VERIFICACIÓN BIAXIAL CUMPLE**\n\nPu ({Pu_input:.1f}) ≤ φPni ({bresler['phi_Pni']:.1f})")
+            st.success(f"**VERIFICACION BIAXIAL CUMPLE**\n\nPu ({Pu_input:.1f}) <= phi_Pni ({bresler['phi_Pni']:.1f})")
         else:
             st.error(f"**VERIFICACIÓN BIAXIAL NO CUMPLE**\n\nPu ({Pu_input:.1f}) > φPni ({bresler['phi_Pni']:.1f})")
             ratio = bresler['ratio']
@@ -3002,17 +3713,17 @@ with tab1:
         | **Muy amplificado** | {Muy_magnified:.2f} {unidad_mom} | |
         """)
         if slenderness['kl_r'] > 100:
-            st.warning(f"️ **kl/r > 100** — Se requiere análisis no lineal de segundo orden según {norma_sel}.")
+            st.warning(f"AVISO: kl/r > 100 — Se requiere analisis no lineal de segundo orden segun {norma_sel}.")
         elif slenderness['kl_r'] > 22:
             if es_desplazable:
                 st.info(
-                    f"ℹ️ **Marco Desplazable (Sway Frame) — kL/r = {slenderness['kl_r']:.1f}.** "
+                    f"Marco Desplazable (Sway Frame) — kL/r = {slenderness['kl_r']:.1f}. "
                     f"Los momentos Mux y Muy ingresados se asumen **ya amplificados por P-Δ** del modelo global. "
                     f"No se aplica magnificación δns adicional. Ref: {norma_sel} C.10.10.7 / ACI 318-19 §6.6.4.6."
                 )
             else:
                 st.info(
-                    f"ℹ️ **Marco No Desplazable — δns = {slenderness['delta_ns']:.3f} aplicado.** "
+                    f"Marco No Desplazable — delta_ns = {slenderness['delta_ns']:.3f} aplicado. "
                     f"Momentos amplificados: Mux = {Mux_magnified:.2f} {unidad_mom} | "
                     f"Muy = {Muy_magnified:.2f} {unidad_mom}. "
                     f"Ref: {norma_sel} C.10.10 / ACI 318-19 §6.6.4.5."
@@ -3026,7 +3737,7 @@ with tab1:
             st.markdown(f"**Cálculo de Ash requerido (NSR-10 C.21.3.5.4):**")
             st.latex(r"(a) \quad A_{sh} = " + req_1_str)
             st.latex(r"(b) \quad A_{sh} = " + req_2_str)
-            st.markdown(f"**→ Rige: {Ash_req:.2f} cm²**")
+            st.markdown(f"**Rige: {Ash_req:.2f} cm2**")
 
             st.markdown(f"""
             | Parámetro | Valor | Requerido | Estado |
@@ -5246,7 +5957,7 @@ with tab4:
                 return buf
 
             # Botón para generar — solo ejecuta la función al hacer clic
-            if st.button("⬇️ " + _t("Generar y Exportar IFC4 (BIM completo)", "Generate & Export IFC4 (full BIM)"), key="col_btn_ifc"):
+            if st.button(_t("Generar y Exportar IFC4 (BIM completo)", "Generate & Export IFC4 (full BIM)"), key="col_btn_ifc"):
                 _ifc_placeholder = st.empty()
                 _ifc_placeholder.info("⏳ Generando modelo IFC4… puede tomar unos segundos.")
                 try:
@@ -5936,3 +6647,179 @@ with tab4:
             else:
                 st.error("No se encontro el capitulo seleccionado en session_state.")
 
+
+# ═══════════════════════════════════════════════════════════════════
+# TAB: RESUMEN EJECUTIVO — Exportable 1 página
+# ═══════════════════════════════════════════════════════════════════
+with tab_resumen:
+    st.subheader(_t("Resumen Ejecutivo", "Executive Summary"))
+    st.caption(_t(
+        "Vista condensada de todos los parametros y resultados. Exportable como HTML imprimible.",
+        "Condensed view of all parameters and results. Exportable as printable HTML."
+    ))
+
+    # ── Datos de identificación ──────────────────────────────────────
+    _emp  = st.session_state.get("c_pm_empresa",         "—")
+    _proy = st.session_state.get("c_pm_proyecto_nombre", "—")
+    _ing  = st.session_state.get("c_pm_ingeniero",       "—")
+    _elab = st.session_state.get("c_pm_elaboro",         "—")
+    _rev  = st.session_state.get("c_pm_reviso",          "—")
+    import datetime as _dt
+    _fecha = _dt.date.today().strftime("%d/%m/%Y")
+
+    # ── Sección y materiales ─────────────────────────────────────────
+    _sec_desc = f"D = {D:.0f} cm (Circular)" if es_circular else f"b = {b:.0f} cm  ×  h = {h:.0f} cm"
+    _Ag_cm2   = math.pi*(D/2)**2 if es_circular else b*h
+    _rho_res  = (Ast / _Ag_cm2 * 100) if _Ag_cm2 > 0 else 0.0
+
+    # ── Estado de verificación ───────────────────────────────────────
+    _estado     = "CUMPLE" if bresler["ok"] else "NO CUMPLE"
+    _color_est  = "#1b5e20" if bresler["ok"] else "#b71c1c"
+    _bg_est     = "#e8f5e9" if bresler["ok"] else "#ffebee"
+    _ratio_res  = bresler["ratio"]
+    _cuantia_ok = (rho_min <= cuantia <= rho_max)
+    _eslend_ok  = (slenderness["kl_r"] <= 100)
+
+    # ── Columnas de resumen en pantalla ─────────────────────────────
+    _rc1, _rc2, _rc3 = st.columns(3)
+    with _rc1:
+        st.markdown("**Identificacion**")
+        st.markdown(f"Empresa: **{_emp}**")
+        st.markdown(f"Proyecto: **{_proy}**")
+        st.markdown(f"Ingeniero: **{_ing}**")
+        st.markdown(f"Fecha: **{_fecha}**")
+    with _rc2:
+        st.markdown("**Seccion y Materiales**")
+        st.markdown(f"Seccion: **{_sec_desc}**")
+        st.markdown(f"f'c = **{fc:.1f} MPa** | fy = **{fy:.0f} MPa**")
+        st.markdown(f"Cuantia: **{cuantia:.2f}%** ({'OK' if _cuantia_ok else 'FUERA'})")
+        st.markdown(f"Ag = **{_Ag_cm2:.1f} cm²** | Ast = **{Ast:.2f} cm²**")
+    with _rc3:
+        st.markdown("**Cargas y Resultado**")
+        st.markdown(f"Pu = **{Pu_input:.1f} {unidad_fuerza}**")
+        st.markdown(f"Mux = **{Mux_input:.2f} {unidad_mom}**")
+        st.markdown(f"Muy = **{Muy_input:.2f} {unidad_mom}**")
+        st.markdown(
+            f"<span style='font-size:1.2rem;font-weight:800;color:{_color_est};"
+            f"background:{_bg_est};padding:4px 12px;border-radius:6px;'>"
+            f"{_estado} — Ratio {_ratio_res:.3f}</span>",
+            unsafe_allow_html=True
+        )
+
+    st.markdown("---")
+
+    # ── Tabla de verificaciones ──────────────────────────────────────
+    st.markdown("**Verificaciones NSR-10**")
+    _verifs = [
+        ("Biaxial Bresler",    f"Pu/Pni = {_ratio_res:.3f}",       "CUMPLE" if bresler['ok'] else "NO CUMPLE"),
+        ("Cuantia",            f"rho = {cuantia:.2f}%",             f"OK ({rho_min:.1f}%–{rho_max:.1f}%)" if _cuantia_ok else "FUERA DE LIMITES"),
+        ("Esbeltez kL/r",      f"kL/r = {slenderness['kl_r']:.1f}", "Corta" if slenderness['kl_r']<=22 else ("Esbelta" if slenderness['kl_r']<=100 else "Muy esbelta")),
+        ("Confinamiento Ash",  f"Ash = {Ash_prov:.2f} cm²",         f"OK >= {Ash_req:.2f} cm²" if ash_ok else f"DEFICIT: {Ash_prov:.2f} < {Ash_req:.2f}"),
+        ("Excentricidad min.", f"ex={e_min_x_cm:.2f} cm | ey={e_min_y_cm:.2f} cm", "NSR-10 C.10.3.6"),
+    ]
+    import pandas as _pd_res
+    _df_verif = _pd_res.DataFrame(_verifs, columns=["Verificacion", "Valor", "Estado"])
+    st.dataframe(_df_verif, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # ── Generador HTML exportable ────────────────────────────────────
+    _estado_color_html = "#2e7d32" if bresler["ok"] else "#c62828"
+    _html_resumen = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Resumen Ejecutivo — {_proy}</title>
+<style>
+  body {{ font-family: Arial, sans-serif; font-size: 12px; margin: 24px; color: #1a1a1a; }}
+  h1 {{ font-size: 18px; margin-bottom: 4px; }}
+  h2 {{ font-size: 13px; color: #444; margin-top: 16px; margin-bottom: 4px; border-bottom: 1px solid #ccc; }}
+  table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
+  th {{ background: #1565c0; color: white; padding: 6px 8px; text-align: left; font-size: 11px; }}
+  td {{ padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }}
+  tr:nth-child(even) td {{ background: #f5f5f5; }}
+  .estado {{ display: inline-block; padding: 6px 16px; border-radius: 6px;
+             font-size: 14px; font-weight: bold; color: white;
+             background: {_estado_color_html}; margin-top: 8px; }}
+  .header-bar {{ background: #0d47a1; color: white; padding: 12px 16px;
+                 border-radius: 6px; margin-bottom: 12px; }}
+  .header-bar h1 {{ color: white; }}
+  .header-bar p {{ margin: 2px 0; font-size: 11px; opacity: 0.9; }}
+  .grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 8px; }}
+  .card {{ background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; padding: 10px; }}
+  .card h3 {{ font-size: 11px; color: #555; margin: 0 0 6px; text-transform: uppercase; }}
+  @media print {{ body {{ margin: 12px; }} }}
+</style>
+</head>
+<body>
+<div class="header-bar">
+  <h1>Resumen Ejecutivo — Columnas P-M Biaxial</h1>
+  <p>Empresa: {_emp} &nbsp;|&nbsp; Proyecto: {_proy} &nbsp;|&nbsp; Ingeniero: {_ing}</p>
+  <p>Elaboro: {_elab} &nbsp;|&nbsp; Reviso: {_rev} &nbsp;|&nbsp; Fecha: {_fecha} &nbsp;|&nbsp; Norma: {norma_sel} &nbsp;|&nbsp; Nivel: {nivel_sismico}</p>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>Seccion y Materiales</h3>
+    <b>Seccion:</b> {_sec_desc}<br>
+    <b>f'c:</b> {fc:.1f} MPa &nbsp; <b>fy:</b> {fy:.0f} MPa<br>
+    <b>d':</b> {d_prime:.1f} cm &nbsp; <b>L:</b> {L_col:.0f} cm<br>
+    <b>Ag:</b> {_Ag_cm2:.1f} cm² &nbsp; <b>Ast:</b> {Ast:.2f} cm²<br>
+    <b>Cuantia ρ:</b> {cuantia:.2f}%
+  </div>
+  <div class="card">
+    <h3>Cargas Ultimas (LRFD)</h3>
+    <b>Pu:</b> {Pu_input:.2f} {unidad_fuerza}<br>
+    <b>Mux:</b> {Mux_input:.2f} {unidad_mom}<br>
+    <b>Muy:</b> {Muy_input:.2f} {unidad_mom}<br>
+    <b>ex min:</b> {e_min_x_cm:.2f} cm &nbsp; <b>ey min:</b> {e_min_y_cm:.2f} cm<br>
+    <b>kL/r:</b> {slenderness['kl_r']:.1f} ({slenderness['classification']})
+  </div>
+  <div class="card">
+    <h3>Resultado</h3>
+    <span class="estado">{_estado}</span><br><br>
+    <b>Ratio Pu/φPni:</b> {_ratio_res:.4f}<br>
+    <b>φPni Bresler:</b> {bresler['phi_Pni']:.2f} {unidad_fuerza}<br>
+    <b>φPnx:</b> {bresler['phi_Pnx']:.2f} &nbsp; <b>φPny:</b> {bresler['phi_Pny']:.2f} {unidad_fuerza}
+  </div>
+</div>
+
+<h2>Verificaciones NSR-10</h2>
+<table>
+  <tr><th>Verificacion</th><th>Valor</th><th>Estado</th></tr>
+  {''.join(f"<tr><td>{v[0]}</td><td>{v[1]}</td><td>{v[2]}</td></tr>" for v in _verifs)}
+</table>
+
+<h2>Refuerzo Transversal</h2>
+<table>
+  <tr><th>Parametro</th><th>Valor</th></tr>
+  <tr><td>Tipo</td><td>{col_type}</td></tr>
+  <tr><td>Diametro / Separacion</td><td>Ø{stirrup_diam:.1f} mm @ {paso_espiral if es_circular else s_conf:.1f} cm</td></tr>
+  <tr><td>{"ρs provisto" if es_circular else "Ash provisto"}</td><td>{f"{rho_s_prov*100:.2f}%" if es_circular else f"{Ash_prov:.3f} cm²"}</td></tr>
+  <tr><td>{"ρs requerido" if es_circular else "Ash requerido"}</td><td>{f"{rho_s_req*100:.2f}%" if es_circular else f"{Ash_req:.3f} cm²"}</td></tr>
+  <tr><td>Estado Confinamiento</td><td>{"OK" if ash_ok else "DEFICIT"}</td></tr>
+</table>
+
+<p style="margin-top:24px;font-size:10px;color:#888;">
+  Generado por StructoPro — Columnas P-M Biaxial &nbsp;|&nbsp; {norma_sel} &nbsp;|&nbsp; {_fecha}<br>
+  Los resultados deben ser verificados por un ingeniero responsable antes de su uso en obra.
+</p>
+</body>
+</html>"""
+
+    st.download_button(
+        label=_t("Descargar Resumen Ejecutivo HTML", "Download Executive Summary HTML"),
+        data=_html_resumen.encode("utf-8"),
+        file_name=f"Resumen_Ejecutivo_{_proy.replace(' ','_')}.html",
+        mime="text/html",
+        key="c_pm_dl_resumen",
+        help=_t(
+            "Descarga una pagina HTML imprimible con todos los parametros y resultados. "
+            "Abre en cualquier navegador y usa Ctrl+P para imprimir o guardar como PDF.",
+            "Downloads a printable HTML page with all parameters and results."
+        )
+    )
+    st.caption(_t(
+        "Abre el archivo en su navegador y use Ctrl+P (o Cmd+P) para imprimir o guardar como PDF.",
+        "Open the file in your browser and use Ctrl+P (or Cmd+P) to print or save as PDF."
+    ))
